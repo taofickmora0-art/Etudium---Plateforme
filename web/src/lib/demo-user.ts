@@ -1,21 +1,17 @@
-import type { Role } from "@/components/ui/ProfileMenu";
+import type { ShellUser } from "@/lib/auth/current-user";
 
 /**
- * Utilisateur de démonstration affiché par la coque tant que la connexion n'existe pas (tâche 0.4).
- * Ce sont les données des écrans du design ; la 0.4 les remplace par le profil de la personne connectée,
- * la 0.6 par ses vrais rôles. Les trois rôles servent à montrer tout le menu du profil pendant la validation.
+ * Utilisatrice des écrans du design, affichée uniquement en mode démonstration (base de test pas encore
+ * configurée, sur l'ordinateur de développement). Les trois rôles montrent tout le menu du profil pendant la validation.
  */
-export const DEMO_USER = {
+export const DEMO_USER: ShellUser = {
   prenom: "Aïcha",
   nom: "Kpadé",
   initials: "AK",
   email: "aicha.k@exemple.com",
-  roles: ["etudiant", "formateur", "admin"] as Role[],
-  /** Ligne sous le nom sur la page « Profil » du téléphone. */
+  roles: ["etudiant", "formateur", "admin"],
   statut: "Étudiante",
   formule: "Standard",
   serie: 8,
   points: 165,
 };
-
-export type ShellUser = typeof DEMO_USER;

@@ -192,3 +192,15 @@ export async function updatePassword(_prev: FormState, formData: FormData): Prom
   }
   redirect("/accueil");
 }
+
+/** Déconnexion (NdDeconnexion) : ferme la session de cet appareil seulement, puis ramène à la connexion. */
+export async function signOut(): Promise<void> {
+  try {
+    const supabase = await createClient();
+    await supabase.auth.signOut({ scope: "local" });
+  } catch {
+    // Base injoignable : les cookies de session sont tout de même effacés côté navigateur par Supabase au prochain passage.
+  }
+  (await cookies()).delete(REMEMBER_COOKIE);
+  redirect("/connexion");
+}

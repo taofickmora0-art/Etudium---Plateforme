@@ -1,17 +1,17 @@
 import type { ReactNode } from "react";
-import type { ShellUser } from "@/lib/demo-user";
 import { AppHeader } from "./AppHeader";
 import { MobileNav } from "./MobileNav";
 import { SidebarNav } from "./SidebarNav";
 
 /**
- * Coque de l'espace connecté.
+ * Coque de l'espace connecté. Elle s'affiche sans attendre le compte : `account` (compteurs, cloche, profil)
+ * arrive ensuite dans l'en-tête.
  * - À partir de 1024 px (NdAccueil) : en-tête, cadre gris-bleu arrondi 32 px, barre latérale de 337 px, panneau blanc ; la page défile.
  * - En dessous (NdMobAccueil) : en-tête compact, panneau blanc arrondi en haut, barre du bas. C'est la page qui défile,
  *   l'en-tête et la barre du bas restent collés : chaque page s'ouvre en haut, le retour arrière retrouve la position,
  *   et les barres du navigateur peuvent se replier.
  */
-export function AppShell({ user, actions, children }: { user: ShellUser; actions?: ReactNode; children: ReactNode }) {
+export function AppShell({ account, children }: { account?: ReactNode; children: ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col bg-page lg:px-5 lg:pb-5">
       <a
@@ -20,7 +20,7 @@ export function AppShell({ user, actions, children }: { user: ShellUser; actions
       >
         Aller au contenu
       </a>
-      <AppHeader user={user} actions={actions} />
+      <AppHeader account={account} />
       <div className="flex flex-1 lg:items-stretch lg:rounded-coque lg:bg-coque">
         <SidebarNav className="hidden lg:flex" />
         <main

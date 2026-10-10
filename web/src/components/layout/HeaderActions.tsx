@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { NotificationsPanel } from "@/components/ui/NotificationsPanel";
 import { ProfileMenu } from "@/components/ui/ProfileMenu";
-import type { ShellUser } from "@/lib/demo-user";
+import type { ShellUser } from "@/lib/auth/current-user";
 import { LogoutDialog } from "./LogoutDialog";
 
 /** Cloche et rond de profil de l'en-tête (NdNotificationsOuvertes, NdMesFormationsMenu). */

@@ -8,7 +8,9 @@ import { requestReset, updatePassword } from "@/lib/auth/actions";
 vi.mock("@/lib/auth/actions", () => ({ requestReset: vi.fn(), updatePassword: vi.fn() }));
 
 describe("Écran « Mot de passe oublié »", () => {
-  beforeEach(() => vi.mocked(requestReset).mockReset());
+  beforeEach(() => {
+    vi.mocked(requestReset).mockReset();
+  });
 
   it("après l'envoi, l'adresse est rappelée et le lien peut être renvoyé", async () => {
     vi.mocked(requestReset).mockResolvedValue({ status: "success", values: { email: "aicha.k@exemple.com" } });

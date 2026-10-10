@@ -1,0 +1,88 @@
+import { cache } from "react";
+import type { Role } from "@/components/ui/ProfileMenu";
+import { DEMO_USER } from "@/lib/demo-user";
+import { getPublicEnv } from "@/lib/env";
+import { createClient } from "@/lib/supabase/server";
+import { isDemoMode } from "./routing";
+
+/** Ce que la coque affiche de la personne connectée (en-tête, menu du profil, page « Profil » du téléphone). */
+export type ShellUser = {
+  prenom: string;
+  nom: string;
+  initials: string;
+  email: string;
+  roles: Role[];
+  /** Ligne sous le nom sur la page « Profil » du téléphone. */
+  statut: string;
+  formule: string;
+  serie: number;
+  points: number;
+};
+
+const ORDRE_DES_ROLES: Role[] = ["etudiant", "formateur", "moderateur", "admin", "super_admin"];
+
+/** Mode démonstration (voir `isDemoMode`) : base non configurée, sur l'ordinateur de développement. */
+export function demoModeActive(): boolean {
+  let configured = true;
+  try {
+    getPublicEnv();
+  } catch {
+    configured = false;
+  }
+  return isDemoMode({ configured, nodeEnv: process.env.NODE_ENV });
+}
+
+type Metadonnees = Record<string, unknown>;
+const chaine = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+
+/** Prénom et nom tirés des données d'inscription : formulaire (prenom, nom) ou Google (given_name, family_name, full_name). */
+function nomDepuisInscription(meta: Metadonnees) {
+  const complet = chaine(meta.full_name) || chaine(meta.name);
+  const [premier = "", ...reste] = complet.split(/\s+/).filter(Boolean);
+  return {
+    prenom: chaine(meta.prenom) || chaine(meta.given_name) || premier,
+    nom: chaine(meta.nom) || chaine(meta.family_name) || reste.join(" "),
+  };
+}
+
+const initiales = (prenom: string, nom: string, email: string) =>
+  ((prenom[0] ?? "") + (nom[0] ?? "")).toUpperCase() || (email[0] ?? "?").toUpperCase();
+
+/**
+ * La personne connectée, lue une seule fois par requête (React.cache) : session, profil et rôles.
+ * Tant que le profil n'est pas lisible, on se rabat sur les données d'inscription.
+ * Série et points arrivent au lot 6, les formules payantes au lot 2.
+ */
+export const getShellUser = cache(async (): Promise<ShellUser | null> => {
+  if (demoModeActive()) return DEMO_USER;
+
+  const supabase = await createClient();
+  // getClaims vérifie le jeton sur place, comme le proxy : pas d'aller-retour réseau à chaque page.
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (!claims?.sub) return null;
+
+  const [profil, roles] = await Promise.all([
+    supabase.from("profils").select("prenom, nom").eq("id", claims.sub).maybeSingle(),
+    supabase.from("roles").select("role").eq("profil_id", claims.sub),
+  ]);
+
+  const inscription = nomDepuisInscription((claims.user_metadata as Metadonnees | undefined) ?? {});
+  const prenom = chaine(profil.data?.prenom) || inscription.prenom;
+  const nom = chaine(profil.data?.nom) || inscription.nom;
+  const email = chaine(claims.email);
+  const lus = new Set(((roles.data as { role: Role }[] | null) ?? []).map((r) => r.role));
+  const tries = ORDRE_DES_ROLES.filter((r) => lus.has(r));
+
+  return {
+    prenom,
+    nom,
+    initials: initiales(prenom, nom, email),
+    email,
+    roles: tries.length > 0 ? tries : ["etudiant"],
+    statut: "Étudiant·e",
+    formule: "Gratuite",
+    serie: 0,
+    points: 0,
+  };
+});

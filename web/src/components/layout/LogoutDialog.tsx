@@ -1,12 +1,30 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { unstable_rethrow } from "next/navigation";
 import { Logout03Icon } from "@hugeicons/core-free-icons";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { signOut } from "@/lib/auth/actions";
+
+/**
+ * L'action redirige vers la connexion ; Next fait alors échouer l'appel avec une « erreur de redirection »
+ * alors que tout s'est bien passé et que la navigation est en cours. Seule une vraie erreur est remontée.
+ */
+async function seDeconnecter() {
+  try {
+    await signOut();
+  } catch (error) {
+    try {
+      unstable_rethrow(error);
+    } catch {
+      return;
+    }
+    throw error;
+  }
+}
 
 /**
  * Confirmation de déconnexion (NdDeconnexion, NdMobDeconnexion).
- * Tant que la connexion n'existe pas (tâche 0.4), confirmer ramène simplement à la page de départ.
+ * Confirmer ferme la session de cet appareil et ramène à la connexion.
  */
 export function LogoutDialog({
   open,
@@ -18,7 +36,6 @@ export function LogoutDialog({
   /** Élément qui reprend le focus à la fermeture (le rond de profil, quand la fenêtre s'ouvre depuis son menu). */
   returnFocus?: () => HTMLElement | null | undefined;
 }) {
-  const router = useRouter();
   return (
     <ConfirmDialog
       open={open}
@@ -28,7 +45,7 @@ export function LogoutDialog({
       description="Votre progression est enregistrée. Vous devrez saisir à nouveau vos identifiants pour revenir."
       confirmLabel="Se déconnecter"
       returnFocus={returnFocus}
-      onConfirm={() => router.push("/")}
+      onConfirm={seDeconnecter}
     />
   );
 }

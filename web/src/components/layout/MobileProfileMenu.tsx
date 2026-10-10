@@ -4,7 +4,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
 import { List, ListRow } from "@/components/ui/ListRow";
 import { PointsIcon, StreakIcon } from "@/components/ui/TopBarIcons";
-import type { ShellUser } from "@/lib/demo-user";
+import type { ShellUser } from "@/lib/auth/current-user";
 import { NAV_MENU_TELEPHONE } from "@/lib/navigation";
 import { MenuLogout } from "./MenuLogout";
 

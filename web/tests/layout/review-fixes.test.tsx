@@ -12,7 +12,7 @@ vi.mock("next/navigation", () => ({ usePathname: () => "/accueil", useRouter: ()
 
 describe("Corrections de la relecture de la coque", () => {
   it("sur téléphone, c'est la page qui défile : en-tête et barre du bas restent collés", () => {
-    render(<AppShell user={DEMO_USER}>Contenu</AppShell>);
+    render(<AppShell>Contenu</AppShell>);
     expect(screen.getByRole("main")).not.toHaveClass("overflow-y-auto");
     expect(screen.getByRole("banner")).toHaveClass("max-lg:sticky", "max-lg:top-0");
     expect(screen.getByRole("navigation", { name: "Navigation" }).parentElement).toHaveClass("sticky", "bottom-0");
