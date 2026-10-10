@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Boutons } from "./sections/Boutons";
+import { Cartes } from "./sections/Cartes";
 import { Fondations } from "./sections/Fondations";
 import { Formulaires } from "./sections/Formulaires";
 
@@ -12,6 +13,7 @@ const PLANCHES = [
   { id: "fondations", label: "Fondations" },
   { id: "boutons", label: "Boutons" },
   { id: "formulaires", label: "Formulaires" },
+  { id: "cartes", label: "Cartes" },
 ];
 
 export default function VitrinePage() {
@@ -34,6 +36,7 @@ export default function VitrinePage() {
       <Fondations />
       <Boutons />
       <Formulaires />
+      <Cartes />
     </div>
   );
 }

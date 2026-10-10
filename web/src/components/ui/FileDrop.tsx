@@ -4,7 +4,7 @@ import { useRef, useState, type DragEvent } from "react";
 import { Upload04Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/cn";
 import { Button } from "./Button";
-import { Icon } from "./Icon";
+import { IconTile } from "./IconTile";
 
 type FileDropProps = {
   /** Types acceptés par le sélecteur du système (« .xlsx,.docx,.pdf »). */
@@ -49,9 +49,7 @@ export function FileDrop({ accept, maxSizeLabel, onFiles, title = "Déposez votr
         className,
       )}
     >
-      <span className="flex size-11 flex-none items-center justify-center rounded-[13px] bg-panneau text-texte">
-        <Icon icon={Upload04Icon} size={20} />
-      </span>
+      <IconTile icon={Upload04Icon} size={44} tone="blanc" />
       <span className="text-[15px] leading-[22px] font-medium text-encre">{title}</span>
       <span className="text-[13px] leading-5 text-ardoise">{maxSizeLabel}</span>
       <Button variant="contour" size="sm" className="mt-1" disabled={disabled} onClick={() => input.current?.click()}>

@@ -4,6 +4,7 @@ import { cn } from "@/lib/cn";
 // Planche « Boutons », « Avatars et progression ».
 const SIZES = {
   52: "size-[52px] text-[19px]",
+  44: "size-11 text-base",
   40: "size-10 text-sm",
   32: "size-8 text-xs",
 } as const;

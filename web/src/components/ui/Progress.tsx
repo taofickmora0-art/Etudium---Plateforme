@@ -28,13 +28,13 @@ export function ProgressBar({ value, label = "Progression", className }: Progres
 }
 
 /** La ligne sous la barre : « 68 % terminé · 2 h restantes ». */
-export function ProgressMeta({ value, timeLabel, className }: { value: number; timeLabel?: string; className?: string }) {
+export function ProgressMeta({ id, value, timeLabel, className }: { id?: string; value: number; timeLabel?: string; className?: string }) {
   return (
-    <div className={cn("flex flex-wrap items-center gap-[7px] text-xs leading-[18px] text-discret", className)}>
+    <div id={id} className={cn("flex flex-wrap items-center gap-[7px] text-xs leading-[18px] text-discret", className)}>
       <span>{Math.round(value)} % terminé</span>
       {timeLabel && (
         <>
-          <span aria-hidden="true" className="size-[3px] rounded-full bg-discret" />
+          <MetaDot />
           <span className="flex items-center gap-1">
             <Icon icon={Clock01Icon} size={18} className="-mx-[1.5px]" />
             <span>{timeLabel}</span>
@@ -43,4 +43,9 @@ export function ProgressMeta({ value, timeLabel, className }: { value: number; t
       )}
     </div>
   );
+}
+
+/** Petit point qui sépare deux informations d'une ligne de détails. */
+export function MetaDot() {
+  return <span aria-hidden="true" className="size-[3px] flex-none rounded-full bg-discret" />;
 }

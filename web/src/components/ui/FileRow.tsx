@@ -2,6 +2,7 @@ import { Delete02Icon, Download04Icon, File02Icon } from "@hugeicons/core-free-i
 import { cn } from "@/lib/cn";
 import { Icon } from "./Icon";
 import { IconButton, iconButtonVariants } from "./IconButton";
+import { IconTile } from "./IconTile";
 import { ProgressBar } from "./Progress";
 
 type FileRowProps = {
@@ -38,9 +39,7 @@ export function FileRow({ name, meta, progress, onRemove, downloadHref, classNam
 
   return (
     <div className={cn(ROW, "flex min-w-0 items-center gap-3", className)}>
-      <span className="flex size-10 flex-none items-center justify-center rounded-champ bg-coque text-texte">
-        <Icon icon={File02Icon} size={18} />
-      </span>
+      <IconTile icon={File02Icon} />
       <span className="flex min-w-0 flex-1 flex-col">
         <span title={name} className="truncate text-sm leading-5 font-medium text-encre">
           {name}
