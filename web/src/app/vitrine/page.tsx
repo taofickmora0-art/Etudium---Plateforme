@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Boutons } from "./sections/Boutons";
 import { Fondations } from "./sections/Fondations";
 
 export const metadata: Metadata = {
@@ -6,7 +7,10 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-const PLANCHES = [{ id: "fondations", label: "Fondations" }];
+const PLANCHES = [
+  { id: "fondations", label: "Fondations" },
+  { id: "boutons", label: "Boutons" },
+];
 
 export default function VitrinePage() {
   return (
@@ -26,6 +30,7 @@ export default function VitrinePage() {
         </nav>
       </header>
       <Fondations />
+      <Boutons />
     </div>
   );
 }
