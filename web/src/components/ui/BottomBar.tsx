@@ -7,7 +7,7 @@ type BottomBarProps = {
   className?: string;
 };
 
-/** Barre du bas du téléphone (planche « Navigation ») : cinq entrées de 56 px, l'active en pastille blanche. */
+/** Barre du bas du téléphone (NdMobAccueil) : cinq entrées de 56 px, l'active en pastille blanche, texte et icône bleus. */
 export function BottomBar({ items, className }: BottomBarProps) {
   return (
     <nav aria-label="Navigation" className={cn("flex gap-1 rounded-panneau bg-coque p-1.5", className)}>
@@ -18,11 +18,12 @@ export function BottomBar({ items, className }: BottomBarProps) {
           aria-current={item.active ? "page" : undefined}
           className={cn(
             "focus-etudium flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-carte text-[11px] leading-[14px] font-medium text-texte no-underline transition-colors",
-            item.active ? "bg-panneau shadow-pastille" : "hover:bg-white/55",
+            item.active ? "bg-panneau text-bleu shadow-pastille" : "hover:bg-white/55",
           )}
         >
           <Icon icon={item.icon} size={22} />
-          <span className="max-w-full truncate">{item.label}</span>
+          {/* Le libellé peut mordre de 2 px sur l’espace entre les onglets (« Communauté » à 390 px). */}
+          <span className="max-w-[calc(100%+4px)] truncate">{item.label}</span>
         </Link>
       ))}
     </nav>

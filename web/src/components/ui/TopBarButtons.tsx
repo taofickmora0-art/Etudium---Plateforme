@@ -11,6 +11,8 @@ const SURFACE = "flex h-[49px] flex-none items-center rounded-bouton bg-coque te
 const INTERACTIVE = "focus-etudium cursor-pointer transition-colors hover:bg-coque-survol";
 
 type ButtonProps = ComponentPropsWithoutRef<"button">;
+/** Avec `href`, le bouton devient un lien (la recherche et l'action mènent souvent à une page). */
+type LinkableProps = ButtonProps & { href?: string };
 
 /** Symbole Étudium qui ramène à l'accueil. */
 export function LogoButton({ href = "/", className }: { href?: string; className?: string }) {
@@ -22,21 +24,41 @@ export function LogoButton({ href = "/", className }: { href?: string; className
 }
 
 /** Ouvre la recherche. */
-export function SearchButton({ children = "Rechercher", className, type, ...props }: ButtonProps) {
-  return (
-    <button type={type ?? "button"} className={cn(SURFACE, INTERACTIVE, "gap-2 px-4", className)} {...props}>
+export function SearchButton({ children = "Rechercher", href, className, type, ...props }: LinkableProps) {
+  const classes = cn(SURFACE, INTERACTIVE, "gap-2 px-4 no-underline", className);
+  const content = (
+    <>
       <Icon icon={Search01Icon} size={22} strokeWidth={1.9} />
       <span>{children}</span>
+    </>
+  );
+  return href ? (
+    <Link href={href} className={classes}>
+      {content}
+    </Link>
+  ) : (
+    <button type={type ?? "button"} className={classes} {...props}>
+      {content}
     </button>
   );
 }
 
 /** Action principale de la page (« Ajouter une formation »). */
-export function ActionButton({ children, className, type, ...props }: ButtonProps & { children: ReactNode }) {
-  return (
-    <button type={type ?? "button"} className={cn(SURFACE, INTERACTIVE, "gap-2 px-4", className)} {...props}>
+export function ActionButton({ children, href, className, type, ...props }: LinkableProps & { children: ReactNode }) {
+  const classes = cn(SURFACE, INTERACTIVE, "gap-2 px-4 no-underline", className);
+  const content = (
+    <>
       <Icon icon={PlusSignIcon} size={18} strokeWidth={2.2} />
       <span>{children}</span>
+    </>
+  );
+  return href ? (
+    <Link href={href} className={classes}>
+      {content}
+    </Link>
+  ) : (
+    <button type={type ?? "button"} className={classes} {...props}>
+      {content}
     </button>
   );
 }

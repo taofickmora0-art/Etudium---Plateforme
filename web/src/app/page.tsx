@@ -1,6 +1,8 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { connection } from "next/server";
 import { Logo } from "@/components/brand/Logo";
+import { Button } from "@/components/ui/Button";
 import { EnvError, getPublicEnv } from "@/lib/env";
 import { checkSupabase } from "@/lib/supabase/health";
 
@@ -62,6 +64,14 @@ export default function Home() {
             >
               <EtatConnexion />
             </Suspense>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild>
+                <Link href="/accueil">Ouvrir l’application</Link>
+              </Button>
+              <Button asChild variant="contour">
+                <Link href="/vitrine">Vitrine des composants</Link>
+              </Button>
+            </div>
             <p className="text-xs leading-[18px] text-discret">Tâche 0.1 · environnement local</p>
           </div>
         </main>
