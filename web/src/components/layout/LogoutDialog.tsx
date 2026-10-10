@@ -1,30 +1,19 @@
 "use client";
 
-import { unstable_rethrow } from "next/navigation";
 import { Logout03Icon } from "@hugeicons/core-free-icons";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { signOut } from "@/lib/auth/actions";
+import { loadFullPage } from "@/lib/full-page";
 
-/**
- * L'action redirige vers la connexion ; Next fait alors échouer l'appel avec une « erreur de redirection »
- * alors que tout s'est bien passé et que la navigation est en cours. Seule une vraie erreur est remontée.
- */
+/** Ferme la session, puis recharge entièrement la page de connexion : rien du compte ne reste en mémoire. */
 async function seDeconnecter() {
-  try {
-    await signOut();
-  } catch (error) {
-    try {
-      unstable_rethrow(error);
-    } catch {
-      return;
-    }
-    throw error;
-  }
+  await signOut();
+  loadFullPage("/connexion");
 }
 
 /**
  * Confirmation de déconnexion (NdDeconnexion, NdMobDeconnexion).
- * Confirmer ferme la session de cet appareil et ramène à la connexion.
+ * Si la base ne répond pas, la fenêtre reste ouverte et le dit.
  */
 export function LogoutDialog({
   open,

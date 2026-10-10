@@ -50,6 +50,7 @@ export function SignUpForm() {
         <div className="flex flex-col gap-1.5">
           <Checkbox
             name="conditions"
+            defaultChecked={state.values?.conditions === "on"}
             aria-invalid={e.conditions ? true : undefined}
             aria-describedby={e.conditions ? "inscription-conditions-erreur" : undefined}
             label={

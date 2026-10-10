@@ -50,8 +50,13 @@ describe("Inscription", () => {
     const state = await signUp(IDLE, form({ ...INSCRIPTION, conditions: "" }));
     expect(state.status).toBe("error");
     expect(state.fieldErrors?.conditions).toBe("Acceptez les conditions pour créer votre compte.");
-    expect(state.values).toEqual({ prenom: "Aïcha", nom: "Kpadé", email: " Aicha.K@Exemple.com" });
+    expect(state.values).toEqual({ prenom: "Aïcha", nom: "Kpadé", email: " Aicha.K@Exemple.com", conditions: "" });
     expect(auth.signUp).not.toHaveBeenCalled();
+  });
+
+  it("après une erreur, les conditions déjà acceptées restent cochées", async () => {
+    const state = await signUp(IDLE, form({ ...INSCRIPTION, password: "court" }));
+    expect(state.values?.conditions).toBe("on");
   });
 
   it("une erreur de Supabase est traduite", async () => {

@@ -24,8 +24,17 @@ export function authErrorMessage(error: { code?: string; status?: number } | nul
 /**
  * Page où aller après la connexion. N'accepte qu'un chemin du site (« /certificats ») :
  * jamais une adresse extérieure (« https://… », « //… », « /\… »), pour qu'un lien piégé ne fasse pas sortir du site.
+ * L'adresse est lue comme un navigateur la lirait : il efface tabulations et retours à la ligne, si bien que
+ * « /\t/pirate » deviendrait « //pirate ». Seul un chemin qui reste sur le site est accepté.
  */
 export function safeNext(value: string | null | undefined, fallback = "/accueil"): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) return fallback;
-  return value;
+  if (!value || !value.startsWith("/")) return fallback;
+  const ORIGINE = "http://etudium.invalid";
+  try {
+    const url = new URL(value, ORIGINE);
+    if (url.origin !== ORIGINE) return fallback;
+    return url.pathname + url.search + url.hash;
+  } catch {
+    return fallback;
+  }
 }

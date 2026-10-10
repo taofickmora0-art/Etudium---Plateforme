@@ -44,7 +44,7 @@ export function SignInForm() {
           <PasswordInput id="connexion-mdp" name="password" autoComplete="current-password" required />
         </Field>
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <Checkbox name="remember" label="Se souvenir de moi" defaultChecked />
+          <Checkbox name="remember" label="Se souvenir de moi" defaultChecked={state.values?.remember !== "0"} />
           <Link href="/mot-de-passe-oublie" className={LIEN}>
             Mot de passe oublié ?
           </Link>

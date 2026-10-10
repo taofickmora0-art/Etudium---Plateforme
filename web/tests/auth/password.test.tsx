@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const auth = { resetPasswordForEmail: vi.fn(), updateUser: vi.fn(), signOut: vi.fn(), verifyOtp: vi.fn() };
+const auth = { resetPasswordForEmail: vi.fn(), updateUser: vi.fn(), signOut: vi.fn(), verifyOtp: vi.fn(), getClaims: vi.fn() };
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth }) }));
 vi.mock("next/headers", () => ({
   cookies: async () => ({ get: () => undefined, set: () => {}, delete: () => {} }),
@@ -37,15 +37,24 @@ describe("Mot de passe oublié", () => {
     });
   });
 
-  it("la limite d'envoi est annoncée", async () => {
+  it("la limite d'envoi ne trahit pas l'existence d'un compte", async () => {
+    // Supabase n'applique la limite par adresse qu'aux comptes existants : « Renvoyer le lien » aussitôt
+    // dirait « Trop de demandes » pour un compte existant et « succès » pour une adresse inconnue.
     auth.resetPasswordForEmail.mockResolvedValue({ error: { code: "over_email_send_rate_limit", status: 429 } });
     const state = await requestReset(IDLE, form({ email: "aicha.k@exemple.com" }));
-    expect(state).toMatchObject({ status: "error", message: "Trop de demandes. Patientez une minute, puis réessayez." });
+    expect(state).toEqual({ status: "success", values: { email: "aicha.k@exemple.com" } });
   });
 });
 
+// Session ouverte par le lien reçu par e-mail : Supabase l'inscrit comme « otp » (vérification du lien), datée en secondes.
+const maintenant = () => Math.floor(Date.now() / 1000);
+const session = (amr: unknown) => ({ data: { claims: { sub: "u1", amr } }, error: null });
+
 describe("Nouveau mot de passe", () => {
-  beforeEach(() => Object.values(auth).forEach((f) => f.mockReset()));
+  beforeEach(() => {
+    Object.values(auth).forEach((f) => f.mockReset());
+    auth.getClaims.mockResolvedValue(session([{ method: "otp", timestamp: maintenant() - 60 }]));
+  });
 
   it("le nouveau mot de passe déconnecte les autres appareils", async () => {
     auth.updateUser.mockResolvedValue({ error: null });
@@ -59,6 +68,20 @@ describe("Nouveau mot de passe", () => {
     auth.updateUser.mockResolvedValue({ error: { name: "AuthSessionMissingError", status: 400 } });
     const state = await updatePassword(IDLE, form({ password: "nouveaumdp", confirmation: "nouveaumdp" }));
     expect(state.message).toBe("Ce lien a expiré. Demandez-en un nouveau.");
+  });
+
+  it("une session ouverte par mot de passe ne suffit pas : il faut le lien reçu par e-mail", async () => {
+    auth.getClaims.mockResolvedValue(session([{ method: "password", timestamp: maintenant() - 60 }]));
+    const state = await updatePassword(IDLE, form({ password: "nouveaumdp", confirmation: "nouveaumdp" }));
+    expect(state.message).toBe("Ce lien a expiré. Demandez-en un nouveau.");
+    expect(auth.updateUser).not.toHaveBeenCalled();
+  });
+
+  it("un lien utilisé il y a plus de 15 minutes ne suffit plus", async () => {
+    auth.getClaims.mockResolvedValue(session([{ method: "otp", timestamp: maintenant() - 16 * 60 }]));
+    const state = await updatePassword(IDLE, form({ password: "nouveaumdp", confirmation: "nouveaumdp" }));
+    expect(state.message).toBe("Ce lien a expiré. Demandez-en un nouveau.");
+    expect(auth.updateUser).not.toHaveBeenCalled();
   });
 
   it("les deux mots de passe doivent correspondre", async () => {

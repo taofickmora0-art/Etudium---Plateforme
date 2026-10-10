@@ -43,6 +43,7 @@ Sans cette adresse, le retour de Google et le lien « mot de passe oublié » so
    - **Minimum password length** : `8`
    - **Email OTP Expiration** : `600` (secondes, soit 10 minutes ; ce réglage vaut aussi pour le lien « mot de passe oublié »)
    - **Email OTP Length** : `6` (l’écran de l’application attend un code à 6 chiffres)
+   - **Secure password change** : activé (pour changer de mot de passe hors du lien « mot de passe oublié », Supabase exigera une connexion récente)
 3. **Save**.
 
 ---
@@ -189,7 +190,7 @@ Déconnecte-toi puis reconnecte-toi : le menu du profil montre les deux espaces.
 | « Email address not authorized » dans les journaux de Supabase, pas d’e-mail reçu | Le service d’e-mails inclus n’écrit qu’aux membres de l’équipe : termine l’étape 5 (Resend). |
 | Le code reçu a 8 chiffres | Étape 3 : **Email OTP Length** sur `6`. |
 | L’e-mail d’inscription contient un lien au lieu d’un code | Étape 4 : le modèle « Confirm sign up » n’a pas été enregistré. |
-| Le lien « mot de passe oublié » mène à « Ce lien a expiré » | Le lien a plus de 10 minutes ou a déjà servi : redemande-le. Si ça se répète, vérifie le modèle « Reset password » (étape 4) et la **Site URL** (étape 2). |
+| Le lien « mot de passe oublié » mène à « Ce lien a expiré » | Le lien a plus de 10 minutes ou a déjà servi, ou tu as mis plus de 15 minutes à choisir le nouveau mot de passe : redemande-le. Si ça se répète, vérifie le modèle « Reset password » (étape 4) et la **Site URL** (étape 2). |
 | « Trop de demandes. Patientez une minute, puis réessayez. » | La limite d’envoi de Supabase est atteinte : attends un peu (étape 6). |
 | Google affiche « redirect_uri_mismatch » | L’adresse de retour copiée dans Google (étape 7) doit être **exactement** la *Callback URL* de Supabase. |
 | Retour sur la connexion avec « La connexion avec Google n’a pas abouti » | Vérifie `http://localhost:3000/**` dans les **Redirect URLs** (étape 2). Si tu as fermé la fenêtre Google, recommence simplement. |

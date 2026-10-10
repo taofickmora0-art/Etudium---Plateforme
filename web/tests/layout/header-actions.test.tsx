@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HeaderActions } from "@/components/layout/HeaderActions";
 import { signOut } from "@/lib/auth/actions";
+import { loadFullPage } from "@/lib/full-page";
 import { DEMO_USER } from "@/lib/demo-user";
 
 vi.mock("next/navigation", async (original) => ({
@@ -12,6 +13,7 @@ vi.mock("next/navigation", async (original) => ({
   usePathname: () => "/accueil",
 }));
 vi.mock("@/lib/auth/actions", () => ({ signOut: vi.fn() }));
+vi.mock("@/lib/full-page", () => ({ loadFullPage: vi.fn() }));
 
 async function ouvrirDeconnexion() {
   const user = userEvent.setup();
@@ -24,6 +26,7 @@ async function ouvrirDeconnexion() {
 describe("Actions de l'en-tête", () => {
   beforeEach(() => {
     vi.mocked(signOut).mockReset();
+    vi.mocked(loadFullPage).mockReset();
   });
 
   it("la cloche ouvre un panneau vide", async () => {
@@ -42,13 +45,11 @@ describe("Actions de l'en-tête", () => {
     expect(fenetre).not.toBeInTheDocument();
   });
 
-  it("la redirection vers la connexion n'est pas un échec", async () => {
-    // Une action qui redirige fait échouer son appel avec une « erreur de redirection » de Next.
-    vi.mocked(signOut).mockRejectedValue(Object.assign(new Error("NEXT_REDIRECT"), { digest: "NEXT_REDIRECT;push;/connexion;307;" }));
+  it("après la déconnexion, la page de connexion est entièrement rechargée (rien du compte ne reste en mémoire)", async () => {
+    vi.mocked(signOut).mockResolvedValue(undefined);
     const user = await ouvrirDeconnexion();
     await user.click(screen.getByRole("button", { name: "Se déconnecter" }));
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(loadFullPage).toHaveBeenCalledWith("/connexion");
   });
 
   it("si la base ne répond pas, la fenêtre reste ouverte et le dit", async () => {
@@ -58,6 +59,7 @@ describe("Actions de l'en-tête", () => {
     await user.click(screen.getByRole("button", { name: "Se déconnecter" }));
     expect(screen.getByRole("dialog", { name: "Se déconnecter ?" })).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("L’action n’a pas abouti.");
+    expect(loadFullPage).not.toHaveBeenCalled();
   });
 
   it("Échap ferme la confirmation et rend le focus", async () => {

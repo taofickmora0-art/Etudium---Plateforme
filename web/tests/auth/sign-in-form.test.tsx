@@ -21,4 +21,19 @@ describe("Formulaire de connexion", () => {
     expect(screen.getByRole("button", { name: /Se connecter/ })).toHaveAttribute("aria-busy", "true");
     await act(async () => terminer({ status: "idle" }));
   });
+
+  it("après une erreur, « Se souvenir de moi » reste décoché si on l'a décoché", async () => {
+    signIn.mockImplementationOnce(async () => ({
+      status: "error",
+      message: "E-mail ou mot de passe incorrect.",
+      values: { email: "aicha.k@exemple.com", remember: "0" },
+    }));
+    render(<SignInForm />);
+    const souvenir = screen.getByRole("checkbox", { name: "Se souvenir de moi" });
+    fireEvent.click(souvenir);
+    expect(souvenir).not.toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "Se connecter" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("E-mail ou mot de passe incorrect.");
+    expect(screen.getByRole("checkbox", { name: "Se souvenir de moi" })).not.toBeChecked();
+  });
 });

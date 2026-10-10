@@ -33,8 +33,10 @@ async function retenirAdresse(email: string) {
 /** Connexion par e-mail et mot de passe (NdConnexion). */
 export async function signIn(_prev: FormState, formData: FormData): Promise<FormState> {
   const brut = { email: texte(formData, "email"), password: texte(formData, "password"), remember: formData.get("remember") === "on" };
+  // Le choix « Se souvenir de moi » revient avec l'erreur : la case ne doit pas se recocher toute seule.
+  const souvenir = brut.remember ? "1" : "0";
   const parsed = signInSchema.safeParse(brut);
-  if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values: { email: brut.email } };
+  if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values: { email: brut.email, remember: souvenir } };
   const { email, password, remember } = parsed.data;
 
   (await cookies()).set(REMEMBER_COOKIE, remember ? "1" : "0", { path: "/", httpOnly: true, sameSite: "lax", secure: securise, maxAge: UN_AN });
@@ -52,14 +54,14 @@ export async function signIn(_prev: FormState, formData: FormData): Promise<Form
       erreur = error;
     }
   } catch {
-    return { status: "error", message: authErrorMessage(null), values: { email } };
+    return { status: "error", message: authErrorMessage(null), values: { email, remember: souvenir } };
   }
 
   if (nonVerifie) {
     await retenirAdresse(email);
     redirect("/verification-email");
   }
-  if (erreur) return { status: "error", message: authErrorMessage(erreur), values: { email } };
+  if (erreur) return { status: "error", message: authErrorMessage(erreur), values: { email, remember: souvenir } };
   redirect(safeNext(texte(formData, "next")));
 }
 
@@ -89,7 +91,7 @@ export async function signUp(_prev: FormState, formData: FormData): Promise<Form
     password: texte(formData, "password"),
     conditions: formData.get("conditions") ?? undefined,
   };
-  const values = { prenom: brut.prenom, nom: brut.nom, email: brut.email };
+  const values = { prenom: brut.prenom, nom: brut.nom, email: brut.email, conditions: brut.conditions === "on" ? "on" : "" };
   const parsed = signUpSchema.safeParse(brut);
   if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values };
   const { prenom, nom, email, password } = parsed.data;
@@ -161,11 +163,11 @@ export async function requestReset(_prev: FormState, formData: FormData): Promis
   const { email } = parsed.data;
   try {
     const supabase = await createClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    // Réponse ignorée : Supabase ne renvoie d'erreur (limite d'envoi, envoi raté) que pour un compte existant.
+    // L'afficher dirait si le compte existe ; l'écran est donc le même dans tous les cas.
+    await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${await origine()}/auth/confirm?next=/nouveau-mot-de-passe`,
     });
-    const limite = error && (error.code === "over_email_send_rate_limit" || error.code === "over_request_rate_limit" || error.status === 429);
-    if (limite) return { status: "error", message: authErrorMessage(error), values: { email } };
   } catch {
     return { status: "error", message: authErrorMessage(null), values: { email } };
   }
@@ -173,6 +175,22 @@ export async function requestReset(_prev: FormState, formData: FormData): Promis
 }
 
 const LIEN_EXPIRE = "Ce lien a expiré. Demandez-en un nouveau.";
+/** Temps laissé pour choisir le nouveau mot de passe après avoir ouvert le lien reçu par e-mail. */
+const PREUVE_PAR_EMAIL_SECONDES = 15 * 60;
+
+/**
+ * La session vient-elle d'un lien reçu par e-mail, il y a peu ? Le jeton signé par Supabase dit comment la session
+ * a été ouverte (« amr ») : la vérification du lien y figure comme « otp » (« recovery » selon les versions).
+ * Une session ouverte par mot de passe ou par Google ne suffit pas : sur un ordinateur partagé resté connecté,
+ * personne ne doit pouvoir changer le mot de passe sans le lien.
+ */
+function preuveParEmailRecente(amr: unknown, maintenant: number): boolean {
+  if (!Array.isArray(amr)) return false;
+  return amr.some((entree: unknown) => {
+    const { method, timestamp } = (entree ?? {}) as { method?: unknown; timestamp?: unknown };
+    return (method === "otp" || method === "recovery") && typeof timestamp === "number" && maintenant - timestamp <= PREUVE_PAR_EMAIL_SECONDES;
+  });
+}
 
 /** Nouveau mot de passe (NdReinitialisation), ouvert depuis le lien reçu ; les autres appareils sont déconnectés. */
 export async function updatePassword(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -181,6 +199,10 @@ export async function updatePassword(_prev: FormState, formData: FormData): Prom
 
   try {
     const supabase = await createClient();
+    const { data } = await supabase.auth.getClaims();
+    if (!data?.claims?.sub || !preuveParEmailRecente(data.claims.amr, Math.floor(Date.now() / 1000))) {
+      return { status: "error", message: LIEN_EXPIRE };
+    }
     const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
     if (error) {
       const sansSession = (error as { name?: string }).name === "AuthSessionMissingError" || error.code === "session_not_found";
@@ -193,14 +215,23 @@ export async function updatePassword(_prev: FormState, formData: FormData): Prom
   redirect("/accueil");
 }
 
-/** Déconnexion (NdDeconnexion) : ferme la session de cet appareil seulement, puis ramène à la connexion. */
+/**
+ * Déconnexion (NdDeconnexion) : ferme la session de cet appareil seulement. Pas de redirection ici :
+ * l'écran recharge entièrement la page de connexion (rien du compte ne reste en mémoire).
+ */
 export async function signOut(): Promise<void> {
   try {
     const supabase = await createClient();
     await supabase.auth.signOut({ scope: "local" });
   } catch {
-    // Base injoignable : les cookies de session sont tout de même effacés côté navigateur par Supabase au prochain passage.
+    // Base injoignable : la session ne peut pas être fermée chez Supabase ; elle l'est tout de même sur cet appareil (ci-dessous).
   }
-  (await cookies()).delete(REMEMBER_COOKIE);
-  redirect("/connexion");
+  // Cookies de session de Supabase (« sb-<projet>-auth-token », parfois découpés en morceaux) et choix « Se souvenir de moi » :
+  // effacés dans tous les cas, sinon le rechargement ramènerait à l'accueil.
+  const magasin = await cookies();
+  magasin
+    .getAll()
+    .filter(({ name }) => name.startsWith("sb-"))
+    .forEach(({ name }) => magasin.delete(name));
+  magasin.delete(REMEMBER_COOKIE);
 }

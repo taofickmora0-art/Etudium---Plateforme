@@ -63,7 +63,15 @@ describe("Connexion", () => {
     auth.signInWithPassword.mockResolvedValue({ error: { code: "invalid_credentials", status: 400 } });
     const state = await signIn(IDLE, form(BONS));
     expect(state).toMatchObject({ status: "error", message: "E-mail ou mot de passe incorrect." });
-    expect(state.values).toEqual({ email: "aicha.k@exemple.com" });
+    expect(state.values).toEqual({ email: "aicha.k@exemple.com", remember: "1" });
+  });
+
+  it("après une erreur, le choix « Se souvenir de moi » est gardé", async () => {
+    auth.signInWithPassword.mockResolvedValue({ error: { code: "invalid_credentials", status: 400 } });
+    const { remember, ...sansSouvenir } = BONS;
+    void remember;
+    expect((await signIn(IDLE, form(sansSouvenir))).values?.remember).toBe("0");
+    expect((await signIn(IDLE, form({ email: "pas-une-adresse", password: "x" }))).values?.remember).toBe("0");
   });
 
   it("un compte non vérifié repart vers le code", async () => {

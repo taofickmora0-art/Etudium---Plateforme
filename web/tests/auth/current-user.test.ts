@@ -23,9 +23,10 @@ vi.mock("@/lib/env", () => ({
   },
 }));
 
-const jar = new Map<string, string>([["etudium-souvenir", "1"]]);
+const jar = new Map<string, string>();
 vi.mock("next/headers", () => ({
   cookies: async () => ({
+    getAll: () => [...jar].map(([name, value]) => ({ name, value })),
     get: (name: string) => (jar.has(name) ? { name, value: jar.get(name) } : undefined),
     set: (name: string, value: string) => jar.set(name, value),
     delete: (name: string) => jar.delete(name),
@@ -104,17 +105,21 @@ describe("Déconnexion", () => {
   // Accolades : une fonction renvoyée par beforeEach serait appelée comme nettoyage (mockReset renvoie la doublure).
   beforeEach(() => {
     auth.signOut.mockReset();
+    jar.clear();
+    jar.set("etudium-souvenir", "1").set("sb-projet-auth-token", "jeton").set("sb-projet-auth-token.1", "suite").set("autre", "garde");
   });
 
-  it("la déconnexion ferme la session et mène à la connexion", async () => {
+  // Pas de redirection côté serveur : l'écran recharge entièrement la page de connexion (rien du compte ne reste en mémoire).
+  it("la déconnexion ferme la session de cet appareil", async () => {
     auth.signOut.mockResolvedValue({ error: null });
-    await expect(signOut()).rejects.toThrow("NEXT_REDIRECT:/connexion");
+    await expect(signOut()).resolves.toBeUndefined();
     expect(auth.signOut).toHaveBeenCalledWith({ scope: "local" });
-    expect(jar.has("etudium-souvenir")).toBe(false);
+    expect([...jar.keys()]).toEqual(["autre"]);
   });
 
-  it("même si la base ne répond pas, on quitte l'espace", async () => {
+  it("même si la base ne répond pas, cet appareil est déconnecté", async () => {
     auth.signOut.mockRejectedValue(new Error("réseau"));
-    await expect(signOut()).rejects.toThrow("NEXT_REDIRECT:/connexion");
+    await expect(signOut()).resolves.toBeUndefined();
+    expect([...jar.keys()]).toEqual(["autre"]);
   });
 });

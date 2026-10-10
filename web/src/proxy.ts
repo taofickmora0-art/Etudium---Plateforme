@@ -11,6 +11,9 @@ import { getPublicEnv } from "@/lib/env";
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
   let signedIn = false;
+  // En-têtes fournis par Supabase quand il écrit les cookies de session : interdisent toute mise en cache,
+  // pour qu'une réponse portant le jeton d'une personne ne soit jamais resservie à une autre.
+  let entetesSansCache: Record<string, string> = {};
 
   let env;
   try {
@@ -27,10 +30,12 @@ export async function proxy(request: NextRequest) {
     const supabase = createServerClient(supabaseUrl, supabaseKey, {
       cookies: {
         getAll: () => request.cookies.getAll(),
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet, headers) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, withRememberChoice(options, remember)));
+          entetesSansCache = { ...entetesSansCache, ...headers };
+          Object.entries(entetesSansCache).forEach(([nom, valeur]) => response.headers.set(nom, valeur));
         },
       },
     });
@@ -49,6 +54,7 @@ export async function proxy(request: NextRequest) {
   const redirection = NextResponse.redirect(new URL(redirect, request.url));
   // Garder les cookies que Supabase vient d'écrire (session renouvelée ou effacée).
   response.cookies.getAll().forEach((cookie) => redirection.cookies.set(cookie));
+  Object.entries(entetesSansCache).forEach(([nom, valeur]) => redirection.headers.set(nom, valeur));
   return redirection;
 }
 

@@ -26,4 +26,12 @@ describe("Messages d'erreur", () => {
     expect(safeNext("/formations?parcours=digital")).toBe("/formations?parcours=digital");
     expect(safeNext(undefined, "/connexion")).toBe("/connexion");
   });
+
+  it("safeNext refuse les caractères invisibles que les navigateurs effacent (« /\\t/pirate » devient « //pirate »)", () => {
+    expect(safeNext("/\t/pirate.example")).toBe("/accueil");
+    expect(safeNext("/\n/pirate.example")).toBe("/accueil");
+    expect(safeNext("/\r\n/pirate.example")).toBe("/accueil");
+    expect(safeNext("/\t\\pirate.example")).toBe("/accueil");
+    expect(safeNext("/certificats#attestation")).toBe("/certificats#attestation");
+  });
 });
