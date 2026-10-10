@@ -169,24 +169,36 @@ Relance l’application si elle tournait déjà (**Ctrl+C**, puis `npm --prefix 
 
 ### Devenir super-administrateur (tâche 0.6)
 
-Ton compte doit avoir été créé (étape 8). Ensuite : **SQL Editor → New query**, remplace l’adresse par la tienne, puis **Run** :
+Ton compte doit avoir été créé (étape 8). Ensuite : **SQL Editor → New query**, remplace l’adresse par la tienne (majuscules ou minuscules, peu importe), puis **Run** :
 
 ```sql
 insert into public.roles (profil_id, role)
 select id, 'super_admin'::public.role_etudium
 from auth.users
-where email = 'ton.adresse@exemple.com'
-on conflict do nothing;
+where lower(email) = lower('ton.adresse@exemple.com')
+on conflict do nothing
+returning profil_id, role;
 ```
 
-Le résultat attendu est **« Success. 1 row affected »** (ou 0 si tu l’avais déjà fait). Recharge la page : le menu du profil montre **« Espace formateur »** et **« Back-office »**.
+**Ce que tu dois voir :** une ligne dans le tableau des résultats, avec `super_admin` dans la colonne `role`.
 
-C’est la seule fois où un rôle se donne dans l’éditeur SQL : par la suite, seul un super-administrateur pourra attribuer ou retirer un rôle (la base le refuse à tous les autres).
+Si Supabase répond **« Success. No rows returned »**, rien n’a été ajouté : soit l’adresse ne correspond à aucun compte (vérifie-la), soit tu avais déjà ce rôle. Pour en avoir le cœur net, cette requête liste tous les rôles donnés :
+
+```sql
+select u.email, r.role
+from public.roles r
+join auth.users u on u.id = r.profil_id
+order by 1;
+```
+
+Recharge ensuite la page de l’application : le menu du profil montre **« Espace formateur »** et **« Back-office »**.
+
+Jusqu’au back-office (lot 6), les rôles se donnent ici, dans l’éditeur SQL. Depuis l’application, la base refuse à quiconque n’est pas super-administrateur d’attribuer ou de retirer un rôle.
 
 **Valider la tâche 0.6 :**
 
-1. Crée un second compte, étudiant, avec une autre adresse (une adresse de ton équipe Supabase tant que Resend n’est pas branché).
-2. Avec ce compte, tape http://localhost:3000/admin : tu reviens sur l’accueil, et le menu du profil ne montre ni « Espace formateur » ni « Back-office ».
+1. Déconnecte-toi (ou ouvre une fenêtre de navigation privée), puis crée un second compte, étudiant, avec une autre adresse (une adresse de ton équipe Supabase tant que Resend n’est pas branché).
+2. Avec ce compte, tape http://localhost:3000/admin : après un court instant, tu reviens sur l’accueil, et le menu du profil ne montre ni « Espace formateur » ni « Back-office ».
 3. Avec ton compte : `/admin` et `/formateur` s’ouvrent, et le menu du profil coche l’espace où tu te trouves.
 
 ---

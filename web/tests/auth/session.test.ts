@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isDemoMode, PAGES_PUBLIQUES, routeFor } from "@/lib/auth/routing";
+import { isDemoMode, routeFor } from "@/lib/auth/routing";
 import { withRememberChoice } from "@/lib/auth/session-cookies";
 
 const TRENTE_JOURS = 30 * 24 * 60 * 60;
@@ -28,8 +28,32 @@ describe("Pages protégées", () => {
   });
 
   it("les pages publiques restent ouvertes sans compte", () => {
-    for (const pathname of [...PAGES_PUBLIQUES, "/auth/callback", "/auth/confirm"]) {
+    // Liste écrite en toutes lettres (et non relue dans PAGES_PUBLIQUES) : si l'une d'elles sortait de la liste,
+    // la connexion elle-même deviendrait inaccessible et tournerait en rond.
+    const publiques = [
+      "/connexion",
+      "/inscription",
+      "/verification-email",
+      "/mot-de-passe-oublie",
+      "/nouveau-mot-de-passe",
+      "/conditions",
+      "/confidentialite",
+      "/etat",
+      "/auth/callback",
+      "/auth/confirm",
+    ];
+    for (const pathname of publiques) {
       expect(routeFor({ pathname, signedIn: false, hadSession: false }), pathname).toEqual({});
+    }
+  });
+
+  it("une redirection ne mène jamais vers une page elle-même protégée", () => {
+    for (const pathname of ["/", "/accueil", "/admin", "/nouvelle-page"]) {
+      for (const hadSession of [false, true]) {
+        const { redirect } = routeFor({ pathname, signedIn: false, hadSession });
+        const cible = new URL(redirect ?? "/connexion", "http://etudium.invalid").pathname;
+        expect(routeFor({ pathname: cible, signedIn: false, hadSession }), `${pathname} → ${cible}`).toEqual({});
+      }
     }
   });
 
