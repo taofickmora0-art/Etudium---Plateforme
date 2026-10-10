@@ -77,12 +77,18 @@ Ton processeur (AMD Ryzen 7 3750H) fait partie de ceux que Microsoft accepte pou
 
 ---
 
-## 4. Valider la tâche 0.2 (les composants)
+## 4. Valider les tâches 0.2 et 0.3
 
 1. Dans un terminal ouvert sur le dossier du projet :
    ```
    npm --prefix web run dev
    ```
-2. Ouvre http://localhost:3000/vitrine.
-3. Pour chaque section (Fondations, Boutons, Formulaires, Cartes, Navigation, Messages, Menus, Modales), compare avec la planche correspondante de l’artefact design. Essaie aussi sur ton téléphone ou en réduisant la fenêtre.
-4. Dis-moi ce qui ne te va pas : une couleur, un texte, un espacement, un comportement. Je corrige avant d’attaquer la tâche 0.3 (les écrans de connexion).
+2. **Composants (0.2)** : ouvre http://localhost:3000/vitrine. Pour chaque section (Fondations, Boutons, Formulaires, Cartes, Navigation, Messages, Menus, Modales), compare avec la planche correspondante de l’artefact design.
+3. **Coque de l’application (0.3)** : ouvre http://localhost:3000/accueil (ou clique « Ouvrir l’application » sur la page de départ).
+   - Passe par toutes les entrées de la barre latérale : chacune ouvre sa page, ou une page « Bientôt disponible » qui dit à quel lot elle arrive.
+   - Ouvre la cloche, puis le rond de profil, puis « Se déconnecter » (pour l’instant, cela ramène à la page de départ).
+   - Tape une adresse inventée (par exemple http://localhost:3000/nimporte-quoi) : la page « Page introuvable » s’affiche.
+   - Refais le tour en réduisant la fenêtre, ou sur ton téléphone : la barre du bas remplace la barre latérale, et l’onglet « Profil » ouvre le menu du téléphone.
+4. Dis-moi ce qui ne te va pas : une couleur, un texte, un espacement, un comportement. Je corrige avant d’attaquer la tâche 0.4 (inscription et connexion).
+
+> Pour tester sur ton téléphone pendant que l’application tourne sur l’ordinateur, les deux doivent être sur le même Wi-Fi ; dis-le-moi et je te donne la marche à suivre.
