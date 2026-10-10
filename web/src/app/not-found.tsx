@@ -31,7 +31,7 @@ export default function NotFound() {
       </header>
       <div className="flex flex-1 flex-col gap-5 rounded-coque bg-coque p-5">
         <section
-          className="flex flex-1 items-center justify-center rounded-panneau bg-bleu bg-[radial-gradient(rgba(255,255,255,0.13)_1.2px,transparent_1.2px)] bg-size-[22px_22px] p-[clamp(28px,5vw,64px)] text-white"
+          className="trame-points flex flex-1 items-center justify-center rounded-panneau bg-bleu p-[clamp(28px,5vw,64px)] text-white"
         >
           <div className="flex max-w-[640px] flex-col items-center gap-[18px] text-center">
             <div aria-hidden="true" className="flex items-center">

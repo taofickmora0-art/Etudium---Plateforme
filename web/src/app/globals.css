@@ -124,6 +124,12 @@ body {
   }
 }
 
+/* Trame de points blancs des bannières bleues (Nd404, écrans de compte). */
+@utility trame-points {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.13) 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
+}
+
 /* Contour de focus clavier des planches : 2 px bleu Étudium, décalé de 2 px. */
 @utility focus-etudium {
   &:focus-visible {
