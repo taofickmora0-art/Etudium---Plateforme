@@ -3,11 +3,15 @@ import { cookies } from "next/headers";
 import { REMEMBER_COOKIE, rememberFromCookie, withRememberChoice } from "@/lib/auth/session-cookies";
 import { getPublicEnv } from "@/lib/env";
 
-/** Client Supabase pour les composants serveur, actions serveur et routes. */
-export async function createClient() {
+/**
+ * Client Supabase pour les composants serveur, actions serveur et routes.
+ * `remember` force la durée des cookies (« Se souvenir de moi » choisi à la connexion) ;
+ * sinon, elle suit le cookie `etudium-souvenir`.
+ */
+export async function createClient(options: { remember?: boolean } = {}) {
   const { supabaseUrl, supabaseKey } = getPublicEnv();
   const cookieStore = await cookies();
-  const remember = rememberFromCookie(cookieStore.get(REMEMBER_COOKIE)?.value);
+  const remember = options.remember ?? rememberFromCookie(cookieStore.get(REMEMBER_COOKIE)?.value);
 
   return createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
