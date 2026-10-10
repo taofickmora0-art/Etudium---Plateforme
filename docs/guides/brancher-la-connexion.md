@@ -167,19 +167,27 @@ Relance l’application si elle tournait déjà (**Ctrl+C**, puis `npm --prefix 
 8. **Continuer avec Google** → choisis ton compte → tu arrives sur l’accueil.
 9. Connecte-toi en **décochant** « Se souvenir de moi », ferme complètement le navigateur et rouvre http://localhost:3000/accueil : il faut se reconnecter. (Si ton navigateur est réglé pour rouvrir les onglets là où tu les avais laissés, il garde la session : c’est un réglage du navigateur, pas de l’application.)
 
-### Facultatif : voir les espaces formateur et administration
+### Devenir super-administrateur (tâche 0.6)
 
-La gestion des rôles arrive à la tâche 0.6. En attendant, pour voir ces entrées du menu sur ton compte : **SQL Editor → New query**, remplace l’adresse, puis **Run** :
+Ton compte doit avoir été créé (étape 8). Ensuite : **SQL Editor → New query**, remplace l’adresse par la tienne, puis **Run** :
 
 ```sql
 insert into public.roles (profil_id, role)
-select id, r::public.role_etudium
-from auth.users, unnest(array['formateur', 'admin']) as r
+select id, 'super_admin'::public.role_etudium
+from auth.users
 where email = 'ton.adresse@exemple.com'
 on conflict do nothing;
 ```
 
-Déconnecte-toi puis reconnecte-toi : le menu du profil montre les deux espaces.
+Le résultat attendu est **« Success. 1 row affected »** (ou 0 si tu l’avais déjà fait). Recharge la page : le menu du profil montre **« Espace formateur »** et **« Back-office »**.
+
+C’est la seule fois où un rôle se donne dans l’éditeur SQL : par la suite, seul un super-administrateur pourra attribuer ou retirer un rôle (la base le refuse à tous les autres).
+
+**Valider la tâche 0.6 :**
+
+1. Crée un second compte, étudiant, avec une autre adresse (une adresse de ton équipe Supabase tant que Resend n’est pas branché).
+2. Avec ce compte, tape http://localhost:3000/admin : tu reviens sur l’accueil, et le menu du profil ne montre ni « Espace formateur » ni « Back-office ».
+3. Avec ton compte : `/admin` et `/formateur` s’ouvrent, et le menu du profil coche l’espace où tu te trouves.
 
 ---
 
