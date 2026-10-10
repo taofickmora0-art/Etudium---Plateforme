@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Boutons } from "./sections/Boutons";
 import { Fondations } from "./sections/Fondations";
+import { Formulaires } from "./sections/Formulaires";
 
 export const metadata: Metadata = {
   title: "Vitrine des composants · Étudium",
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 const PLANCHES = [
   { id: "fondations", label: "Fondations" },
   { id: "boutons", label: "Boutons" },
+  { id: "formulaires", label: "Formulaires" },
 ];
 
 export default function VitrinePage() {
@@ -31,6 +33,7 @@ export default function VitrinePage() {
       </header>
       <Fondations />
       <Boutons />
+      <Formulaires />
     </div>
   );
 }
