@@ -1,0 +1,19 @@
+# Dépendances et builds
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Secrets : jamais dans le dépôt
+.env
+.env.*
+!.env.example
+
+# Divers
+*.log
+.DS_Store
+Thumbs.db
+.vercel/
+.superpowers/
