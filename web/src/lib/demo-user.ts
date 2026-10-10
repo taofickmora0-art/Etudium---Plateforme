@@ -11,6 +11,8 @@ export const DEMO_USER = {
   initials: "AK",
   email: "aicha.k@exemple.com",
   roles: ["etudiant", "formateur", "admin"] as Role[],
+  /** Ligne sous le nom sur la page « Profil » du téléphone. */
+  statut: "Étudiante",
   formule: "Standard",
   serie: 8,
   points: 165,
