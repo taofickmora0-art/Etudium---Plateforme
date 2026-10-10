@@ -4,6 +4,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/Button";
+import { devOnlyPagesVisible } from "@/lib/dev-only";
 import { EnvError, getPublicEnv } from "@/lib/env";
 import { checkSupabase } from "@/lib/supabase/health";
 
@@ -72,9 +73,11 @@ export default function EtatPage() {
               <Button asChild>
                 <Link href="/accueil">Ouvrir l’application</Link>
               </Button>
-              <Button asChild variant="contour">
-                <Link href="/vitrine">Vitrine des composants</Link>
-              </Button>
+              {devOnlyPagesVisible() && (
+                <Button asChild variant="contour">
+                  <Link href="/vitrine">Vitrine des composants</Link>
+                </Button>
+              )}
             </div>
             <p className="text-xs leading-[18px] text-discret">Tâche 0.1 · environnement local</p>
           </div>

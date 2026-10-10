@@ -33,7 +33,7 @@ Après une modification de `.env.local`, arrêtez puis relancez `npm run dev` : 
 - `/etat` : état de la connexion à la base (ouverte sans compte)
 - `/connexion`, `/inscription`, `/mot-de-passe-oublie` : écrans de compte
 - `/accueil` : espace connecté (demande un compte dès que la base est branchée)
-- `/vitrine` : tous les composants de l’interface
+- `/vitrine` : tous les composants de l’interface (sur l’ordinateur seulement, jamais sur le site en ligne)
 
 ## Autres commandes
 

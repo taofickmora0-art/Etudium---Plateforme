@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { devOnlyPagesVisible } from "@/lib/dev-only";
 import { Boutons } from "./sections/Boutons";
 import { Cartes } from "./sections/Cartes";
 import { Fondations } from "./sections/Fondations";
@@ -24,7 +26,9 @@ const PLANCHES = [
   { id: "modales", label: "Modales" },
 ];
 
+/** Vitrine des composants : outil de développement, sur l'ordinateur seulement (jamais sur le site en ligne). */
 export default function VitrinePage() {
+  if (!devOnlyPagesVisible()) notFound();
   return (
     <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-12 px-4 py-8 sm:px-14 sm:py-14">
       <header className="flex flex-col gap-4">
