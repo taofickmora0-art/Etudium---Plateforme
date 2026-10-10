@@ -74,6 +74,16 @@ describe("Fenêtres", () => {
     expect(onOpenChange).not.toHaveBeenCalled();
   });
 
+  it("la fenêtre a une forme téléphone", () => {
+    render(<ConfirmDialog open onOpenChange={() => {}} onConfirm={() => {}} {...DECONNEXION} />);
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveClass("max-sm:bottom-0");
+    const poignee = dialog.querySelector("[data-poignee]");
+    expect(poignee).not.toBeNull();
+    expect(poignee).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByRole("button", { name: "Se déconnecter" }).parentElement).toHaveClass("max-sm:flex-col-reverse");
+  });
+
   it("la suppression exige le mot exact", async () => {
     const user = userEvent.setup();
     render(

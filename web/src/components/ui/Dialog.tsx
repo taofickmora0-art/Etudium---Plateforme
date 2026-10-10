@@ -42,6 +42,8 @@ export type DialogProps = {
 
 /**
  * Fenêtre de dialogue (planche « Modales et confirmations ») : 420 px, rayon 24, croix en haut à droite.
+ * Sous 640 px (NdMobDeconnexion), elle devient une feuille collée en bas : poignée, pas de croix,
+ * boutons empilés pleine largeur, l'action au-dessus.
  * Le focus reste dans la fenêtre ; Échap la ferme ; il revient ensuite sur le bouton qui l'a ouverte.
  */
 export function Dialog({ open, onOpenChange, title, description, icon, iconTone = "neutre", children, footer, dismissible = true, returnFocus, className }: DialogProps) {
@@ -52,7 +54,7 @@ export function Dialog({ open, onOpenChange, title, description, icon, iconTone 
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
         {/* Voile : sur le fond de page #F2F6FD, il donne le gris-bleu #818DA6 de la planche. */}
-        <RadixDialog.Overlay className="fixed inset-0 z-50 bg-[#36476C]/60 motion-safe:animate-fondu" />
+        <RadixDialog.Overlay className="fixed inset-0 z-50 bg-[#36476C]/60 motion-safe:animate-fondu max-sm:bg-encre/50" />
         <RadixDialog.Content
           onEscapeKeyDown={block}
           onCloseAutoFocus={(event) => {
@@ -67,30 +69,36 @@ export function Dialog({ open, onOpenChange, title, description, icon, iconTone 
           {...(description ? {} : { "aria-describedby": undefined })}
           className={cn(
             "fixed top-1/2 left-1/2 z-50 box-border max-h-[calc(100dvh-32px)] w-[420px] max-w-[calc(100vw-32px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-bloc bg-panneau p-7 shadow-menu outline-none motion-safe:animate-apparition",
+            "max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-t-panneau max-sm:rounded-b-none max-sm:px-5 max-sm:pt-3 max-sm:pb-[calc(24px+env(safe-area-inset-bottom))]",
             className,
           )}
         >
+          <span data-poignee="" aria-hidden="true" className="mx-auto mb-[18px] hidden h-1 w-10 rounded-full bg-sur-encre max-sm:block" />
           {dismissible && (
             <RadixDialog.Close
               aria-label="Fermer"
-              className="focus-etudium cible-tactile absolute top-4 right-4 flex size-9 cursor-pointer items-center justify-center rounded-puce border-0 bg-transparent p-0 text-discret transition-colors hover:bg-coque"
+              className="focus-etudium cible-tactile absolute top-4 right-4 flex size-9 max-sm:hidden cursor-pointer items-center justify-center rounded-puce border-0 bg-transparent p-0 text-discret transition-colors hover:bg-coque"
             >
               <Icon icon={Cancel01Icon} size={18} />
             </RadixDialog.Close>
           )}
           {icon && (
-            <span className={cn("mb-[18px] flex size-12 flex-none items-center justify-center rounded-bouton", ICON_TONES[iconTone])}>
+            <span className={cn("mb-[18px] flex size-12 flex-none items-center justify-center rounded-bouton max-sm:mb-3.5", ICON_TONES[iconTone])}>
               <Icon icon={icon} size={22} />
             </span>
           )}
-          <RadixDialog.Title className={cn("m-0 text-xl leading-7 font-semibold text-balance text-encre", !icon && dismissible && "pr-9")}>
+          <RadixDialog.Title className={cn("m-0 text-xl leading-7 font-semibold text-balance text-encre", !icon && dismissible && "pr-9 max-sm:pr-0")}>
             {title}
           </RadixDialog.Title>
           {description && (
             <RadixDialog.Description className="mt-2 mb-0 text-sm leading-[22px] text-pretty text-discret">{description}</RadixDialog.Description>
           )}
           {children && <div className="mt-[18px]">{children}</div>}
-          {footer && <div className="mt-6 flex flex-wrap justify-end gap-2">{footer}</div>}
+          {footer && (
+            <div className="mt-6 flex flex-wrap justify-end gap-2 max-sm:mt-5 max-sm:flex-col-reverse max-sm:[&>*]:h-12 max-sm:[&>*]:w-full max-sm:[&>*]:rounded-bouton max-sm:[&>*]:px-[18px] max-sm:[&>*]:text-base">
+              {footer}
+            </div>
+          )}
         </RadixDialog.Content>
       </RadixDialog.Portal>
     </RadixDialog.Root>
