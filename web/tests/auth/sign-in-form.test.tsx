@@ -6,11 +6,11 @@ import { SignInForm } from "@/components/auth/SignInForm";
 let terminer: (state: unknown) => void = () => {};
 const signIn = vi.fn(() => new Promise((resolve) => (terminer = resolve)));
 vi.mock("@/lib/auth/actions", () => ({ signIn: () => signIn(), signInWithGoogle: vi.fn() }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), push: vi.fn() }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), push: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
 
 describe("Formulaire de connexion", () => {
   it("le formulaire ne s'envoie qu'une fois", async () => {
-    render(<SignInForm next="/accueil" />);
+    render(<SignInForm />);
     fireEvent.change(screen.getByLabelText("Adresse e-mail"), { target: { value: "aicha.k@exemple.com" } });
     fireEvent.change(screen.getByLabelText("Mot de passe"), { target: { value: "motdepasse" } });
     // Deux clics rapides : le second tombe sur un bouton déjà en chargement.

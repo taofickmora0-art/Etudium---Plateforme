@@ -1,34 +1,16 @@
-import { Suspense } from "react";
 import type { Metadata } from "next";
 import { AuthHeading, AuthLayout } from "@/components/auth/AuthLayout";
-import { SessionExpiredDialog } from "@/components/auth/SessionExpiredDialog";
+import { SignInNotices } from "@/components/auth/FromAddress";
 import { SignInForm } from "@/components/auth/SignInForm";
-import { Banner } from "@/components/ui/Banner";
 import { CourseIllustration } from "@/components/ui/CourseIllustration";
-import { safeNext } from "@/lib/auth/messages";
 
 export const metadata: Metadata = { title: "Connexion · Étudium" };
 
-type Params = Promise<{ next?: string; session?: string; erreur?: string }>;
-
-/** Lit l'adresse (session expirée, retour de Google, page demandée) : sous Suspense avec Cache Components. */
-async function Formulaire({ searchParams }: { searchParams: Params }) {
-  const { next, session, erreur } = await searchParams;
-  return (
-    <>
-      {session === "expiree" && <SessionExpiredDialog />}
-      {erreur === "google" && (
-        <Banner tone="erreur" title="La connexion avec Google n’a pas abouti.">
-          Réessayez ou utilisez votre e-mail.
-        </Banner>
-      )}
-      <SignInForm next={safeNext(next)} />
-    </>
-  );
-}
-
-/** Connexion (NdConnexion, NdConnexionErreur, NdSessionExpiree, NdMobConnexion). */
-export default function ConnexionPage({ searchParams }: { searchParams: Params }) {
+/**
+ * Connexion (NdConnexion, NdConnexionErreur, NdSessionExpiree, NdMobConnexion).
+ * Page statique : l'adresse (session expirée, retour de Google, page demandée) est lue dans le navigateur.
+ */
+export default function ConnexionPage() {
   return (
     <AuthLayout aside="connexion">
       <AuthHeading
@@ -41,9 +23,8 @@ export default function ConnexionPage({ searchParams }: { searchParams: Params }
       >
         Connectez-vous pour reprendre votre apprentissage.
       </AuthHeading>
-      <Suspense fallback={<SignInForm next="/accueil" />}>
-        <Formulaire searchParams={searchParams} />
-      </Suspense>
+      <SignInNotices />
+      <SignInForm />
     </AuthLayout>
   );
 }

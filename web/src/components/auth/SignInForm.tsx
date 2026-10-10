@@ -10,13 +10,14 @@ import { PasswordInput } from "@/components/ui/PasswordInput";
 import { TextInput } from "@/components/ui/TextInput";
 import { signIn } from "@/lib/auth/actions";
 import { IDLE } from "@/lib/auth/schemas";
+import { NextField } from "./FromAddress";
 import { GoogleButton, OrDivider } from "./GoogleButton";
 
 const IDENTIFIANTS_INCORRECTS = "E-mail ou mot de passe incorrect.";
 export const LIEN = "focus-etudium text-sm leading-[22px] font-medium text-bleu no-underline hover:underline";
 
 /** Formulaire de connexion (NdConnexion, NdConnexionErreur). */
-export function SignInForm({ next }: { next: string }) {
+export function SignInForm() {
   const [state, action, pending] = useActionState(signIn, IDLE);
   return (
     <>
@@ -26,7 +27,7 @@ export function SignInForm({ next }: { next: string }) {
             {state.message === IDENTIFIANTS_INCORRECTS ? "Vérifiez vos identifiants, puis réessayez." : null}
           </Banner>
         )}
-        <input type="hidden" name="next" value={next} />
+        <NextField />
         <Field label="Adresse e-mail" htmlFor="connexion-email" error={state.fieldErrors?.email}>
           <TextInput
             id="connexion-email"
@@ -53,7 +54,7 @@ export function SignInForm({ next }: { next: string }) {
         </Button>
       </form>
       <OrDivider />
-      <GoogleButton next={next} />
+      <GoogleButton />
       <p className="m-0 text-center text-sm leading-[22px] text-discret">
         Pas encore de compte ?{" "}
         <Link href="/inscription" className={LIEN}>

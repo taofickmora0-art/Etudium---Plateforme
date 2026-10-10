@@ -9,8 +9,10 @@ import { getPublicEnv } from "@/lib/env";
  * sinon, elle suit le cookie `etudium-souvenir`.
  */
 export async function createClient(options: { remember?: boolean } = {}) {
-  const { supabaseUrl, supabaseKey } = getPublicEnv();
+  // Les cookies d'abord : pendant la compilation, Next met cette lecture en attente (la page sera rendue à la requête),
+  // et une configuration absente ne fait pas échouer la compilation.
   const cookieStore = await cookies();
+  const { supabaseUrl, supabaseKey } = getPublicEnv();
   const remember = options.remember ?? rememberFromCookie(cookieStore.get(REMEMBER_COOKIE)?.value);
 
   return createServerClient(supabaseUrl, supabaseKey, {

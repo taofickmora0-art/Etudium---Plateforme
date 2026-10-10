@@ -4,6 +4,7 @@ import { useFormStatus } from "react-dom";
 import { GoogleIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/Button";
 import { signInWithGoogle } from "@/lib/auth/actions";
+import { NextField } from "./FromAddress";
 
 function Bouton() {
   const { pending } = useFormStatus();
@@ -15,10 +16,10 @@ function Bouton() {
 }
 
 /** « Continuer avec Google » (NdConnexion, NdInscription) : un compte Google sans profil Étudium en crée un. */
-export function GoogleButton({ next = "/accueil" }: { next?: string }) {
+export function GoogleButton() {
   return (
     <form action={signInWithGoogle}>
-      <input type="hidden" name="next" value={next} />
+      <NextField />
       <Bouton />
     </form>
   );

@@ -22,9 +22,13 @@ describe("Écran « Mot de passe oublié »", () => {
     expect(screen.getByRole("button", { name: "Renvoyer le lien" })).toBeInTheDocument();
   });
 
-  it("un lien expiré est annoncé", () => {
-    render(<ResetRequestForm linkExpired />);
-    expect(screen.getByRole("status")).toHaveTextContent("Ce lien a expiré. Demandez-en un nouveau.");
+  it("l'avis venu de l'adresse s'efface dès le premier envoi", async () => {
+    vi.mocked(requestReset).mockResolvedValue({ status: "error", message: "Trop de demandes. Patientez une minute, puis réessayez." });
+    render(<ResetRequestForm notice={<p>Ce lien a expiré.</p>} />);
+    expect(screen.getByText("Ce lien a expiré.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Envoyer le lien" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Trop de demandes.");
+    expect(screen.queryByText("Ce lien a expiré.")).not.toBeInTheDocument();
   });
 });
 

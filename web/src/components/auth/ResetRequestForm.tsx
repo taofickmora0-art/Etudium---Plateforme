@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, type ReactNode } from "react";
 import Link from "next/link";
 import { Mail01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import { Banner } from "@/components/ui/Banner";
@@ -13,7 +13,7 @@ import { AuthHeading } from "./AuthLayout";
 import { LIEN } from "./SignInForm";
 
 /** « Mot de passe oublié » (NdMotDePasse), puis « Vérifiez votre boîte de réception » (NdMotDePasseEnvoye). */
-export function ResetRequestForm({ linkExpired = false }: { linkExpired?: boolean }) {
+export function ResetRequestForm({ notice }: { notice?: ReactNode }) {
   const [state, action, pending] = useActionState(requestReset, IDLE);
 
   if (state.status === "success") {
@@ -42,7 +42,8 @@ export function ResetRequestForm({ linkExpired = false }: { linkExpired?: boolea
       <AuthHeading icon={SquareLock02Icon} title="Mot de passe oublié">
         Saisissez l’adresse e-mail de votre compte. Nous vous enverrons un lien pour choisir un nouveau mot de passe.
       </AuthHeading>
-      {linkExpired && state.status === "idle" && <Banner tone="attention" title="Ce lien a expiré.">Demandez-en un nouveau.</Banner>}
+      {/* Avis venu de l’adresse (lien expiré) : il s’efface dès le premier envoi. */}
+      {state.status === "idle" && notice}
       <form action={action} noValidate className="flex flex-col gap-[18px]">
         {state.status === "error" && state.message && <Banner tone="erreur" title={state.message} />}
         <Field label="Adresse e-mail" htmlFor="oubli-email" error={state.fieldErrors?.email}>
