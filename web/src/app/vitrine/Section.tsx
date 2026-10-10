@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { Eyebrow } from "@/components/ui/Text";
 
-/** Bloc blanc d'une planche : rayon 28, intertitre en capitales. */
-export function Panel({ title, children }: { title: string; children: ReactNode }) {
+/** Bloc d'une planche : blanc (ou gris-bleu « coque » pour montrer la barre latérale), rayon 28, intertitre en capitales. */
+export function Panel({ title, coque = false, children }: { title: string; coque?: boolean; children: ReactNode }) {
   return (
-    <section className="rounded-panneau bg-panneau px-5 pt-6 pb-7 sm:px-8 sm:pt-7 sm:pb-8">
+    <section className={`rounded-panneau px-5 pt-6 pb-7 sm:px-8 sm:pt-7 sm:pb-8 ${coque ? "bg-coque" : "bg-panneau"}`}>
       <Eyebrow as="h3" className="mb-5">
         {title}
       </Eyebrow>

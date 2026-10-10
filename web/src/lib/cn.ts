@@ -6,7 +6,7 @@ import { extendTailwindMerge } from "tailwind-merge";
 const COULEURS = [
   "page", "coque", "coque-survol", "panneau", "fond-doux",
   "encre", "titre", "texte", "ardoise", "ardoise-fonce", "discret", "indice", "gris-icone",
-  "bordure-carte", "bordure", "bordure-champ", "separateur", "piste", "inactif",
+  "bordure-carte", "bordure", "bordure-champ", "separateur", "filet", "piste", "inactif",
   "bleu", "bleu-survol", "bleu-nuit", "bleu-clair", "bleu-pale", "bleu-bord", "bleu-moyen",
   "reussite-fond", "reussite-texte", "attention-fond", "attention-texte",
   "erreur-fond", "erreur-texte", "erreur-vif", "erreur-survol", "premium-fond", "premium-texte",
