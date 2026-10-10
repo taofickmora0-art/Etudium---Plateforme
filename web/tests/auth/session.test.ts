@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isDemoMode, routeFor } from "@/lib/auth/routing";
+import { isDemoMode, PAGES_PUBLIQUES, routeFor } from "@/lib/auth/routing";
 import { withRememberChoice } from "@/lib/auth/session-cookies";
 
 const TRENTE_JOURS = 30 * 24 * 60 * 60;
@@ -21,6 +21,18 @@ describe("Se souvenir de moi", () => {
 });
 
 describe("Pages protégées", () => {
+  it("une page de l'espace connecté non listée est protégée d'office", () => {
+    expect(routeFor({ pathname: "/nouvelle-page", signedIn: false, hadSession: false })).toEqual({ redirect: "/connexion?next=%2Fnouvelle-page" });
+    expect(routeFor({ pathname: "/admin", signedIn: false, hadSession: false })).toEqual({ redirect: "/connexion?next=%2Fadmin" });
+    expect(routeFor({ pathname: "/formateur/cours", signedIn: false, hadSession: false })).toEqual({ redirect: "/connexion?next=%2Fformateur%2Fcours" });
+  });
+
+  it("les pages publiques restent ouvertes sans compte", () => {
+    for (const pathname of [...PAGES_PUBLIQUES, "/auth/callback", "/auth/confirm"]) {
+      expect(routeFor({ pathname, signedIn: false, hadSession: false }), pathname).toEqual({});
+    }
+  });
+
   it("un visiteur est renvoyé à la connexion", () => {
     expect(routeFor({ pathname: "/certificats", signedIn: false, hadSession: false })).toEqual({ redirect: "/connexion?next=%2Fcertificats" });
     expect(routeFor({ pathname: "/mes-formations/excel", signedIn: false, hadSession: false })).toEqual({

@@ -1,8 +1,21 @@
-import { PAGES_A_VENIR } from "@/lib/pages-a-venir";
-
 // Où envoyer une requête selon qu'on est connecté ou non (spec §4 et §7). Utilisé par le proxy.
 
-const ESPACE_CONNECTE = ["/accueil", "/menu", ...Object.keys(PAGES_A_VENIR).map((k) => `/${k}`)];
+/**
+ * Pages ouvertes sans compte. Tout le reste est réservé aux comptes connectés : une page ajoutée plus tard
+ * est protégée d'office. Le site public (lot 1) ajoutera ses pages ici.
+ */
+export const PAGES_PUBLIQUES = [
+  "/connexion",
+  "/inscription",
+  "/verification-email",
+  "/mot-de-passe-oublie",
+  "/nouveau-mot-de-passe",
+  "/conditions",
+  "/confidentialite",
+  "/etat",
+  "/vitrine",
+  "/auth",
+];
 const ECRANS_DE_COMPTE = ["/connexion", "/inscription", "/verification-email", "/mot-de-passe-oublie"];
 
 const dans = (pathname: string, chemins: string[]) => chemins.some((c) => pathname === c || pathname.startsWith(`${c}/`));
@@ -11,7 +24,7 @@ type Situation = { pathname: string; signedIn: boolean; hadSession: boolean };
 
 export function routeFor({ pathname, signedIn, hadSession }: Situation): { redirect?: string } {
   if (pathname === "/") return { redirect: signedIn ? "/accueil" : "/connexion" };
-  if (dans(pathname, ESPACE_CONNECTE) && !signedIn) {
+  if (!dans(pathname, PAGES_PUBLIQUES) && !signedIn) {
     // Un cookie de session était là mais n'est plus valable : on l'annonce (fenêtre « Votre session a expiré »).
     return { redirect: hadSession ? "/connexion?session=expiree" : `/connexion?next=${encodeURIComponent(pathname)}` };
   }
