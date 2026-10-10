@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EnvError, readPublicEnv } from "@/lib/env";
+import { assertNoSecretKey, EnvError, readPublicEnv } from "@/lib/env";
 
 const b64url = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
 const fakeJwt = (payload: object) => `${b64url({ alg: "HS256", typ: "JWT" })}.${b64url(payload)}.signature`;
@@ -56,10 +56,48 @@ describe("readPublicEnv", () => {
     expect(error.message).not.toContain(secret);
   });
 
+  it("refuse une clé secrète collée entre guillemets", () => {
+    const secret = "“sb_secret_ENTRE_GUILLEMETS”";
+    const error = readError({ NEXT_PUBLIC_SUPABASE_URL: URL_OK, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: secret });
+    expect(error.message).toContain("secrète");
+    expect(error.message).not.toContain("ENTRE_GUILLEMETS");
+  });
+
+  it("refuse une clé secrète précédée de Bearer", () => {
+    const error = readError({ NEXT_PUBLIC_SUPABASE_URL: URL_OK, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "Bearer sb_secret_AVEC_PREFIXE" });
+    expect(error.message).toContain("secrète");
+    expect(error.message).not.toContain("AVEC_PREFIXE");
+  });
+
+  it("refuse une clé qui n'est pas une clé publique Supabase", () => {
+    const error = readError({ NEXT_PUBLIC_SUPABASE_URL: URL_OK, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "ma-cle-au-hasard" });
+    expect(error.variable).toBe("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
+    expect(error.message).toContain("n’est pas une clé publique");
+    expect(error.message).not.toContain("ma-cle-au-hasard");
+  });
+
   it("refuse un JWT service_role", () => {
     const secret = fakeJwt({ role: "service_role" });
     const error = readError({ NEXT_PUBLIC_SUPABASE_URL: URL_OK, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: secret });
     expect(error.message).toContain("secrète");
     expect(error.message).not.toContain(secret);
+  });
+});
+
+describe("assertNoSecretKey (contrôle au démarrage de Next)", () => {
+  it("bloque le démarrage si une clé secrète est présente", () => {
+    expect(() => assertNoSecretKey({ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_secret_AU_DEMARRAGE" })).toThrow(/secrète/);
+  });
+
+  it("bloque le démarrage pour un JWT service_role", () => {
+    expect(() => assertNoSecretKey({ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: fakeJwt({ role: "service_role" }) })).toThrow(/secrète/);
+  });
+
+  it("laisse démarrer quand la clé est absente (la page affichera Configuration manquante)", () => {
+    expect(() => assertNoSecretKey({})).not.toThrow();
+  });
+
+  it("laisse démarrer avec une clé publique", () => {
+    expect(() => assertNoSecretKey({ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_xyz" })).not.toThrow();
   });
 });

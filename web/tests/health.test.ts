@@ -54,6 +54,19 @@ describe("checkSupabase", () => {
     expect(Date.now() - started).toBeLessThan(500);
   });
 
+  it("renvoie pause quand le projet est en pause (code 540)", async () => {
+    expect(await checkSupabase(env, respond(540))).toEqual({
+      ok: false,
+      reason: "pause",
+      message: "Le projet Supabase est en pause : réactivez-le depuis son tableau de bord (bouton « Restore project »).",
+    });
+  });
+
+  it("explique la restriction quand le projet est restreint (code 402)", async () => {
+    const status = await checkSupabase(env, respond(402));
+    expect(status.ok === false && status.message).toContain("restreint");
+  });
+
   it("renvoie inconnu pour un autre statut", async () => {
     const status = await checkSupabase(env, respond(500));
     expect(status.ok === false && status.reason).toBe("inconnu");
