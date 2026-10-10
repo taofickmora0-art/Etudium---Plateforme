@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/Icon";
 import { List, ListRow } from "@/components/ui/ListRow";
 import { PointsIcon, StreakIcon } from "@/components/ui/TopBarIcons";
 import type { ShellUser } from "@/lib/auth/current-user";
+import { canAccess } from "@/lib/auth/permissions";
 import { NAV_MENU_TELEPHONE } from "@/lib/navigation";
 import { MenuLogout } from "./MenuLogout";
 
@@ -45,10 +46,10 @@ export function MobileProfileMenu({ user }: { user: ShellUser }) {
           <ListRow key={e.href} href={e.href} leading={<Icon icon={e.icon} size={22} />} title={e.label} />
         ))}
         {/* Espaces selon les rôles, comme dans le menu du profil sur ordinateur. L'accès réel est vérifié par le serveur. */}
-        {user.roles.includes("formateur") && (
+        {canAccess("formateur", user.roles) && (
           <ListRow href="/formateur" leading={<Icon icon={TeachingIcon} size={22} />} title="Espace formateur" />
         )}
-        {user.roles.some((r) => r === "admin" || r === "super_admin" || r === "moderateur") && (
+        {canAccess("admin", user.roles) && (
           <ListRow href="/admin" leading={<Icon icon={Shield01Icon} size={22} />} title="Back-office" />
         )}
         <MenuLogout />

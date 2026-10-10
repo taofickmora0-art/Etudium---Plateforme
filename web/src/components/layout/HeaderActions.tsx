@@ -1,9 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { NotificationsPanel } from "@/components/ui/NotificationsPanel";
 import { ProfileMenu } from "@/components/ui/ProfileMenu";
 import type { ShellUser } from "@/lib/auth/current-user";
+import { spaceOf } from "@/lib/auth/permissions";
 import { LogoutDialog } from "./LogoutDialog";
 
 /** Cloche et rond de profil de l'en-tête (NdNotificationsOuvertes, NdMesFormationsMenu). */
@@ -19,6 +21,7 @@ export function HeaderActions({ user }: { user: ShellUser }) {
         <ProfileMenu
           user={{ initials: user.initials, name: `${user.prenom} ${user.nom}`, email: user.email }}
           roles={user.roles}
+          currentSpace={spaceOf(usePathname())}
           onSignOut={() => setDeconnexion(true)}
         />
       </div>
