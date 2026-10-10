@@ -1,26 +1,25 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Couleurs et police de la planche « Fondations » du design Étudium (complétées à la tâche 0.2). */
+@theme {
+  --color-page: #f2f6fd;
+  --color-coque: #e9effb;
+  --color-panneau: #ffffff;
+  --color-encre: #1d1d1f;
+  --color-texte: #232326;
+  --color-discret: #667085;
+  --color-bleu: #0b18c9;
+  --color-bleu-survol: #08149f;
+  --color-reussite-fond: #ddf3e4;
+  --color-reussite-texte: #17663a;
+  --color-erreur-fond: #fbe3e1;
+  --color-erreur-texte: #b42318;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-page);
+  color: var(--color-texte);
+  -webkit-font-smoothing: antialiased;
 }
