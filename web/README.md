@@ -21,8 +21,19 @@ Copiez `.env.example` en `.env.local`, puis remplissez-le avec l’URL du projet
 npm run dev
 ```
 
-Ouvrez http://localhost:3000. La page indique « Base connectée » quand Supabase répond.
+Ouvrez http://localhost:3000/etat : la page indique « Base connectée » quand Supabase répond.
+La connexion demande ensuite quelques réglages dans Supabase (modèles d’e-mail, Resend, Google) : voir `docs/guides/brancher-la-connexion.md`.
+
+Tant que `.env.local` n’est pas rempli, `npm run dev` tourne en **mode démonstration** : l’espace connecté (`/accueil`) s’ouvre sans compte,
+avec l’utilisatrice des écrans du design. Ce mode n’existe jamais en production.
 Après une modification de `.env.local`, arrêtez puis relancez `npm run dev` : le fichier n’est relu qu’au démarrage.
+
+## Pages utiles
+
+- `/etat` : état de la connexion à la base (ouverte sans compte)
+- `/connexion`, `/inscription`, `/mot-de-passe-oublie` : écrans de compte
+- `/accueil` : espace connecté (demande un compte dès que la base est branchée)
+- `/vitrine` : tous les composants de l’interface
 
 ## Autres commandes
 

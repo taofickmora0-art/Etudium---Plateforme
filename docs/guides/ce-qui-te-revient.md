@@ -1,6 +1,6 @@
 # Ce qui te revient (lot 0)
 
-Trois manipulations que je ne peux pas faire à ta place, parce qu’elles touchent à tes comptes ou à ton ordinateur, puis la validation de la tâche 0.2. Rien ne presse dans l’ordre, sauf Windows (voir plus bas).
+Trois manipulations que je ne peux pas faire à ta place, parce qu’elles touchent à tes comptes ou à ton ordinateur, puis la validation des tâches 0.2 à 0.4. Rien ne presse dans l’ordre, sauf Windows (voir plus bas).
 
 ---
 
@@ -21,11 +21,12 @@ Trois manipulations que je ne peux pas faire à ta place, parce qu’elles touch
    NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
    ```
-7. Lance l’application (voir le point 4 plus bas) et ouvre http://localhost:3000. Tu dois lire **« Base connectée »**.
+7. Lance l’application (voir le point 4 plus bas) et ouvre http://localhost:3000/etat. Tu dois lire **« Base connectée »**.
+8. Continue avec le guide **[Brancher la connexion](brancher-la-connexion.md)** : il règle l’inscription, les e-mails et Google sur ce projet.
 
 Tu peux m’envoyer l’URL et la clé **publique** si tu veux que je vérifie : elles ne donnent accès à rien de sensible. Rien d’autre.
 
-> Un projet gratuit se met en pause après une semaine sans activité. La page affiche alors « Le projet Supabase est en pause » : il suffit de cliquer **Restore project** dans le tableau de bord.
+> Un projet gratuit se met en pause après une semaine sans activité. La page `/etat` affiche alors « Le projet Supabase est en pause » : il suffit de cliquer **Restore project** dans le tableau de bord.
 
 ---
 
@@ -77,18 +78,21 @@ Ton processeur (AMD Ryzen 7 3750H) fait partie de ceux que Microsoft accepte pou
 
 ---
 
-## 4. Valider les tâches 0.2 et 0.3
+## 4. Valider les tâches 0.2, 0.3 et 0.4
 
 1. Dans un terminal ouvert sur le dossier du projet :
    ```
    npm --prefix web run dev
    ```
 2. **Composants (0.2)** : ouvre http://localhost:3000/vitrine. Pour chaque section (Fondations, Boutons, Formulaires, Cartes, Navigation, Messages, Menus, Modales), compare avec la planche correspondante de l’artefact design.
-3. **Coque de l’application (0.3)** : ouvre http://localhost:3000/accueil (ou clique « Ouvrir l’application » sur la page de départ).
+3. **Coque de l’application (0.3)** : ouvre http://localhost:3000/accueil.
+   - Tant que la base n’est pas branchée, l’application tourne en **mode démonstration** : l’espace connecté s’ouvre sans compte, avec Aïcha Kpadé, l’utilisatrice des écrans du design. Une fois la base branchée, il faut un compte (point 5).
    - Passe par toutes les entrées de la barre latérale : chacune ouvre sa page, ou une page « Bientôt disponible » qui dit à quel lot elle arrive.
-   - Ouvre la cloche, puis le rond de profil, puis « Se déconnecter » (pour l’instant, cela ramène à la page de départ).
+   - Ouvre la cloche, puis le rond de profil, puis « Se déconnecter » : cela mène à la page de connexion.
    - Tape une adresse inventée (par exemple http://localhost:3000/nimporte-quoi) : la page « Page introuvable » s’affiche.
    - Refais le tour en réduisant la fenêtre, ou sur ton téléphone : la barre du bas remplace la barre latérale, et l’onglet « Profil » ouvre le menu du téléphone.
-4. Dis-moi ce qui ne te va pas : une couleur, un texte, un espacement, un comportement. Je corrige avant d’attaquer la tâche 0.4 (inscription et connexion).
+4. **Écrans de compte (0.4)**, même sans base : http://localhost:3000/connexion, `/inscription`, `/mot-de-passe-oublie`, `/nouveau-mot-de-passe`. Compare-les avec les écrans du design (connexion, inscription, code, mot de passe). Les pages `/conditions` et `/confidentialite` ont un texte provisoire : dis-moi s’il te convient en attendant le texte définitif.
+5. **Connexion pour de vrai (0.4)** : suis le guide [Brancher la connexion](brancher-la-connexion.md) jusqu’à sa vérification finale.
+6. Dis-moi ce qui ne te va pas : une couleur, un texte, un espacement, un comportement. Je corrige avant d’attaquer la suite.
 
 > Pour tester sur ton téléphone pendant que l’application tourne sur l’ordinateur, les deux doivent être sur le même Wi-Fi ; dis-le-moi et je te donne la marche à suivre.
