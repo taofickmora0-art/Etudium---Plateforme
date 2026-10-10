@@ -86,6 +86,12 @@
   --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
 
   --animate-apparition: apparition 180ms ease-out;
+  --animate-fondu: fondu 150ms ease-out;
+  @keyframes fondu {
+    from {
+      opacity: 0;
+    }
+  }
   @keyframes apparition {
     from {
       opacity: 0;

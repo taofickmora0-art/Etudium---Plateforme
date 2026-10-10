@@ -4,6 +4,7 @@ import { Cartes } from "./sections/Cartes";
 import { Fondations } from "./sections/Fondations";
 import { Formulaires } from "./sections/Formulaires";
 import { Menus } from "./sections/Menus";
+import { Modales } from "./sections/Modales";
 import { Navigation } from "./sections/Navigation";
 import { Retours } from "./sections/Retours";
 
@@ -20,6 +21,7 @@ const PLANCHES = [
   { id: "navigation", label: "Navigation" },
   { id: "retours", label: "Messages" },
   { id: "menus", label: "Menus" },
+  { id: "modales", label: "Modales" },
 ];
 
 export default function VitrinePage() {
@@ -46,6 +48,7 @@ export default function VitrinePage() {
       <Navigation />
       <Retours />
       <Menus />
+      <Modales />
     </div>
   );
 }
