@@ -11,6 +11,7 @@ import {
   HelpCircleIcon,
   Home03Icon,
   Route01Icon,
+  Search01Icon,
   UserGroupIcon,
   UserIcon,
 } from "@hugeicons/core-free-icons";
@@ -48,17 +49,26 @@ export const NAV_BAS: NavEntry[] = [
   { href: "/menu", label: "Profil", icon: UserIcon },
 ];
 
-/** Liste de la page « Profil » du téléphone (NdMobMenu). */
+/**
+ * Liste de la page « Profil » du téléphone (NdMobMenu), complétée des entrées de la barre latérale
+ * que la barre du bas n'a pas (Exercices, catalogue, formations gratuites) : sur téléphone, tout reste accessible.
+ */
 export const NAV_MENU_TELEPHONE: NavEntry[] = [
   { href: "/profil", label: "Mon profil", icon: UserIcon },
   { href: "/abonnement", label: "Mon abonnement", icon: CreditCardIcon },
   { href: "/parcours", label: "Mes parcours", icon: Route01Icon },
+  { href: "/exercices", label: "Exercices", icon: AssignmentsIcon },
   { href: "/certificats", label: "Certificats", icon: Certificate01Icon },
+  { href: "/formations", label: "Toutes les formations", icon: BookOpen01Icon },
+  { href: "/formations-gratuites", label: "Formations gratuites", icon: GiftIcon },
   { href: "/favoris", label: "Favoris", icon: FavouriteIcon },
   { href: "/evenements", label: "Événements", icon: Calendar03Icon },
   { href: "/messages", label: "Messages", icon: BubbleChatIcon },
   { href: "/aide", label: "Aide", icon: HelpCircleIcon },
 ];
+
+/** Raccourcis de l'en-tête du téléphone (la recherche, que la barre du bas n'a pas). */
+export const LIENS_ENTETE_TELEPHONE: NavEntry[] = [{ href: "/recherche", label: "Rechercher", icon: Search01Icon }];
 
 const LOT_1 = "au lot 1, Catalogue et apprentissage";
 const LOT_5 = "au lot 5, Communauté et accompagnement";

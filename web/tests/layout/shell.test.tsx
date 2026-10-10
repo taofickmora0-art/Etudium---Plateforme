@@ -25,7 +25,8 @@ describe("Coque", () => {
   it("l'en-tête mène à la recherche et au catalogue", () => {
     render(<AppShell user={DEMO_USER}>Contenu</AppShell>);
     const entete = screen.getByRole("banner");
-    expect(within(entete).getByRole("link", { name: "Rechercher" })).toHaveAttribute("href", "/recherche");
+    // Deux liens « Rechercher » : le bouton de l'ordinateur et la loupe du téléphone.
+    for (const lien of within(entete).getAllByRole("link", { name: "Rechercher" })) expect(lien).toHaveAttribute("href", "/recherche");
     expect(within(entete).getByRole("link", { name: "Ajouter une formation" })).toHaveAttribute("href", "/formations");
     expect(within(entete).getByRole("link", { name: "Étudium, accueil" })).toHaveAttribute("href", "/accueil");
   });

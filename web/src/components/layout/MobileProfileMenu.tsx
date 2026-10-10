@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Shield01Icon, TeachingIcon } from "@hugeicons/core-free-icons";
 import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
 import { List, ListRow } from "@/components/ui/ListRow";
@@ -43,6 +44,13 @@ export function MobileProfileMenu({ user }: { user: ShellUser }) {
         {NAV_MENU_TELEPHONE.map((e) => (
           <ListRow key={e.href} href={e.href} leading={<Icon icon={e.icon} size={22} />} title={e.label} />
         ))}
+        {/* Espaces selon les rôles, comme dans le menu du profil sur ordinateur. L'accès réel est vérifié par le serveur. */}
+        {user.roles.includes("formateur") && (
+          <ListRow href="/formateur" leading={<Icon icon={TeachingIcon} size={22} />} title="Espace formateur" />
+        )}
+        {user.roles.some((r) => r === "admin" || r === "super_admin" || r === "moderateur") && (
+          <ListRow href="/admin" leading={<Icon icon={Shield01Icon} size={22} />} title="Back-office" />
+        )}
         <MenuLogout />
       </List>
     </div>

@@ -22,8 +22,8 @@ export function BottomBar({ items, className }: BottomBarProps) {
           )}
         >
           <Icon icon={item.icon} size={22} />
-          {/* Le libellé peut mordre de 2 px sur l’espace entre les onglets (« Communauté » à 390 px). */}
-          <span className="max-w-[calc(100%+4px)] truncate">{item.label}</span>
+          {/* Le libellé peut mordre de 4 px de chaque côté sur l’espace entre les onglets : « Communauté » tient à 360 px. */}
+          <span className="max-w-[calc(100%+8px)] truncate">{item.label}</span>
         </Link>
       ))}
     </nav>
