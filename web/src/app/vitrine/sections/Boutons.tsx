@@ -50,7 +50,7 @@ export function Boutons() {
       description="Un seul bouton principal, en bleu Étudium, par écran. Le rouge est réservé aux actions irréversibles."
     >
       <Panel title="Boutons · variantes">
-        <div className="grid grid-cols-2 items-start gap-6 sm:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-1 items-start gap-6 min-[440px]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">
           <Exemple legende="Principal">
             <Button>Reprendre la leçon</Button>
           </Exemple>

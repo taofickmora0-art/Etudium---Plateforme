@@ -52,7 +52,7 @@ export function SearchSuggestions({ query, onQueryChange, groups, resultsHref, o
         if (event.key === "ArrowDown") move(event, 1);
         if (event.key === "ArrowUp") move(event, -1);
       }}
-      className={cn(menuSurfaceClasses, "w-[360px]", className)}
+      className={cn(menuSurfaceClasses, "w-[360px] max-w-full", className)}
     >
       <form
         role="search"
