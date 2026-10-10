@@ -1,19 +1,85 @@
 @import "tailwindcss";
 
-/* Couleurs et police de la planche « Fondations » du design Étudium (complétées à la tâche 0.2). */
+/*
+ * Jetons du design Étudium, relevés sur les planches « Composants » de l'artefact « Nouveau design »
+ * (NdCFondations, NdCBoutons, NdCFormulaires, NdCCartes, NdCNavigation, NdCRetours, NdCMenus, NdCModales).
+ */
 @theme {
+  /* Surfaces */
   --color-page: #f2f6fd;
   --color-coque: #e9effb;
+  --color-coque-survol: #dee6f6;
   --color-panneau: #ffffff;
+  --color-fond-doux: #e5ebf7;
+
+  /* Textes */
   --color-encre: #1d1d1f;
+  --color-titre: #262628;
   --color-texte: #232326;
+  --color-ardoise: #535e75;
+  --color-ardoise-fonce: #4a546b;
   --color-discret: #667085;
+  --color-indice: #757f94;
+  --color-gris-icone: #818da6;
+
+  /* Bordures et pistes */
+  --color-bordure-carte: #eaeef7;
+  --color-bordure: #e3e8f3;
+  --color-bordure-champ: #d2d9e8;
+  --color-separateur: #dbe0eb;
+  --color-piste: #d6ddec;
+  --color-inactif: #bfc8db;
+
+  /* Bleu Étudium */
   --color-bleu: #0b18c9;
   --color-bleu-survol: #08149f;
+  --color-bleu-nuit: #060f75;
+  --color-bleu-clair: #eef0ff;
+  --color-bleu-pale: #dde1ff;
+  --color-bleu-bord: #c2c8ff;
+  --color-bleu-moyen: #9da6ff;
+
+  /* États : fond + texte */
   --color-reussite-fond: #ddf3e4;
   --color-reussite-texte: #17663a;
+  --color-attention-fond: #fbefd0;
+  --color-attention-texte: #8a5a00;
   --color-erreur-fond: #fbe3e1;
   --color-erreur-texte: #b42318;
+  --color-erreur-vif: #d92d20;
+  --color-erreur-survol: #f6d2ce;
+  --color-premium-fond: #ede9fe;
+  --color-premium-texte: #6d28d9;
+
+  /* Parcours Business (orange) et Digital (violet), surtout pour les illustrations */
+  --color-business-fond: #fff7ed;
+  --color-business-texte: #c2410c;
+  --color-business-vif: #f97316;
+  --color-business-clair: #fdba74;
+  --color-business-nuit: #7c2d12;
+  --color-digital-fond: #f5f3ff;
+  --color-digital-clair: #c4b5fd;
+  --color-digital-vif: #7c3aed;
+  --color-digital-fonce: #5b21b6;
+  --color-digital-nuit: #4c1d95;
+
+  --color-etoile: #f5c02c;
+
+  /* Arrondis (planche « Fondations » et relevés) */
+  --radius-etiquette: 4px;
+  --radius-puce: 10px;
+  --radius-champ: 12px;
+  --radius-bouton: 14px;
+  --radius-carte: 16px;
+  --radius-menu: 18px;
+  --radius-bloc: 24px;
+  --radius-panneau: 28px;
+  --radius-coque: 32px;
+
+  /* Ombres */
+  --shadow-menu: 0 16px 40px rgba(20, 20, 30, 0.14), 0 2px 6px rgba(20, 20, 30, 0.06);
+  --shadow-focus: 0 0 0 3px rgba(11, 24, 201, 0.14);
+  --shadow-pastille: 0 1px 2px rgba(20, 20, 30, 0.08);
 
   --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
 }
@@ -22,4 +88,16 @@ body {
   background: var(--color-page);
   color: var(--color-texte);
   -webkit-font-smoothing: antialiased;
+}
+
+::placeholder {
+  color: var(--color-indice);
+}
+
+/* Contour de focus clavier des planches : 2 px bleu Étudium, décalé de 2 px. */
+@utility focus-etudium {
+  &:focus-visible {
+    outline: 2px solid var(--color-bleu);
+    outline-offset: 2px;
+  }
 }
