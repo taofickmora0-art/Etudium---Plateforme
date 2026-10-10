@@ -1,7 +1,9 @@
 "use client";
 
 import { useId, useRef, type ClipboardEvent, type KeyboardEvent } from "react";
+import { AlertCircleIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/cn";
+import { Icon } from "./Icon";
 
 type CodeInputProps = {
   /** Texte visible au-dessus des cases (« Code reçu par e-mail »). */
@@ -14,6 +16,8 @@ type CodeInputProps = {
   length?: number;
   /** Aide sous les cases (« Le code expire dans 10 minutes. »). */
   hint?: string;
+  /** Message d'erreur (« Ce code est incorrect… ») : affiché en rouge à la place de l'aide, cases en erreur. */
+  error?: string;
   invalid?: boolean;
   disabled?: boolean;
   className?: string;
@@ -22,7 +26,7 @@ type CodeInputProps = {
 const onlyDigits = (text: string) => text.replace(/\D/g, "");
 
 /** Code de vérification en cases de 48 × 56 (planche « Formulaires », « Listes, zones de texte et code »). */
-export function CodeInput({ label, value, onChange, onComplete, length = 6, hint, invalid, disabled, className }: CodeInputProps) {
+export function CodeInput({ label, value, onChange, onComplete, length = 6, hint, error, invalid, disabled, className }: CodeInputProps) {
   const id = useId();
   const boxes = useRef<(HTMLInputElement | null)[]>([]);
   const code = onlyDigits(value).slice(0, length);
@@ -82,7 +86,7 @@ export function CodeInput({ label, value, onChange, onComplete, length = 6, hint
       <span id={`${id}-label`} className="text-sm leading-5 font-medium text-encre">
         {label}
       </span>
-      <div role="group" aria-labelledby={`${id}-label`} aria-describedby={hint ? `${id}-hint` : undefined} className="flex gap-2">
+      <div role="group" aria-labelledby={`${id}-label`} aria-describedby={error || hint ? `${id}-hint` : undefined} className="flex gap-2">
         {Array.from({ length }, (_, index) => (
           <input
             key={index}
@@ -93,7 +97,7 @@ export function CodeInput({ label, value, onChange, onComplete, length = 6, hint
             inputMode="numeric"
             autoComplete={index === 0 ? "one-time-code" : "off"}
             aria-label={`Chiffre ${index + 1}`}
-            aria-invalid={invalid || undefined}
+            aria-invalid={invalid || Boolean(error) || undefined}
             disabled={disabled}
             value={code[index] ?? ""}
             onFocus={(event) => event.target.select()}
@@ -114,10 +118,17 @@ export function CodeInput({ label, value, onChange, onComplete, length = 6, hint
           />
         ))}
       </div>
-      {hint && (
-        <span id={`${id}-hint`} className="text-xs leading-[18px] text-discret">
-          {hint}
+      {error ? (
+        <span id={`${id}-hint`} className="flex items-center gap-1.5 text-xs leading-[18px] text-erreur-texte">
+          <Icon icon={AlertCircleIcon} size={14} />
+          {error}
         </span>
+      ) : (
+        hint && (
+          <span id={`${id}-hint`} className="text-xs leading-[18px] text-discret">
+            {hint}
+          </span>
+        )
       )}
     </div>
   );
