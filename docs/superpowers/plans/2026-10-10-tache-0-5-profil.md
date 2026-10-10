@@ -123,7 +123,7 @@
 ### Task 3: La coque vérifie la session auprès de Supabase ; photo dans la coque
 
 **Files:**
-- Modify: `web/src/lib/auth/current-user.ts`, `web/src/lib/demo-user.ts`, `web/src/app/(app)/layout.tsx`, `web/src/lib/auth/actions.ts` (`signOut` utilise le nouvel utilitaire)
+- Modify: `web/src/lib/auth/current-user.ts`, `web/src/lib/demo-user.ts`, `web/src/app/(app)/layout.tsx`, `web/src/lib/auth/actions.ts` (`signOut` utilise le nouvel utilitaire), `web/src/lib/auth/require-space.ts` si la 0.6 est déjà faite (sans compte : `/auth/sortie` au lieu de `/connexion`, comme la mise en page)
 - Create: `web/src/lib/auth/local-session.ts`, `web/src/app/auth/sortie/route.ts`
 - Modify: `web/src/components/ui/Avatar.tsx`, `web/src/components/layout/AppHeader.tsx` (`HeaderAccount`), `web/src/components/layout/HeaderActions.tsx`, `web/src/components/ui/ProfileMenu.tsx`, `web/src/components/layout/MobileProfileMenu.tsx`
 - Test: `web/tests/auth/current-user.test.ts` (mocks `getClaims` → `getUser`), `web/tests/auth/sortie.test.ts`, `web/tests/ui/avatar.test.tsx`
