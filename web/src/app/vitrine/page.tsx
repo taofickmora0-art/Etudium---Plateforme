@@ -4,6 +4,7 @@ import { Cartes } from "./sections/Cartes";
 import { Fondations } from "./sections/Fondations";
 import { Formulaires } from "./sections/Formulaires";
 import { Navigation } from "./sections/Navigation";
+import { Retours } from "./sections/Retours";
 
 export const metadata: Metadata = {
   title: "Vitrine des composants · Étudium",
@@ -16,6 +17,7 @@ const PLANCHES = [
   { id: "formulaires", label: "Formulaires" },
   { id: "cartes", label: "Cartes" },
   { id: "navigation", label: "Navigation" },
+  { id: "retours", label: "Messages" },
 ];
 
 export default function VitrinePage() {
@@ -40,6 +42,7 @@ export default function VitrinePage() {
       <Formulaires />
       <Cartes />
       <Navigation />
+      <Retours />
     </div>
   );
 }
