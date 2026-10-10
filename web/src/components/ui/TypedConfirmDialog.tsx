@@ -21,10 +21,20 @@ export function TypedConfirmDialog({ confirmWord, onOpenChange, ...props }: Type
         if (!open) setTyped("");
         onOpenChange(open);
       }}
-      confirmDisabled={typed !== confirmWord}
+      // Les claviers de téléphone ajoutent souvent une espace après le mot : on l'ignore, mais pas les majuscules.
+      confirmDisabled={typed.trim() !== confirmWord}
     >
       <Field label={`Pour confirmer, saisissez ${confirmWord}`} htmlFor={id}>
-        <TextInput id={id} value={typed} onChange={(event) => setTyped(event.target.value)} placeholder={confirmWord} autoComplete="off" spellCheck={false} />
+        <TextInput
+          id={id}
+          value={typed}
+          onChange={(event) => setTyped(event.target.value)}
+          placeholder={confirmWord}
+          autoComplete="off"
+          autoCapitalize="characters"
+          autoCorrect="off"
+          spellCheck={false}
+        />
       </Field>
     </ConfirmDialog>
   );

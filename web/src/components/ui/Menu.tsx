@@ -10,9 +10,10 @@ import { Icon, type IconSvgElement } from "./Icon";
 // Planche « Menus déroulants » : surface blanche, rayon 18, ombre portée, lignes d'au moins 44 px.
 export const menuSurfaceClasses =
   "z-50 box-border max-w-[calc(100vw-32px)] rounded-menu border border-bordure-carte bg-panneau p-2 shadow-menu motion-safe:animate-apparition";
-// L'élément survolé ou atteint au clavier se repère à son fond gris-bleu (data-highlighted), comme sur la planche.
+// L'élément survolé se repère à son fond gris-bleu (data-highlighted), comme sur la planche ; au clavier,
+// le contour bleu s'y ajoute (:focus-visible ne s'allume pas à la souris).
 export const menuItemClasses =
-  "box-border flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-puce border-0 bg-transparent px-3 py-1.5 text-left text-texte no-underline outline-none select-none data-[highlighted]:bg-coque hover:bg-coque";
+  "focus-etudium box-border flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-puce border-0 bg-transparent px-3 py-1.5 text-left text-texte no-underline select-none data-[highlighted]:bg-coque hover:bg-coque";
 export const menuHeadingClasses = "px-3 pt-2 pb-1 text-xs leading-[18px] font-medium tracking-[0.04em] text-discret uppercase";
 export const menuSeparatorClasses = "mx-1 my-1.5 h-px bg-bordure-carte";
 

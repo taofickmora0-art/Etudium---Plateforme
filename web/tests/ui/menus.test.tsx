@@ -38,6 +38,8 @@ describe("Menus", () => {
     expect(items[0]).toHaveFocus();
     await user.keyboard("{ArrowDown}");
     expect(items[1]).toHaveFocus();
+    // Le contour bleu n'apparaît qu'au clavier (:focus-visible) : la souris garde le simple fond de la planche.
+    expect(items[1]).toHaveClass("focus-etudium");
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();

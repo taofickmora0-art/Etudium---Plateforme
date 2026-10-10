@@ -2,6 +2,7 @@
 
 import { useId, useRef, type KeyboardEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/cn";
 import type { IconSvgElement } from "./Icon";
@@ -19,8 +20,9 @@ type SearchSuggestionsProps = {
   query: string;
   onQueryChange: (query: string) => void;
   groups: SuggestionGroup[];
-  /** Page de tous les résultats ; Entrée dans le champ y mène. */
+  /** Page de tous les résultats ; Entrée dans le champ (ou la touche « Rechercher » du téléphone) y mène. */
   resultsHref: (query: string) => string;
+  /** Prévient qu'on quitte le panneau vers `href` (pour le fermer, par exemple). La navigation, elle, est déjà faite. */
   onNavigate?: (href: string) => void;
   className?: string;
 };
@@ -31,6 +33,7 @@ type SearchSuggestionsProps = {
  */
 export function SearchSuggestions({ query, onQueryChange, groups, resultsHref, onNavigate, className }: SearchSuggestionsProps) {
   const id = useId();
+  const router = useRouter();
   const panel = useRef<HTMLDivElement>(null);
 
   const move = (event: KeyboardEvent, step: 1 | -1) => {
@@ -59,7 +62,10 @@ export function SearchSuggestions({ query, onQueryChange, groups, resultsHref, o
         className="px-1 pt-1 pb-2"
         onSubmit={(event) => {
           event.preventDefault();
-          if (query.trim()) onNavigate?.(resultsHref(query.trim()));
+          if (!query.trim()) return;
+          const href = resultsHref(query.trim());
+          router.push(href);
+          onNavigate?.(href);
         }}
       >
         <label htmlFor={id} className="sr-only">
@@ -75,7 +81,7 @@ export function SearchSuggestions({ query, onQueryChange, groups, resultsHref, o
             <ul className="m-0 list-none p-0">
               {group.items.map((item) => (
                 <li key={item.href}>
-                  <Link href={item.href} data-suggestion="" className={cn(menuItemClasses, "focus-visible:bg-coque")} onClick={() => onNavigate?.(item.href)}>
+                  <Link href={item.href} data-suggestion="" className={menuItemClasses} onClick={() => onNavigate?.(item.href)}>
                     <MenuRow icon={group.icon} label={item.label} description={item.meta} />
                   </Link>
                 </li>
@@ -84,7 +90,7 @@ export function SearchSuggestions({ query, onQueryChange, groups, resultsHref, o
           </section>
         ))}
       <div className={menuSeparatorClasses} />
-      <Link href={resultsHref(query.trim())} data-suggestion="" className={cn(menuItemClasses, "focus-visible:bg-coque")} onClick={() => onNavigate?.(resultsHref(query.trim()))}>
+      <Link href={resultsHref(query.trim())} data-suggestion="" className={menuItemClasses} onClick={() => onNavigate?.(resultsHref(query.trim()))}>
         <MenuRow icon={Search01Icon} label="Voir tous les résultats" />
         <kbd className="rounded-md bg-coque px-1.5 py-0.5 font-sans text-xs leading-4 font-medium text-ardoise">Entrée</kbd>
       </Link>

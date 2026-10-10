@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import type { IconSvgElement } from "./Icon";
+import { Banner } from "./Banner";
 import { Button } from "./Button";
 import { Dialog, DialogClose, type DialogIconTone } from "./Dialog";
 
@@ -17,8 +18,13 @@ export type ConfirmDialogProps = {
   cancelLabel?: string;
   /** « danger » : bouton rouge, pour une action irréversible. */
   tone?: "neutre" | "danger";
-  /** Si l'action renvoie une promesse, le bouton reste en chargement jusqu'à la fin, puis la fenêtre se ferme. */
+  /**
+   * Si l'action renvoie une promesse, le bouton reste en chargement jusqu'à la fin, puis la fenêtre se ferme.
+   * Si la promesse échoue, la fenêtre reste ouverte et affiche `errorMessage` : on peut réessayer.
+   */
   onConfirm: () => void | Promise<void>;
+  /** Message affiché si l'action échoue. */
+  errorMessage?: string;
   icon?: IconSvgElement;
   iconTone?: DialogIconTone;
   /** Bouton de confirmation désactivé (mot de confirmation pas encore saisi…). */
@@ -39,9 +45,11 @@ export function ConfirmDialog({
   icon,
   iconTone,
   confirmDisabled = false,
+  errorMessage = "L’action n’a pas abouti. Vérifiez votre connexion, puis réessayez.",
   children,
 }: ConfirmDialogProps) {
   const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   const confirm = async () => {
     const result = onConfirm();
@@ -50,11 +58,13 @@ export function ConfirmDialog({
       return;
     }
     setPending(true);
+    setFailed(false);
     try {
       await result;
       onOpenChange(false);
-    } catch {
-      // L'appelant affiche l'erreur ; la fenêtre reste ouverte pour réessayer.
+    } catch (error) {
+      console.error(error);
+      setFailed(true);
     } finally {
       setPending(false);
     }
@@ -63,7 +73,11 @@ export function ConfirmDialog({
   return (
     <Dialog
       open={open}
-      onOpenChange={(next) => !pending && onOpenChange(next)}
+      onOpenChange={(next) => {
+        if (pending) return;
+        if (!next) setFailed(false);
+        onOpenChange(next);
+      }}
       title={title}
       description={description}
       icon={icon}
@@ -81,7 +95,12 @@ export function ConfirmDialog({
         </>
       }
     >
-      {children}
+      {(children || failed) && (
+        <div className="flex flex-col gap-3.5">
+          {children}
+          {failed && <Banner tone="erreur">{errorMessage}</Banner>}
+        </div>
+      )}
     </Dialog>
   );
 }

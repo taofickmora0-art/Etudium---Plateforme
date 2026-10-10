@@ -57,6 +57,9 @@ describe("Formulaires", () => {
     await user.click(screen.getByRole("button", { name: "Afficher le mot de passe" }));
     expect(input).toHaveAttribute("type", "text");
     expect(screen.getByRole("button", { name: "Masquer le mot de passe" })).toBeInTheDocument();
+    expect(input).toHaveAttribute("spellcheck", "false");
+    expect(input).toHaveAttribute("autocapitalize", "none");
+    expect(input).toHaveAttribute("autocorrect", "off");
   });
 
   it("CodeInput accepte un code collé avec espace", async () => {
@@ -98,6 +101,49 @@ describe("Formulaires", () => {
     render(<CodeHarness initial="482" onChange={onChange} />);
     fireEvent.change(screen.getByLabelText("Chiffre 3"), { target: { value: "" } });
     expect(onChange).toHaveBeenLastCalledWith("48");
+  });
+
+  it("CodeInput remplace un code plein par un code collé dans la dernière case", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const onComplete = vi.fn();
+    render(<CodeHarness initial="111111" onChange={onChange} onComplete={onComplete} />);
+    await user.click(screen.getByLabelText("Chiffre 6"));
+    await user.paste("482913");
+    expect(onChange).toHaveBeenLastCalledWith("482913");
+    expect(onComplete).toHaveBeenLastCalledWith("482913");
+  });
+
+  it("CodeInput remplace le début d'un code par un code complet collé plus loin", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<CodeHarness initial="48" onChange={onChange} />);
+    await user.click(screen.getByLabelText("Chiffre 3"));
+    await user.paste("482913");
+    expect(onChange).toHaveBeenLastCalledWith("482913");
+  });
+
+  // Le téléphone insère le code avant le chiffre déjà présent : la case contient « 482913 » puis « 1 »,
+  // et le curseur est juste après le code inséré.
+  it("CodeInput ignore le chiffre déjà présent quand le téléphone insère tout le code", () => {
+    const onChange = vi.fn();
+    render(<CodeHarness initial="1" onChange={onChange} />);
+    fireEvent.change(screen.getByLabelText("Chiffre 1"), { target: { value: "4829131", selectionStart: 6, selectionEnd: 6 } });
+    expect(onChange).toHaveBeenLastCalledWith("482913");
+  });
+
+  it("CodeInput garde le bon code quand le chiffre déjà présent y figure aussi", () => {
+    const onChange = vi.fn();
+    render(<CodeHarness initial="4" onChange={onChange} />);
+    fireEvent.change(screen.getByLabelText("Chiffre 1"), { target: { value: "4829134", selectionStart: 6, selectionEnd: 6 } });
+    expect(onChange).toHaveBeenLastCalledWith("482913");
+  });
+
+  it("CodeInput lit aussi un code inséré après le chiffre déjà présent", () => {
+    const onChange = vi.fn();
+    render(<CodeHarness initial="1" onChange={onChange} />);
+    fireEvent.change(screen.getByLabelText("Chiffre 1"), { target: { value: "1482913", selectionStart: 7, selectionEnd: 7 } });
+    expect(onChange).toHaveBeenLastCalledWith("482913");
   });
 
   it("Switch bascule", async () => {

@@ -110,6 +110,20 @@ body {
   color: var(--color-indice);
 }
 
+/*
+ * Sur un écran tactile, une petite commande (bouton de 34 px, case, page…) garde son dessin mais reçoit
+ * une zone de toucher d'au moins 44 × 44 px, centrée. L'élément doit être positionné (relative ou absolute).
+ */
+@utility cible-tactile {
+  @media (pointer: coarse) {
+    &::after {
+      content: "";
+      position: absolute;
+      inset: min(0px, calc((100% - 44px) / 2));
+    }
+  }
+}
+
 /* Contour de focus clavier des planches : 2 px bleu Étudium, décalé de 2 px. */
 @utility focus-etudium {
   &:focus-visible {

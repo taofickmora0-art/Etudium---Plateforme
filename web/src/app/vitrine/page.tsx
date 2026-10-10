@@ -34,7 +34,7 @@ export default function VitrinePage() {
             <a
               key={p.id}
               href={`#${p.id}`}
-              className="focus-etudium rounded-champ bg-panneau px-3.5 py-2 text-sm font-medium text-texte hover:bg-coque"
+              className="focus-etudium cible-tactile relative rounded-champ bg-panneau px-3.5 py-2 text-sm font-medium text-texte hover:bg-coque"
             >
               {p.label}
             </a>

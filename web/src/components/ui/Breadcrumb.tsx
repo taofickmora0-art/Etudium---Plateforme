@@ -23,7 +23,7 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
                     {item.label}
                   </span>
                 ) : (
-                  <Link href={item.href} className="focus-etudium text-discret no-underline transition-colors hover:text-texte">
+                  <Link href={item.href} className="focus-etudium cible-tactile relative text-discret no-underline transition-colors hover:text-texte">
                     {item.label}
                   </Link>
                 )}

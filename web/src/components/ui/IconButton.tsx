@@ -5,7 +5,7 @@ import { Icon, type IconSvgElement } from "./Icon";
 
 // Planche « Boutons » : « Icône seule », « Icône, contour » et « Fermer ».
 export const iconButtonVariants = cva(
-  "focus-etudium inline-flex flex-none items-center justify-center p-0 text-texte transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-45",
+  "focus-etudium cible-tactile relative inline-flex flex-none items-center justify-center p-0 text-texte transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-45",
   {
     variants: {
       variant: {

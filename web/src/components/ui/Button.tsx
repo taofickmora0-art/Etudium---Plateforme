@@ -7,7 +7,7 @@ import { Spinner } from "./Spinner";
 
 // Planche « Boutons, filtres et étiquettes » : variantes et tailles.
 export const buttonVariants = cva(
-  "focus-etudium inline-flex items-center justify-center gap-2 font-medium leading-none whitespace-nowrap no-underline transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-45",
+  "focus-etudium cible-tactile relative inline-flex items-center justify-center gap-2 font-medium leading-none whitespace-nowrap no-underline transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-45",
   {
     variants: {
       variant: {

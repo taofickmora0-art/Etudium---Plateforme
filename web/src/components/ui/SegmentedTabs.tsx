@@ -30,7 +30,7 @@ export function SegmentedTabs({ label, items, defaultValue, value, onValueChange
           <Tabs.Trigger
             key={item.value}
             value={item.value}
-            className="focus-etudium flex h-10 cursor-pointer items-center rounded-puce px-4 text-sm font-medium text-texte transition-colors hover:text-bleu data-[state=active]:bg-panneau data-[state=active]:text-bleu data-[state=active]:shadow-pastille"
+            className="focus-etudium cible-tactile relative flex h-10 cursor-pointer items-center rounded-puce px-4 text-sm font-medium text-texte transition-colors hover:text-bleu data-[state=active]:bg-panneau data-[state=active]:text-bleu data-[state=active]:shadow-pastille"
           >
             {item.label}
           </Tabs.Trigger>

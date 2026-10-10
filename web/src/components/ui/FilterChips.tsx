@@ -26,7 +26,7 @@ export function FilterChips({ label, options, value, onValueChange, className }:
             aria-pressed={active}
             onClick={() => onValueChange(option.value)}
             className={cn(
-              "focus-etudium h-[42px] cursor-pointer rounded-champ border px-[15px] pb-px text-sm font-medium tracking-[-0.1px] whitespace-nowrap transition-colors",
+              "focus-etudium cible-tactile relative h-[42px] cursor-pointer rounded-champ border px-[15px] pb-px text-sm font-medium tracking-[-0.1px] whitespace-nowrap transition-colors",
               active ? "border-bleu-bord bg-bleu-clair text-bleu" : "border-bordure bg-panneau text-texte hover:bg-page",
             )}
           >

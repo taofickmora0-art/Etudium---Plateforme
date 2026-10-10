@@ -52,6 +52,19 @@ describe("Fenêtres", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
+  it("un échec de la confirmation est affiché dans la fenêtre", async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    const journal = vi.spyOn(console, "error").mockImplementation(() => {});
+    render(<ConfirmDialog open onOpenChange={onOpenChange} onConfirm={() => Promise.reject(new Error("réseau"))} {...DECONNEXION} />);
+    await user.click(screen.getByRole("button", { name: "Se déconnecter" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("L’action n’a pas abouti");
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Se déconnecter" })).toBeEnabled();
+    expect(journal).toHaveBeenCalled();
+    journal.mockRestore();
+  });
+
   it("une fenêtre bloquante ne se ferme ni avec Échap ni par une croix", async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
@@ -83,5 +96,10 @@ describe("Fenêtres", () => {
     await user.clear(champ);
     await user.type(champ, "SUPPRIMER");
     expect(bouton).toBeEnabled();
+    // Les claviers de téléphone ajoutent souvent une espace après un mot proposé.
+    await user.type(champ, " ");
+    expect(bouton).toBeEnabled();
+    expect(champ).toHaveAttribute("autocapitalize", "characters");
+    expect(champ).toHaveAttribute("autocorrect", "off");
   });
 });

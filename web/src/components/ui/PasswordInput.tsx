@@ -11,8 +11,13 @@ export function PasswordInput({ invalid, className, "aria-invalid": ariaInvalid,
   const [visible, setVisible] = useState(false);
   return (
     <span className="relative block">
+      {/* Affiché, le mot de passe devient un texte : ni correcteur (qui l'enverrait à un serveur), ni majuscule
+          ou correction automatique du clavier (qui changeraient le mot de passe enregistré). */}
       <input
         type={visible ? "text" : "password"}
+        spellCheck={false}
+        autoCapitalize="none"
+        autoCorrect="off"
         aria-invalid={isInvalid(invalid, ariaInvalid)}
         className={cn(controlClasses, "pr-12", className)}
         {...props}

@@ -61,7 +61,7 @@ export function Dialog({ open, onOpenChange, title, description, icon, iconTone 
           {dismissible && (
             <RadixDialog.Close
               aria-label="Fermer"
-              className="focus-etudium absolute top-4 right-4 flex size-9 cursor-pointer items-center justify-center rounded-puce border-0 bg-transparent p-0 text-discret transition-colors hover:bg-coque"
+              className="focus-etudium cible-tactile absolute top-4 right-4 flex size-9 cursor-pointer items-center justify-center rounded-puce border-0 bg-transparent p-0 text-discret transition-colors hover:bg-coque"
             >
               <Icon icon={Cancel01Icon} size={18} />
             </RadixDialog.Close>

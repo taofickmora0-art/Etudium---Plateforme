@@ -34,7 +34,7 @@ export function Retours() {
           <Banner
             tone="information"
             action={
-              <a href="#" className="focus-etudium text-sm leading-[22px] font-medium text-bleu no-underline hover:underline">
+              <a href="#" className="focus-etudium cible-tactile relative text-sm leading-[22px] font-medium text-bleu no-underline hover:underline">
                 Voir ma formule
               </a>
             }

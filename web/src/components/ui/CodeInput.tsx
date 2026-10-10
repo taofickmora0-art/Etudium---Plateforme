@@ -29,13 +29,28 @@ export function CodeInput({ label, value, onChange, onComplete, length = 6, hint
 
   const focusBox = (index: number) => boxes.current[Math.max(0, Math.min(index, length - 1))]?.focus();
 
-  /** Écrit des chiffres à partir de la case `index` (jamais après la fin du code déjà saisi : pas de trou). */
+  /**
+   * Écrit des chiffres à partir de la case `index` (jamais après la fin du code déjà saisi : pas de trou).
+   * Un code complet, collé ou inséré n'importe où, remplace tout le code : c'est presque toujours le bon code reçu.
+   */
   const write = (index: number, digits: string) => {
-    const start = Math.min(index, code.length);
-    const next = (code.slice(0, start) + digits + code.slice(start + digits.length)).slice(0, length);
+    const full = digits.length >= length;
+    const start = full ? 0 : Math.min(index, code.length);
+    const next = full ? digits.slice(0, length) : (code.slice(0, start) + digits + code.slice(start + digits.length)).slice(0, length);
     onChange(next);
     if (next.length === length) onComplete?.(next);
-    focusBox(start + digits.length);
+    focusBox(full ? length - 1 : start + digits.length);
+  };
+
+  /**
+   * Ce qui vient d'être tapé ou inséré dans une case, sans le chiffre qu'elle contenait déjà.
+   * Le curseur est juste après le texte inséré : c'est lui qui dit où se trouvait l'ancien chiffre.
+   */
+  const insertedText = (raw: string, previous: string | undefined, caret: number | null) => {
+    if (!previous || raw.length < 2) return raw;
+    const insertedLength = raw.length - previous.length;
+    if (caret !== null && caret >= insertedLength) return raw.slice(caret - insertedLength, caret);
+    return raw.startsWith(previous) ? raw.slice(previous.length) : raw.slice(0, insertedLength);
   };
 
   const handleKeyDown = (index: number, event: KeyboardEvent<HTMLInputElement>) => {
@@ -59,7 +74,7 @@ export function CodeInput({ label, value, onChange, onComplete, length = 6, hint
   const handlePaste = (index: number, event: ClipboardEvent<HTMLInputElement>) => {
     event.preventDefault();
     const digits = onlyDigits(event.clipboardData.getData("text"));
-    if (digits) write(index, digits.slice(0, length));
+    if (digits) write(index, digits);
   };
 
   return (
@@ -89,11 +104,9 @@ export function CodeInput({ label, value, onChange, onComplete, length = 6, hint
                 onChange(code.slice(0, index) + code.slice(index + 1));
                 return;
               }
-              // Le chiffre déjà présent n'est pas une nouvelle saisie. Une case reçoit parfois tout le code
-              // (saisie automatique du téléphone) : on le répartit sur les cases suivantes.
-              const typed = raw.length > 1 && code[index] ? raw.replace(code[index], "") : raw;
-              const digits = onlyDigits(typed);
-              if (digits) write(index, digits.slice(0, length));
+              // Une case reçoit parfois tout le code (saisie automatique du téléphone) : on le répartit.
+              const digits = onlyDigits(insertedText(raw, code[index], event.target.selectionStart));
+              if (digits) write(index, digits);
             }}
             onKeyDown={(event) => handleKeyDown(index, event)}
             onPaste={(event) => handlePaste(index, event)}

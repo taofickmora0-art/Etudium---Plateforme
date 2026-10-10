@@ -105,7 +105,7 @@ export function ToastView({ tone, title, description, action, onDismiss, classNa
               action.onClick();
               onDismiss?.();
             }}
-            className="focus-etudium flex-none cursor-pointer border-0 bg-transparent p-0 text-[13px] leading-5 font-semibold text-white underline"
+            className="focus-etudium cible-tactile relative flex-none cursor-pointer border-0 bg-transparent p-0 text-[13px] leading-5 font-semibold text-white underline"
           >
             {action.label}
           </button>
@@ -114,7 +114,7 @@ export function ToastView({ tone, title, description, action, onDismiss, classNa
               type="button"
               aria-label="Fermer la notification"
               onClick={onDismiss}
-              className="focus-etudium -my-0.5 flex size-6 flex-none cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-sur-encre hover:text-white"
+              className="focus-etudium cible-tactile relative -my-0.5 flex size-6 flex-none cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-sur-encre hover:text-white"
             >
               <Icon icon={Cancel01Icon} size={16} />
             </button>

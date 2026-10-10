@@ -25,7 +25,7 @@ export function Switch({ label, className, ...props }: SwitchProps) {
       <RadixSwitch.Root
         id={id}
         {...props}
-        className="focus-etudium box-border inline-flex h-7 w-[46px] flex-none cursor-pointer items-center rounded-full bg-inactif p-[3px] transition-colors data-[state=checked]:bg-bleu disabled:cursor-not-allowed disabled:opacity-45"
+        className="focus-etudium cible-tactile relative box-border inline-flex h-7 w-[46px] flex-none cursor-pointer items-center rounded-full bg-inactif p-[3px] transition-colors data-[state=checked]:bg-bleu disabled:cursor-not-allowed disabled:opacity-45"
       >
         <RadixSwitch.Thumb className="block size-[22px] rounded-full bg-panneau shadow-[0_1px_2px_rgba(0,0,0,0.2)] transition-transform data-[state=checked]:translate-x-[18px]" />
       </RadixSwitch.Root>
