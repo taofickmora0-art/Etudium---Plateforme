@@ -49,6 +49,10 @@ describe("Pages protégées", () => {
     }
     expect(routeFor({ pathname: "/accueil", signedIn: true, hadSession: true })).toEqual({});
   });
+
+  it("le lien de réinitialisation ouvre une session : le nouveau mot de passe reste accessible", () => {
+    expect(routeFor({ pathname: "/nouveau-mot-de-passe", signedIn: true, hadSession: true })).toEqual({});
+  });
 });
 
 describe("Mode démonstration", () => {

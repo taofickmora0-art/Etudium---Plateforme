@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { authErrorMessage, safeNext } from "./messages";
-import { codeSchema, fieldErrorsFrom, signInSchema, signUpSchema, type FormState } from "./schemas";
+import { codeSchema, fieldErrorsFrom, newPasswordSchema, resetRequestSchema, signInSchema, signUpSchema, type FormState } from "./schemas";
 import { PENDING_EMAIL_COOKIE, PENDING_EMAIL_MAX_AGE, REMEMBER_COOKIE } from "./session-cookies";
 
 // Actions serveur des écrans de compte. `redirect()` est toujours appelé hors des blocs try (il lève une erreur).
@@ -148,4 +148,47 @@ export async function resendCode(prev: FormState): Promise<FormState> {
     return { status: "error", message: authErrorMessage(null) };
   }
   return { status: "success", message: "Un nouveau code vous a été envoyé." };
+}
+
+/**
+ * « Mot de passe oublié » (NdMotDePasse) : envoie le lien, et répond toujours la même chose, que le compte
+ * existe ou non (spec §4), sauf quand Supabase limite les envois.
+ */
+export async function requestReset(_prev: FormState, formData: FormData): Promise<FormState> {
+  const brut = texte(formData, "email");
+  const parsed = resetRequestSchema.safeParse({ email: brut });
+  if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values: { email: brut } };
+  const { email } = parsed.data;
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${await origine()}/auth/confirm?next=/nouveau-mot-de-passe`,
+    });
+    const limite = error && (error.code === "over_email_send_rate_limit" || error.code === "over_request_rate_limit" || error.status === 429);
+    if (limite) return { status: "error", message: authErrorMessage(error), values: { email } };
+  } catch {
+    return { status: "error", message: authErrorMessage(null), values: { email } };
+  }
+  return { status: "success", values: { email } };
+}
+
+const LIEN_EXPIRE = "Ce lien a expiré. Demandez-en un nouveau.";
+
+/** Nouveau mot de passe (NdReinitialisation), ouvert depuis le lien reçu ; les autres appareils sont déconnectés. */
+export async function updatePassword(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = newPasswordSchema.safeParse({ password: texte(formData, "password"), confirmation: texte(formData, "confirmation") });
+  if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error) };
+
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+    if (error) {
+      const sansSession = (error as { name?: string }).name === "AuthSessionMissingError" || error.code === "session_not_found";
+      return { status: "error", message: sansSession ? LIEN_EXPIRE : authErrorMessage(error) };
+    }
+    await supabase.auth.signOut({ scope: "others" });
+  } catch {
+    return { status: "error", message: authErrorMessage(null) };
+  }
+  redirect("/accueil");
 }
