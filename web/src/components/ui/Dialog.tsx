@@ -32,6 +32,11 @@ export type DialogProps = {
   footer?: ReactNode;
   /** Fenêtre bloquante (session expirée) : ni croix, ni Échap, ni clic à côté. */
   dismissible?: boolean;
+  /**
+   * Élément qui reprend le focus à la fermeture. Par défaut, celui qui avait le focus à l'ouverture ;
+   * à préciser quand la fenêtre s'ouvre depuis un menu, qui a disparu entre-temps.
+   */
+  returnFocus?: () => HTMLElement | null | undefined;
   className?: string;
 };
 
@@ -39,7 +44,7 @@ export type DialogProps = {
  * Fenêtre de dialogue (planche « Modales et confirmations ») : 420 px, rayon 24, croix en haut à droite.
  * Le focus reste dans la fenêtre ; Échap la ferme ; il revient ensuite sur le bouton qui l'a ouverte.
  */
-export function Dialog({ open, onOpenChange, title, description, icon, iconTone = "neutre", children, footer, dismissible = true, className }: DialogProps) {
+export function Dialog({ open, onOpenChange, title, description, icon, iconTone = "neutre", children, footer, dismissible = true, returnFocus, className }: DialogProps) {
   const block = (event: Event) => {
     if (!dismissible) event.preventDefault();
   };
@@ -50,6 +55,13 @@ export function Dialog({ open, onOpenChange, title, description, icon, iconTone 
         <RadixDialog.Overlay className="fixed inset-0 z-50 bg-[#36476C]/60 motion-safe:animate-fondu" />
         <RadixDialog.Content
           onEscapeKeyDown={block}
+          onCloseAutoFocus={(event) => {
+            const target = returnFocus?.();
+            if (target) {
+              event.preventDefault();
+              target.focus();
+            }
+          }}
           onPointerDownOutside={block}
           onInteractOutside={block}
           {...(description ? {} : { "aria-describedby": undefined })}

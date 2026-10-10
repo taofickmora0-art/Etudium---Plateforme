@@ -29,6 +29,8 @@ export type ConfirmDialogProps = {
   iconTone?: DialogIconTone;
   /** Bouton de confirmation désactivé (mot de confirmation pas encore saisi…). */
   confirmDisabled?: boolean;
+  /** Voir `Dialog` : élément qui reprend le focus à la fermeture. */
+  returnFocus?: () => HTMLElement | null | undefined;
   children?: ReactNode;
 };
 
@@ -45,6 +47,7 @@ export function ConfirmDialog({
   icon,
   iconTone,
   confirmDisabled = false,
+  returnFocus,
   errorMessage = "L’action n’a pas abouti. Vérifiez votre connexion, puis réessayez.",
   children,
 }: ConfirmDialogProps) {
@@ -80,6 +83,7 @@ export function ConfirmDialog({
       }}
       title={title}
       description={description}
+      returnFocus={returnFocus}
       icon={icon}
       iconTone={iconTone ?? (tone === "danger" ? "danger" : "neutre")}
       footer={
