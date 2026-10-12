@@ -7,7 +7,8 @@ import { cn } from "@/lib/cn";
 import { Icon } from "./Icon";
 
 type AccordionProps = {
-  items: { question: string; answer: ReactNode }[];
+  /** `question` : un texte, ou un titre composé (titre et méta d'un module) avec sa `cle`. */
+  items: { question: ReactNode; answer: ReactNode; cle?: string }[];
   /** Questions ouvertes au départ (indices). */
   defaultOpen?: number[];
   className?: string;
@@ -18,10 +19,10 @@ export function Accordion({ items, defaultOpen = [], className }: AccordionProps
   return (
     <RadixAccordion.Root type="multiple" defaultValue={defaultOpen.map(String)} className={cn("flex min-w-0 flex-col", className)}>
       {items.map((item, index) => (
-        <RadixAccordion.Item key={item.question} value={String(index)} className="border-b border-bordure-carte">
+        <RadixAccordion.Item key={item.cle ?? (typeof item.question === "string" ? item.question : index)} value={String(index)} className="border-b border-bordure-carte">
           <RadixAccordion.Header className="m-0">
             <RadixAccordion.Trigger className="group focus-etudium flex min-h-14 w-full cursor-pointer items-center justify-between gap-4 border-0 bg-transparent py-2 text-left text-base leading-6 font-medium text-encre">
-              <span>{item.question}</span>
+              <span className="min-w-0">{item.question}</span>
               <span className="flex flex-none transition-transform group-data-[state=open]:rotate-180">
                 <Icon icon={ArrowDown01Icon} size={20} />
               </span>

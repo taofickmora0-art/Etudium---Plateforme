@@ -1,17 +1,11 @@
-import { CourseIllustration, type Parcours } from "@/components/ui/CourseIllustration";
-
-const PILES: { parcours: Parcours; decalage: string; rotation: string }[] = [
-  { parcours: "academique", decalage: "ml-0", rotation: "-rotate-7" },
-  { parcours: "digital", decalage: "-ml-[13px]", rotation: "rotate-4" },
-  { parcours: "business", decalage: "-ml-[13px]", rotation: "-rotate-3" },
-];
+import { PilesParcours } from "./BlocsFiche";
 
 export const SOUS_TITRE_CATALOGUE = "Réussite académique, compétences digitales et business en ligne. Chaque fiche propose un aperçu gratuit.";
 
 /** Bandeau bleu du catalogue public (NdCataloguePublic) : pastille, titre, texte et les trois illustrations de parcours. */
 export function HerosCatalogue() {
   return (
-    <section className="box-border rounded-panneau bg-bleu bg-[radial-gradient(rgba(255,255,255,0.13)_1.2px,transparent_1.2px)] bg-size-[22px_22px] p-[clamp(28px,4.5vw,56px)] text-white">
+    <section className="box-border rounded-panneau bg-bleu trame-points p-[clamp(28px,4.5vw,56px)] text-white">
       <div className="flex flex-wrap items-center justify-between gap-x-12 gap-y-7">
         <div className="min-w-0 flex-[1_1_420px]">
           <div className="flex max-w-[800px] flex-col gap-4">
@@ -23,16 +17,7 @@ export function HerosCatalogue() {
           </div>
         </div>
         <div className="flex-none px-3 py-2">
-          <div aria-hidden="true" className="flex items-center">
-            {PILES.map(({ parcours, decalage, rotation }) => (
-              <span
-                key={parcours}
-                className={`flex size-[84px] items-center justify-center rounded-[24px] bg-white shadow-[0_10px_28px_rgba(4,10,80,0.22)] ${decalage} ${rotation}`}
-              >
-                <CourseIllustration parcours={parcours} size={52} />
-              </span>
-            ))}
-          </div>
+          <PilesParcours taille="md" />
         </div>
       </div>
     </section>

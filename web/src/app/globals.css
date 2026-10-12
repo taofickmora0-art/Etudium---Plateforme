@@ -130,6 +130,14 @@ body {
   background-size: 22px 22px;
 }
 
+/* Contour de focus clavier sur fond bleu (bandeaux, pied de page) : 2 px blanc, décalé de 2 px. */
+@utility focus-blanc {
+  &:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+  }
+}
+
 /* Contour de focus clavier des planches : 2 px bleu Étudium, décalé de 2 px. */
 @utility focus-etudium {
   &:focus-visible {

@@ -20,7 +20,7 @@ const COLONNES = [
 /** Pied de page public : bleu nuit à motif de points, dernier élément du bloc gris-bleu de la page. */
 export function PiedDePagePublic() {
   return (
-    <footer className="box-border flex flex-wrap gap-x-12 gap-y-8 rounded-panneau bg-[#060F75] bg-[radial-gradient(rgba(255,255,255,0.13)_1.2px,transparent_1.2px)] bg-size-[22px_22px] p-[clamp(28px,4.5vw,56px)] text-[#C2C8FF]">
+    <footer className="box-border flex flex-wrap gap-x-12 gap-y-8 rounded-panneau bg-[#060F75] trame-points p-[clamp(28px,4.5vw,56px)] text-[#C2C8FF]">
       <div className="flex max-w-[360px] flex-[1_1_280px] flex-col gap-3.5">
         <span className="flex items-center gap-2.5 text-[22px] font-bold tracking-[-0.02em] text-white">
           <LogoMark inverse />
@@ -32,7 +32,7 @@ export function PiedDePagePublic() {
         <nav key={colonne.titre} aria-label={colonne.titre} className="flex flex-[0_1_180px] flex-col gap-1">
           <span className="mb-2 text-[13px] font-semibold tracking-[0.04em] text-[#9DA6FF] uppercase">{colonne.titre}</span>
           {colonne.liens.map((lien) => (
-            <Link key={lien.href} href={lien.href} className="focus-etudium flex min-h-[34px] items-center text-[15px] font-medium text-white no-underline hover:underline">
+            <Link key={lien.href} href={lien.href} className="focus-blanc flex min-h-[34px] items-center text-[15px] font-medium text-white no-underline hover:underline">
               {lien.label}
             </Link>
           ))}
