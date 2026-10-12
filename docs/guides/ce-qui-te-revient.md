@@ -172,3 +172,15 @@ Il faut la section 5 (tables et exemples du lot 1). Sans elles, le catalogue aff
    - une fiche gratuite (Zotero, Canva, ou celle que tu as créée en 1.2) : bouton **Commencer**.
 4. Ouvre http://localhost:3000/formations/maitriser-microsoft-excel puis, dans un autre onglet, l’adresse de son image de partage : clic droit sur la page → **Afficher le code source**, cherche `og:image`, et ouvre l’adresse indiquée. L’image bleue avec le titre s’affiche.
 5. Le vrai test WhatsApp (coller le lien dans une conversation) demande l’adresse en ligne : on le fera à la mise en production.
+
+## 8. Valider Mes parcours (tâche 1.4), 5 minutes
+
+Il faut la section 5 (tables et exemples du lot 1). Connecte-toi, puis ouvre **Mes parcours** dans le menu :
+
+1. Un onglet par parcours (Académique, Digital, Business), chacun avec un petit cadenas : au lot 1, personne n’a encore de formule.
+2. Chaque parcours affiche sa couleur, sa description, le badge « Non inclus », puis le bloc « Ce parcours n’est pas inclus dans votre compte gratuit » avec le bouton **Voir les formules** (la page des formules arrive au lot 2).
+3. Dessous, les formations du parcours, numérotées 01, 02… dans l’ordre du back-office :
+   - Zotero (Académique) et Canva (Digital) portent « Gratuite », les autres « Verrouillée » ;
+   - chaque ligne ouvre la fiche de la formation.
+4. Au back-office, ajoute une formation publiée à un parcours (onglet Informations de la formation), puis recharge Mes parcours : elle apparaît en dernier dans ce parcours. Pour l’instant, on ne peut pas changer cet ordre au back-office.
+5. La progression (« 0 % du parcours », barres vides) se remplira avec la tâche 1.7.

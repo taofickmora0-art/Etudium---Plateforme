@@ -33,15 +33,15 @@ function LigneFormation({ carte, rang, progression }: { carte: CarteCatalogue; r
         <span aria-hidden="true" className="flex size-11 flex-none items-center justify-center rounded-champ bg-coque text-sm font-semibold text-texte">
           {String(rang).padStart(2, "0")}
         </span>
-        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="text-[15px] leading-[22px] font-medium text-encre">{carte.titre}</span>
-        </span>
-        {/* La barre laisse sa place au titre sur téléphone. */}
-        <span className="w-[120px] flex-none max-sm:hidden">
-          <ProgressBar value={progression?.pourcentage ?? 0} label={`Progression : ${carte.titre}`} className="h-1.5" />
-        </span>
-        <span className="flex w-[100px] flex-none justify-end">
-          <Tag tone={etat.ton}>{etat.libelle}</Tag>
+        {/* Sur téléphone, la barre se masque et l'état passe sous le titre : le titre garde toute la largeur. */}
+        <span className="flex min-w-0 flex-1 flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:gap-3.5">
+          <span className="w-full min-w-0 text-[15px] leading-[22px] font-medium text-encre sm:w-auto sm:flex-1">{carte.titre}</span>
+          <span className="w-[120px] flex-none max-sm:hidden">
+            <ProgressBar value={progression?.pourcentage ?? 0} label={`Progression : ${carte.titre}`} className="h-1.5" />
+          </span>
+          <span className="flex flex-none sm:w-[100px] sm:justify-end">
+            <Tag tone={etat.ton}>{etat.libelle}</Tag>
+          </span>
         </span>
         <span className="flex flex-none text-discret">
           <Icon icon={ArrowRight01Icon} size={18} />
@@ -64,12 +64,15 @@ function PanneauParcours({ parcours, cartes, progressions }: { parcours: Parcour
             <span className={cn("flex size-12 flex-none items-center justify-center rounded-[14px]", TUILE[parcours.couleur])}>
               <Icon icon={Route01Icon} size={22} />
             </span>
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <h2 className="m-0 text-xl leading-7 font-semibold text-encre">{parcours.nom}</h2>
-              {parcours.description && <p className="m-0 text-sm leading-[22px] text-pretty text-discret">{parcours.description}</p>}
+            {/* Sur téléphone, le badge passe sous la description pour laisser la largeur au nom. */}
+            <div className="flex min-w-0 flex-1 flex-col items-start gap-2 sm:flex-row sm:gap-4">
+              <div className="flex min-w-0 flex-col gap-1 sm:flex-1">
+                <h2 className="m-0 text-xl leading-7 font-semibold text-encre">{parcours.nom}</h2>
+                {parcours.description && <p className="m-0 text-sm leading-[22px] text-pretty text-discret">{parcours.description}</p>}
+              </div>
+              {/* Lot 1 : aucun abonnement, aucun parcours actif (les formules arrivent au lot 2). */}
+              <Tag tone="enAttente" className="flex-none">Non inclus</Tag>
             </div>
-            {/* Lot 1 : aucun abonnement, aucun parcours actif (les formules arrivent au lot 2). */}
-            <Tag tone="enAttente">Non inclus</Tag>
           </div>
           <ProgressBar value={pourcentage} label="Progression du parcours" className="mt-5" />
           <div className="mt-2 flex flex-wrap items-center gap-[7px] text-xs leading-[18px] text-discret">
