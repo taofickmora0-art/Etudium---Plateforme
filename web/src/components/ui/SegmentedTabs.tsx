@@ -3,8 +3,10 @@
 import { useState, type ReactNode } from "react";
 import { Tabs } from "radix-ui";
 import { cn } from "@/lib/cn";
+import { Icon, type IconSvgElement } from "./Icon";
 
-export type TabItem = { value: string; label: string; content: ReactNode };
+/** `icon` : petite icône avant le libellé (cadenas d'un parcours non inclus, NdParcours). */
+export type TabItem = { value: string; label: string; content: ReactNode; icon?: IconSvgElement };
 
 type SegmentedTabsProps = {
   /** Nom de la liste d'onglets pour les lecteurs d'écran. */
@@ -41,6 +43,7 @@ export function SegmentedTabs({ label, items, defaultValue, value, onValueChange
             value={item.value}
             className="focus-etudium cible-tactile relative flex h-10 cursor-pointer items-center rounded-puce px-4 text-sm font-medium text-texte transition-colors hover:text-bleu data-[state=active]:bg-panneau data-[state=active]:text-bleu data-[state=active]:shadow-pastille"
           >
+            {item.icon && <Icon icon={item.icon} size={16} className="mr-1.5" />}
             {item.label}
           </Tabs.Trigger>
         ))}
@@ -49,8 +52,8 @@ export function SegmentedTabs({ label, items, defaultValue, value, onValueChange
         <Tabs.Content
           key={item.value}
           value={item.value}
-          forceMount={keepMounted || undefined}
-          hidden={keepMounted ? item.value !== actif : undefined}
+          // Sans keepMounted, ne rien passer : un « hidden={undefined} » écraserait celui que Radix pose sur les panneaux inactifs.
+          {...(keepMounted ? { forceMount: true as const, hidden: item.value !== actif } : {})}
           className="focus-etudium rounded-carte"
         >
           {item.content}

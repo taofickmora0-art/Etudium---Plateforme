@@ -61,8 +61,8 @@ export async function listCatalogue(): Promise<CarteCatalogue[]> {
 export async function listParcoursCatalogue(): Promise<ParcoursCatalogue[]> {
   if (demoModeActive()) return [];
   const supabase = await createClient();
-  const lignes = verifier(await supabase.from("parcours").select(COLONNES_PARCOURS).eq("actif", true).order("ordre")) as Ligne[] | null;
-  return (lignes ?? []).map(versParcours);
+  const lignes = verifier(await supabase.from("parcours").select(`${COLONNES_PARCOURS}, description`).eq("actif", true).order("ordre")) as Ligne[] | null;
+  return (lignes ?? []).map((p) => ({ ...versParcours(p), description: texte(p.description) }));
 }
 
 const versLecon = (l: Ligne): LeconFiche & { ordre: number } => ({

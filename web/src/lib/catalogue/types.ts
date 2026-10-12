@@ -2,7 +2,15 @@ import type { Badge, CouleurParcours, Niveau } from "@/lib/contenus/libelles";
 
 // Ce que le catalogue et la fiche formation lisent de la base (formations publiées seulement).
 
-export type ParcoursCatalogue = { slug: string; nom: string; nomCourt: string; couleur: CouleurParcours; ordre: number };
+export type ParcoursCatalogue = {
+  slug: string;
+  nom: string;
+  nomCourt: string;
+  couleur: CouleurParcours;
+  ordre: number;
+  /** Lue pour la liste des parcours (page Mes parcours), pas sur les cartes. */
+  description?: string;
+};
 
 export type CarteCatalogue = {
   id: string;

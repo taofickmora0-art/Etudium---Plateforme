@@ -46,7 +46,9 @@ describe("Lecture du catalogue", () => {
 
   it("les parcours du catalogue sont les parcours actifs, dans l'ordre", async () => {
     faux.repondre("parcours.select", { data: [PARCOURS] });
-    expect(await listParcoursCatalogue()).toEqual([{ slug: "reussite-academique", nom: "Réussite académique", nomCourt: "Académique", couleur: "academique", ordre: 1 }]);
+    expect(await listParcoursCatalogue()).toEqual([
+      { slug: "reussite-academique", nom: "Réussite académique", nomCourt: "Académique", couleur: "academique", ordre: 1, description: "" },
+    ]);
     expect(faux.de("parcours", "select")[0].filtres).toContainEqual(["eq", "actif", true]);
   });
 

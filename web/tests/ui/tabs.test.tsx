@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { SquareLock02Icon } from "@hugeicons/core-free-icons";
 import { describe, expect, it, vi } from "vitest";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
@@ -38,5 +39,27 @@ describe("SegmentedTabs", () => {
     await userEvent.keyboard("{ArrowRight}");
     expect(screen.getByRole("tab", { name: "Notifications" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("Contenu notifications")).toBeVisible();
+  });
+
+  it("seul le panneau actif est exposé ; les autres restent cachés (avec ou sans keepMounted)", () => {
+    const items = [
+      { value: "a", label: "A", content: <p>Contenu A</p> },
+      { value: "b", label: "B", content: <p>Contenu B</p> },
+      { value: "c", label: "C", content: <p>Contenu C</p> },
+    ];
+    const { unmount } = render(<SegmentedTabs label="Onglets" items={items} />);
+    expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
+    unmount();
+    render(<SegmentedTabs label="Onglets" items={items} keepMounted />);
+    expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
+    expect(screen.getByText("Contenu B", { selector: "p" })).not.toBeVisible();
+  });
+
+  it("un onglet peut porter une petite icône avant son libellé", () => {
+    render(
+      <SegmentedTabs label="Parcours" items={[{ value: "a", label: "Académique", icon: SquareLock02Icon, content: <p>A</p> }]} />,
+    );
+    const onglet = screen.getByRole("tab", { name: "Académique" });
+    expect(onglet.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
   });
 });
