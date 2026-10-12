@@ -52,6 +52,15 @@ describe("Ressources d'une leçon", () => {
     expect(assign).not.toHaveBeenCalled();
   });
 
+  it("une coupure réseau est annoncée et le bouton redevient utilisable", async () => {
+    lienRessource.mockRejectedValue(new TypeError("Failed to fetch"));
+    render(<RessourcesLecon ressources={RESSOURCES} />);
+    const bouton = screen.getByRole("button", { name: "Télécharger Classeur d’exemple" });
+    await userEvent.click(bouton);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Le lien n’a pas pu être créé. Réessayez.");
+    expect(bouton).toBeEnabled();
+  });
+
   it("« Consulter » attend le visualiseur (tâche 1.8)", () => {
     render(<RessourcesLecon ressources={RESSOURCES} />);
     const consulter = screen.getByRole("button", { name: "Consulter Guide des tableaux croisés" });

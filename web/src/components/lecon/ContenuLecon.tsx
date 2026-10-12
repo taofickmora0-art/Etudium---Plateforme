@@ -7,7 +7,7 @@ import { EnTeteLecon } from "./EnTeteLecon";
 import { LeconVerrouillee } from "./LeconVerrouillee";
 import { LecteurVideo } from "./LecteurVideo";
 import { NavigationLecon } from "./NavigationLecon";
-import { NotesLecon } from "./NotesLecon";
+import { NoteProvider, NotesLecon } from "./NotesLecon";
 import { OngletsLecon } from "./OngletsLecon";
 import { ProgrammeMobile } from "./ProgrammeMobile";
 import { RessourcesLecon } from "./RessourcesLecon";
@@ -50,11 +50,13 @@ export function ContenuLecon({ donnees, connecte, terminees }: Props) {
       <div className="flex flex-wrap items-start gap-8">
         {ouverte ? (
           <div className="flex min-w-0 flex-[999_1_420px] flex-col">
-            <OngletsLecon
-              programme={programme}
-              ressources={<RessourcesLecon ressources={lecon.ressources} />}
-              notes={<NotesLecon leconId={lecon.id} noteInitiale={note} connecte={connecte} disponible={notesDisponibles} />}
-            />
+            <NoteProvider key={lecon.id} noteInitiale={note}>
+              <OngletsLecon
+                programme={programme}
+                ressources={<RessourcesLecon ressources={lecon.ressources} />}
+                notes={<NotesLecon leconId={lecon.id} noteInitiale={note} connecte={connecte} disponible={notesDisponibles} />}
+              />
+            </NoteProvider>
           </div>
         ) : (
           // Sans onglets, le téléphone garde quand même le programme (il n'a pas de panneau à gauche).

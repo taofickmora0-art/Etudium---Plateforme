@@ -16,7 +16,7 @@ import { Icon, type IconSvgElement } from "@/components/ui/Icon";
 import { formatParMime } from "@/lib/admin/fichiers";
 import { cn } from "@/lib/cn";
 import { lienRessource } from "@/lib/lecon/actions";
-import { metaRessource } from "@/lib/lecon/regles";
+import { LIEN_ECHEC, metaRessource } from "@/lib/lecon/regles";
 import type { RessourceLecon } from "@/lib/lecon/types";
 
 /** Icône du format (le design n'en montre qu'une ; une par famille aide à reconnaître le fichier). */
@@ -59,10 +59,16 @@ export function RessourcesLecon({ ressources }: { ressources: RessourceLecon[] }
   const telecharger = async (r: RessourceLecon) => {
     setErreur(null);
     setEnCours(r.id);
-    const reponse = await lienRessource(r.id);
-    setEnCours(null);
-    if ("url" in reponse) window.location.assign(reponse.url);
-    else setErreur(reponse.erreur);
+    try {
+      const reponse = await lienRessource(r.id);
+      if ("url" in reponse) window.location.assign(reponse.url);
+      else setErreur(reponse.erreur);
+    } catch {
+      // Coupure réseau : on le dit, au lieu de l'écran d'erreur.
+      setErreur(LIEN_ECHEC);
+    } finally {
+      setEnCours(null);
+    }
   };
 
   return (

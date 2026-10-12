@@ -8,6 +8,10 @@ import type { RessourceLecon, VideoLecon } from "./types";
 /** Longueur maximale d'une note privée (la base l'impose aussi, migration 0006). */
 export const NOTE_MAX = 5000;
 
+// Messages communs aux actions serveur et aux composants (une coupure réseau dit la même chose qu'un refus).
+export const NOTE_ECHEC = "La note n’a pas pu être enregistrée. Réessayez.";
+export const LIEN_ECHEC = "Le lien n’a pas pu être créé. Réessayez.";
+
 type LeconAPlat = LeconFiche & { module: { numero: number; titre: string } };
 
 /** Toutes les leçons, dans l'ordre du programme, avec leur module. */

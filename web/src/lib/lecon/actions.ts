@@ -1,16 +1,16 @@
 "use server";
 
+import { refresh } from "next/cache";
 import { formatParMime } from "@/lib/admin/fichiers";
 import { texte, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
-import { NOTE_MAX } from "./regles";
+import { LIEN_ECHEC, NOTE_ECHEC, NOTE_MAX } from "./regles";
 
 // Actions de la page leçon. Les règles de la base décident de l'accès (notes : chacun les siennes, sur une leçon ouverte ;
 // ressources : avec l'accès à la leçon) ; on revérifie la session ici, sans faire confiance au navigateur.
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const NOTE_ECHEC = "La note n’a pas pu être enregistrée. Réessayez.";
 const FICHIER_INACCESSIBLE = "Ce fichier n’est pas accessible.";
 
 /** Enregistre la note privée d'une leçon ; une note vidée est effacée. */
@@ -26,7 +26,10 @@ export async function enregistrerNote(leconId: string, saisie: string): Promise<
     saisie.trim() === ""
       ? await supabase.from("notes_lecons").delete().eq("lecon_id", leconId).eq("profil_id", compte.id)
       : await supabase.from("notes_lecons").upsert({ profil_id: compte.id, lecon_id: leconId, texte: saisie }, { onConflict: "profil_id,lecon_id" });
-  return reponse.error ? { ok: false, erreur: NOTE_ECHEC } : { ok: true };
+  if (reponse.error) return { ok: false, erreur: NOTE_ECHEC };
+  // La page est relue : un retour arrière ou l'autre jeu d'onglets ne montrent pas l'ancienne note.
+  refresh();
+  return { ok: true };
 }
 
 /** Nom proposé au téléchargement : le titre, avec l'extension du format (sans la doubler), sans barre oblique. */
@@ -45,9 +48,10 @@ export async function lienRessource(ressourceId: string): Promise<{ url: string 
   if (!ressource) return { erreur: FICHIER_INACCESSIBLE };
   if (ressource.telechargeable !== true) return { erreur: "Ce fichier se consulte sans téléchargement." };
 
-  const lien = await supabase.storage
-    .from("ressources")
-    .createSignedUrl(texte(ressource.fichier), 60, { download: nomDeTelechargement(texte(ressource.titre), texte(ressource.format)) });
+  // Le nom de téléchargement est ajouté ici : passé en option, la bibliothèque l'encoderait deux fois
+  // (« Données » deviendrait « Donn%C3%A9es »).
+  const lien = await supabase.storage.from("ressources").createSignedUrl(texte(ressource.fichier), 60);
   const url = lien.error ? "" : texte(lien.data?.signedUrl);
-  return url ? { url } : { erreur: "Le lien n’a pas pu être créé. Réessayez." };
+  if (!url) return { erreur: LIEN_ECHEC };
+  return { url: `${url}&download=${encodeURIComponent(nomDeTelechargement(texte(ressource.titre), texte(ressource.format)))}` };
 }

@@ -3,6 +3,8 @@ import { fauxSupabase } from "../admin/faux-supabase";
 import { id } from "./donnees";
 
 const faux = fauxSupabase();
+const refresh = vi.fn();
+vi.mock("next/cache", () => ({ refresh: () => refresh() }));
 let compte: { id: string } | null = { id: "compte-1" };
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({ ...faux.client, auth: { getUser: async () => ({ data: { user: compte }, error: null }) } }),
@@ -17,6 +19,7 @@ describe("Notes privées", () => {
   beforeEach(() => {
     faux.vider();
     compte = { id: "compte-1" };
+    refresh.mockReset();
   });
 
   it("sans compte, rien n'est enregistré", async () => {
@@ -35,6 +38,8 @@ describe("Notes privées", () => {
     const [appel] = faux.de("notes_lecons", "upsert");
     expect(appel.valeurs).toEqual({ profil_id: "compte-1", lecon_id: id(1), texte: "Ctrl + T" });
     expect(appel.options).toEqual({ onConflict: "profil_id,lecon_id" });
+    // La page est relue : un retour arrière ou un autre onglet ne montrent pas l'ancienne note.
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it("une note vidée est effacée", async () => {
@@ -46,6 +51,7 @@ describe("Notes privées", () => {
   it("une erreur de la base, ou une leçon mal désignée, laisse un message", async () => {
     faux.repondre("notes_lecons.upsert", { error: { code: "42501", message: "refusé" } });
     expect(await enregistrerNote(id(3), "x")).toEqual({ ok: false, erreur: "La note n’a pas pu être enregistrée. Réessayez." });
+    expect(refresh).not.toHaveBeenCalled();
     expect(await enregistrerNote("abc", "x")).toEqual({ ok: false, erreur: "La note n’a pas pu être enregistrée. Réessayez." });
   });
 });
@@ -66,18 +72,17 @@ describe("Lien de téléchargement d'une ressource", () => {
     expect(faux.de("storage.ressources")).toEqual([]);
   });
 
-  it("le lien dure 60 secondes et porte le nom du fichier", async () => {
+  it("le lien dure 60 secondes et porte le nom du fichier, accents compris (encodé une seule fois)", async () => {
     faux.repondre("ressources.select", { data: RESSOURCE });
-    faux.repondre("storage.ressources.createSignedUrl", { data: { signedUrl: "https://stockage/lien-signe" } });
-    expect(await lienRessource(id(301))).toEqual({ url: "https://stockage/lien-signe" });
-    expect(faux.de("storage.ressources", "createSignedUrl")[0].valeurs).toEqual([RESSOURCE.fichier, 60, { download: "Données de l’enquête.xlsx" }]);
+    faux.repondre("storage.ressources.createSignedUrl", { data: { signedUrl: "https://stockage/lien-signe?token=abc" } });
+    expect(await lienRessource(id(301))).toEqual({ url: `https://stockage/lien-signe?token=abc&download=${encodeURIComponent("Données de l’enquête.xlsx")}` });
+    expect(faux.de("storage.ressources", "createSignedUrl")[0].valeurs).toEqual([RESSOURCE.fichier, 60]);
   });
 
   it("un titre qui porte déjà l'extension ne la double pas ; une barre oblique ne casse pas le nom", async () => {
     faux.repondre("ressources.select", { data: { ...RESSOURCE, titre: "notes 2025/2026.XLSX" } });
-    faux.repondre("storage.ressources.createSignedUrl", { data: { signedUrl: "https://stockage/x" } });
-    await lienRessource(id(301));
-    expect(faux.de("storage.ressources", "createSignedUrl")[0].valeurs).toEqual([RESSOURCE.fichier, 60, { download: "notes 2025-2026.XLSX" }]);
+    faux.repondre("storage.ressources.createSignedUrl", { data: { signedUrl: "https://stockage/x?token=abc" } });
+    expect(await lienRessource(id(301))).toEqual({ url: `https://stockage/x?token=abc&download=${encodeURIComponent("notes 2025-2026.XLSX")}` });
   });
 
   it("si le lien ne peut pas être créé, un message le dit", async () => {

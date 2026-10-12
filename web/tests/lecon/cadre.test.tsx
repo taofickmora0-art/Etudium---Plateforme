@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }), usePathname: () => "/formations/x/lecons/y" }));
@@ -31,5 +32,15 @@ describe("Cadre de la page leçon", () => {
     expect(screen.getByRole("link", { name: "Étudium, accueil" })).toHaveAttribute("href", "/accueil");
     expect(screen.getByRole("link", { name: "Retour" })).toHaveAttribute("href", "/mes-formations");
     expect(screen.getByRole("link", { name: "Aller au contenu" })).toHaveAttribute("href", "#contenu");
+  });
+
+  it("une panne (Supabase injoignable) affiche une erreur en français, avec « Réessayer »", async () => {
+    const { default: LeconError } = await import("@/app/(lecon)/error");
+    const retry = vi.fn();
+    render(<LeconError error={new Error("fetch failed")} retry={retry} />);
+    expect(screen.getByRole("heading", { name: "Une erreur est survenue" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Réessayer" }));
+    expect(retry).toHaveBeenCalled();
+    expect(screen.getByRole("link", { name: "Toutes les formations" })).toHaveAttribute("href", "/formations");
   });
 });

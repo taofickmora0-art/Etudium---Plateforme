@@ -1,24 +1,46 @@
 "use client";
 
-import { useId, useState, useTransition } from "react";
+import { createContext, useContext, useId, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { Note01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { cn } from "@/lib/cn";
 import { enregistrerNote } from "@/lib/lecon/actions";
-import { NOTE_MAX } from "@/lib/lecon/regles";
+import { NOTE_ECHEC, NOTE_MAX } from "@/lib/lecon/regles";
 
 type Props = { leconId: string; noteInitiale: string | null; connecte: boolean; disponible: boolean };
 
 const TEXTE_DISCRET = "m-0 text-sm leading-[22px] text-discret";
 
+type Statut = { ok: boolean; message: string } | null;
+type EtatNote = { texte: string; setTexte: (texte: string) => void; statut: Statut; setStatut: (statut: Statut) => void };
+
+const ContexteNote = createContext<EtatNote | null>(null);
+
+/**
+ * Garde la note au-dessus des onglets : un changement d'onglet (qui démonte le panneau) ne perd ni la saisie ni la note
+ * enregistrée, et les onglets de l'ordinateur et du téléphone montrent la même note.
+ */
+export function NoteProvider({ noteInitiale, children }: { noteInitiale: string | null; children: ReactNode }) {
+  const [texte, setTexte] = useState(noteInitiale ?? "");
+  const [statut, setStatut] = useState<Statut>(null);
+  return <ContexteNote value={{ texte, setTexte, statut, setStatut }}>{children}</ContexteNote>;
+}
+
+/** L'état partagé s'il existe, sinon un état propre (composant utilisé seul). */
+function useEtatNote(noteInitiale: string | null): EtatNote {
+  const partage = useContext(ContexteNote);
+  const [texte, setTexte] = useState(noteInitiale ?? "");
+  const [statut, setStatut] = useState<Statut>(null);
+  return partage ?? { texte, setTexte, statut, setStatut };
+}
+
 /** Onglet « Notes » (NdLecon §2.11) : une note privée par leçon, enregistrée au clic. */
 export function NotesLecon({ leconId, noteInitiale, connecte, disponible }: Props) {
   const champ = useId();
   const aide = useId();
-  const [texte, setTexte] = useState(noteInitiale ?? "");
-  const [statut, setStatut] = useState<{ ok: boolean; message: string } | null>(null);
+  const { texte, setTexte, statut, setStatut } = useEtatNote(noteInitiale);
   const [enCours, demarrer] = useTransition();
 
   if (!connecte) {
@@ -39,8 +61,13 @@ export function NotesLecon({ leconId, noteInitiale, connecte, disponible }: Prop
       onSubmit={(e) => {
         e.preventDefault();
         demarrer(async () => {
-          const reponse = await enregistrerNote(leconId, texte);
-          setStatut(reponse.ok ? { ok: true, message: "Note enregistrée" } : { ok: false, message: reponse.erreur });
+          try {
+            const reponse = await enregistrerNote(leconId, texte);
+            setStatut(reponse.ok ? { ok: true, message: "Note enregistrée" } : { ok: false, message: reponse.erreur });
+          } catch {
+            // Coupure réseau : on le dit et on garde la saisie, au lieu de l'écran d'erreur.
+            setStatut({ ok: false, message: NOTE_ECHEC });
+          }
         });
       }}
     >
