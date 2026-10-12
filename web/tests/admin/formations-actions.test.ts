@@ -1,0 +1,149 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fauxSupabase } from "./faux-supabase";
+
+const faux = fauxSupabase();
+vi.mock("@/lib/supabase/server", () => ({ createClient: async () => faux.client }));
+const getShellUser = vi.fn();
+vi.mock("@/lib/auth/current-user", () => ({ getShellUser: () => getShellUser(), demoModeActive: () => false }));
+const refresh = vi.fn();
+vi.mock("next/cache", () => ({ refresh: () => refresh() }));
+
+const { createFormation, saveFormationInfos, setStatutFormation, deleteFormation } = await import("@/lib/admin/actions");
+const { IDLE } = await import("@/lib/auth/schemas");
+
+const F = "11111111-1111-4111-8111-111111111111";
+const P1 = "22222222-2222-4222-8222-222222222222";
+const P2 = "33333333-3333-4333-8333-333333333333";
+
+const form = (valeurs: Record<string, string | string[]>) => {
+  const fd = new FormData();
+  for (const [k, v] of Object.entries(valeurs)) for (const x of Array.isArray(v) ? v : [v]) fd.append(k, x);
+  return fd;
+};
+const INFOS = {
+  id: F,
+  titre: "Maîtriser Excel",
+  slug: "maitriser-excel",
+  resume: "Résumé",
+  description: "",
+  objectifs: "A\n\n  B  \n",
+  competences: "Formules",
+  niveau: "intermediaire",
+  formateur_id: "",
+  gratuite: "on",
+  achat_separe: "",
+  prix_fcfa: "",
+  badge: "",
+  seuil_video: "90",
+  parcours: [P1, P2],
+};
+
+describe("Back-office : formations", () => {
+  beforeEach(() => {
+    faux.vider();
+    refresh.mockReset();
+    getShellUser.mockReset();
+    getShellUser.mockResolvedValue({ roles: ["etudiant", "admin"] });
+  });
+
+  it("deux formations au même titre reçoivent des adresses distinctes", async () => {
+    faux.repondre("formations.select", { data: [{ slug: "maitriser-excel" }, { slug: "maitriser-excel-avance" }] });
+    faux.repondre("formations.insert", { data: { id: F } });
+    const state = await createFormation(IDLE, form({ titre: "Maîtriser Excel" }));
+    expect(faux.de("formations", "insert")[0].valeurs).toEqual({ titre: "Maîtriser Excel", slug: "maitriser-excel-2" });
+    expect(state).toEqual({ status: "success", redirection: `/admin/formations/${F}` });
+  });
+
+  it("une formation sans titre n'est pas créée", async () => {
+    const state = await createFormation(IDLE, form({ titre: "  " }));
+    expect(state.fieldErrors?.titre).toBe("Entrez le titre de la formation.");
+    expect(faux.appels).toEqual([]);
+  });
+
+  it("les informations s'enregistrent, listes saisies une par ligne", async () => {
+    const state = await saveFormationInfos(IDLE, form(INFOS));
+    expect(state.status).toBe("success");
+    const [maj] = faux.de("formations", "update");
+    expect(maj.valeurs).toEqual({
+      titre: "Maîtriser Excel",
+      slug: "maitriser-excel",
+      resume: "Résumé",
+      description: "",
+      objectifs: ["A", "B"],
+      competences: ["Formules"],
+      niveau: "intermediaire",
+      formateur_id: null,
+      gratuite: true,
+      achat_separe: false,
+      prix_fcfa: null,
+      badge: null,
+      seuil_video: 90,
+    });
+    expect(maj.filtres).toContainEqual(["eq", "id", F]);
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it("un parcours coché s'ajoute à la fin de sa liste, un décoché se retire, les autres gardent leur place", async () => {
+    const P3 = "44444444-4444-4444-8444-444444444444";
+    // Liens existants : P1 (gardé) et P3 (décoché) ; P2 est nouveau et compte déjà 4 formations.
+    faux.repondre("formations_parcours.select", (appel) =>
+      appel.valeurs === "ordre" ? { data: { ordre: 4 } } : { data: [{ parcours_id: P1 }, { parcours_id: P3 }] },
+    );
+    await saveFormationInfos(IDLE, form(INFOS));
+    const [suppression] = faux.de("formations_parcours", "delete");
+    expect(suppression.filtres).toEqual([
+      ["eq", "formation_id", F],
+      ["in", "parcours_id", [P3]],
+    ]);
+    const ajouts = faux.de("formations_parcours", "insert").map((a) => a.valeurs);
+    expect(ajouts).toEqual([{ formation_id: F, parcours_id: P2, ordre: 5 }]);
+  });
+
+  it("une adresse figée par la publication est expliquée sur son champ", async () => {
+    faux.repondre("formations.update", { error: { code: "P0001", message: "L'adresse d'une formation publiée ne change plus." } });
+    const state = await saveFormationInfos(IDLE, form({ ...INFOS, slug: "autre-adresse" }));
+    expect(state.fieldErrors?.slug).toBe("L’adresse d’une formation publiée ne change plus.");
+    expect(state.values?.objectifs).toBe("A\nB");
+    expect(faux.de("formations_parcours")).toEqual([]);
+  });
+
+  it("un prix ou un seuil invalide est refusé avant la base", async () => {
+    const state = await saveFormationInfos(IDLE, form({ ...INFOS, prix_fcfa: "-5", seuil_video: "30" }));
+    expect(state.fieldErrors).toMatchObject({ prix_fcfa: "Un prix positif, en FCFA.", seuil_video: "Entre 50 et 100 %." });
+    expect(faux.appels).toEqual([]);
+  });
+
+  it("on ne publie pas une formation vide", async () => {
+    faux.repondre("modules.select", { data: [{ id: "m1", lecons: [] }] });
+    expect(await setStatutFormation(F, "publiee")).toEqual({ ok: false, message: "Ajoutez au moins une leçon avant de publier." });
+    expect(faux.de("formations", "update")).toEqual([]);
+  });
+
+  it("une formation avec des leçons se publie, puis s'archive", async () => {
+    faux.repondre("modules.select", { data: [{ id: "m1", lecons: [{ id: "l1" }] }] });
+    expect(await setStatutFormation(F, "publiee")).toEqual({ ok: true });
+    expect(faux.de("formations", "update")[0].valeurs).toEqual({ statut: "publiee" });
+    expect(await setStatutFormation(F, "archivee")).toEqual({ ok: true });
+    expect(faux.de("formations", "update")[1].valeurs).toEqual({ statut: "archivee" });
+  });
+
+  it("seul un brouillon s'efface, avec ses fichiers", async () => {
+    faux.repondre("formations.select", { data: { statut: "archivee", publiee_le: "2026-10-01T00:00:00Z" } });
+    expect(await deleteFormation(F)).toEqual({ ok: false, message: "Une formation publiée s’archive, elle ne s’efface pas." });
+    expect(faux.de("formations", "delete")).toEqual([]);
+
+    faux.vider();
+    faux.repondre("formations.select", { data: { statut: "brouillon", publiee_le: null } });
+    faux.repondre("storage.ressources.list", { data: [{ name: "a.pdf" }, { name: "b.png" }] });
+    expect(await deleteFormation(F)).toEqual({ ok: true, redirection: "/admin/formations" });
+    expect(faux.de("storage.ressources", "remove")[0].valeurs).toEqual([[`${F}/a.pdf`, `${F}/b.png`]]);
+    expect(faux.de("formations", "delete")[0].filtres).toContainEqual(["eq", "id", F]);
+  });
+
+  it("un étudiant ne publie ni n'efface rien", async () => {
+    getShellUser.mockResolvedValue({ roles: ["etudiant"] });
+    expect(await setStatutFormation(F, "publiee")).toEqual({ ok: false, message: "Accès réservé à l’équipe." });
+    expect(await deleteFormation(F)).toEqual({ ok: false, message: "Accès réservé à l’équipe." });
+    expect(faux.appels).toEqual([]);
+  });
+});
