@@ -184,3 +184,20 @@ Il faut la section 5 (tables et exemples du lot 1). Connecte-toi, puis ouvre **M
    - chaque ligne ouvre la fiche de la formation.
 4. Au back-office, ajoute une formation publiée à un parcours (onglet Informations de la formation), puis recharge Mes parcours : elle apparaît en dernier dans ce parcours. Pour l’instant, on ne peut pas changer cet ordre au back-office.
 5. La progression (« 0 % du parcours », barres vides) se remplira avec la tâche 1.7.
+
+## 9. Valider la page leçon (tâche 1.5), 15 minutes
+
+Il faut la section 5 (tables et exemples du lot 1).
+
+1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0006_notes.sql` (notes privées), comme les précédents.
+2. Au back-office, ouvre **Maîtriser Microsoft Excel** → onglet Programme → leçon **Découvrir l’interface** (aperçu), et colle le lien d’une vidéo YouTube.
+3. Dans une **fenêtre de navigation privée** (sans compte), ouvre cette leçon depuis la fiche (lien **Aperçu**) :
+   - la vidéo se lit ; un bandeau « Vous regardez un aperçu gratuit » propose de créer un compte ;
+   - dans le programme à gauche, les leçons non-aperçu ont un cadenas ;
+   - **Leçon suivante** jusqu’à « Les formules essentielles » : un verrou remplace la vidéo, avec « Créer un compte gratuit » et « Voir l’aperçu gratuit ».
+4. Connecte-toi (fenêtre normale) et ouvre une leçon de la formation que tu as créée en 1.2 (en tant qu’admin, toutes les leçons te sont ouvertes) :
+   - le programme, **Leçon précédente / suivante** ;
+   - onglet **Ressources** : **Télécharger** ouvre le fichier ; **Consulter** reste grisé jusqu’à la tâche 1.8 ;
+   - onglet **Notes** : écris une note, **Enregistrer la note**, recharge la page : elle est toujours là.
+5. Sur ton téléphone (ou en rétrécissant la fenêtre) : en haut, la flèche de retour et le titre de la formation ; sous la vidéo, les onglets **Programme**, **Ressources** et **Notes** ; en bas, la barre **Leçon précédente / Leçon suivante**.
+6. Ce qui arrive ensuite : le lecteur aux couleurs d’Étudium et le temps réellement regardé (1.6), « Marquer comme terminée » et la progression (1.7), le visualiseur de fichiers (1.8).
