@@ -49,47 +49,37 @@ Sans cette adresse, le retour de Google et le lien « mot de passe oublié » so
 
 ---
 
-## 4. Les e-mails en français, 5 minutes
+## 4. Les e-mails en français, aux couleurs d’Étudium, 5 minutes
 
-**Authentication → Emails**, onglet des modèles (*Templates*). Remplace deux modèles. Copie les textes ci-dessous **tels quels**, accolades comprises.
+Les deux modèles sont dans le projet, prêts à coller : `web/supabase/templates/`. Ils reprennent le design :
+- fond bleu très clair, carte blanche, logo « É » bleu ;
+- code en grand dans un encadré bleu pâle ;
+- bouton bleu pour le lien.
+
+Ils s’affichent correctement dans Gmail, Outlook et sur téléphone.
+
+Dans Supabase : **Authentication → Emails**, liste des modèles (*Templates*).
 
 ### « Confirm sign up » (le code d’inscription)
 
-Sujet :
-
-```
-Votre code Étudium
-```
-
-Contenu :
-
-```html
-<h2>Bienvenue sur Étudium</h2>
-<p>Voici votre code pour activer votre compte :</p>
-<p style="font-size:30px;font-weight:600;letter-spacing:6px;margin:24px 0">{{ .Token }}</p>
-<p>Ce code expire dans 10 minutes.</p>
-<p>Si vous n’avez pas créé de compte sur Étudium, ignorez cet e-mail.</p>
-```
+1. Clique sur **Confirm sign up**.
+2. **Subject** : `Votre code Étudium`
+3. **Message body** :
+   - ouvre `web/supabase/templates/confirmation-inscription.html` avec le Bloc-notes ;
+   - **Ctrl + A** puis **Ctrl + C** ;
+   - dans Supabase, efface l’ancien contenu (**Ctrl + A** puis **Suppr**) et colle (**Ctrl + V**).
+4. **Save**.
 
 ### « Reset password » (le lien « mot de passe oublié »)
 
-Sujet :
+1. Clique sur **Reset password**.
+2. **Subject** : `Choisir un nouveau mot de passe Étudium`
+3. **Message body** : même chose avec `web/supabase/templates/mot-de-passe-oublie.html`.
+4. **Save**.
 
-```
-Choisir un nouveau mot de passe Étudium
-```
+Ne modifie pas les accolades `{{ … }}` : Supabase y met le code et le lien. Les autres modèles ne servent pas pour l’instant.
 
-Contenu :
-
-```html
-<h2>Nouveau mot de passe</h2>
-<p>Vous avez demandé à changer le mot de passe de votre compte Étudium.</p>
-<p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/nouveau-mot-de-passe">Choisir un nouveau mot de passe</a></p>
-<p>Ce lien expire dans 10 minutes et ne sert qu’une fois.</p>
-<p>Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail : votre mot de passe ne change pas.</p>
-```
-
-**Save** après chaque modèle. Les autres modèles ne servent pas pour l’instant.
+> Le nom de l’expéditeur (« Étudium » au lieu de « Supabase Auth ») se règle avec Resend, à l’étape 5.
 
 ---
 

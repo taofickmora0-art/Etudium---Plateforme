@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Choisir un nouveau mot de passe Étudium</title>
+  </head>
+  <body style="margin: 0; padding: 0; background: #f2f6fd">
+    <!-- Texte d'aperçu affiché par la messagerie à côté du sujet -->
+    <span style="display: none; max-height: 0; overflow: hidden; opacity: 0; color: #f2f6fd">Le lien pour choisir un nouveau mot de passe, valable 10 minutes.</span>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f2f6fd">
+      <tr>
+        <td align="center" style="padding: 32px 16px">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 520px">
+            <!-- Logo -->
+            <tr>
+              <td style="padding: 0 4px 20px">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td
+                      width="40"
+                      height="40"
+                      align="center"
+                      valign="middle"
+                      style="width: 40px; height: 40px; background: #0b18c9; border-radius: 12px; color: #ffffff; font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 20px; font-weight: 700; line-height: 40px"
+                    >
+                      É
+                    </td>
+                    <td style="padding-left: 10px; font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; color: #0b18c9">Étudium</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <!-- Carte -->
+            <tr>
+              <td style="background: #ffffff; border-radius: 16px; padding: 32px 28px; font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+                <h1 style="margin: 0 0 12px; font-size: 24px; line-height: 32px; font-weight: 600; color: #1d1d1f">Nouveau mot de passe</h1>
+                <p style="margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #232326">Vous avez demandé à changer le mot de passe de votre compte Étudium. Cliquez sur le bouton pour en choisir un nouveau.</p>
+                <!-- Bouton (tableau : s'affiche aussi dans Outlook) -->
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td align="center" bgcolor="#0b18c9" style="border-radius: 12px">
+                      <a
+                        href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/nouveau-mot-de-passe"
+                        style="display: inline-block; padding: 14px 22px; font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; line-height: 20px; color: #ffffff; text-decoration: none; border-radius: 12px"
+                        >Choisir un nouveau mot de passe</a
+                      >
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin: 24px 0 0; font-size: 14px; line-height: 22px; color: #667085">Ce lien expire dans 10 minutes et ne sert qu’une fois.</p>
+                <p style="margin: 12px 0 0; font-size: 13px; line-height: 20px; color: #667085">
+                  Le bouton ne fonctionne pas ? Copiez cette adresse dans votre navigateur :<br />
+                  <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/nouveau-mot-de-passe" style="color: #0b18c9; word-break: break-all">{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/nouveau-mot-de-passe</a>
+                </p>
+              </td>
+            </tr>
+            <!-- Pied -->
+            <tr>
+              <td style="padding: 20px 4px 0; font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; line-height: 18px; color: #667085">
+                Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail : votre mot de passe ne change pas.<br />
+                Étudium · Formation, compétences digitales et accompagnement des étudiants et des jeunes diplômés.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
