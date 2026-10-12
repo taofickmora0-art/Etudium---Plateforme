@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LeconForm } from "@/components/admin/LeconForm";
 import { PageAdmin } from "@/components/admin/PageAdmin";
+import { RessourcesEditor } from "@/components/admin/RessourcesEditor";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -39,6 +40,7 @@ async function FicheLecon({ params }: Params) {
     >
       <div className="flex flex-col gap-6">
         <LeconForm lecon={lecon} />
+        <RessourcesEditor lecon={lecon} />
       </div>
     </PageAdmin>
   );

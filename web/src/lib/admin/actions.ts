@@ -5,7 +5,8 @@ import { authErrorMessage } from "@/lib/auth/messages";
 import { fieldErrorsFrom, type FormState } from "@/lib/auth/schemas";
 import type { createClient } from "@/lib/supabase/server";
 import { exigerEquipe } from "./garde";
-import { formateurSchema, formationInfosSchema, leconSchema, lignes, moduleSchema, parcoursSchema } from "./schemas";
+import { formatParMime } from "./fichiers";
+import { formateurSchema, formationInfosSchema, leconSchema, lignes, moduleSchema, parcoursSchema, ressourceSchema } from "./schemas";
 import { parseDuree } from "./duree";
 import { slugify } from "./slug";
 import { parseVideoUrl } from "./video";
@@ -427,4 +428,88 @@ export async function saveLecon(_prev: FormState, fd: FormData): Promise<FormSta
   }
   refresh();
   return { status: "success", values };
+}
+
+// ─── Ressources d'une leçon ─────────────────────────────────────────────────
+// Le fichier est envoyé par le navigateur directement dans l'espace « ressources » (jusqu'à 50 Mo, au-delà de ce que
+// permet une action serveur) ; la règle de stockage de la 0004 n'y autorise que l'équipe. On enregistre ensuite sa ligne.
+
+const HORS_DOSSIER = "Ce fichier n’est pas dans le dossier de la formation.";
+const TITRE_FICHIER = "Entrez le titre du fichier.";
+const CONSULTATION_IMPOSSIBLE = "Seuls les PDF et les images peuvent être en consultation seule.";
+/** Nom donné par l'envoi : un uuid et l'extension, directement dans le dossier de la formation. */
+const NOM_FICHIER = /^[0-9a-f-]{36}\.[a-z0-9]{1,5}$/i;
+
+type NouvelleRessource = { leconId: string; titre: string; fichier: string; format: string; tailleOctets: number };
+
+export async function addRessource(entree: NouvelleRessource): Promise<Resultat> {
+  const parsed = ressourceSchema.safeParse({
+    titre: entree.titre,
+    fichier: entree.fichier,
+    format: entree.format,
+    taille_octets: entree.tailleOctets,
+    telechargeable: true,
+  });
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? ECHEC };
+  if (!estUuid(entree.leconId)) return { ok: false, message: ECHEC };
+  try {
+    const garde = await exigerEquipe();
+    if ("erreur" in garde) return { ok: false, message: garde.erreur };
+    const { supabase } = garde;
+    const { data: lecon } = await supabase.from("lecons").select("modules(formation_id)").eq("id", entree.leconId).maybeSingle();
+    const parent = (lecon as { modules?: { formation_id?: string } | { formation_id?: string }[] } | null)?.modules;
+    const formationId = Array.isArray(parent) ? parent[0]?.formation_id : parent?.formation_id;
+    if (!formationId) return { ok: false, message: ECHEC };
+    const [dossier, nom, ...reste] = parsed.data.fichier.split("/");
+    if (dossier !== formationId || !nom || reste.length > 0 || !NOM_FICHIER.test(nom)) return { ok: false, message: HORS_DOSSIER };
+    const ordre = await rangSuivant(supabase, "ressources", ["lecon_id", entree.leconId]);
+    const { error } = await supabase.from("ressources").insert({ lecon_id: entree.leconId, ...parsed.data, ordre });
+    if (error) return { ok: false, message: ECHEC };
+  } catch {
+    return { ok: false, message: ECHEC };
+  }
+  refresh();
+  return { ok: true };
+}
+
+/** Titre et mode (téléchargeable ou consultation seule) d'une ressource. */
+export async function updateRessource(entree: { id: string; titre: string; telechargeable: boolean }): Promise<Resultat> {
+  const titre = entree.titre.trim();
+  if (!titre) return { ok: false, message: TITRE_FICHIER };
+  if (titre.length > 120) return { ok: false, message: "120 caractères au maximum." };
+  if (!estUuid(entree.id)) return { ok: false, message: ECHEC };
+  try {
+    const garde = await exigerEquipe();
+    if ("erreur" in garde) return { ok: false, message: garde.erreur };
+    const { supabase } = garde;
+    const { data: ressource } = await supabase.from("ressources").select("format").eq("id", entree.id).maybeSingle();
+    if (!ressource) return { ok: false, message: ECHEC };
+    if (!entree.telechargeable && !formatParMime((ressource as { format: string }).format)?.consultable) {
+      return { ok: false, message: CONSULTATION_IMPOSSIBLE };
+    }
+    const { error } = await supabase.from("ressources").update({ titre, telechargeable: entree.telechargeable }).eq("id", entree.id);
+    if (error) return { ok: false, message: ECHEC };
+  } catch {
+    return { ok: false, message: ECHEC };
+  }
+  refresh();
+  return { ok: true };
+}
+
+/** Supprime une ressource, puis son fichier. */
+export async function deleteRessource(id: string): Promise<Resultat> {
+  if (!estUuid(id)) return { ok: false, message: ECHEC };
+  try {
+    const garde = await exigerEquipe();
+    if ("erreur" in garde) return { ok: false, message: garde.erreur };
+    const { supabase } = garde;
+    const { data: ressource } = await supabase.from("ressources").select("fichier").eq("id", id).maybeSingle();
+    const { error } = await supabase.from("ressources").delete().eq("id", id);
+    if (error) return { ok: false, message: ECHEC };
+    await retirerFichiers(supabase, ressource ? [ressource] : []);
+  } catch {
+    return { ok: false, message: ECHEC };
+  }
+  refresh();
+  return { ok: true };
 }
