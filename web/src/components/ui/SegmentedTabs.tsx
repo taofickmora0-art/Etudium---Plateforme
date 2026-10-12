@@ -20,11 +20,13 @@ type SegmentedTabsProps = {
    * Sans cela, Radix démonte le panneau quitté.
    */
   keepMounted?: boolean;
+  /** Onglets qui se partagent toute la largeur, en 44 px (téléphone, NdMobLecon). */
+  pleineLargeur?: boolean;
   className?: string;
 };
 
 /** Onglets : piste grise, pastille blanche et texte bleu (planche « Boutons », « Filtres et onglets »). */
-export function SegmentedTabs({ label, items, defaultValue, value, onValueChange, keepMounted = false, className }: SegmentedTabsProps) {
+export function SegmentedTabs({ label, items, defaultValue, value, onValueChange, keepMounted = false, pleineLargeur = false, className }: SegmentedTabsProps) {
   const [interne, setInterne] = useState(defaultValue ?? items[0]?.value);
   const actif = value ?? interne;
   return (
@@ -36,12 +38,18 @@ export function SegmentedTabs({ label, items, defaultValue, value, onValueChange
       }}
       className={cn("flex flex-col gap-6", className)}
     >
-      <Tabs.List aria-label={label} className="inline-flex flex-wrap gap-1 self-start rounded-bouton bg-coque p-1">
+      <Tabs.List
+        aria-label={label}
+        className={cn("gap-1 rounded-bouton bg-coque p-1", pleineLargeur ? "flex flex-nowrap self-stretch" : "inline-flex flex-wrap self-start")}
+      >
         {items.map((item) => (
           <Tabs.Trigger
             key={item.value}
             value={item.value}
-            className="focus-etudium cible-tactile relative flex h-10 cursor-pointer items-center rounded-puce px-4 text-sm font-medium text-texte transition-colors hover:text-bleu data-[state=active]:bg-panneau data-[state=active]:text-bleu data-[state=active]:shadow-pastille"
+            className={cn(
+              "focus-etudium cible-tactile relative flex cursor-pointer items-center rounded-puce text-sm font-medium text-texte transition-colors hover:text-bleu data-[state=active]:bg-panneau data-[state=active]:text-bleu data-[state=active]:shadow-pastille",
+              pleineLargeur ? "h-11 min-w-0 flex-1 justify-center px-1.5" : "h-10 px-4",
+            )}
           >
             {/* Masquée sur téléphone : les onglets tiennent sur une ligne (l'icône est décorative). */}
             {item.icon && <Icon icon={item.icon} size={16} className="mr-1.5 max-sm:hidden" />}

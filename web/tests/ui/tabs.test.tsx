@@ -55,6 +55,12 @@ describe("SegmentedTabs", () => {
     expect(screen.getByText("Contenu B", { selector: "p" })).not.toBeVisible();
   });
 
+  it("en pleine largeur, les onglets se partagent la ligne (téléphone)", () => {
+    render(<SegmentedTabs label="Contenu" pleineLargeur items={[{ value: "a", label: "Programme", content: <p>A</p> }, { value: "b", label: "Notes", content: <p>B</p> }]} />);
+    expect(screen.getByRole("tablist", { name: "Contenu" })).toHaveClass("self-stretch", "flex-nowrap");
+    for (const onglet of screen.getAllByRole("tab")) expect(onglet).toHaveClass("flex-1", "h-11");
+  });
+
   it("un onglet peut porter une petite icône avant son libellé", () => {
     render(
       <SegmentedTabs label="Parcours" items={[{ value: "a", label: "Académique", icon: SquareLock02Icon, content: <p>A</p> }]} />,
