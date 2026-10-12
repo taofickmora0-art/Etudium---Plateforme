@@ -1,0 +1,101 @@
+import { formatParMime, tailleLisible } from "@/lib/admin/fichiers";
+import { leconsApercu } from "@/lib/catalogue/regles";
+import type { FicheFormation, LeconFiche, ModuleFiche } from "@/lib/catalogue/types";
+import type { RessourceLecon, VideoLecon } from "./types";
+
+// Règles de la page leçon (NdLecon, NdMobLecon) : navigation dans le programme, vidéo, durées, verrou.
+
+/** Longueur maximale d'une note privée (la base l'impose aussi, migration 0006). */
+export const NOTE_MAX = 5000;
+
+type LeconAPlat = LeconFiche & { module: { numero: number; titre: string } };
+
+/** Toutes les leçons, dans l'ordre du programme, avec leur module. */
+export function leconsAPlat(modules: ModuleFiche[]): LeconAPlat[] {
+  return modules.flatMap((m, index) => m.lecons.map((l) => ({ ...l, module: { numero: index + 1, titre: m.titre } })));
+}
+
+/** Leçons précédente et suivante, d'un module à l'autre (null au début, à la fin, ou si la leçon est inconnue). */
+export function voisines(modules: ModuleFiche[], leconId: string): { precedente: LeconFiche | null; suivante: LeconFiche | null } {
+  const lecons = modules.flatMap((m) => m.lecons);
+  const i = lecons.findIndex((l) => l.id === leconId);
+  if (i < 0) return { precedente: null, suivante: null };
+  return { precedente: lecons[i - 1] ?? null, suivante: lecons[i + 1] ?? null };
+}
+
+/** « Module 3 · Analyse de données », « Leçon 2 sur 3 de ce module ». */
+export function situation(modules: ModuleFiche[], leconId: string): { numero: number; titreModule: string; rang: number; total: number } | null {
+  for (const [index, m] of modules.entries()) {
+    const rang = m.lecons.findIndex((l) => l.id === leconId);
+    if (rang >= 0) return { numero: index + 1, titreModule: m.titre, rang: rang + 1, total: m.lecons.length };
+  }
+  return null;
+}
+
+/** Adresse du lecteur officiel : YouTube sans cookies publicitaires, Vimeo sans suivi. */
+export function urlIntegration(video: VideoLecon): string {
+  if (video.fournisseur === "youtube") return `https://www.youtube-nocookie.com/embed/${video.id}?rel=0`;
+  const [numero, code] = video.id.split("/");
+  return `https://player.vimeo.com/video/${numero}?dnt=1${code ? `&h=${code}` : ""}`;
+}
+
+const deuxChiffres = (n: number) => String(n).padStart(2, "0");
+
+/** Durée de l'en-tête : « 12 min 40 », « 12 min », « 45 s », « 1 h 02 min » ; vide si nulle. */
+export function dureeLecon(secondes: number): string {
+  if (secondes <= 0) return "";
+  const heures = Math.floor(secondes / 3600);
+  const minutes = Math.floor((secondes % 3600) / 60);
+  const reste = secondes % 60;
+  if (heures > 0) return minutes > 0 ? `${heures} h ${deuxChiffres(minutes)} min` : `${heures} h`;
+  if (minutes === 0) return `${reste} s`;
+  return reste > 0 ? `${minutes} min ${deuxChiffres(reste)}` : `${minutes} min`;
+}
+
+export type EtatLigne = "courante" | "terminee" | "a-venir" | "verrouillee";
+
+/** État d'une ligne du programme. La leçon ouverte reste « courante », même fermée (sa page montre le verrou). */
+export function etatLigne(lecon: LeconFiche, leconCourante: string, terminees: ReadonlySet<string>): EtatLigne {
+  if (lecon.id === leconCourante) return "courante";
+  if (!lecon.accessible) return "verrouillee";
+  return terminees.has(lecon.id) ? "terminee" : "a-venir";
+}
+
+/** Secondes des leçons pas encore terminées (« 2 h restantes »). */
+export function tempsRestant(modules: ModuleFiche[], terminees: ReadonlySet<string>): number {
+  return modules.flatMap((m) => m.lecons).reduce((total, l) => (terminees.has(l.id) ? total : total + l.dureeSecondes), 0);
+}
+
+/** « Excel · 84 Ko · téléchargeable », « PDF · 1,2 Mo · consultation seule ». */
+export function metaRessource(r: RessourceLecon): string {
+  const format = formatParMime(r.format)?.label ?? "Fichier";
+  return [format, tailleLisible(r.tailleOctets), r.telechargeable ? "téléchargeable" : "consultation seule"].join(" · ");
+}
+
+/**
+ * Ce que dit une leçon fermée. Au lot 1, une formation gratuite ne se ferme qu'au visiteur : un compte gratuit l'ouvre.
+ * Sinon, la leçon fait partie d'un parcours (formules au lot 2) ; l'aperçu gratuit reste proposé.
+ */
+export function verrou(
+  fiche: Pick<FicheFormation, "gratuite" | "modules">,
+  connecte: boolean,
+): { titre: string; texte: string; inscription: boolean; connexion: boolean; formules: boolean; apercu: LeconFiche | null } {
+  if (fiche.gratuite && !connecte) {
+    return {
+      titre: "Cette leçon est réservée aux comptes Étudium",
+      texte: "Créez votre compte gratuit pour suivre toute la formation.",
+      inscription: true,
+      connexion: true,
+      formules: false,
+      apercu: null,
+    };
+  }
+  return {
+    titre: "Cette leçon est verrouillée",
+    texte: "Elle fait partie d’un parcours. Les leçons d’aperçu restent ouvertes à tous.",
+    inscription: !connecte,
+    connexion: false,
+    formules: connecte,
+    apercu: leconsApercu(fiche)[0] ?? null,
+  };
+}

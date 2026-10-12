@@ -1,0 +1,79 @@
+import { demoModeActive } from "@/lib/auth/current-user";
+import { getFiche } from "@/lib/catalogue/data";
+import { estTablesAbsentes, liste, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
+import { createClient } from "@/lib/supabase/server";
+import type { DonneesLecon, LeconDetail, RessourceLecon, VideoLecon } from "./types";
+
+// Lecture de la page leçon. Le programme vient de la fiche (formations publiées, accès calculé par la base) ;
+// la base ne renvoie le contenu et les ressources qu'avec l'accès à la leçon (règles de la 0004), et on ne les garde
+// de toute façon que si `accessible` est vrai.
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const versRessource = (r: Ligne): RessourceLecon => ({
+  id: String(r.id),
+  titre: texte(r.titre),
+  format: texte(r.format),
+  tailleOctets: Number(r.taille_octets ?? 0),
+  telechargeable: r.telechargeable === true,
+});
+
+const rangDe = (r: Ligne) => Number(r.ordre ?? 0);
+
+function versVideo(contenu: Ligne | null): VideoLecon | null {
+  const fournisseur = contenu?.video_fournisseur;
+  const id = texte(contenu?.video_id);
+  return (fournisseur === "youtube" || fournisseur === "vimeo") && id ? { fournisseur, id } : null;
+}
+
+function versLecon(l: Ligne): LeconDetail {
+  const accessible = l.accessible === true;
+  const contenu = accessible ? un(l.lecons_contenus) : null;
+  return {
+    id: String(l.id),
+    titre: texte(l.titre),
+    dureeSecondes: Number(l.duree_secondes ?? 0),
+    apercu: l.apercu === true,
+    accessible,
+    resume: texte(l.resume),
+    pointsCles: textes(l.points_cles),
+    video: versVideo(contenu),
+    texte: texte(contenu?.texte),
+    ressources: accessible ? [...liste(l.ressources)].sort((a, b) => rangDe(a) - rangDe(b)).map(versRessource) : [],
+  };
+}
+
+/** La note du compte connecté ; une table absente (0006 pas encore appliquée) ne bloque pas la page. */
+async function lireNote(leconId: string): Promise<{ note: string | null; notesDisponibles: boolean }> {
+  const supabase = await createClient();
+  try {
+    const ligne = verifier(await supabase.from("notes_lecons").select("texte").eq("lecon_id", leconId).maybeSingle()) as Ligne | null;
+    return { note: texte(ligne?.texte) || null, notesDisponibles: true };
+  } catch (erreur) {
+    if (estTablesAbsentes(erreur)) return { note: null, notesDisponibles: false };
+    throw erreur;
+  }
+}
+
+/** La page d'une leçon : null si l'adresse ne correspond à rien (formation non publiée, leçon d'une autre formation…). */
+export async function getLecon(slug: string, leconId: string, connecte: boolean): Promise<DonneesLecon | null> {
+  if (demoModeActive() || !UUID.test(leconId)) return null;
+  const fiche = await getFiche(slug);
+  if (!fiche || !fiche.modules.some((m) => m.lecons.some((l) => l.id === leconId))) return null;
+
+  const supabase = await createClient();
+  const ligne = verifier(
+    await supabase
+      .from("lecons")
+      .select(
+        "id, titre, duree_secondes, apercu, resume, points_cles, accessible, " +
+          "lecons_contenus(video_fournisseur, video_id, texte), ressources(id, titre, format, taille_octets, telechargeable, ordre)",
+      )
+      .eq("id", leconId)
+      .maybeSingle(),
+  ) as Ligne | null;
+  if (!ligne) return null;
+
+  const notes = connecte ? await lireNote(leconId) : { note: null, notesDisponibles: true };
+  return { fiche, lecon: versLecon(ligne), ...notes };
+}

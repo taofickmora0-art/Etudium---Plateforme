@@ -68,6 +68,7 @@ export async function listParcoursCatalogue(): Promise<ParcoursCatalogue[]> {
 const versLecon = (l: Ligne): LeconFiche & { ordre: number } => ({
   id: String(l.id),
   titre: texte(l.titre),
+  titreCourt: texte(l.titre_court) || null,
   dureeSecondes: Number(l.duree_secondes ?? 0),
   apercu: l.apercu === true,
   accessible: l.accessible === true,
@@ -86,7 +87,7 @@ export const getFiche = cache(async (slug: string): Promise<FicheFormation | nul
       .from("formations")
       .select(
         `${COLONNES_CARTE}, description, objectifs, competences, formateurs(nom, titre, domaine, presentation), ` +
-          "modules(id, titre, ordre, lecons(id, titre, duree_secondes, apercu, ordre, accessible))",
+          "modules(id, titre, ordre, lecons(id, titre, titre_court, duree_secondes, apercu, ordre, accessible))",
       )
       .eq("statut", "publiee")
       .eq("slug", slug)
@@ -113,7 +114,7 @@ export const getFiche = cache(async (slug: string): Promise<FicheFormation | nul
       (m): ModuleFiche => ({
         id: m.id,
         titre: m.titre,
-        lecons: m.lecons.map((l) => ({ id: l.id, titre: l.titre, dureeSecondes: l.dureeSecondes, apercu: l.apercu, accessible: l.accessible })),
+        lecons: m.lecons.map((l) => ({ id: l.id, titre: l.titre, titreCourt: l.titreCourt, dureeSecondes: l.dureeSecondes, apercu: l.apercu, accessible: l.accessible })),
       }),
     ),
   };

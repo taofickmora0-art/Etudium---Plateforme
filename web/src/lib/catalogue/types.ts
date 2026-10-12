@@ -33,6 +33,8 @@ export type CarteCatalogue = {
 export type LeconFiche = {
   id: string;
   titre: string;
+  /** Titre raccourci du programme de gauche de la page leçon (null : le titre complet, coupé). */
+  titreCourt?: string | null;
   dureeSecondes: number;
   apercu: boolean;
   /** Calculé par la base (règle d'accès de la 0004) pour la personne qui regarde. */
