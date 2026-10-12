@@ -11,7 +11,7 @@ export const emailSchema = z
 
 export const passwordSchema = z.string({ error: "Au moins 8 caractères." }).min(8, { error: "Au moins 8 caractères." });
 
-const nameSchema = (vide: string) =>
+export const nameSchema = (vide: string) =>
   z.string({ error: vide }).trim().min(1, { error: vide }).max(50, { error: "50 caractères au maximum." });
 
 export const signUpSchema = z.object({
