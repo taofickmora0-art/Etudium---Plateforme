@@ -24,7 +24,6 @@ export const PAGES_A_VENIR = {
   abonnement: { titre: "Mon abonnement", quand: "au lot 2, Abonnements et paiement", description: "Votre formule, vos paiements et vos reçus s’afficheront ici." },
   formateur: { titre: "Espace formateur", quand: "au lot 4, Espace formateur", description: "Les formateurs y créeront et suivront leurs formations." },
   admin: { titre: "Back-office", quand: "au lot 1, avec le back-office de saisie", description: "L’équipe Étudium y gérera les formations et les comptes." },
-  profil: { titre: "Mon profil", quand: "à la tâche 0.5, juste après la connexion", description: "Vous pourrez modifier vos informations, votre photo et vos préférences." },
 } satisfies Record<string, { titre: string; quand: string; description: string }>;
 
 export type PageAVenir = keyof typeof PAGES_A_VENIR;

@@ -2,6 +2,7 @@ import { Suspense, type ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { HeaderAccount } from "@/components/layout/AppHeader";
 import { AppShell } from "@/components/layout/AppShell";
+import { ToastProvider } from "@/components/ui/Toast";
 import { getShellUser } from "@/lib/auth/current-user";
 
 async function CompteDeLEntete() {
@@ -18,14 +19,16 @@ async function CompteDeLEntete() {
  */
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <AppShell
-      account={
-        <Suspense fallback={null}>
-          <CompteDeLEntete />
-        </Suspense>
-      }
-    >
-      {children}
-    </AppShell>
+    <ToastProvider>
+      <AppShell
+        account={
+          <Suspense fallback={null}>
+            <CompteDeLEntete />
+          </Suspense>
+        }
+      >
+        {children}
+      </AppShell>
+    </ToastProvider>
   );
 }
