@@ -148,3 +148,27 @@ Il faut ton compte **super-administrateur** (section « Devenir super-administra
 9. Vérifie dans **Table Editor → formations** que ta formation a le statut `publiee`, et dans **Storage → ressources** que ton PDF est rangé dans le dossier de la formation.
 
 Dis-moi ce qui coince ou ce qui manque : c’est le moment, avant d’afficher le catalogue (tâche 1.3).
+
+---
+
+## 7. Valider le catalogue et la fiche formation (tâche 1.3), 10 minutes
+
+Il faut la section 5 (tables et exemples du lot 1). Sans elles, le catalogue affiche l’avertissement « Les tables du lot 1 ne sont pas encore dans la base ».
+
+1. Ouvre une **fenêtre de navigation privée** (sans compte), puis http://localhost:3000/formations :
+   - le bandeau bleu « Toutes les formations », la recherche, le niveau et les puces de filtre ;
+   - 10 formations, chacune avec la puce de son parcours ;
+   - filtre **Business** puis **Gratuites** : « Aucune formation ne correspond » ; **Effacer les filtres** les ramène ;
+   - tape « zotéro » dans la recherche : Zotero apparaît ;
+   - recharge la page : les filtres sont gardés.
+2. Ouvre **Maîtriser Microsoft Excel** :
+   - fiche publique, avec la carte d’offre « Incluse dans le parcours » ;
+   - dans le programme, les 2 premières leçons portent le lien **Aperçu** ;
+   - la page de leçon elle-même arrive avec la tâche 1.5 : pour l’instant, ce lien mène à « Page introuvable ».
+3. Connecte-toi (fenêtre normale) :
+   - **Toutes les formations** : le même catalogue dans l’appli, avec « Trier : … » ;
+   - **Formations gratuites** : Zotero et Canva ;
+   - une fiche payante : leçons fermées par un cadenas, sauf l’aperçu ;
+   - une fiche gratuite (Zotero, Canva, ou celle que tu as créée en 1.2) : bouton **Commencer**.
+4. Ouvre http://localhost:3000/formations/maitriser-microsoft-excel puis, dans un autre onglet, l’adresse de son image de partage : clic droit sur la page → **Afficher le code source**, cherche `og:image`, et ouvre l’adresse indiquée. L’image bleue avec le titre s’affiche.
+5. Le vrai test WhatsApp (coller le lien dans une conversation) demande l’adresse en ligne : on le fera à la mise en production.
