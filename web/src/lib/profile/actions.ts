@@ -59,8 +59,8 @@ export async function updatePhoto(_prev: FormState, formData: FormData): Promise
     const photos = supabase.storage.from("photos-profil");
     const envoi = await photos.upload(chemin, octets, { contentType: type, upsert: false, cacheControl: "604800" });
     if (envoi.error) return { status: "error", message: PHOTO_ECHEC };
-    const { data } = photos.getPublicUrl(chemin);
-    const maj = await supabase.from("profils").update({ photo_url: data.publicUrl }).eq("id", user.id);
+    // La base garde le chemin (contrôlé par la contrainte profils_photo_chemin) ; l'adresse est construite à l'affichage.
+    const maj = await supabase.from("profils").update({ photo_url: chemin }).eq("id", user.id);
     if (maj.error) {
       await photos.remove([chemin]);
       return { status: "error", message: PHOTO_ECHEC };

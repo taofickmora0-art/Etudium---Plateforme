@@ -3,6 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import type { Role } from "@/components/ui/ProfileMenu";
 import { DEMO_USER } from "@/lib/demo-user";
 import { getPublicEnv } from "@/lib/env";
+import { photoPublicUrl } from "@/lib/profile/photo-url";
 import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "./routing";
 import { AuthUnavailableError, isSessionClosed } from "./session-state";
@@ -102,6 +103,6 @@ export const getShellUser = cache(async (): Promise<ShellUser | null> => {
     formule: "Gratuite",
     serie: 0,
     points: 0,
-    photoUrl: chaine(profil.data?.photo_url) || null,
+    photoUrl: photoPublicUrl(chaine(profil.data?.photo_url)),
   };
 });

@@ -64,11 +64,25 @@ describe("Compte affiché par la coque", () => {
     await expect(getShellUser()).rejects.toThrow();
   });
 
-  it("getShellUser lit le profil, les rôles et la photo", async () => {
+  it("la coque affiche l'adresse publique de la photo", async () => {
     auth.getUser.mockResolvedValue(session({}));
-    tables.profils = { data: { prenom: "Aïcha", nom: "Kpadé", photo_url: "https://projet.supabase.co/a.jpg" }, error: null };
+    tables.profils = { data: { prenom: "Aïcha", nom: "Kpadé", photo_url: "u1/a.jpg" }, error: null };
     tables.roles = { data: [{ role: "etudiant" }], error: null };
-    expect((await getShellUser())?.photoUrl).toBe("https://projet.supabase.co/a.jpg");
+    expect((await getShellUser())?.photoUrl).toBe("https://projet.supabase.co/storage/v1/object/public/photos-profil/u1/a.jpg");
+  });
+
+  it("une photo enregistrée avant la migration 0003 (adresse complète) reste affichée", async () => {
+    auth.getUser.mockResolvedValue(session({}));
+    tables.profils = { data: { photo_url: "https://projet.supabase.co/storage/v1/object/public/photos-profil/u1/a.jpg" }, error: null };
+    expect((await getShellUser())?.photoUrl).toBe("https://projet.supabase.co/storage/v1/object/public/photos-profil/u1/a.jpg");
+  });
+
+  it("une valeur qui n'est pas un chemin de photo donne les initiales", async () => {
+    auth.getUser.mockResolvedValue(session({}));
+    for (const forgee of ["https://ailleurs.example/pixel.png", "../autre/a.jpg", "/u1/a.jpg", "u1/a.jpg?x=1"]) {
+      tables.profils = { data: { photo_url: forgee }, error: null };
+      expect((await getShellUser())?.photoUrl, forgee).toBeNull();
+    }
   });
 
   it("getShellUser lit le profil et les rôles", async () => {

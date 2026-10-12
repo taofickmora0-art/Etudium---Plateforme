@@ -3,7 +3,7 @@ import { checkPhotoFile, detectImageType, PHOTO_MAX_OCTETS, squareCrop } from "@
 
 // ─── Doublures : Supabase (session, stockage, table profils) et rafraîchissement de Next ───
 const auth = { getUser: vi.fn() };
-const stockage = { upload: vi.fn(), list: vi.fn(), remove: vi.fn(), getPublicUrl: vi.fn() };
+const stockage = { upload: vi.fn(), list: vi.fn(), remove: vi.fn() };
 const update = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
@@ -68,7 +68,6 @@ describe("Photo de profil : envoi", () => {
     [auth.getUser, update, refresh, ...Object.values(stockage)].forEach((f) => f.mockReset());
     auth.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
     stockage.upload.mockResolvedValue({ data: {}, error: null });
-    stockage.getPublicUrl.mockImplementation((chemin: string) => ({ data: { publicUrl: `https://projet.supabase.co/storage/v1/object/public/photos-profil/${chemin}` } }));
     stockage.list.mockResolvedValue({ data: [{ name: "ancienne.jpg" }], error: null });
     stockage.remove.mockResolvedValue({ data: [], error: null });
   });
@@ -92,7 +91,8 @@ describe("Photo de profil : envoi", () => {
     const [chemin, , options] = stockage.upload.mock.calls[0];
     expect(chemin).toMatch(/^u1\/[0-9a-f-]{36}\.jpg$/);
     expect(options).toMatchObject({ contentType: "image/jpeg", upsert: false, cacheControl: "604800" });
-    expect(update).toHaveBeenCalledWith({ photo_url: `https://projet.supabase.co/storage/v1/object/public/photos-profil/${chemin}` });
+    // La base garde le chemin (vérifié par une contrainte) ; l’adresse publique est construite à l’affichage.
+    expect(update).toHaveBeenCalledWith({ photo_url: chemin });
     expect(stockage.remove).toHaveBeenCalledWith(["u1/ancienne.jpg"]);
     expect(refresh).toHaveBeenCalled();
   });
