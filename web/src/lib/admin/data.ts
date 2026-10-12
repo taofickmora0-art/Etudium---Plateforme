@@ -1,5 +1,6 @@
 import { demoModeActive } from "@/lib/auth/current-user";
 import type { Badge, CouleurParcours, Niveau, StatutFormation } from "@/lib/contenus/libelles";
+import { estTablesAbsentes, liste, parOrdre, TablesAbsentesError, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import type {
   FormateurAdmin,
@@ -16,38 +17,10 @@ import type {
 // Lecture des contenus pour le back-office. Les pages vérifient d'abord l'équipe (requireSpace) ; la base revérifie
 // (règles d'accès de la 0004 : l'équipe voit aussi les brouillons et les archives).
 
-/** Les tables du lot 1 ne sont pas encore dans la base : la migration 0004 n'a pas été appliquée. */
-export class TablesAbsentesError extends Error {
-  constructor() {
-    super("Tables du lot 1 absentes : migration 0004 à appliquer.");
-    this.name = "TablesAbsentesError";
-  }
-}
-
-/** Reconnaît l'erreur par son nom : une même classe peut exister en deux exemplaires selon le chargement des modules. */
-export const estTablesAbsentes = (erreur: unknown) => erreur instanceof Error && erreur.name === "TablesAbsentesError";
-
-type ErreurSupabase = { code?: string; message?: string } | null;
-const TABLES_ABSENTES = new Set(["PGRST205", "42P01"]);
-
-function verifier<T>(reponse: { data: T; error: ErreurSupabase }): T {
-  if (reponse.error) {
-    if (reponse.error.code && TABLES_ABSENTES.has(reponse.error.code)) throw new TablesAbsentesError();
-    throw new Error(reponse.error.message ?? "Lecture des contenus impossible.");
-  }
-  return reponse.data;
-}
+export { estTablesAbsentes, TablesAbsentesError };
 
 /** Un identifiant qui n'a pas la forme d'un uuid ne trouvera rien : on évite l'erreur de la base (page introuvable). */
 const estUuid = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-
-type Ligne = Record<string, unknown>;
-/** Une relation « un à un » arrive en objet ou en tableau selon ce que Supabase devine : on accepte les deux. */
-const un = (valeur: unknown): Ligne | null => (Array.isArray(valeur) ? ((valeur[0] as Ligne | undefined) ?? null) : ((valeur as Ligne | null) ?? null));
-const liste = (valeur: unknown): Ligne[] => (Array.isArray(valeur) ? (valeur as Ligne[]) : []);
-const texte = (valeur: unknown) => (typeof valeur === "string" ? valeur : "");
-const textes = (valeur: unknown) => (Array.isArray(valeur) ? valeur.filter((v): v is string => typeof v === "string") : []);
-const parOrdre = <T extends { ordre: number }>(a: T, b: T) => a.ordre - b.ordre;
 
 const versParcours = (p: Ligne): ParcoursAdmin => ({
   id: String(p.id),
