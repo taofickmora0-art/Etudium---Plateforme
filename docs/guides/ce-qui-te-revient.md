@@ -94,7 +94,7 @@ Ton processeur (AMD Ryzen 7 3750H) fait partie de ceux que Microsoft accepte pou
 4. **Écrans de compte (0.4)**, même sans base : http://localhost:3000/connexion, `/inscription`, `/mot-de-passe-oublie`, `/nouveau-mot-de-passe`. Compare-les avec les écrans du design (connexion, inscription, code, mot de passe). Les pages `/conditions` et `/confidentialite` ont un texte provisoire : dis-moi s’il te convient en attendant le texte définitif.
 5. **Connexion pour de vrai (0.4)** : suis le guide [Brancher la connexion](brancher-la-connexion.md) jusqu’à sa vérification finale.
    - **Rôles (0.6)** : à la fin de ce guide, la section « Devenir super-administrateur » donne ton rôle et explique comment vérifier qu’un compte étudiant ne peut pas ouvrir `/admin`. Sans base, en mode démonstration, `/admin` et `/formateur` s’ouvrent déjà : l’utilisatrice de démonstration a ces rôles.
-   - **Mon profil (0.5)** : sans base, http://localhost:3000/profil montre déjà les trois onglets avec les données d’Aïcha (les enregistrements répondent « Une erreur est survenue… »). Une fois la base branchée, avec les deux fichiers SQL appliqués (étape 1 du guide) :
+   - **Mon profil (0.5)** : sans base, http://localhost:3000/profil montre déjà les trois onglets avec les données d’Aïcha (les enregistrements répondent « Une erreur est survenue… »). Une fois la base branchée, avec les trois fichiers SQL appliqués (étape 1 du guide : 0001, 0002 et 0003) :
      1. Modifie tes informations, recharge la page : elles restent.
      2. Change ta photo : elle apparaît dans l’en-tête et dans le menu du profil.
      3. Change deux interrupteurs de l’onglet Notifications, recharge : ils restent.
@@ -106,5 +106,6 @@ Ton processeur (AMD Ryzen 7 3750H) fait partie de ceux que Microsoft accepte pou
         - Si l’icône n’apparaît pas : menu **⋮** de Chrome (en haut à droite) → **« Caster, enregistrer et partager »** → **« Installer la page en tant qu’appli… »** (ou **« Installer Étudium… »**).
      3. Sur téléphone, l’installation demande une adresse en `https` : on la vérifiera à la mise en ligne.
 6. Dis-moi ce qui ne te va pas : une couleur, un texte, un espacement, un comportement. Je corrige avant d’attaquer la suite.
+7. **Spec du lot 1** : relis le brouillon [Lot 1 — Catalogue + apprentissage](../superpowers/specs/2026-10-12-lot-1-catalogue-apprentissage-design.md), surtout sa section 1 (douze questions, chacune avec ma proposition). Réponds « OK pour tout » ou donne-moi les numéros à changer : je ne code rien du lot 1 avant ton accord.
 
 > Pour tester sur ton téléphone pendant que l’application tourne sur l’ordinateur, les deux doivent être sur le même Wi-Fi ; dis-le-moi et je te donne la marche à suivre.
