@@ -12,6 +12,7 @@ import { Tag } from "@/components/ui/Tag";
 import { IDLE, type FormState } from "@/lib/auth/schemas";
 import { changePassword } from "@/lib/profile/actions";
 import type { ProfileData } from "@/lib/profile/data";
+import { DeleteAccountCard } from "./DeleteAccountCard";
 
 const CARTE = "rounded-carte border border-bordure-carte bg-panneau";
 const GRILLE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(220px,calc((100%-16px)/2))),1fr))] items-start gap-4";
@@ -81,6 +82,9 @@ export function SecurityTab({ profile }: { profile: ProfileData }) {
             <Tag tone="valide">Active</Tag>
           </div>
         )}
+      </div>
+      <div className="min-w-0 flex-[1_1_300px]">
+        <DeleteAccountCard />
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { clearLocalSession } from "@/lib/auth/local-session";
 import { authErrorMessage } from "@/lib/auth/messages";
 import { fieldErrorsFrom, type FormState } from "@/lib/auth/schemas";
 import { createClient } from "@/lib/supabase/server";
@@ -114,4 +115,24 @@ export async function changePassword(_prev: FormState, formData: FormData): Prom
     return { status: "error", message: authErrorMessage(null) };
   }
   return { status: "success" };
+}
+
+/**
+ * Suppression du compte (NdProfilSuppression). Lève une erreur en cas d'échec : la fenêtre le dit et on peut réessayer.
+ * Ordre : photos, puis adresse de la photo (si la base refuse ensuite, le profil n'affiche pas une photo disparue),
+ * puis le compte (fonction supprimer_mon_compte, migration 0002 ; profil et rôles suivent), puis la session de l'appareil.
+ */
+export async function deleteAccount(): Promise<void> {
+  const { supabase, user } = await sessionUser();
+  if (!user) throw new Error("Session expirée");
+  const photos = supabase.storage.from("photos-profil");
+  const { data: fichiers } = await photos.list(user.id);
+  const chemins = (fichiers ?? []).map((f) => `${user.id}/${f.name}`);
+  if (chemins.length > 0) {
+    await photos.remove(chemins);
+    await supabase.from("profils").update({ photo_url: null }).eq("id", user.id);
+  }
+  const { error } = await supabase.rpc("supprimer_mon_compte");
+  if (error) throw new Error("Suppression refusée");
+  await clearLocalSession();
 }

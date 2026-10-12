@@ -28,6 +28,7 @@ function AvisDeConnexion() {
   return (
     <>
       {adresse.get("session") === "expiree" && <SessionExpiredDialog />}
+      {adresse.get("compte") === "supprime" && <Banner tone="reussite" title="Votre compte a été supprimé." />}
       {adresse.get("erreur") === "google" && (
         <Banner tone="erreur" title="La connexion avec Google n’a pas abouti.">
           Réessayez ou utilisez votre e-mail.

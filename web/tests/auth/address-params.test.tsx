@@ -45,6 +45,12 @@ describe("Adresse des écrans de compte", () => {
     expect(screen.getByRole("dialog", { name: "Votre session a expiré" })).toBeInTheDocument();
   });
 
+  it("la connexion confirme la suppression du compte", () => {
+    adresse = new URLSearchParams("compte=supprime");
+    render(<ConnexionPage />);
+    expect(screen.getByRole("status")).toHaveTextContent("Votre compte a été supprimé.");
+  });
+
   it("un lien de réinitialisation expiré est annoncé", () => {
     adresse = new URLSearchParams("lien=expire");
     render(<MotDePasseOubliePage />);
