@@ -215,3 +215,16 @@ Il faut la section 5 (tables et exemples du lot 1).
 7. Sans compte (fenêtre privée), une leçon d’aperçu se lit avec les mêmes commandes, mais rien n’est mesuré.
 8. Ce qui arrive ensuite (1.7) : reprendre la vidéo là où on l’a laissée, « Marquer comme terminée » pour les leçons sans vidéo, et la progression dans le programme et dans « Mes parcours ».
 
+## 11. Valider la progression (tâche 1.7), 15 minutes
+
+1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0008_progression.sql`.
+2. Connecté, termine quelques leçons d’une même formation :
+   - une leçon **avec vidéo** : regarde-la jusqu’au seuil (le bouton « Marquer comme terminée » reste grisé, avec « Regardez au moins 90 % de la vidéo », puis passe à « Leçon terminée ») ;
+   - une leçon **sans vidéo** : clique « Marquer comme terminée ».
+3. Vérifie que le même pourcentage s’affiche partout (par exemple 3 leçons sur 12 = 25 %) :
+   - dans le programme à gauche de la page leçon (barre, « 25 % terminé », temps restant) ;
+   - sur la fiche de la formation : « Votre progression », « Prochaine leçon », bouton **Continuer**, coches vertes et « Vous êtes ici » dans le programme ;
+   - dans **Mes parcours**, sur la ligne de la formation.
+4. Arrête une vidéo vers 4:00, ouvre une autre page, puis reviens : la vidéo reprend à 4:00.
+5. Sur téléphone : une fois la leçon terminée, le bouton du bas devient **Leçon suivante**.
+

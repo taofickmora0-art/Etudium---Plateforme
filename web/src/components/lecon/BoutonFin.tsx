@@ -30,7 +30,8 @@ export function BoutonFin({ leconId, variante, suivante }: Props) {
   const { toast } = useToast();
   const [enCours, demarrer] = useTransition();
   const telephone = variante === "telephone";
-  const taille = telephone ? "h-12 w-full px-2.5" : "";
+  // Téléphone : le texte peut passer sur deux lignes (bouton de 48 px), pour tenir à 320 px à côté de « Leçon précédente ».
+  const taille = telephone ? "h-12 w-full px-2.5 text-center leading-[18px] whitespace-normal" : "";
 
   const lienSuivante = suivante && (
     <Link href={suivante} className={cn(buttonVariants(), taille)}>

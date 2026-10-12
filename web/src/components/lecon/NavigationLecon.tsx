@@ -46,7 +46,7 @@ export function BarreLecon({ fiche, leconId }: Props) {
   return (
     <div className="flex items-end gap-2">
       {precedente && (
-        <Link href={adresseLecon(fiche.slug, precedente.id)} className={cn(buttonVariants({ variant: "contour" }), "h-12 flex-none px-2.5")}>
+        <Link href={adresseLecon(fiche.slug, precedente.id)} className={cn(buttonVariants({ variant: "contour" }), "h-12 flex-[0_1_auto] px-2.5 text-center leading-[18px] whitespace-normal")}>
           Leçon précédente
         </Link>
       )}
