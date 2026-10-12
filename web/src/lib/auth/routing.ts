@@ -16,6 +16,9 @@ export const PAGES_PUBLIQUES = [
   "/vitrine",
   "/auth",
 ];
+/** En-tête de requête où le proxy note la page demandée (les pages n'ont pas d'autre moyen de la connaître). */
+export const EN_TETE_CHEMIN = "x-etudium-chemin";
+
 const ECRANS_DE_COMPTE = ["/connexion", "/inscription", "/verification-email", "/mot-de-passe-oublie"];
 
 const dans = (pathname: string, chemins: string[]) => chemins.some((c) => pathname === c || pathname.startsWith(`${c}/`));

@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
 import { getShellUser } from "@/lib/auth/current-user";
+import { redirectToSortie } from "@/lib/auth/sortie";
 
 /**
  * À placer (sous Suspense) dans chaque page de l'espace connecté : une mise en page n'est pas réexécutée à chaque
@@ -7,6 +7,6 @@ import { getShellUser } from "@/lib/auth/current-user";
  * suppression du compte). Supabase ne reconnaît plus la session → /auth/sortie l'efface de l'appareil.
  */
 export async function SessionGuard() {
-  if (!(await getShellUser())) redirect("/auth/sortie");
+  if (!(await getShellUser())) return redirectToSortie();
   return null;
 }

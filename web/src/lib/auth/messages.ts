@@ -33,6 +33,8 @@ export function safeNext(value: string | null | undefined, fallback = "/accueil"
   try {
     const url = new URL(value, ORIGINE);
     if (url.origin !== ORIGINE) return fallback;
+    // Une fois « . » et « .. » résolus, « /.//pirate » donne « //pirate » : une adresse extérieure pour le navigateur.
+    if (url.pathname.startsWith("//")) return fallback;
     return url.pathname + url.search + url.hash;
   } catch {
     return fallback;

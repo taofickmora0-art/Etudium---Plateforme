@@ -1,9 +1,9 @@
 import { Suspense, type ReactNode } from "react";
-import { redirect } from "next/navigation";
 import { HeaderAccount } from "@/components/layout/AppHeader";
 import { AppShell } from "@/components/layout/AppShell";
 import { ToastProvider } from "@/components/ui/Toast";
 import { getShellUser } from "@/lib/auth/current-user";
+import { redirectToSortie } from "@/lib/auth/sortie";
 import { AuthUnavailableError } from "@/lib/auth/session-state";
 
 async function CompteDeLEntete() {
@@ -17,7 +17,7 @@ async function CompteDeLEntete() {
   }
   // Le proxy a déjà renvoyé les visiteurs sans session. Ici, Supabase ne reconnaît plus la session (fermée sur un autre
   // appareil, compte supprimé) : /auth/sortie l'efface de l'appareil, sinon proxy et connexion se renverraient la balle.
-  if (!user) redirect("/auth/sortie");
+  if (!user) return redirectToSortie();
   return <HeaderAccount user={user} />;
 }
 

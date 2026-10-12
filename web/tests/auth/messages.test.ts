@@ -34,4 +34,11 @@ describe("Messages d'erreur", () => {
     expect(safeNext("/\t\\pirate.example")).toBe("/accueil");
     expect(safeNext("/certificats#attestation")).toBe("/certificats#attestation");
   });
+
+  it("safeNext refuse un chemin qui, une fois les « . » et « .. » résolus, commence par « // » (adresse extérieure)", () => {
+    for (const piege of ["/.//pirate.example", "/..//pirate.example", "/%2e//pirate.example", "/a/..//pirate.example", "/./\\pirate.example"]) {
+      expect(safeNext(piege), piege).toBe("/accueil");
+    }
+    expect(safeNext("/formations/./excel")).toBe("/formations/excel");
+  });
 });

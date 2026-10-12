@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getShellUser, type ShellUser } from "./current-user";
 import { canAccess, type Espace } from "./permissions";
+import { redirectToSortie } from "./sortie";
 
 /**
  * À appeler en tête de chaque page réservée (et plus tard au plus près des données), jamais dans une mise en page :
@@ -9,7 +10,7 @@ import { canAccess, type Espace } from "./permissions";
  */
 export async function requireSpace(espace: Espace): Promise<ShellUser> {
   const user = await getShellUser();
-  if (!user) redirect("/auth/sortie");
+  if (!user) return redirectToSortie();
   if (!canAccess(espace, user.roles)) redirect("/accueil");
   return user;
 }

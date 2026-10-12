@@ -8,6 +8,9 @@ import { getShellUser } from "@/lib/auth/current-user";
 import { DEMO_USER } from "@/lib/demo-user";
 
 vi.mock("@/lib/auth/current-user", () => ({ getShellUser: vi.fn() }));
+// Page demandée, posée par le proxy dans un en-tête de la requête (absente si la requête n'est pas passée par lui).
+let cheminDemande: string | null = null;
+vi.mock("next/headers", () => ({ headers: async () => new Headers(cheminDemande ? { "x-etudium-chemin": cheminDemande } : {}) }));
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => {
     throw new Error(`NEXT_REDIRECT:${url}`);
@@ -31,6 +34,13 @@ const contient = (noeud: ReactNode, type: unknown): boolean => {
 describe("Session vérifiée à chaque page", () => {
   beforeEach(() => {
     vi.mocked(getShellUser).mockReset();
+    cheminDemande = null;
+  });
+
+  it("la sortie garde la page demandée, pour y revenir après la reconnexion", async () => {
+    vi.mocked(getShellUser).mockResolvedValue(null);
+    cheminDemande = "/profil";
+    await expect(SessionGuard()).rejects.toThrow("NEXT_REDIRECT:/auth/sortie?next=%2Fprofil");
   });
 
   it("une session fermée ailleurs passe par la sortie", async () => {
@@ -50,7 +60,7 @@ describe("Session vérifiée à chaque page", () => {
   it("chaque page de l'espace connecté vérifie la session", () => {
     const sansVerification = pages(join(process.cwd(), "src/app/(app)")).filter((p) => {
       const code = readFileSync(p, "utf8");
-      return !["<SessionGuard", "<ComingSoon", "<ReservedComingSoon", 'redirect("/auth/sortie")'].some((m) => code.includes(m));
+      return !["<SessionGuard", "<ComingSoon", "<ReservedComingSoon", "redirectToSortie()"].some((m) => code.includes(m));
     });
     expect(sansVerification).toEqual([]);
   });

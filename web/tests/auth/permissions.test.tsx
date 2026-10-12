@@ -13,6 +13,7 @@ import { DEMO_USER } from "@/lib/demo-user";
 
 vi.mock("@/lib/auth/current-user", () => ({ getShellUser: vi.fn() }));
 vi.mock("@/lib/auth/actions", () => ({ signOut: vi.fn() }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-etudium-chemin": "/admin" }) }));
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => {
     throw new Error(`NEXT_REDIRECT:${url}`);
@@ -56,7 +57,7 @@ describe("Pages réservées", () => {
 
   it("sans compte (ou session fermée ailleurs), passage par la sortie", async () => {
     vi.mocked(getShellUser).mockResolvedValue(null);
-    await expect(requireSpace("formateur")).rejects.toThrow("NEXT_REDIRECT:/auth/sortie");
+    await expect(requireSpace("formateur")).rejects.toThrow("NEXT_REDIRECT:/auth/sortie?next=%2Fadmin");
   });
 
   it("un administrateur ouvre le back-office", async () => {

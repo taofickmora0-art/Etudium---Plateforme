@@ -1,9 +1,9 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { ProfileTabs } from "@/components/profile/ProfileTabs";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Heading, Lead } from "@/components/ui/Text";
+import { redirectToSortie } from "@/lib/auth/sortie";
 import { getProfile } from "@/lib/profile/data";
 
 export const metadata: Metadata = { title: "Mon profil · Étudium" };
@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Mon profil · Étudium" };
 async function ProfilDuCompte() {
   const profile = await getProfile();
   // Supabase ne reconnaît plus la session (fermée sur un autre appareil) : /auth/sortie l'efface de l'appareil.
-  if (!profile) redirect("/auth/sortie");
+  if (!profile) return redirectToSortie();
   return <ProfileTabs profile={profile} />;
 }
 

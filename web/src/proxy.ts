@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { hasSessionCookie, isDemoMode, routeFor } from "@/lib/auth/routing";
+import { EN_TETE_CHEMIN, hasSessionCookie, isDemoMode, routeFor } from "@/lib/auth/routing";
 import { REMEMBER_COOKIE, rememberFromCookie, withRememberChoice } from "@/lib/auth/session-cookies";
 import { getPublicEnv } from "@/lib/env";
 
@@ -9,6 +9,8 @@ import { getPublicEnv } from "@/lib/env";
  * et oriente la racine (spec §4 et §7). La vérification réelle des droits reste faite par la base.
  */
 export async function proxy(request: NextRequest) {
+  // Transmis aux pages (remplace toute valeur envoyée par le navigateur) : une session fermée ailleurs y ramènera.
+  request.headers.set(EN_TETE_CHEMIN, request.nextUrl.pathname);
   let response = NextResponse.next({ request });
   let signedIn = false;
   // En-têtes fournis par Supabase quand il écrit les cookies de session : interdisent toute mise en cache,
@@ -59,7 +61,8 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Tout sauf les fichiers de Next et les vrais fichiers statiques (images, icônes, manifeste, polices…).
-  // Une page dont l'adresse contient un point (« /formations/python-3.12 ») reste surveillée.
-  matcher: ["/((?!_next/static|_next/image|.*\\.(?:ico|png|jpe?g|gif|webp|avif|svg|css|js|map|txt|xml|webmanifest|woff2?|ttf|pdf)$).*)"],
+  // Tout sauf les fichiers de Next et les vrais fichiers statiques : images, icônes, manifeste et polices partout ;
+  // scripts, styles, textes, XML et PDF seulement à la racine (robots.txt, sitemap.xml…).
+  // Une page dont l'adresse contient un point (« /formations/python-3.12 », « /formations/node.js ») reste surveillée.
+  matcher: ["/((?!_next/static|_next/image|.*\\.(?:ico|png|jpe?g|gif|webp|avif|svg|webmanifest|woff2?|ttf)$|[^/]*\\.(?:css|js|map|txt|xml|pdf)$).*)"],
 };

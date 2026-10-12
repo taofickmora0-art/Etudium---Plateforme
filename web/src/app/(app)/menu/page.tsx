@@ -1,15 +1,15 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { MobileProfileMenu } from "@/components/layout/MobileProfileMenu";
 import { getShellUser } from "@/lib/auth/current-user";
+import { redirectToSortie } from "@/lib/auth/sortie";
 
 export const metadata: Metadata = { title: "Profil · Étudium" };
 
 async function MenuDuCompte() {
   const user = await getShellUser();
   // Session fermée ailleurs : /auth/sortie l'efface de l'appareil.
-  if (!user) redirect("/auth/sortie");
+  if (!user) return redirectToSortie();
   return <MobileProfileMenu user={user} />;
 }
 
