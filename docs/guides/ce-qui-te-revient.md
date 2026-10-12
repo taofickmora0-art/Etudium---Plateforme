@@ -111,19 +111,40 @@ Ton processeur (AMD Ryzen 7 3750H) fait partie de ceux que Microsoft accepte pou
 
 ---
 
-## 5. Lot 1 : la base des contenus (tâche 1.1), 5 minutes
+## 5. Lot 1 : la base des contenus (tâches 1.1 et 1.2), 5 minutes
 
-Les formations, leur programme et la règle « qui voit quoi » vivent dans la base. Dans Supabase, **SQL Editor → New query**, comme pour les fichiers précédents :
+Les formations, leur programme et la règle « qui voit quoi » vivent dans la base. Dans Supabase, **SQL Editor → New query**, comme pour les fichiers précédents, et dans cet ordre :
 
 1. Colle `web/supabase/migrations/0004_contenus.sql`, puis **Run**. Résultat attendu : **« Success. No rows returned »**.
-2. Colle `web/supabase/exemples/lot-1.sql`, puis **Run**. Ce fichier ajoute les 3 parcours et les 10 formations du design, avec le programme d’Excel. **Seulement sur la base de test** `etudium-dev`, jamais sur celle du site en ligne.
-3. Vérifie dans **Table Editor** :
+2. Colle `web/supabase/migrations/0005_back_office.sql`, puis **Run**. Même résultat attendu. Il sert au back-office : ranger les éléments (monter, descendre) et n’accepter que les fichiers prévus.
+3. Colle `web/supabase/exemples/lot-1.sql`, puis **Run**. Ce fichier ajoute les 3 parcours et les 10 formations du design, avec le programme d’Excel. **Seulement sur la base de test** `etudium-dev`, jamais sur celle du site en ligne.
+4. Vérifie dans **Table Editor** :
    - `parcours` : 3 lignes ;
    - `formations` : 10 lignes ;
    - `modules` : 4 lignes ;
    - `lecons` : 12 lignes.
-4. Dans **Storage**, un espace **ressources** est apparu. Il est privé : il recevra les fichiers des leçons.
-
-Les vidéos ne sont pas encore là : tu colleras les liens de quelques vidéos YouTube depuis le back-office (tâche 1.2).
+5. Dans **Storage**, un espace **ressources** est apparu. Il est privé : il recevra les fichiers des leçons.
 
 > Applique toujours les fichiers SQL dans l’ordre de leur numéro, et ne recolle jamais un ancien fichier après un plus récent : il pourrait défaire ce que le plus récent a changé.
+
+---
+
+## 6. Valider le back-office (tâche 1.2), 20 minutes
+
+Il faut ton compte **super-administrateur** (section « Devenir super-administrateur » du guide [Brancher la connexion](brancher-la-connexion.md)) et la section 5 ci-dessus.
+
+1. Connecte-toi, puis ouvre http://localhost:3000/admin (ou rond de profil → **Back-office**). Tu vois trois rubriques : Parcours (3), Formateurs (1), Formations (10 publiées).
+2. **Formations → Nouvelle formation** : donne un titre, puis **Créer le brouillon**. La fiche de la formation s’ouvre.
+3. Onglet **Informations** : coche un parcours, active **Formation gratuite**, remplis le résumé et quelques objectifs (un par ligne), puis **Enregistrer**.
+4. Onglet **Programme** : ajoute **2 modules**, puis **2 leçons** dans chacun (« Ajouter la leçon » ouvre la page de la leçon).
+5. Sur chaque page de leçon :
+   - colle le lien d’une vidéo YouTube (le champ affiche « Reconnu : YouTube · … ») ;
+   - saisis sa durée (par exemple 12:40) ;
+   - sur la première leçon, active **Leçon d’aperçu** ;
+   - **Enregistrer**, puis **Retour au programme**.
+6. Sur une leçon, dépose un **PDF** dans « Ressources », puis active **Consultation seule**. Essaie aussi un fichier qui n’est pas accepté (un .exe, par exemple) : il est refusé avec un message.
+7. Dans le programme, range une leçon avec la flèche **Monter**.
+8. Onglet **Publication** → **Publier**. La formation passe en « Publiée » ; son adresse ne peut plus changer.
+9. Vérifie dans **Table Editor → formations** que ta formation a le statut `publiee`, et dans **Storage → ressources** que ton PDF est rangé dans le dossier de la formation.
+
+Dis-moi ce qui coince ou ce qui manque : c’est le moment, avant d’afficher le catalogue (tâche 1.3).
