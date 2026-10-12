@@ -39,6 +39,8 @@ describe("Formulaire d'une leçon", () => {
     expect(screen.getByLabelText("Lien de la vidéo")).toHaveValue("https://youtu.be/dQw4w9WgXcQ");
     expect(screen.getByText("Reconnu : YouTube · dQw4w9WgXcQ")).toBeInTheDocument();
     expect(screen.getByLabelText("Durée")).toHaveValue("12:40");
+    // Clavier de téléphone avec un point (le pavé numérique n'a pas de deux-points).
+    expect(screen.getByLabelText("Durée")).toHaveAttribute("inputmode", "decimal");
     expect(screen.getByLabelText("Points clés")).toHaveValue("Créer un tableau croisé dynamique\nModifier la structure du tableau");
   });
 

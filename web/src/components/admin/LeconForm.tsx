@@ -31,7 +31,7 @@ export function LeconForm({ lecon }: { lecon: LeconAdmin }) {
   const apercu = state.values ? state.values.apercu === "on" : lecon.apercu;
 
   return (
-    <form action={envoyer} noValidate className={CARTE_FORMULAIRE}>
+    <form onSubmit={envoyer} noValidate className={CARTE_FORMULAIRE}>
       {state.status === "error" && state.message && <Banner tone="erreur" title={state.message} />}
       <input type="hidden" name="id" value={lecon.id} />
       <Field label="Titre" htmlFor="lecon-titre" error={e.titre}>
@@ -53,8 +53,8 @@ export function LeconForm({ lecon }: { lecon: LeconAdmin }) {
             spellCheck={false}
           />
         </Field>
-        <Field label="Durée" htmlFor="lecon-duree" hint="Durée de la vidéo, par exemple 12:40." error={e.duree}>
-          <TextInput id="lecon-duree" name="duree" inputMode="numeric" placeholder="12:40" defaultValue={valeur("duree", formatDuree(lecon.dureeSecondes))} />
+        <Field label="Durée" htmlFor="lecon-duree" hint="Durée de la vidéo, par exemple 12:40 (ou 12.40 sur téléphone)." error={e.duree}>
+          <TextInput id="lecon-duree" name="duree" inputMode="decimal" placeholder="12:40" defaultValue={valeur("duree", formatDuree(lecon.dureeSecondes))} />
         </Field>
       </div>
       <Switch name="apercu" label="Leçon d’aperçu" description="Visible sans compte, même si la formation est payante." defaultChecked={apercu} />

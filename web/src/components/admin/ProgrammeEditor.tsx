@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Field } from "@/components/ui/Field";
 import { IconButton } from "@/components/ui/IconButton";
 import { IconTile } from "@/components/ui/IconTile";
-import { List, ListRow } from "@/components/ui/ListRow";
+import { List } from "@/components/ui/ListRow";
 import { Heading } from "@/components/ui/Text";
 import { TextInput } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
@@ -56,6 +56,7 @@ function FormulaireTitre({
   bouton,
   valeurInitiale = "",
   succes,
+  vider = false,
 }: {
   action: Parameters<typeof useFormulaireAdmin>[0];
   champs: Record<string, string>;
@@ -63,11 +64,13 @@ function FormulaireTitre({
   bouton: string;
   valeurInitiale?: string;
   succes: string;
+  /** Vider le champ après un ajout réussi. */
+  vider?: boolean;
 }) {
   const id = useId();
-  const { state, envoyer, pending, erreurs: e, valeur } = useFormulaireAdmin(action, succes);
+  const { state, envoyer, pending, erreurs: e, valeur } = useFormulaireAdmin(action, { succes, viderApresSucces: vider });
   return (
-    <form action={envoyer} noValidate className="flex flex-col gap-2">
+    <form onSubmit={envoyer} noValidate className="flex flex-col gap-2">
       {state.status === "error" && state.message && <Banner tone="erreur" title={state.message} />}
       {Object.entries(champs).map(([nom, v]) => (
         <input key={nom} type="hidden" name={nom} value={v} />
@@ -112,26 +115,27 @@ function ModuleBloc({ formationId, module, rang, premier, dernier }: { formation
       ) : (
         <List label={`Leçons du module ${rang}`}>
           {module.lecons.map((l, index) => (
-            <ListRow
-              key={l.id}
-              leading={<IconTile icon={PlayCircleIcon} />}
-              title={
-                <Link href={`/admin/formations/${formationId}/lecons/${l.id}`} className="focus-etudium text-inherit no-underline hover:underline">
+            // Sur un petit écran, les boutons passent sous le titre plutôt que de l'écraser.
+            <li key={l.id} className="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-1 py-3.5">
+              <IconTile icon={PlayCircleIcon} />
+              <span className="flex min-w-[150px] flex-1 flex-col gap-0.5">
+                <Link
+                  href={`/admin/formations/${formationId}/lecons/${l.id}`}
+                  className="focus-etudium truncate text-[15px] leading-[22px] font-medium text-encre no-underline hover:underline"
+                >
                   {l.titre}
                 </Link>
-              }
-              subtitle={resumeLecon(l)}
-              trailing={
-                <span className="flex flex-none items-center gap-1">
-                  <BoutonsOrdre table="lecons" id={l.id} nom={l.titre} premier={index === 0} dernier={index === module.lecons.length - 1} />
-                  <IconButton icon={Delete02Icon} label={`Supprimer la leçon « ${l.titre} »`} variant="discret" size="sm" onClick={() => ouvrir(l)} />
-                </span>
-              }
-            />
+                <span className="truncate text-[13px] leading-5 text-discret">{resumeLecon(l)}</span>
+              </span>
+              <span role="group" aria-label={`Actions de « ${l.titre} »`} className="ml-auto flex flex-none items-center gap-1">
+                <BoutonsOrdre table="lecons" id={l.id} nom={l.titre} premier={index === 0} dernier={index === module.lecons.length - 1} />
+                <IconButton icon={Delete02Icon} label={`Supprimer la leçon « ${l.titre} »`} variant="discret" size="sm" onClick={() => ouvrir(l)} />
+              </span>
+            </li>
           ))}
         </List>
       )}
-      <FormulaireTitre action={addLecon} champs={{ module_id: module.id }} label="Nouvelle leçon" bouton="Ajouter la leçon" succes="Leçon créée" />
+      <FormulaireTitre action={addLecon} champs={{ module_id: module.id }} label="Nouvelle leçon" bouton="Ajouter la leçon" succes="Leçon créée" vider />
 
       <ConfirmDialog
         open={confirmation === "module"}
@@ -174,7 +178,7 @@ export function ProgrammeEditor({ formation }: { formation: Pick<FormationAdmin,
         ))
       )}
       <div className="rounded-carte border border-dashed border-bordure-carte bg-panneau p-5">
-        <FormulaireTitre action={addModule} champs={{ formation_id: formation.id }} label="Nouveau module" bouton="Ajouter le module" succes="Module ajouté" />
+        <FormulaireTitre action={addModule} champs={{ formation_id: formation.id }} label="Nouveau module" bouton="Ajouter le module" succes="Module ajouté" vider />
       </div>
     </div>
   );

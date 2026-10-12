@@ -54,6 +54,30 @@ describe("Back-office : formations", () => {
     expect(state).toEqual({ status: "success", redirection: `/admin/formations/${F}` });
   });
 
+  it("un titre très long déjà pris reçoit un suffixe sans dépasser 80 caractères", async () => {
+    // Une adresse de 79 caractères (le maximum est 80) : le suffixe oblige à la raccourcir.
+    const titre = "Anticonstitutionnellement".repeat(3) + "abcd";
+    const { slugify } = await import("@/lib/admin/slug");
+    const base = slugify(titre);
+    const coupe = (suffixe: string) => base.slice(0, 80 - suffixe.length).replace(/-+$/, "") + suffixe;
+    faux.repondre("formations.select", { data: [{ slug: base }, { slug: coupe("-2") }] });
+    faux.repondre("formations.insert", { data: { id: F } });
+    await createFormation(IDLE, form({ titre }));
+    const { slug } = faux.de("formations", "insert")[0].valeurs as { slug: string };
+    expect(slug).toBe(coupe("-3"));
+    expect(slug.length).toBeLessThanOrEqual(80);
+    // La recherche des adresses prises couvre aussi les versions raccourcies.
+    const [, motif] = faux.de("formations", "select")[0].filtres.find((f) => f[0] === "like")!.slice(1) as [string, string];
+    expect(coupe("-3").startsWith(motif.replace(/%$/, ""))).toBe(true);
+  });
+
+  it("une adresse prise entre-temps est expliquée sous le titre", async () => {
+    faux.repondre("formations.select", { data: [] });
+    faux.repondre("formations.insert", { error: { code: "23505", message: "duplicate key" } });
+    const state = await createFormation(IDLE, form({ titre: "Excel" }));
+    expect(state.fieldErrors?.titre).toBe("Une autre formation vient de prendre cette adresse : réessayez.");
+  });
+
   it("une formation sans titre n'est pas créée", async () => {
     const state = await createFormation(IDLE, form({ titre: "  " }));
     expect(state.fieldErrors?.titre).toBe("Entrez le titre de la formation.");

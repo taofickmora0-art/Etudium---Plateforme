@@ -56,15 +56,16 @@ function LigneRessource({ ressource, premier, dernier }: { ressource: RessourceA
 
   return (
     <li className="flex flex-col gap-3 rounded-bouton border border-bordure-carte p-3.5">
-      <div className="flex items-center gap-3">
+      {/* Sur un petit écran, les boutons passent sous le titre plutôt que de l'écraser. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <IconTile icon={File02Icon} />
-        <span className="flex min-w-0 flex-1 flex-col">
+        <span className="flex min-w-[150px] flex-1 flex-col">
           <span title={ressource.titre} className="truncate text-sm leading-5 font-medium text-encre">
             {ressource.titre}
           </span>
           <span className="text-xs leading-[18px] text-discret">{meta(ressource)}</span>
         </span>
-        <span className="flex flex-none items-center gap-1">
+        <span role="group" aria-label={`Actions de « ${ressource.titre} »`} className="ml-auto flex flex-none items-center gap-1">
           <BoutonsOrdre table="ressources" id={ressource.id} nom={ressource.titre} premier={premier} dernier={dernier} />
           <IconButton
             icon={Delete02Icon}
@@ -140,7 +141,10 @@ export function RessourcesEditor({ lecon }: { lecon: Pick<LeconAdmin, "id" | "fo
     setEnvois((liste) => [...liste, { cle, nom: fichier.name, taille: fichier.size }]);
     try {
       const stockage = createClient().storage.from("ressources");
-      const { error } = await stockage.upload(chemin, fichier, { contentType: format, upsert: false });
+      // Avec un fichier, Supabase envoie le type annoncé par le navigateur (Windows : « application/x-zip-compressed »,
+      // ou rien du tout pour un fichier Office sans Office) au lieu de `contentType`. Une copie typée (sans recopier les
+      // octets) transmet le type vérifié, celui qu'attend l'espace de stockage.
+      const { error } = await stockage.upload(chemin, fichier.slice(0, fichier.size, format), { contentType: format, upsert: false });
       if (error) {
         toast({ tone: "erreur", title: `L’envoi de « ${fichier.name} » n’a pas abouti.` });
         return;

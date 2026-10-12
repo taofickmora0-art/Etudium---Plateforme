@@ -52,6 +52,12 @@ describe("Ressources d'une leçon au back-office", () => {
     expect(screen.getAllByRole("switch", { name: "Consultation seule" })).toHaveLength(1);
   });
 
+  it("sur un petit écran, les boutons d'une ressource passent sous son titre", () => {
+    afficher();
+    const actions = screen.getByRole("group", { name: "Actions de « Guide des tableaux croisés »" });
+    expect(actions.parentElement).toHaveClass("flex-wrap");
+  });
+
   it("un faux PDF est refusé sans envoi", async () => {
     const { container } = afficher();
     await deposer(container, new File(["bonjour"], "guide.pdf", { type: "application/pdf" }));
@@ -75,9 +81,21 @@ describe("Ressources d'une leçon au back-office", () => {
     await waitFor(() => expect(addRessource).toHaveBeenCalled());
     const [chemin, fichier, options] = upload.mock.calls[0];
     expect(chemin).toMatch(/^f1\/[0-9a-f-]{36}\.pdf$/);
-    expect(fichier).toBe(pdf);
+    expect((fichier as Blob).type).toBe("application/pdf");
+    expect((fichier as Blob).size).toBe(pdf.size);
     expect(options).toMatchObject({ contentType: "application/pdf", upsert: false });
     expect(addRessource).toHaveBeenCalledWith({ leconId: "l1", titre: "Guide des TCD", fichier: chemin, format: "application/pdf", tailleOctets: pdf.size });
+  });
+
+  it("le stockage reçoit le type vérifié, pas celui que Windows annonce", async () => {
+    const { container } = afficher();
+    // Windows annonce un ZIP en « application/x-zip-compressed », et un fichier Office sans Office installé sans type.
+    await deposer(container, new File(["PK\u0003\u0004 archive"], "exercices.zip", { type: "application/x-zip-compressed" }));
+    await deposer(container, new File(["PK\u0003\u0004 classeur"], "donnees.xlsx", { type: "" }));
+    await waitFor(() => expect(upload).toHaveBeenCalledTimes(2));
+    expect((upload.mock.calls[0][1] as Blob).type).toBe("application/zip");
+    expect((upload.mock.calls[1][1] as Blob).type).toBe("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    expect((upload.mock.calls[1][1] as Blob).size).toBe(new File(["PK\u0003\u0004 classeur"], "x").size);
   });
 
   it("si l'enregistrement échoue, le fichier envoyé est retiré", async () => {

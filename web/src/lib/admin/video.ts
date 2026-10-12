@@ -25,14 +25,17 @@ export function parseVideoUrl(lien: string): Video | null {
   if (hote === "youtu.be") return youtube(segments[0]);
   if (hote === "youtube.com" || hote === "youtube-nocookie.com") {
     if (url.pathname === "/watch") return youtube(url.searchParams.get("v"));
-    if (["embed", "shorts", "live", "v"].includes(segments[0] ?? "")) return youtube(segments[1]);
+    // « embed/videoseries?list=… » est une playlist, pas une vidéo (le mot fait lui aussi 11 caractères).
+    if (["embed", "shorts", "live", "v"].includes(segments[0] ?? "") && segments[1] !== "videoseries") return youtube(segments[1]);
     return null;
   }
 
   if (hote === "vimeo.com" || hote === "player.vimeo.com") {
     // vimeo.com/123456789, vimeo.com/123456789/<code> (non répertoriée), player.vimeo.com/video/123456789?h=<code>,
-    // vimeo.com/channels/<nom>/123456789…
-    const position = segments.findIndex((s) => ID_VIMEO.test(s));
+    // vimeo.com/channels/<nom>/123456789… Dans une vitrine, un album ou un groupe (« showcase/7302342/video/432523532 »),
+    // la vidéo est celle qui suit « video » ou « videos », pas le premier nombre.
+    const apresVideo = segments.findIndex((s, i) => (s === "video" || s === "videos") && ID_VIMEO.test(segments[i + 1] ?? ""));
+    const position = apresVideo >= 0 ? apresVideo + 1 : segments.findIndex((s) => ID_VIMEO.test(s));
     if (position < 0) return null;
     const id = segments[position];
     const parametre = url.searchParams.get("h");

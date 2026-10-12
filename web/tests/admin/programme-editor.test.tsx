@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -60,6 +60,31 @@ describe("Programme d'une formation au back-office", () => {
     const fenetre = await screen.findByRole("dialog");
     expect(within(fenetre).getByText("Supprimer ce module ?")).toBeInTheDocument();
     expect(within(fenetre).getByText("Ses 2 leçons, leurs vidéos et leurs ressources seront supprimées.")).toBeInTheDocument();
+  });
+
+  it("sur un petit écran, les boutons d'une leçon passent sous son titre", () => {
+    afficher(FORMATION);
+    // La ligne peut passer à la ligne ; le titre garde une largeur minimale lisible (jsdom ne calcule pas la mise en page).
+    const actions = screen.getByRole("group", { name: "Actions de « Découvrir l’interface »" });
+    expect(actions.parentElement).toHaveClass("flex-wrap");
+    expect(screen.getByRole("link", { name: "Découvrir l’interface" }).parentElement).toHaveClass("min-w-[150px]");
+  });
+
+  it("le titre d'un module ajouté se vide, celui d'un module renommé reste", async () => {
+    const { addModule, renameModule } = await import("@/lib/admin/actions");
+    vi.mocked(addModule).mockResolvedValue({ status: "success" });
+    vi.mocked(renameModule).mockImplementation(async (_p, fd) => ({ status: "success", values: { titre: String(fd.get("titre")) } }));
+    afficher(FORMATION);
+    const nouveau = screen.getByLabelText("Nouveau module");
+    await userEvent.type(nouveau, "Graphiques");
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter le module" }));
+    await waitFor(() => expect(nouveau).toHaveValue(""));
+    const [titre] = screen.getAllByLabelText("Titre du module");
+    await userEvent.clear(titre);
+    await userEvent.type(titre, "Bases");
+    await userEvent.click(screen.getAllByRole("button", { name: "Renommer" })[0]);
+    await waitFor(() => expect(vi.mocked(renameModule)).toHaveBeenCalled());
+    expect(titre).toHaveValue("Bases");
   });
 
   it("sans module, l'état vide guide", () => {

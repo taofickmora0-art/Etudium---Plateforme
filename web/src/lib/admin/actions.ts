@@ -16,6 +16,7 @@ import { parseVideoUrl } from "./video";
 
 const ECHEC = authErrorMessage(null);
 const ADRESSE_PRISE = "Cette adresse est déjà prise.";
+const ADRESSE_PRISE_ENTRE_TEMPS = "Une autre formation vient de prendre cette adresse : réessayez.";
 const DEPLACEMENT_ECHOUE = "Le déplacement n’a pas abouti.";
 const FORMATION_VIDE = "Ajoutez au moins une leçon avant de publier.";
 const PUBLIEE_ARCHIVER = "Une formation publiée s’archive, elle ne s’efface pas.";
@@ -141,13 +142,21 @@ export async function createFormation(_prev: FormState, fd: FormData): Promise<F
     const garde = await exigerEquipe();
     if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
     const { supabase } = garde;
-    let base = slugify(parsed.data.titre) || "formation";
-    const { data: prises } = await supabase.from("formations").select("slug").like("slug", `${base}%`);
+    const base = slugify(parsed.data.titre) || "formation";
+    // n-ième adresse candidate : la base, puis « base-2 », « base-3 »… raccourcie pour rester sous 80 caractères.
+    const candidate = (n: number) => {
+      if (n === 1) return base;
+      const suffixe = `-${n}`;
+      return base.slice(0, 80 - suffixe.length).replace(/-+$/, "") + suffixe;
+    };
+    // Le début commun à toutes les candidates, pour retrouver aussi les versions raccourcies déjà prises.
+    const { data: prises } = await supabase.from("formations").select("slug").like("slug", `${base.slice(0, 70)}%`);
     const utilisees = new Set(((prises as { slug: string }[] | null) ?? []).map((p) => p.slug));
-    if (utilisees.has(base)) base = base.slice(0, 76).replace(/-+$/, "");
-    let slug = base;
-    for (let n = 2; utilisees.has(slug); n++) slug = `${base}-${n}`;
-    const { data, error } = await supabase.from("formations").insert({ titre: parsed.data.titre, slug }).select("id").single();
+    let n = 1;
+    while (utilisees.has(candidate(n))) n++;
+    const { data, error } = await supabase.from("formations").insert({ titre: parsed.data.titre, slug: candidate(n) }).select("id").single();
+    // Une autre formation a pris la même adresse entre-temps : le formulaire n'a qu'un champ, le titre.
+    if (error?.code === "23505") return { status: "error", fieldErrors: { titre: ADRESSE_PRISE_ENTRE_TEMPS }, values };
     if (error || !data) return erreurEnregistrement(error ?? {}, values);
     return { status: "success", redirection: `/admin/formations/${(data as { id: string }).id}` };
   } catch {

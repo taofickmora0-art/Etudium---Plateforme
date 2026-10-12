@@ -26,7 +26,7 @@ export function FormationInfosForm({ formation, parcours, formateurs }: Props) {
   const parcoursCoches = state.values ? (state.values.parcours ?? "").split(",").filter(Boolean) : formation.parcoursIds;
 
   return (
-    <form action={envoyer} noValidate className={CARTE_FORMULAIRE}>
+    <form onSubmit={envoyer} noValidate className={CARTE_FORMULAIRE}>
       {state.status === "error" && state.message && <Banner tone="erreur" title={state.message} />}
       <input type="hidden" name="id" value={formation.id} />
       <Field label="Titre" htmlFor="formation-titre" error={e.titre}>

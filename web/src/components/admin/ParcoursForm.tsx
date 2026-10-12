@@ -16,10 +16,10 @@ export const CARTE_FORMULAIRE = "flex max-w-[680px] flex-col gap-5 rounded-carte
 
 /** Création ou modification d'un parcours (spec du lot 1, §10). */
 export function ParcoursForm({ parcours }: { parcours?: ParcoursAdmin }) {
-  const { state, envoyer, pending, erreurs: e, valeur } = useFormulaireAdmin(saveParcours, parcours ? "Parcours enregistré" : "Parcours créé");
+  const { state, envoyer, pending, erreurs: e, valeur } = useFormulaireAdmin(saveParcours, { succes: parcours ? "Parcours enregistré" : "Parcours créé" });
   const actif = state.values ? state.values.actif === "on" : (parcours?.actif ?? true);
   return (
-    <form action={envoyer} noValidate className={CARTE_FORMULAIRE}>
+    <form onSubmit={envoyer} noValidate className={CARTE_FORMULAIRE}>
       {state.status === "error" && state.message && <Banner tone="erreur" title={state.message} />}
       {parcours && <input type="hidden" name="id" value={parcours.id} />}
       <Field label="Nom" htmlFor="parcours-nom" error={e.nom}>

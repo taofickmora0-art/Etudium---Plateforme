@@ -12,9 +12,9 @@ import { useFormulaireAdmin } from "./useFormulaireAdmin";
 
 /** Fiche publique d'un formateur (spec du lot 1, Q7) ; elle sera reliée à son compte au lot 4. */
 export function FormateurForm({ formateur }: { formateur?: FormateurAdmin }) {
-  const { state, envoyer, pending, erreurs: e, valeur } = useFormulaireAdmin(saveFormateur, formateur ? "Fiche enregistrée" : "Fiche créée");
+  const { state, envoyer, pending, erreurs: e, valeur } = useFormulaireAdmin(saveFormateur, { succes: formateur ? "Fiche enregistrée" : "Fiche créée" });
   return (
-    <form action={envoyer} noValidate className={CARTE_FORMULAIRE}>
+    <form onSubmit={envoyer} noValidate className={CARTE_FORMULAIRE}>
       {state.status === "error" && state.message && <Banner tone="erreur" title={state.message} />}
       {formateur && <input type="hidden" name="id" value={formateur.id} />}
       <Field label="Nom" htmlFor="formateur-nom" error={e.nom}>

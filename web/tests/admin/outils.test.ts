@@ -43,6 +43,16 @@ describe("Lien d'une vidéo", () => {
     expect(parseVideoUrl("https://vimeo.com/channels/staffpicks/76979871")).toEqual({ fournisseur: "vimeo", id: "76979871" });
   });
 
+  it("une playlist YouTube n'est pas prise pour une vidéo", () => {
+    expect(parseVideoUrl("https://www.youtube.com/embed/videoseries?list=PL1234567890")).toBeNull();
+  });
+
+  it("une vidéo Vimeo vue dans une vitrine, un album ou un groupe donne l'identifiant de la vidéo", () => {
+    expect(parseVideoUrl("https://vimeo.com/showcase/7302342/video/432523532")).toEqual({ fournisseur: "vimeo", id: "432523532" });
+    expect(parseVideoUrl("https://vimeo.com/album/7302342/video/432523532")).toEqual({ fournisseur: "vimeo", id: "432523532" });
+    expect(parseVideoUrl("https://vimeo.com/groups/etudium/videos/432523532")).toEqual({ fournisseur: "vimeo", id: "432523532" });
+  });
+
   it("parseVideoUrl refuse le reste", () => {
     for (const lien of ["https://exemple.com/video.mp4", "https://youtube.com/watch?v=court", "pas un lien", "", "https://youtube.com.pirate.example/watch?v=dQw4w9WgXcQ"]) {
       expect(parseVideoUrl(lien), lien).toBeNull();
@@ -65,6 +75,13 @@ describe("Durées", () => {
     expect(parseDuree("")).toBe(0);
     expect(parseDuree(" 06:10 ")).toBe(370);
     for (const faux of ["12:75", "-3", "douze", "1:2:3:4", "1:60:00"]) expect(parseDuree(faux), faux).toBeNull();
+  });
+
+  it("sur téléphone, le point ou la virgule remplacent les deux-points", () => {
+    expect(parseDuree("12.40")).toBe(760);
+    expect(parseDuree("12,40")).toBe(760);
+    expect(parseDuree("1.02.03")).toBe(3723);
+    expect(parseDuree("12.75")).toBeNull();
   });
 
   it("formatDuree écrit comme le design", () => {
