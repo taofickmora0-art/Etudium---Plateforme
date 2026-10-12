@@ -1,4 +1,4 @@
-# Ce qui te revient (lot 0)
+# Ce qui te revient (lots 0 et 1)
 
 Trois manipulations que je ne peux pas faire à ta place, parce qu’elles touchent à tes comptes ou à ton ordinateur, puis la validation des tâches 0.2 à 0.4. Rien ne presse dans l’ordre, sauf Windows (voir plus bas).
 
@@ -106,6 +106,20 @@ Ton processeur (AMD Ryzen 7 3750H) fait partie de ceux que Microsoft accepte pou
         - Si l’icône n’apparaît pas : menu **⋮** de Chrome (en haut à droite) → **« Caster, enregistrer et partager »** → **« Installer la page en tant qu’appli… »** (ou **« Installer Étudium… »**).
      3. Sur téléphone, l’installation demande une adresse en `https` : on la vérifiera à la mise en ligne.
 6. Dis-moi ce qui ne te va pas : une couleur, un texte, un espacement, un comportement. Je corrige avant d’attaquer la suite.
-7. **Spec du lot 1** : relis le brouillon [Lot 1 — Catalogue + apprentissage](../superpowers/specs/2026-10-12-lot-1-catalogue-apprentissage-design.md), surtout sa section 1 (douze questions, chacune avec ma proposition). Réponds « OK pour tout » ou donne-moi les numéros à changer : je ne code rien du lot 1 avant ton accord.
 
 > Pour tester sur ton téléphone pendant que l’application tourne sur l’ordinateur, les deux doivent être sur le même Wi-Fi ; dis-le-moi et je te donne la marche à suivre.
+
+## 5. Lot 1 : la base des contenus (tâche 1.1), 5 minutes
+
+Les formations, leur programme et la règle « qui voit quoi » vivent dans la base. Dans Supabase, **SQL Editor → New query**, comme pour les fichiers précédents :
+
+1. Colle `web/supabase/migrations/0004_contenus.sql`, puis **Run**. Résultat attendu : **« Success. No rows returned »**.
+2. Colle `web/supabase/exemples/lot-1.sql`, puis **Run**. Ce fichier ajoute les 3 parcours et les 10 formations du design, avec le programme d’Excel. **Seulement sur la base de test** `etudium-dev`, jamais sur celle du site en ligne.
+3. Vérifie dans **Table Editor** :
+   - `parcours` : 3 lignes ;
+   - `formations` : 10 lignes ;
+   - `modules` : 4 lignes ;
+   - `lecons` : 12 lignes.
+4. Dans **Storage**, un espace **ressources** est apparu. Il est privé : il recevra les fichiers des leçons.
+
+Les vidéos ne sont pas encore là : tu colleras les liens de quelques vidéos YouTube depuis le back-office (tâche 1.2).
