@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { ArrowRight01Icon, ArrowRight02Icon, Clock01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import { Icon } from "@/components/ui/Icon";
-import { MetaDot } from "@/components/ui/Progress";
+import { MetaDot, ProgressBar } from "@/components/ui/Progress";
 import { Tag, type TagTone } from "@/components/ui/Tag";
 import { Heading, Lead } from "@/components/ui/Text";
 import { dureeLisible, etatAcces, leconsApercu, nombreDeLecons, parcoursPrincipal, premiereLeconOuverte } from "@/lib/catalogue/regles";
 import type { FicheFormation } from "@/lib/catalogue/types";
+import { formatDuree } from "@/lib/admin/duree";
 import { libelleNiveau } from "@/lib/contenus/libelles";
+import type { EtatProgression } from "@/lib/progression/regles";
 import { AvisVides, CarteFormateur, elementsInclus, ListeCochee } from "./BlocsFiche";
 import { adresseLecon, ProgrammeFiche, resumeProgramme } from "./ProgrammeFiche";
 
@@ -25,18 +27,70 @@ function EnTeteSection({ titre, id, suite }: { titre: string; id?: string; suite
   );
 }
 
+/** « Votre progression » (NdFormation §6.4) : pourcentage, barre, temps restant. */
+function EnTeteProgression({ progression }: { progression: EtatProgression }) {
+  const restant = dureeLisible(progression.restantSecondes);
+  return (
+    <>
+      <div className="flex items-end justify-between gap-3">
+        <span className="text-sm leading-[22px] font-medium text-discret">Votre progression</span>
+        <span className="flex-none text-[28px] leading-8 font-medium tracking-[-0.01em] whitespace-nowrap text-titre">{progression.pourcentage} %</span>
+      </div>
+      <ProgressBar value={progression.pourcentage} label="Progression de la formation" className="mt-3" />
+      {restant && (
+        <div className="mt-2 flex items-center gap-1 text-xs leading-[18px] text-discret">
+          <Icon icon={Clock01Icon} size={18} className="-mx-[1.5px]" />
+          <span>{restant} restantes</span>
+        </div>
+      )}
+    </>
+  );
+}
+
+/** « Prochaine leçon » et « Continuer », ou « Formation terminée » et « Revoir la formation ». */
+function Reprise({ fiche, progression }: { fiche: FicheFormation; progression: EtatProgression }) {
+  const lecon = progression.aReprendre;
+  const rang = lecon ? fiche.modules.findIndex((m) => m.lecons.some((l) => l.id === lecon.id)) : -1;
+  const premiere = premiereLeconOuverte(fiche);
+  const cible = lecon ?? (progression.terminee ? premiere : null);
+  if (!cible) return null;
+  return (
+    <>
+      <div className="mt-[18px] flex flex-col gap-0.5 border-t border-bordure-carte pt-4">
+        {lecon ? (
+          <>
+            <span className="text-xs leading-[18px] text-discret">Prochaine leçon</span>
+            <span className="text-[15px] leading-[22px] font-medium text-encre">{lecon.titre}</span>
+            <span className="text-[13px] leading-5 text-discret">{[`Module ${rang + 1}`, formatDuree(lecon.dureeSecondes)].filter(Boolean).join(" · ")}</span>
+          </>
+        ) : (
+          <span className="text-[15px] leading-[22px] font-medium text-reussite-texte">Formation terminée</span>
+        )}
+      </div>
+      <Link href={adresseLecon(fiche.slug, cible.id)} className={BOUTON_PRINCIPAL}>
+        <span>{lecon ? "Continuer" : "Revoir la formation"}</span>
+        <Icon icon={ArrowRight02Icon} size={20} />
+      </Link>
+    </>
+  );
+}
+
 /**
- * Carte d'accès (à droite) : commencer une formation ouverte, voir l'aperçu, ou savoir qu'elle est verrouillée.
- * La progression (« 68 % », « Continuer ») arrive en 1.7, les favoris en 1.9, les formules au lot 2.
+ * Carte d'accès (à droite). Formation commencée (1.7) : la progression, puis « Continuer ». Sinon : commencer une
+ * formation ouverte, voir l'aperçu, ou savoir qu'elle est verrouillée. Les favoris arrivent en 1.9, les formules au lot 2.
  */
-function CarteAcces({ fiche }: { fiche: FicheFormation }) {
+function CarteAcces({ fiche, progression }: { fiche: FicheFormation; progression: EtatProgression | null }) {
   const etat = etatAcces(fiche, true);
   const parcours = [...fiche.parcours].sort((a, b) => a.ordre - b.ordre)[0];
   const premiere = premiereLeconOuverte(fiche);
   const apercus = leconsApercu(fiche);
+  const suivie = progression?.commencee ? progression : null;
+  const reprise = suivie && (suivie.aReprendre || suivie.terminee);
   return (
     <div className={CARTE}>
-      {etat === "gratuite" && (
+      {suivie && <EnTeteProgression progression={suivie} />}
+      {reprise && <Reprise fiche={fiche} progression={suivie} />}
+      {!reprise && etat === "gratuite" && (
         <>
           <span className="text-sm leading-[22px] font-medium text-discret">Votre formation</span>
           <p className="m-0 mt-2 text-sm leading-[22px] text-texte">Formation gratuite : toutes les leçons sont ouvertes.</p>
@@ -48,7 +102,7 @@ function CarteAcces({ fiche }: { fiche: FicheFormation }) {
           )}
         </>
       )}
-      {etat === "apercu" && (
+      {!reprise && etat === "apercu" && (
         <>
           <span className="text-sm leading-[22px] font-medium text-discret">Aperçu gratuit</span>
           <p className="m-0 mt-2 text-sm leading-[22px] text-texte">
@@ -63,7 +117,7 @@ function CarteAcces({ fiche }: { fiche: FicheFormation }) {
           )}
         </>
       )}
-      {etat === "verrouillee" && (
+      {!reprise && etat === "verrouillee" && (
         <>
           <span className="flex items-center gap-2 text-base leading-6 font-semibold text-encre">
             <Icon icon={SquareLock02Icon} size={18} />
@@ -77,8 +131,11 @@ function CarteAcces({ fiche }: { fiche: FicheFormation }) {
   );
 }
 
-/** Fiche formation pour un compte connecté (NdFormation) : en-tête, programme avec cadenas, carte d'accès. */
-export function FicheConnectee({ fiche }: { fiche: FicheFormation }) {
+/**
+ * Fiche formation pour un compte connecté (NdFormation) : en-tête, programme avec cadenas, carte d'accès. Avec la
+ * progression du compte (1.7) : « Votre progression », « Continuer », leçons terminées et « Vous êtes ici ».
+ */
+export function FicheConnectee({ fiche, progression = null }: { fiche: FicheFormation; progression?: EtatProgression | null }) {
   const parcours = [...fiche.parcours].sort((a, b) => a.ordre - b.ordre)[0];
   const duree = dureeLisible(fiche.dureeSecondes);
   const meta = [duree, libelleNiveau(fiche.niveau), fiche.nbLecons > 0 ? nombreDeLecons(fiche.nbLecons) : "", fiche.formateur?.nom ?? ""].filter(Boolean);
@@ -157,7 +214,7 @@ export function FicheConnectee({ fiche }: { fiche: FicheFormation }) {
           )}
           <section aria-labelledby="programme-titre" className="flex min-w-0 flex-col gap-4">
             <EnTeteSection titre="Programme" id="programme-titre" suite={fiche.modules.length > 0 ? resumeProgramme(fiche) : undefined} />
-            <ProgrammeFiche fiche={fiche} variante="connecte" />
+            <ProgrammeFiche fiche={fiche} variante="connecte" progression={progression?.commencee ? progression : null} />
           </section>
           <div className="flex min-w-0 flex-col gap-4">
             <EnTeteSection titre="Avis des étudiants" />
@@ -166,7 +223,7 @@ export function FicheConnectee({ fiche }: { fiche: FicheFormation }) {
         </div>
         <div className="min-w-0 flex-[1_1_300px]">
           <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(216px,calc((100%-32px)/3))),1fr))] gap-4">
-            <CarteAcces fiche={fiche} />
+            <CarteAcces fiche={fiche} progression={progression} />
             {fiche.formateur && <CarteFormateur formateur={fiche.formateur} variante="connecte" />}
             <div className={CARTE}>
               <h3 className="m-0 text-base leading-6 font-semibold text-encre">Inclus dans la formation</h3>

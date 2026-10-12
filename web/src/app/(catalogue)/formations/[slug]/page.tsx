@@ -9,6 +9,8 @@ import { getFiche } from "@/lib/catalogue/data";
 import { metadonneesFiche } from "@/lib/catalogue/partage";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { compteConnecte } from "@/lib/catalogue/visiteur";
+import { lireProgression } from "@/lib/progression/data";
+import { etatFormation } from "@/lib/progression/regles";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -32,7 +34,10 @@ async function Fiche({ params }: Params) {
   }
   // Brouillon, formation archivée ou adresse inconnue : page introuvable, pour tout le monde.
   if (!fiche) notFound();
-  return compte ? <FicheConnectee fiche={fiche} /> : <FichePublique fiche={fiche} />;
+  if (!compte) return <FichePublique fiche={fiche} />;
+  // Progression du compte (1.7) : absente tant que les migrations 0007 et 0008 ne sont pas appliquées.
+  const lignes = await lireProgression();
+  return <FicheConnectee fiche={fiche} progression={lignes ? etatFormation(fiche, lignes) : null} />;
 }
 
 /** Fiche d'une formation (spec du lot 1, §2) : NdFormationPublic pour un visiteur, NdFormation pour un compte connecté. */

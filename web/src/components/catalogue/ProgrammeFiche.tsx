@@ -1,11 +1,13 @@
 import Link from "next/link";
-import { PlayCircleIcon, SquareLock02Icon } from "@hugeicons/core-free-icons";
+import { CheckmarkCircle02Icon, PlayCircleIcon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import { Accordion } from "@/components/ui/Accordion";
 import { Icon } from "@/components/ui/Icon";
 import { formatDuree } from "@/lib/admin/duree";
 import { dureeLisible, nombreDeLecons } from "@/lib/catalogue/regles";
 import type { FicheFormation, LeconFiche } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
+import { etatModule, type EtatProgression } from "@/lib/progression/regles";
+import { Tag } from "@/components/ui/Tag";
 
 export const adresseLecon = (slug: string, leconId: string) => `/formations/${slug}/lecons/${leconId}`;
 
@@ -36,14 +38,22 @@ function LeconPublique({ slug, lecon, premiere }: { slug: string; lecon: LeconFi
   );
 }
 
-/** Ligne d'une leçon, programme connecté (NdFormation) : lien si la leçon est ouverte, cadenas sinon. */
-function LeconConnectee({ slug, lecon }: { slug: string; lecon: LeconFiche }) {
+/**
+ * Ligne d'une leçon, programme connecté (NdFormation) : lien si la leçon est ouverte, cadenas sinon. Avec la progression
+ * (1.7) : coche verte sur une leçon terminée, « Vous êtes ici » sur la leçon où reprendre.
+ */
+function LeconConnectee({ slug, lecon, terminee = false, ici = false }: { slug: string; lecon: LeconFiche; terminee?: boolean; ici?: boolean }) {
+  const icone = !lecon.accessible ? SquareLock02Icon : terminee ? CheckmarkCircle02Icon : PlayCircleIcon;
   const contenu = (
     <>
-      <span className={cn("flex flex-none", lecon.accessible ? "text-texte" : "text-discret")}>
-        <Icon icon={lecon.accessible ? PlayCircleIcon : SquareLock02Icon} size={20} />
+      <span className={cn("flex flex-none", !lecon.accessible ? "text-discret" : terminee ? "text-reussite-texte" : "text-texte")}>
+        <Icon icon={icone} size={20} />
       </span>
-      <span className={cn("min-w-0 flex-1 text-sm leading-5", lecon.accessible ? "text-encre" : "text-discret")}>{lecon.titre}</span>
+      <span className={cn("min-w-0 flex-1 text-sm leading-5", lecon.accessible ? "text-encre" : "text-discret", ici && "font-semibold")}>
+        {lecon.titre}
+        {terminee && <span className="sr-only"> (terminée)</span>}
+      </span>
+      {ici && <Tag tone="nouveau">Vous êtes ici</Tag>}
       <span className="min-w-14 flex-none text-right text-[13px] leading-5 text-discret">{formatDuree(lecon.dureeSecondes)}</span>
     </>
   );
@@ -63,8 +73,19 @@ function LeconConnectee({ slug, lecon }: { slug: string; lecon: LeconFiche }) {
 }
 
 /** Programme en accordéon : un module par ligne, le premier ouvert (NdFormationPublic §5.3, NdFormation §6.3 b). */
-export function ProgrammeFiche({ fiche, variante }: { fiche: FicheFormation; variante: "public" | "connecte" }) {
+export function ProgrammeFiche({
+  fiche,
+  variante,
+  progression = null,
+}: {
+  fiche: FicheFormation;
+  variante: "public" | "connecte";
+  /** Progression du compte connecté (1.7) ; null avant la première leçon ou sans progression en base. */
+  progression?: EtatProgression | null;
+}) {
   if (fiche.modules.length === 0) return <p className="m-0 text-sm leading-[22px] text-discret">Le programme arrive bientôt.</p>;
+  const terminees = progression?.terminees ?? new Set<string>();
+  const aReprendre = progression?.aReprendre ?? null;
   return (
     <Accordion
       defaultOpen={[0]}
@@ -73,8 +94,12 @@ export function ProgrammeFiche({ fiche, variante }: { fiche: FicheFormation; var
         cle: module.id,
         question: (
           <span className="flex flex-col gap-0.5">
-            <span>
-              Module {rang + 1} : {module.titre}
+            <span className="flex flex-wrap items-center gap-2">
+              <span>
+                Module {rang + 1} : {module.titre}
+              </span>
+              {progression && etatModule(module, terminees, aReprendre) === "termine" && <Tag tone="valide">Terminé</Tag>}
+              {progression && etatModule(module, terminees, aReprendre) === "en-cours" && <Tag tone="nouveau">En cours</Tag>}
             </span>
             <span className="block text-[13px] leading-5 font-normal text-discret">{metaModule(module.lecons)}</span>
           </span>
@@ -88,7 +113,7 @@ export function ProgrammeFiche({ fiche, variante }: { fiche: FicheFormation; var
                 variante === "public" ? (
                   <LeconPublique key={lecon.id} slug={fiche.slug} lecon={lecon} premiere={index === 0} />
                 ) : (
-                  <LeconConnectee key={lecon.id} slug={fiche.slug} lecon={lecon} />
+                  <LeconConnectee key={lecon.id} slug={fiche.slug} lecon={lecon} terminee={terminees.has(lecon.id)} ici={aReprendre?.id === lecon.id} />
                 ),
               )}
             </span>
