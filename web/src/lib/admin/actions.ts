@@ -5,7 +5,7 @@ import { authErrorMessage } from "@/lib/auth/messages";
 import { fieldErrorsFrom, type FormState } from "@/lib/auth/schemas";
 import type { createClient } from "@/lib/supabase/server";
 import { exigerEquipe } from "./garde";
-import { formateurSchema, formationInfosSchema, lignes, parcoursSchema } from "./schemas";
+import { formateurSchema, formationInfosSchema, leconSchema, lignes, moduleSchema, parcoursSchema } from "./schemas";
 import { slugify } from "./slug";
 
 // Actions serveur du back-office (spec du lot 1, §10). Chacune revérifie l'équipe (exigerEquipe), puis la base
@@ -260,4 +260,112 @@ export async function deleteFormation(id: string): Promise<Resultat> {
     return { ok: false, message: ECHEC };
   }
   return { ok: true, redirection: "/admin/formations" };
+}
+
+// ─── Programme : modules et leçons ──────────────────────────────────────────
+
+/** Retire du stockage les fichiers des ressources supprimées (après la ligne : voir deleteFormation). */
+async function retirerFichiers(supabase: Supabase, fichiers: unknown) {
+  const chemins = ((fichiers as { fichier: string }[] | null) ?? []).map((r) => r.fichier).filter(Boolean);
+  if (chemins.length > 0) await supabase.storage.from("ressources").remove(chemins);
+}
+
+export async function addModule(_prev: FormState, fd: FormData): Promise<FormState> {
+  const formationId = texte(fd, "formation_id");
+  const values = { titre: texte(fd, "titre") };
+  const parsed = moduleSchema.safeParse(values);
+  if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values };
+  if (!estUuid(formationId)) return { status: "error", message: ECHEC, values };
+  try {
+    const garde = await exigerEquipe();
+    if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
+    const { supabase } = garde;
+    const ordre = await rangSuivant(supabase, "modules", ["formation_id", formationId]);
+    const { error } = await supabase.from("modules").insert({ formation_id: formationId, titre: parsed.data.titre, ordre });
+    if (error) return erreurEnregistrement(error, values);
+  } catch {
+    return { status: "error", message: ECHEC, values };
+  }
+  refresh();
+  return { status: "success" };
+}
+
+export async function renameModule(_prev: FormState, fd: FormData): Promise<FormState> {
+  const id = texte(fd, "id");
+  const values = { titre: texte(fd, "titre") };
+  const parsed = moduleSchema.safeParse(values);
+  if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values };
+  if (!estUuid(id)) return { status: "error", message: ECHEC, values };
+  try {
+    const garde = await exigerEquipe();
+    if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
+    const { error } = await garde.supabase.from("modules").update({ titre: parsed.data.titre }).eq("id", id);
+    if (error) return erreurEnregistrement(error, values);
+  } catch {
+    return { status: "error", message: ECHEC, values };
+  }
+  refresh();
+  return { status: "success", values };
+}
+
+/** Supprime un module : ses leçons partent avec lui (cascade), puis les fichiers de leurs ressources. */
+export async function deleteModule(id: string): Promise<Resultat> {
+  if (!estUuid(id)) return { ok: false, message: ECHEC };
+  try {
+    const garde = await exigerEquipe();
+    if ("erreur" in garde) return { ok: false, message: garde.erreur };
+    const { supabase } = garde;
+    const { data: fichiers } = await supabase.from("ressources").select("fichier, lecons!inner(module_id)").eq("lecons.module_id", id);
+    const { error } = await supabase.from("modules").delete().eq("id", id);
+    if (error) return { ok: false, message: ECHEC };
+    await retirerFichiers(supabase, fichiers);
+  } catch {
+    return { ok: false, message: ECHEC };
+  }
+  refresh();
+  return { ok: true };
+}
+
+/** Nouvelle leçon à la fin du module, avec son contenu vide ; on ouvre ensuite sa page. */
+export async function addLecon(_prev: FormState, fd: FormData): Promise<FormState> {
+  const moduleId = texte(fd, "module_id");
+  const values = { titre: texte(fd, "titre") };
+  const parsed = leconSchema.pick({ titre: true }).safeParse(values);
+  if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values };
+  if (!estUuid(moduleId)) return { status: "error", message: ECHEC, values };
+  try {
+    const garde = await exigerEquipe();
+    if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
+    const { supabase } = garde;
+    const { data: module } = await supabase.from("modules").select("formation_id").eq("id", moduleId).maybeSingle();
+    const formationId = (module as { formation_id?: string } | null)?.formation_id;
+    if (!formationId) return { status: "error", message: ECHEC, values };
+    const ordre = await rangSuivant(supabase, "lecons", ["module_id", moduleId]);
+    const { data, error } = await supabase.from("lecons").insert({ module_id: moduleId, titre: parsed.data.titre, ordre }).select("id").single();
+    if (error || !data) return erreurEnregistrement(error ?? {}, values);
+    const leconId = (data as { id: string }).id;
+    // Le contenu (vidéo, texte) vit à part : il ne se montre qu'avec l'accès à la leçon. Créé vide ici, complété ensuite.
+    await supabase.from("lecons_contenus").insert({ lecon_id: leconId });
+    return { status: "success", redirection: `/admin/formations/${formationId}/lecons/${leconId}` };
+  } catch {
+    return { status: "error", message: ECHEC, values };
+  }
+}
+
+/** Supprime une leçon (contenu et ressources en cascade), puis les fichiers de ses ressources. */
+export async function deleteLecon(id: string): Promise<Resultat> {
+  if (!estUuid(id)) return { ok: false, message: ECHEC };
+  try {
+    const garde = await exigerEquipe();
+    if ("erreur" in garde) return { ok: false, message: garde.erreur };
+    const { supabase } = garde;
+    const { data: fichiers } = await supabase.from("ressources").select("fichier").eq("lecon_id", id);
+    const { error } = await supabase.from("lecons").delete().eq("id", id);
+    if (error) return { ok: false, message: ECHEC };
+    await retirerFichiers(supabase, fichiers);
+  } catch {
+    return { ok: false, message: ECHEC };
+  }
+  refresh();
+  return { ok: true };
 }

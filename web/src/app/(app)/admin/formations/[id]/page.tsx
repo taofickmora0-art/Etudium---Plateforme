@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { FormationInfosForm } from "@/components/admin/FormationInfosForm";
 import { FormationOnglets } from "@/components/admin/FormationOnglets";
 import { PageAdmin } from "@/components/admin/PageAdmin";
+import { ProgrammeEditor } from "@/components/admin/ProgrammeEditor";
 import { PublicationPanel } from "@/components/admin/PublicationPanel";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { TON_STATUT } from "@/components/admin/tons";
@@ -36,7 +37,7 @@ async function FicheFormation({ params }: Params) {
     >
       <FormationOnglets
         informations={<FormationInfosForm formation={formation} parcours={parcours} formateurs={formateurs} />}
-        programme={<p className="m-0 text-sm text-discret">Le programme se saisit ici.</p>}
+        programme={<ProgrammeEditor formation={formation} />}
         publication={<PublicationPanel id={formation.id} statut={formation.statut} />}
       />
     </PageAdmin>
