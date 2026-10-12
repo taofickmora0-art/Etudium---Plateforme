@@ -16,11 +16,13 @@ import { STATUTS } from "@/lib/contenus/libelles";
 
 export const metadata: Metadata = { title: "Formation · Back-office · Étudium" };
 
-type Params = { params: Promise<{ id: string }> };
+type Params = { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string }> };
 
-async function FicheFormation({ params }: Params) {
+const ONGLETS = ["informations", "programme", "publication"];
+
+async function FicheFormation({ params, searchParams }: Params) {
   await requireSpace("admin");
-  const { id } = await params;
+  const [{ id }, { onglet }] = await Promise.all([params, searchParams]);
   let donnees;
   try {
     donnees = await Promise.all([getFormationAdmin(id), listParcours(), listFormateurs()]);
@@ -36,6 +38,7 @@ async function FicheFormation({ params }: Params) {
       action={<Tag tone={TON_STATUT[formation.statut]}>{STATUTS[formation.statut]}</Tag>}
     >
       <FormationOnglets
+        ongletInitial={onglet && ONGLETS.includes(onglet) ? onglet : "informations"}
         informations={<FormationInfosForm formation={formation} parcours={parcours} formateurs={formateurs} />}
         programme={<ProgrammeEditor formation={formation} />}
         publication={<PublicationPanel id={formation.id} statut={formation.statut} />}
@@ -44,10 +47,10 @@ async function FicheFormation({ params }: Params) {
   );
 }
 
-export default function Page({ params }: Params) {
+export default function Page({ params, searchParams }: Params) {
   return (
     <Suspense fallback={<Skeleton className="h-96 max-w-[680px] rounded-carte" />}>
-      <FicheFormation params={params} />
+      <FicheFormation params={params} searchParams={searchParams} />
     </Suspense>
   );
 }

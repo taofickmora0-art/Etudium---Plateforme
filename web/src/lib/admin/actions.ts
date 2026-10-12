@@ -6,7 +6,9 @@ import { fieldErrorsFrom, type FormState } from "@/lib/auth/schemas";
 import type { createClient } from "@/lib/supabase/server";
 import { exigerEquipe } from "./garde";
 import { formateurSchema, formationInfosSchema, leconSchema, lignes, moduleSchema, parcoursSchema } from "./schemas";
+import { parseDuree } from "./duree";
 import { slugify } from "./slug";
+import { parseVideoUrl } from "./video";
 
 // Actions serveur du back-office (spec du lot 1, §10). Chacune revérifie l'équipe (exigerEquipe), puis la base
 // revérifie encore (règles d'accès de la 0004).
@@ -368,4 +370,61 @@ export async function deleteLecon(id: string): Promise<Resultat> {
   }
   refresh();
   return { ok: true };
+}
+
+// ─── Une leçon ──────────────────────────────────────────────────────────────
+
+const LIEN_INCONNU = "Ce lien n’est ni une vidéo YouTube ni une vidéo Vimeo.";
+const DUREE_INVALIDE = "Durée au format 12:40.";
+
+/** Page d'une leçon : informations, vidéo (fournisseur + identifiant, jamais le lien), « Dans cette leçon », texte. */
+export async function saveLecon(_prev: FormState, fd: FormData): Promise<FormState> {
+  const id = texte(fd, "id");
+  const lien = texte(fd, "video").trim();
+  const duree = parseDuree(texte(fd, "duree"));
+  const video = lien ? parseVideoUrl(lien) : null;
+  const saisie = {
+    titre: texte(fd, "titre"),
+    titre_court: texte(fd, "titre_court"),
+    duree_secondes: duree ?? 0,
+    apercu: coche(fd, "apercu"),
+    resume: texte(fd, "resume"),
+    points_cles: lignes(texte(fd, "points_cles")),
+    texte: texte(fd, "texte"),
+  };
+  const values = {
+    ...enTextes({ ...saisie, duree_secondes: "" }),
+    duree: texte(fd, "duree"),
+    video: texte(fd, "video"),
+    points_cles: saisie.points_cles.join("\n"),
+  };
+  const parsed = leconSchema.safeParse(saisie);
+  const erreurs = parsed.success ? {} : fieldErrorsFrom(parsed.error);
+  if (duree === null) erreurs.duree = DUREE_INVALIDE;
+  if (lien && !video) erreurs.video = LIEN_INCONNU;
+  if (!parsed.success || Object.keys(erreurs).length > 0) return { status: "error", fieldErrors: erreurs, values };
+  if (!estUuid(id)) return { status: "error", message: ECHEC, values };
+
+  try {
+    const garde = await exigerEquipe();
+    if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
+    const { supabase } = garde;
+    const { texte: contenuTexte, titre_court, ...lecon } = parsed.data;
+    const { error } = await supabase
+      .from("lecons")
+      .update({ ...lecon, titre_court: titre_court || null })
+      .eq("id", id);
+    if (error) return erreurEnregistrement(error, values);
+    const { error: erreurContenu } = await supabase.from("lecons_contenus").upsert({
+      lecon_id: id,
+      video_fournisseur: video?.fournisseur ?? null,
+      video_id: video?.id ?? null,
+      texte: contenuTexte,
+    });
+    if (erreurContenu) return erreurEnregistrement(erreurContenu, values);
+  } catch {
+    return { status: "error", message: ECHEC, values };
+  }
+  refresh();
+  return { status: "success", values };
 }
