@@ -57,6 +57,13 @@ describe("Compte affiché par la coque", () => {
     expect(await getShellUser()).toBeNull();
   });
 
+  it("un incident passager de Supabase ne passe pas pour une session fermée", async () => {
+    auth.getUser.mockResolvedValue({ data: { user: null }, error: { name: "AuthRetryableFetchError", status: 0, message: "fetch failed" } });
+    await expect(getShellUser()).rejects.toThrow();
+    auth.getUser.mockResolvedValue({ data: { user: null }, error: { name: "AuthApiError", status: 503, message: "indisponible" } });
+    await expect(getShellUser()).rejects.toThrow();
+  });
+
   it("getShellUser lit le profil, les rôles et la photo", async () => {
     auth.getUser.mockResolvedValue(session({}));
     tables.profils = { data: { prenom: "Aïcha", nom: "Kpadé", photo_url: "https://projet.supabase.co/a.jpg" }, error: null };

@@ -44,6 +44,13 @@ describe("Sortie d'une session fermée ailleurs", () => {
     expect(reponse.headers.get("location")).toBe("http://localhost:3000/connexion?session=expiree");
   });
 
+  it("un incident passager de Supabase n'efface pas la session", async () => {
+    auth.getUser.mockResolvedValue({ data: { user: null }, error: { name: "AuthRetryableFetchError", status: 0, message: "fetch failed" } });
+    const reponse = await GET(requete());
+    expect(reponse.headers.get("location")).toBe("http://localhost:3000/accueil");
+    expect(jar.has("sb-projet-auth-token")).toBe(true);
+  });
+
   it("une session fermée ailleurs est effacée de l'appareil", async () => {
     auth.getUser.mockResolvedValue({ data: { user: null }, error: { code: "session_not_found", status: 403 } });
     const reponse = await GET(requete());

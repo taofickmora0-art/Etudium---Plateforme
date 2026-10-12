@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Notification02Icon, Search01Icon, Shield01Icon, SparklesIcon, TeachingIcon } from "@hugeicons/core-free-icons";
@@ -6,6 +7,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import type { IconSvgElement } from "@/components/ui/Icon";
 import { Heading } from "@/components/ui/Text";
 import { NAV_MENU_TELEPHONE, NAV_MON_ESPACE, NAV_PRINCIPALE, PAGES_A_VENIR, type PageAVenir } from "@/lib/navigation";
+import { SessionGuard } from "./SessionGuard";
 
 // Pages qui ne sont pas dans les menus, mais dans l'en-tête ou le menu du profil.
 const ICONES_HORS_MENU: Partial<Record<PageAVenir, IconSvgElement>> = {
@@ -25,8 +27,8 @@ export function comingSoonMetadata(page: PageAVenir): Metadata {
   return { title: `${PAGES_A_VENIR[page].titre} · Étudium` };
 }
 
-/** Page « Bientôt disponible » : dit ce que contiendra l'écran et à quel lot il arrive. */
-export function ComingSoon({ page }: { page: PageAVenir }) {
+/** Contenu d'une page « Bientôt disponible » : ce que contiendra l'écran et à quel lot il arrive. */
+export function ComingSoonView({ page }: { page: PageAVenir }) {
   const { titre, quand, description } = PAGES_A_VENIR[page];
   return (
     <div className="flex flex-col gap-6">
@@ -42,5 +44,17 @@ export function ComingSoon({ page }: { page: PageAVenir }) {
         }
       />
     </div>
+  );
+}
+
+/** Page « Bientôt disponible » de l'espace connecté, avec la vérification de session de chaque page. */
+export function ComingSoon({ page }: { page: PageAVenir }) {
+  return (
+    <>
+      <ComingSoonView page={page} />
+      <Suspense fallback={null}>
+        <SessionGuard />
+      </Suspense>
+    </>
   );
 }

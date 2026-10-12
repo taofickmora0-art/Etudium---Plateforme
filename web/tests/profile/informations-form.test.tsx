@@ -24,4 +24,19 @@ describe("Onglet Informations", () => {
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
     expect(await screen.findByText("Modifications enregistrées")).toBeInTheDocument();
   });
+
+  it("une coupure réseau est annoncée sans perdre la saisie", async () => {
+    vi.mocked(updateProfile).mockRejectedValue(new TypeError("Failed to fetch"));
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <InformationsTab profile={DEMO_PROFILE} />
+      </ToastProvider>,
+    );
+    await user.clear(screen.getByLabelText("Filière"));
+    await user.type(screen.getByLabelText("Filière"), "Communication");
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Une erreur est survenue. Vérifiez votre connexion, puis réessayez.");
+    expect(screen.getByLabelText("Filière")).toHaveValue("Communication");
+  });
 });

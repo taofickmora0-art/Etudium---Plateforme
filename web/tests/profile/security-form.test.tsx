@@ -31,6 +31,16 @@ describe("Onglet Sécurité", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("une coupure réseau est annoncée", async () => {
+    vi.mocked(changePassword).mockRejectedValue(new TypeError("Failed to fetch"));
+    const user = userEvent.setup();
+    afficher();
+    await user.type(screen.getByLabelText("Mot de passe actuel"), "motdepasse");
+    await user.type(screen.getByLabelText("Nouveau mot de passe"), "nouveaumdp");
+    await user.click(screen.getByRole("button", { name: "Mettre à jour" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Une erreur est survenue. Vérifiez votre connexion, puis réessayez.");
+  });
+
   it("un compte Google sans mot de passe n'a pas de formulaire", () => {
     afficher({ ...DEMO_PROFILE, hasPassword: false });
     expect(screen.queryByLabelText("Mot de passe actuel")).not.toBeInTheDocument();

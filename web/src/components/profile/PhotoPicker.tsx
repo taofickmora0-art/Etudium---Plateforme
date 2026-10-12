@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { IDLE } from "@/lib/auth/schemas";
 import { updatePhoto } from "@/lib/profile/actions";
-import { checkPhotoFile, PHOTO_MAX_OCTETS, PHOTO_TROP_LOURDE } from "@/lib/profile/photo";
+import { checkPhotoFile, PHOTO_ECHEC, PHOTO_MAX_OCTETS, PHOTO_TROP_LOURDE } from "@/lib/profile/photo";
 import { resizePhoto } from "@/lib/profile/resize-photo";
 
 /** Photo et « Changer la photo » (NdProfil). La photo est réduite dans le navigateur avant l'envoi. */
@@ -35,9 +35,14 @@ export function PhotoPicker({ initials, photoUrl, name }: { initials: string; ph
       }
       const donnees = new FormData();
       donnees.set("photo", reduite);
-      const resultat = await updatePhoto(IDLE, donnees);
-      if (resultat.status === "success") toast({ tone: "reussite", title: "Photo mise à jour" });
-      else setErreur(resultat.message ?? null);
+      try {
+        const resultat = await updatePhoto(IDLE, donnees);
+        if (resultat.status === "success") toast({ tone: "reussite", title: "Photo mise à jour" });
+        else setErreur(resultat.message ?? PHOTO_ECHEC);
+      } catch {
+        // Coupure réseau pendant l'envoi : on le dit, au lieu de l'écran d'erreur.
+        setErreur(PHOTO_ECHEC);
+      }
     });
   };
 

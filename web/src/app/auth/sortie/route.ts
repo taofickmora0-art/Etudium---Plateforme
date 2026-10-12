@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { clearLocalSession } from "@/lib/auth/local-session";
+import { isSessionClosed } from "@/lib/auth/session-state";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -12,6 +13,8 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.getUser();
     if (!error && data?.user) return NextResponse.redirect(new URL("/accueil", request.url));
+    // Incident passager de Supabase : on ne touche pas à la session (l'accueil proposera de réessayer).
+    if (error && !isSessionClosed(error)) return NextResponse.redirect(new URL("/accueil", request.url));
   } catch {
     // Base injoignable ou pas configurée : on se comporte comme sans session (même règle que le proxy).
   }

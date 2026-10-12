@@ -5,6 +5,7 @@ import { DEMO_USER } from "@/lib/demo-user";
 import { getPublicEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "./routing";
+import { AuthUnavailableError, isSessionClosed } from "./session-state";
 
 /** Ce que la coque affiche de la personne connectée (en-tête, menu du profil, page « Profil » du téléphone). */
 export type ShellUser = {
@@ -54,13 +55,17 @@ const initiales = (prenom: string, nom: string, email: string) =>
 /**
  * Le compte connecté, vérifié auprès de Supabase (getUser) une seule fois par requête. Contrairement à la lecture du jeton
  * sur place (getClaims, gardée par le proxy), Supabase voit une session fermée ailleurs : mot de passe changé, compte supprimé.
- * Hors mode démonstration seulement.
+ * Un incident passager (réseau, Supabase indisponible) lève AuthUnavailableError : la page propose de réessayer
+ * (error.tsx) au lieu de déconnecter. Hors mode démonstration seulement.
  */
 export const getAuthUser = cache(async (): Promise<User | null> => {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
-  if (error || !data?.user) return null;
-  return data.user;
+  if (error) {
+    if (isSessionClosed(error)) return null;
+    throw new AuthUnavailableError();
+  }
+  return data?.user ?? null;
 });
 
 /**

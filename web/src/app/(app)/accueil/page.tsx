@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { CourseIllustration } from "@/components/ui/CourseIllustration";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Heading, Lead } from "@/components/ui/Text";
+import { SessionGuard } from "@/components/layout/SessionGuard";
 import { getShellUser } from "@/lib/auth/current-user";
 
 export const metadata: Metadata = { title: "Accueil · Étudium" };
@@ -29,6 +30,9 @@ export default function AccueilPage() {
           <Link href="/formations">Explorer le catalogue</Link>
         </Button>
       </div>
+      <Suspense fallback={null}>
+        <SessionGuard />
+      </Suspense>
       <EmptyState
         illustration={<CourseIllustration parcours="academique" size={64} />}
         title="Votre tableau de bord arrive bientôt"

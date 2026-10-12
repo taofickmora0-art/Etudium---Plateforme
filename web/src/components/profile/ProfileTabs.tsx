@@ -22,6 +22,7 @@ export function ProfileTabs({ profile }: { profile: ProfileData }) {
   return (
     <SegmentedTabs
       label="Sections du profil"
+      keepMounted
       className="gap-5"
       items={[
         {

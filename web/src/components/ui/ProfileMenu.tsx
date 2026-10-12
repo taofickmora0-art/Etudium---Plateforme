@@ -38,7 +38,7 @@ export function ProfileMenu({ user, roles, currentSpace = "etudiant", onSignOut 
   return (
     <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger asChild>
-        <ProfileButton />
+        <ProfileButton>{user.photoUrl ? <Avatar initials={user.initials} src={user.photoUrl} className="size-full" /> : undefined}</ProfileButton>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content aria-label="Menu du profil" align="end" sideOffset={8} className={cn(menuSurfaceClasses, "w-[280px]")}>

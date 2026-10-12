@@ -3,6 +3,7 @@
 export const PHOTO_MAX_OCTETS = 2 * 1024 * 1024;
 export const PHOTO_TYPE = "Choisissez une image JPG ou PNG.";
 export const PHOTO_TROP_LOURDE = "Cette image dépasse 2 Mo. Choisissez-en une plus légère.";
+export const PHOTO_ECHEC = "La photo n’a pas pu être enregistrée. Réessayez.";
 
 /** Le type d'après les premiers octets du fichier (sa signature), jamais d'après son nom. */
 export function detectImageType(bytes: Uint8Array): "image/jpeg" | "image/png" | null {

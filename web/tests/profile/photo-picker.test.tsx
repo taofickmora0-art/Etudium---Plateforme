@@ -20,4 +20,16 @@ describe("Changer la photo", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Choisissez une image JPG ou PNG.");
     expect(updatePhoto).not.toHaveBeenCalled();
   });
+
+  it("une coupure réseau pendant l'envoi est annoncée", async () => {
+    vi.mocked(updatePhoto).mockRejectedValue(new TypeError("Failed to fetch"));
+    const { container } = render(
+      <ToastProvider>
+        <PhotoPicker initials="AK" photoUrl={null} name="Aïcha Kpadé" />
+      </ToastProvider>,
+    );
+    const champ = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+    fireEvent.change(champ, { target: { files: [new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], "a.jpg", { type: "image/jpeg" })] } });
+    expect(await screen.findByRole("alert")).toHaveTextContent("La photo n’a pas pu être enregistrée. Réessayez.");
+  });
 });

@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/Select";
 import { TextInput } from "@/components/ui/TextInput";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
+import { authErrorMessage } from "@/lib/auth/messages";
 import { IDLE, type FormState } from "@/lib/auth/schemas";
 import { updateProfile } from "@/lib/profile/actions";
 import type { ProfileData } from "@/lib/profile/data";
@@ -20,10 +21,16 @@ const GRILLE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(220px,calc(
 /** Onglet Informations (NdProfil) : photo, coordonnées, études et objectifs ; « Enregistrer » (NdProfilEnregistre). */
 export function InformationsTab({ profile }: { profile: ProfileData }) {
   const { toast } = useToast();
-  const [state, action, pending] = useActionState(async (prev: FormState, formData: FormData) => {
-    const resultat = await updateProfile(prev, formData);
-    if (resultat.status === "success") toast({ tone: "reussite", title: "Modifications enregistrées" });
-    return resultat;
+  const [state, action, pending] = useActionState(async (prev: FormState, formData: FormData): Promise<FormState> => {
+    try {
+      const resultat = await updateProfile(prev, formData);
+      if (resultat.status === "success") toast({ tone: "reussite", title: "Modifications enregistrées" });
+      return resultat;
+    } catch {
+      // Coupure réseau : on le dit et on garde la saisie, au lieu de l'écran d'erreur.
+      const values = Object.fromEntries([...formData.entries()].map(([k, v]) => [k, String(v)]));
+      return { status: "error", message: authErrorMessage(null), values };
+    }
   }, IDLE);
   const e = state.fieldErrors ?? {};
   // Après un envoi, on garde la saisie (même en cas d'erreur) ; sinon, les valeurs enregistrées.

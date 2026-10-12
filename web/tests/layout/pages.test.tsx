@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ComingSoon } from "@/components/layout/ComingSoon";
+import { ComingSoonView } from "@/components/layout/ComingSoon";
 import { MobileProfileMenu } from "@/components/layout/MobileProfileMenu";
 import { DEMO_USER } from "@/lib/demo-user";
 import { NAV_BAS, NAV_MENU_TELEPHONE, NAV_MON_ESPACE, NAV_PRINCIPALE } from "@/lib/navigation";
@@ -27,7 +27,7 @@ describe("Pages de l'espace connecté", () => {
   });
 
   it("la page à venir dit quand elle arrive", () => {
-    render(<ComingSoon page="evenements" />);
+    render(<ComingSoonView page="evenements" />);
     expect(screen.getByRole("heading", { level: 1, name: "Événements" })).toBeInTheDocument();
     expect(screen.getByText(/au lot 5/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Retour à l’accueil" })).toHaveAttribute("href", "/accueil");

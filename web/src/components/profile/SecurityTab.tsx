@@ -9,6 +9,7 @@ import { Field } from "@/components/ui/Field";
 import { IconTile } from "@/components/ui/IconTile";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Tag } from "@/components/ui/Tag";
+import { authErrorMessage } from "@/lib/auth/messages";
 import { IDLE, type FormState } from "@/lib/auth/schemas";
 import { changePassword } from "@/lib/profile/actions";
 import type { ProfileData } from "@/lib/profile/data";
@@ -19,10 +20,15 @@ const GRILLE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(220px,calc(
 
 function MotDePasse({ hasPassword }: { hasPassword: boolean }) {
   const [confirme, setConfirme] = useState(false);
-  const [state, action, pending] = useActionState(async (prev: FormState, formData: FormData) => {
-    const resultat = await changePassword(prev, formData);
-    if (resultat.status === "success") setConfirme(true);
-    return resultat;
+  const [state, action, pending] = useActionState(async (prev: FormState, formData: FormData): Promise<FormState> => {
+    try {
+      const resultat = await changePassword(prev, formData);
+      if (resultat.status === "success") setConfirme(true);
+      return resultat;
+    } catch {
+      // Coupure réseau : on le dit, au lieu de l'écran d'erreur.
+      return { status: "error", message: authErrorMessage(null) };
+    }
   }, IDLE);
 
   return (

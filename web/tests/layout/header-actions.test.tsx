@@ -29,6 +29,11 @@ describe("Actions de l'en-tête", () => {
     vi.mocked(loadFullPage).mockReset();
   });
 
+  it("la photo de profil s'affiche dans le rond de l'en-tête", () => {
+    render(<HeaderActions user={{ ...DEMO_USER, photoUrl: "https://projet.supabase.co/a.jpg" }} />);
+    expect(screen.getByRole("button", { name: "Mon profil" }).querySelector("img")).toHaveAttribute("src", "https://projet.supabase.co/a.jpg");
+  });
+
   it("la cloche ouvre un panneau vide", async () => {
     const user = userEvent.setup();
     render(<HeaderActions user={DEMO_USER} />);

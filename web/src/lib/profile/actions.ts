@@ -5,7 +5,7 @@ import { clearLocalSession } from "@/lib/auth/local-session";
 import { authErrorMessage } from "@/lib/auth/messages";
 import { fieldErrorsFrom, type FormState } from "@/lib/auth/schemas";
 import { createClient } from "@/lib/supabase/server";
-import { detectImageType, PHOTO_MAX_OCTETS, PHOTO_TROP_LOURDE, PHOTO_TYPE } from "./photo";
+import { detectImageType, PHOTO_ECHEC, PHOTO_MAX_OCTETS, PHOTO_TROP_LOURDE, PHOTO_TYPE } from "./photo";
 import type { NotificationPreferences } from "./preferences";
 import { passwordChangeSchema, preferencesSchema, profileSchema } from "./schemas";
 
@@ -41,8 +41,6 @@ export async function updateProfile(_prev: FormState, formData: FormData): Promi
   refresh();
   return { status: "success", values };
 }
-
-const PHOTO_ECHEC = "La photo n’a pas pu être enregistrée. Réessayez.";
 
 /** Photo de profil (NdProfil, « Changer la photo ») : contrôlée ici même si le navigateur l'a déjà fait. */
 export async function updatePhoto(_prev: FormState, formData: FormData): Promise<FormState> {
