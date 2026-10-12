@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { CodeInput } from "@/components/ui/CodeInput";
@@ -71,6 +72,13 @@ export function VerifyCodeForm({ email }: { email: string }) {
           {reste > 0 && <span> dans {minutes(reste)}</span>}
         </p>
       </form>
+      {/* Une adresse qui a déjà un compte ne reçoit pas de code : on propose la connexion, sans dire si c'est le cas. */}
+      <p className="m-0 text-center text-sm leading-[22px] text-discret">
+        Vous avez déjà un compte ?{" "}
+        <Link href="/connexion" className={LIEN}>
+          Se connecter
+        </Link>
+      </p>
     </>
   );
 }

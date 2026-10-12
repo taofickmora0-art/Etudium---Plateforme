@@ -26,7 +26,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
 }));
 
-const { signIn } = await import("@/lib/auth/actions");
+const { signIn, signInWithGoogle } = await import("@/lib/auth/actions");
+const { GET: retourGoogle } = await import("@/app/auth/callback/route");
 const { IDLE } = await import("@/lib/auth/schemas");
 
 function form(values: Record<string, string>) {
@@ -80,6 +81,21 @@ describe("Connexion", () => {
     await expect(signIn(IDLE, form(BONS))).rejects.toThrow("NEXT_REDIRECT:/verification-email");
     expect(auth.resend).toHaveBeenCalledWith({ type: "signup", email: "aicha.k@exemple.com" });
     expect(jar.get("etudium-verification")).toBe("aicha.k@exemple.com");
+  });
+
+  it("Google respecte « Se souvenir de moi »", async () => {
+    auth.signInWithOAuth.mockResolvedValue({ data: { url: "https://accounts.google.com/o" }, error: null });
+    await expect(signInWithGoogle(form({ next: "/accueil" }))).rejects.toThrow("NEXT_REDIRECT:https://accounts.google.com/o");
+    expect(jar.get("etudium-souvenir")).toBe("0");
+    await expect(signInWithGoogle(form({ next: "/accueil", remember: "on" }))).rejects.toThrow("NEXT_REDIRECT:https://accounts.google.com/o");
+    expect(jar.get("etudium-souvenir")).toBe("1");
+  });
+
+  it("un échec de Google garde la page demandée", async () => {
+    auth.signInWithOAuth.mockResolvedValue({ data: { url: null }, error: { status: 500 } });
+    await expect(signInWithGoogle(form({ next: "/certificats" }))).rejects.toThrow("NEXT_REDIRECT:/connexion?erreur=google&next=%2Fcertificats");
+    const reponse = await retourGoogle(new Request("http://localhost:3000/auth/callback?next=/certificats") as never);
+    expect(reponse.headers.get("location")).toBe("http://localhost:3000/connexion?erreur=google&next=%2Fcertificats");
   });
 
   it("next ne fait pas sortir du site", async () => {

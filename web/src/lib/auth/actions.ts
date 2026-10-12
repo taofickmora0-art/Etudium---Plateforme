@@ -69,6 +69,9 @@ export async function signIn(_prev: FormState, formData: FormData): Promise<Form
 /** « Continuer avec Google » : part chez Google, revient par /auth/callback. */
 export async function signInWithGoogle(formData: FormData): Promise<void> {
   const next = safeNext(texte(formData, "next"));
+  // Choix « Se souvenir de moi » de la page de connexion (l'inscription envoie toujours « on ») : appliqué au retour.
+  const souvenir = formData.get("remember") === "on";
+  (await cookies()).set(REMEMBER_COOKIE, souvenir ? "1" : "0", { path: "/", httpOnly: true, sameSite: "lax", secure: securise, maxAge: UN_AN });
   let url: string | null = null;
   try {
     const supabase = await createClient();
@@ -80,7 +83,7 @@ export async function signInWithGoogle(formData: FormData): Promise<void> {
   } catch {
     url = null;
   }
-  redirect(url ?? "/connexion?erreur=google");
+  redirect(url ?? `/connexion?erreur=google&next=${encodeURIComponent(next)}`);
 }
 
 /** Inscription par e-mail (NdInscription) : Supabase envoie un code à 6 chiffres, valable 10 minutes. */

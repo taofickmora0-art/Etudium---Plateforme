@@ -24,13 +24,15 @@ describe("Adresse des écrans de compte", () => {
   it("la page demandée est gardée pour après la connexion, avec l'e-mail comme avec Google", () => {
     adresse = new URLSearchParams("next=/certificats");
     render(<ConnexionPage />);
-    expect(champsNext()).toEqual(["/certificats", "/certificats"]);
+    // Un seul champ : le bouton Google part du même formulaire que la connexion par e-mail.
+    expect(champsNext()).toEqual(["/certificats"]);
+    expect(screen.getByRole("button", { name: "Continuer avec Google" }).closest("form")).toContainElement(document.querySelector('input[name="next"]'));
   });
 
   it("une adresse extérieure n'est jamais suivie", () => {
     adresse = new URLSearchParams("next=https://pirate.example");
     render(<ConnexionPage />);
-    expect(champsNext()).toEqual(["/accueil", "/accueil"]);
+    expect(champsNext()).toEqual(["/accueil"]);
   });
 
   it("le retour raté de Google est annoncé", () => {

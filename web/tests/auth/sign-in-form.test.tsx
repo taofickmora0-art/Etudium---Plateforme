@@ -36,4 +36,10 @@ describe("Formulaire de connexion", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("E-mail ou mot de passe incorrect.");
     expect(screen.getByRole("checkbox", { name: "Se souvenir de moi" })).not.toBeChecked();
   });
+
+  it("« Continuer avec Google » part avec le choix « Se souvenir de moi »", () => {
+    render(<SignInForm />);
+    const formulaire = screen.getByRole("button", { name: "Continuer avec Google" }).closest("form");
+    expect(formulaire).toContainElement(screen.getByRole("checkbox", { name: "Se souvenir de moi" }));
+  });
 });

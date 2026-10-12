@@ -21,6 +21,11 @@ describe("Écran du code", () => {
     expect(screen.getByRole("button", { name: "Renvoyer le code" })).toBeEnabled();
   });
 
+  it("l'écran du code propose de se connecter", () => {
+    render(<VerifyCodeForm email="aicha.k@exemple.com" />);
+    expect(screen.getByRole("link", { name: "Se connecter" })).toHaveAttribute("href", "/connexion");
+  });
+
   it("l'adresse est rappelée", () => {
     render(<VerifyCodeForm email="aicha.k@exemple.com" />);
     expect(screen.getByText("aicha.k@exemple.com")).toBeInTheDocument();

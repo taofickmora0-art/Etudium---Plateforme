@@ -6,20 +6,32 @@ import { Button } from "@/components/ui/Button";
 import { signInWithGoogle } from "@/lib/auth/actions";
 import { NextField } from "./FromAddress";
 
-function Bouton() {
+function Bouton({ dansLeFormulaire = false }: { dansLeFormulaire?: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant="contour" size="lg" iconLeft={GoogleIcon} loading={pending} className="w-full">
+    <Button
+      type="submit"
+      variant="contour"
+      size="lg"
+      iconLeft={GoogleIcon}
+      loading={pending}
+      className="w-full"
+      formAction={dansLeFormulaire ? signInWithGoogle : undefined}
+    >
       Continuer avec Google
     </Button>
   );
 }
 
 /** « Continuer avec Google » (NdConnexion, NdInscription) : un compte Google sans profil Étudium en crée un. */
-export function GoogleButton() {
+export function GoogleButton({ inForm = false }: { inForm?: boolean }) {
+  // Dans le formulaire de connexion : part chez Google avec ses champs (page demandée, « Se souvenir de moi »).
+  if (inForm) return <Bouton dansLeFormulaire />;
   return (
     <form action={signInWithGoogle}>
       <NextField />
+      {/* Pas de case « Se souvenir de moi » à l'inscription : on se souvient. */}
+      <input type="hidden" name="remember" value="on" />
       <Bouton />
     </form>
   );

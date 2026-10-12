@@ -16,5 +16,5 @@ export async function GET(request: NextRequest) {
       // Base injoignable ou non configurée : même issue qu'un échec.
     }
   }
-  return NextResponse.redirect(`${origin}/connexion?erreur=google`);
+  return NextResponse.redirect(`${origin}/connexion?erreur=google&next=${encodeURIComponent(next)}`);
 }

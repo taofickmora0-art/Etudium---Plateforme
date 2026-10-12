@@ -52,9 +52,9 @@ export function SignInForm() {
         <Button type="submit" size="lg" loading={pending} className="w-full">
           Se connecter
         </Button>
+        <OrDivider />
+        <GoogleButton inForm />
       </form>
-      <OrDivider />
-      <GoogleButton />
       <p className="m-0 text-center text-sm leading-[22px] text-discret">
         Pas encore de compte ?{" "}
         <Link href="/inscription" className={LIEN}>
