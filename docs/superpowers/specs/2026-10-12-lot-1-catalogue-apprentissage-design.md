@@ -1,7 +1,7 @@
 # Lot 1 — Catalogue + apprentissage : spec technique
 
 - **Date :** 12 octobre 2026
-- **Statut :** **brouillon, à relire** (tâche 1.0). Rien n'est codé tant que tu ne l'as pas validé.
+- **Statut :** validée le 12 octobre 2026 (tâche 1.0) : toutes les propositions de la section 1 sont retenues.
 - **Références :** [feuille de route](2026-10-09-feuille-de-route-design.md) · [spec du lot 0](2026-10-10-lot-0-fondations-design.md) · design « Étudium — Nouveau design » (https://claude.ai/artifact/9Ei2bCdhG75Nr3KnFZQxfg) · cahier des charges V1 (cité « CDC §n »)
 
 À la fin du lot 1, **un visiteur découvre Étudium, parcourt le catalogue, regarde un aperçu, crée son compte et suit une formation gratuite de bout en bout** : vidéo, ressources, progression, reprise, favoris, recherche, avis. Sur ordinateur et sur téléphone, avec le rendu du design.
@@ -10,11 +10,11 @@ Les abonnements et le paiement arrivent au lot 2. Le lot 1 prépare quand même 
 
 ---
 
-## 1. Ce que tu dois trancher
+## 1. Ce que tu as tranché
 
-Le cahier des charges ne répond pas à ces questions. Pour chacune, je te fais une proposition : si elle te va, réponds simplement « OK pour tout » ; sinon, donne-moi le numéro et ta décision.
+Le cahier des charges ne répondait pas à ces questions. Tu as retenu toutes mes propositions le 12 octobre 2026.
 
-| # | Question | Ma proposition |
+| # | Question | Décision |
 |---|---|---|
 | Q1 | L'aperçu gratuit est-il visible **sans compte** ? | **Oui.** Le CDC décrit « Accueil → Catalogue → Formation → Aperçu → Création de compte » (§62). Le visiteur regarde les leçons d'aperçu ; un bandeau l'invite à créer son compte pour enregistrer sa progression. |
 | Q2 | Comment calculer le **pourcentage** d'une formation ? | **Leçons terminées ÷ leçons de la formation.** Chaque leçon compte pareil, quelle que soit sa durée. Le temps restant affiché (« 2 h restantes ») est la somme des durées des leçons non terminées. Les quiz et exercices (lot 3) ne comptent pas dans le pourcentage (règle R17). |
@@ -69,7 +69,7 @@ Le CDC impose que l'accès soit décidé à un seul endroit (§37, R1 à R15). J
 | **Incluse** (lot 2) | La formation est dans un parcours de son abonnement actif | Tout |
 | **Complémentaire** (lot 2) | Formation achetée seule, abonnement actif (R9, R10) | Tout |
 | **Verrouillée** | Aucun des cas ci-dessus | La fiche, le programme et les avis ; les leçons ont un cadenas |
-| **Équipe** | Rôle admin ou super_admin | Tout, pour vérifier les contenus |
+| **Équipe** | Rôle admin, moderateur ou super_admin (ceux qui saisissent les contenus, §4) | Tout, pour vérifier les contenus |
 
 **Une formation archivée** disparaît du catalogue et de la recherche, et ses leçons se ferment (R24). Ceux qui l'avaient commencée la voient encore dans « Mes formations », verrouillée, avec leur progression intacte. La notification des étudiants concernés (R25) arrivera avec les notifications (lot 5).
 
