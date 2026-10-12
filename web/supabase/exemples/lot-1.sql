@@ -1,7 +1,8 @@
 -- Étudium · données d'exemple du lot 1 (textes du design « Nouveau design »).
 -- SEULEMENT sur la base de test etudium-dev : ne jamais appliquer en production.
 -- À appliquer après la migration 0004 : SQL Editor → New query → coller tout le fichier → Run.
--- Rejouable : relancé, il remet les textes d'origine sans rien doubler.
+-- Rejouable : relancé, il ne double rien. Parcours et formations reprennent leurs textes d'origine ; la formatrice
+-- et le programme d'Excel, s'ils existent déjà (même modifiés au back-office), ne sont pas réécrits.
 -- Vidéos et ressources : à ajouter depuis le back-office (tâche 1.2).
 
 -- ─── Les trois parcours du lancement ───────────────────────────────────────

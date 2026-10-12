@@ -1,6 +1,6 @@
 # Ce qui te revient (lots 0 et 1)
 
-Trois manipulations que je ne peux pas faire à ta place, parce qu’elles touchent à tes comptes ou à ton ordinateur, puis la validation des tâches 0.2 à 0.4. Rien ne presse dans l’ordre, sauf Windows (voir plus bas).
+Les manipulations que je ne peux pas faire à ta place, parce qu’elles touchent à tes comptes ou à ton ordinateur, puis la validation des tâches. Rien ne presse dans l’ordre, sauf Windows (voir plus bas).
 
 ---
 
@@ -109,6 +109,8 @@ Ton processeur (AMD Ryzen 7 3750H) fait partie de ceux que Microsoft accepte pou
 
 > Pour tester sur ton téléphone pendant que l’application tourne sur l’ordinateur, les deux doivent être sur le même Wi-Fi ; dis-le-moi et je te donne la marche à suivre.
 
+---
+
 ## 5. Lot 1 : la base des contenus (tâche 1.1), 5 minutes
 
 Les formations, leur programme et la règle « qui voit quoi » vivent dans la base. Dans Supabase, **SQL Editor → New query**, comme pour les fichiers précédents :
@@ -123,3 +125,5 @@ Les formations, leur programme et la règle « qui voit quoi » vivent dans la b
 4. Dans **Storage**, un espace **ressources** est apparu. Il est privé : il recevra les fichiers des leçons.
 
 Les vidéos ne sont pas encore là : tu colleras les liens de quelques vidéos YouTube depuis le back-office (tâche 1.2).
+
+> Applique toujours les fichiers SQL dans l’ordre de leur numéro, et ne recolle jamais un ancien fichier après un plus récent : il pourrait défaire ce que le plus récent a changé.

@@ -147,7 +147,8 @@ create table if not exists public.lecons_contenus (
     or (
       video_fournisseur is not null and video_id is not null and (
         (video_fournisseur = 'youtube' and video_id ~ '^[A-Za-z0-9_-]{11}$')
-        or (video_fournisseur = 'vimeo' and video_id ~ '^[0-9]{6,12}$')
+        -- Vimeo : l'identifiant, suivi du code d'une vidéo « non répertoriée » comme dans son lien (76979871/abcdef0123).
+        or (video_fournisseur = 'vimeo' and video_id ~ '^[0-9]{6,12}(/[0-9a-f]{6,20})?$')
       )
     )
   ),
@@ -178,6 +179,8 @@ create table if not exists public.ressources (
 
 -- ─── Index des liens entre tables ───────────────────────────────────────────
 create index if not exists formations_statut_idx on public.formations (statut);
+create index if not exists formations_formateur_idx on public.formations (formateur_id);
+create index if not exists formateurs_compte_idx on public.formateurs (compte_id);
 create index if not exists formations_parcours_parcours_idx on public.formations_parcours (parcours_id);
 create index if not exists modules_formation_idx on public.modules (formation_id);
 create index if not exists lecons_module_idx on public.lecons (module_id);
@@ -226,6 +229,9 @@ begin
     end if;
     -- La date de première publication ne s'efface pas (elle protège l'adresse).
     new.publiee_le := old.publiee_le;
+  elsif new.statut <> 'publiee' then
+    -- Jamais publiée : pas de date de publication (elle figerait l'adresse d'un simple brouillon).
+    new.publiee_le := null;
   end if;
   if new.statut = 'publiee' and new.publiee_le is null then
     new.publiee_le := now();
@@ -299,11 +305,16 @@ alter table public.lecons enable row level security;
 alter table public.lecons_contenus enable row level security;
 alter table public.ressources enable row level security;
 
--- Un visiteur n'écrit jamais rien ici.
-revoke insert, update, delete on
+-- Un visiteur n'écrit jamais rien ici. Et personne ne vide une table d'un coup par l'API (TRUNCATE ignore les règles
+-- d'accès et contournerait « une formation publiée s'archive »).
+revoke insert, update, delete, truncate on
   public.parcours, public.formateurs, public.formations, public.formations_parcours,
   public.modules, public.lecons, public.lecons_contenus, public.ressources
 from anon;
+revoke truncate on
+  public.parcours, public.formateurs, public.formations, public.formations_parcours,
+  public.modules, public.lecons, public.lecons_contenus, public.ressources
+from authenticated;
 
 -- Lecture : le catalogue publié pour tous ; le programme suit sa formation ; le contenu suit la règle d'accès.
 drop policy if exists "parcours visibles" on public.parcours;
@@ -324,17 +335,17 @@ create policy "formations publiées visibles" on public.formations
 drop policy if exists "parcours d'une formation visible" on public.formations_parcours;
 create policy "parcours d'une formation visible" on public.formations_parcours
   for select to anon, authenticated
-  using (exists (select 1 from public.formations f where f.id = formation_id));
+  using (exists (select 1 from public.formations f where f.id = formations_parcours.formation_id));
 
 drop policy if exists "modules d'une formation visible" on public.modules;
 create policy "modules d'une formation visible" on public.modules
   for select to anon, authenticated
-  using (exists (select 1 from public.formations f where f.id = formation_id));
+  using (exists (select 1 from public.formations f where f.id = modules.formation_id));
 
 drop policy if exists "leçons d'un module visible" on public.lecons;
 create policy "leçons d'un module visible" on public.lecons
   for select to anon, authenticated
-  using (exists (select 1 from public.modules m where m.id = module_id));
+  using (exists (select 1 from public.modules m where m.id = lecons.module_id));
 
 drop policy if exists "contenu avec l'accès à la leçon" on public.lecons_contenus;
 create policy "contenu avec l'accès à la leçon" on public.lecons_contenus
@@ -347,45 +358,33 @@ create policy "ressources avec l'accès à la leçon" on public.ressources
   using (public.acces_lecon(lecon_id));
 
 -- Écriture : l'équipe seulement (admin, moderateur, super_admin). Les formateurs saisiront au lot 4.
-drop policy if exists "l'équipe saisit les parcours" on public.parcours;
-create policy "l'équipe saisit les parcours" on public.parcours
-  for all to authenticated
-  using ((select public.equipe_contenus())) with check ((select public.equipe_contenus()));
-
-drop policy if exists "l'équipe saisit les formateurs" on public.formateurs;
-create policy "l'équipe saisit les formateurs" on public.formateurs
-  for all to authenticated
-  using ((select public.equipe_contenus())) with check ((select public.equipe_contenus()));
-
-drop policy if exists "l'équipe saisit les formations" on public.formations;
-create policy "l'équipe saisit les formations" on public.formations
-  for all to authenticated
-  using ((select public.equipe_contenus())) with check ((select public.equipe_contenus()));
-
-drop policy if exists "l'équipe range les formations dans les parcours" on public.formations_parcours;
-create policy "l'équipe range les formations dans les parcours" on public.formations_parcours
-  for all to authenticated
-  using ((select public.equipe_contenus())) with check ((select public.equipe_contenus()));
-
-drop policy if exists "l'équipe saisit les modules" on public.modules;
-create policy "l'équipe saisit les modules" on public.modules
-  for all to authenticated
-  using ((select public.equipe_contenus())) with check ((select public.equipe_contenus()));
-
-drop policy if exists "l'équipe saisit les leçons" on public.lecons;
-create policy "l'équipe saisit les leçons" on public.lecons
-  for all to authenticated
-  using ((select public.equipe_contenus())) with check ((select public.equipe_contenus()));
-
-drop policy if exists "l'équipe saisit les contenus des leçons" on public.lecons_contenus;
-create policy "l'équipe saisit les contenus des leçons" on public.lecons_contenus
-  for all to authenticated
-  using ((select public.equipe_contenus())) with check ((select public.equipe_contenus()));
-
-drop policy if exists "l'équipe saisit les ressources" on public.ressources;
-create policy "l'équipe saisit les ressources" on public.ressources
-  for all to authenticated
-  using ((select public.equipe_contenus())) with check ((select public.equipe_contenus()));
+-- Une règle par action (ajout, modification, suppression) plutôt qu'une règle « for all » : la lecture garde ainsi
+-- une seule règle par table (conseil « multiple_permissive_policies » de Supabase).
+do $$
+declare
+  t text;
+begin
+  foreach t in array array[
+    'parcours', 'formateurs', 'formations', 'formations_parcours', 'modules', 'lecons', 'lecons_contenus', 'ressources'
+  ] loop
+    execute format('drop policy if exists %I on public.%I', 'l''équipe ajoute', t);
+    execute format(
+      'create policy %I on public.%I for insert to authenticated with check ((select public.equipe_contenus()))',
+      'l''équipe ajoute', t
+    );
+    execute format('drop policy if exists %I on public.%I', 'l''équipe modifie', t);
+    execute format(
+      'create policy %I on public.%I for update to authenticated using ((select public.equipe_contenus())) with check ((select public.equipe_contenus()))',
+      'l''équipe modifie', t
+    );
+    execute format('drop policy if exists %I on public.%I', 'l''équipe supprime', t);
+    execute format(
+      'create policy %I on public.%I for delete to authenticated using ((select public.equipe_contenus()))',
+      'l''équipe supprime', t
+    );
+  end loop;
+end
+$$;
 
 -- ─── Fichiers des ressources : espace privé, 50 Mo par fichier ─────────────
 -- Jamais d'adresse publique : chaque ouverture passe par un lien temporaire, accordé selon la règle d'accès.
@@ -402,7 +401,7 @@ create policy "ressources : lecture avec l'accès à la leçon" on storage.objec
     bucket_id = 'ressources'
     and (
       (select public.equipe_contenus())
-      or exists (select 1 from public.ressources r where r.fichier = name and public.acces_lecon(r.lecon_id))
+      or exists (select 1 from public.ressources r where r.fichier = objects.name and public.acces_lecon(r.lecon_id))
     )
   );
 

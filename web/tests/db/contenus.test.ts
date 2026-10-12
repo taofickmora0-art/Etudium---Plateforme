@@ -56,8 +56,22 @@ describe("Migration 0004 : contenus et règle d'accès", () => {
       "insert into public.ressources (lecon_id, titre, fichier, format, taille_octets, telechargeable) values ($1, 'Guide', 'payante-p/guide.pdf', 'application/pdf', 1000, false)",
       [l.p2],
     );
-    await banc.db.query("insert into storage.objects (bucket_id, name) values ('ressources', 'payante-p/guide.pdf'), ('ressources', 'orphelin.pdf')");
+    for (const [lid, fichier] of [
+      [l.r1, "archivee-r/fiche.pdf"],
+      [l.b1, "brouillon-b/fiche.pdf"],
+    ]) {
+      await banc.db.query(
+        "insert into public.ressources (lecon_id, titre, fichier, format, taille_octets) values ($1, 'Fiche', $2, 'application/pdf', 1000)",
+        [lid, fichier],
+      );
+    }
+    await banc.db.query(
+      "insert into storage.objects (bucket_id, name) values ('ressources', 'payante-p/guide.pdf'), ('ressources', 'orphelin.pdf'), ('ressources', 'archivee-r/fiche.pdf'), ('ressources', 'brouillon-b/fiche.pdf')",
+    );
+    await banc.db.query("insert into public.formations_parcours (formation_id, parcours_id) values ($1, $3), ($2, $3)", [f.B, f.G, parcours]);
   });
+
+  const REFUS = /row-level security|permission denied/;
 
   it("un visiteur voit le catalogue publié, pas les brouillons ni les archives", async () => {
     const slugs = (await banc.en<{ slug: string }>("anon", "select slug from public.formations order by slug")).map((r) => r.slug);
@@ -68,6 +82,10 @@ describe("Migration 0004 : contenus et règle d'accès", () => {
     expect(await banc.en("anon", "select id from public.modules where formation_id = $1", [f.B])).toEqual([]);
     expect(await banc.en("anon", "select id from public.lecons where module_id = $1", [m.B])).toEqual([]);
     expect(await banc.en({ id: E }, "select id from public.lecons where module_id = $1", [m.B])).toEqual([]);
+    expect(await banc.en("anon", "select parcours_id from public.formations_parcours where formation_id = $1", [f.B])).toEqual([]);
+    expect(await banc.en({ id: E }, "select id from public.ressources where lecon_id = $1", [l.b1])).toEqual([]);
+    expect(await banc.en({ id: E }, "select name from storage.objects where name = 'brouillon-b/fiche.pdf'")).toEqual([]);
+    expect(await banc.en("anon", "select parcours_id from public.formations_parcours where formation_id = $1", [f.G])).toHaveLength(1);
   });
 
   it("l'aperçu se regarde sans compte", async () => {
@@ -95,16 +113,43 @@ describe("Migration 0004 : contenus et règle d'accès", () => {
     expect(await banc.en({ id: E }, "select lecon_id from public.lecons_contenus where lecon_id = $1", [l.r1])).toEqual([]);
     expect(await banc.en({ id: A }, "select id from public.lecons where id = $1", [l.r1])).toHaveLength(1);
     expect(await banc.en({ id: A }, "select lecon_id from public.lecons_contenus where lecon_id = $1", [l.r1])).toHaveLength(1);
+    expect(await banc.en({ id: E }, "select id from public.ressources where lecon_id = $1", [l.r1])).toEqual([]);
+    expect(await banc.en({ id: E }, "select name from storage.objects where name = 'archivee-r/fiche.pdf'")).toEqual([]);
+    expect(await banc.en({ id: A }, "select name from storage.objects where name = 'archivee-r/fiche.pdf'")).toHaveLength(1);
   });
 
   it("l'équipe voit et saisit tout, le formateur pas encore", async () => {
     const ajout = (slug: string) => `insert into public.parcours (slug, nom, nom_court, couleur) values ('${slug}', 'Nouveau', 'Nouveau', 'digital')`;
     await banc.en({ id: A }, ajout("par-admin"));
     await banc.en({ id: M }, ajout("par-moderateur"));
-    await expect(banc.en({ id: E }, ajout("par-etudiant"))).rejects.toThrow();
-    await expect(banc.en({ id: F }, ajout("par-formateur"))).rejects.toThrow();
-    await expect(banc.en("anon", ajout("par-visiteur"))).rejects.toThrow();
+    await expect(banc.en({ id: E }, ajout("par-etudiant"))).rejects.toThrow(REFUS);
+    await expect(banc.en({ id: F }, ajout("par-formateur"))).rejects.toThrow(REFUS);
+    await expect(banc.en("anon", ajout("par-visiteur"))).rejects.toThrow(REFUS);
     expect(await banc.en({ id: A }, "select slug from public.formations where slug = 'brouillon-b'")).toHaveLength(1);
+    // Le formateur ne touche pas non plus aux leçons ni aux fichiers (lot 4).
+    expect(await banc.en({ id: F }, "update public.lecons_contenus set texte = 'modifié' where lecon_id = $1 returning lecon_id", [l.g1])).toEqual([]);
+    await expect(banc.en({ id: F }, "insert into storage.objects (bucket_id, name) values ('ressources', 'formateur.pdf')")).rejects.toThrow(REFUS);
+  });
+
+  it("personne ne vide une table par l'API", async () => {
+    for (const qui of ["anon", { id: E }, { id: F }] as const) {
+      await expect(banc.en(qui, "truncate public.formations_parcours")).rejects.toThrow(/permission denied/);
+    }
+  });
+
+  it("une seule règle de lecture par table, et des liens indexés (conseiller de Supabase)", async () => {
+    const tables = ["parcours", "formateurs", "formations", "formations_parcours", "modules", "lecons", "lecons_contenus", "ressources"];
+    const { rows } = await banc.db.query<{ tablename: string; cmd: string }>(
+      "select tablename, cmd from pg_policies where schemaname = 'public' and tablename = any($1)",
+      [tables],
+    );
+    for (const table of tables) {
+      const regles = rows.filter((r) => r.tablename === table).map((r) => r.cmd);
+      expect(regles.filter((c) => c === "SELECT" || c === "ALL"), table).toEqual(["SELECT"]);
+    }
+    const index = (await banc.db.query<{ indexdef: string }>("select indexdef from pg_indexes where schemaname = 'public'")).rows.map((r) => r.indexdef);
+    expect(index.some((d) => /ON public\.formations .*\(formateur_id\)/.test(d))).toBe(true);
+    expect(index.some((d) => /ON public\.formateurs .*\(compte_id\)/.test(d))).toBe(true);
   });
 
   it("un fichier de ressource ne s'ouvre qu'avec l'accès à la leçon", async () => {
@@ -114,7 +159,7 @@ describe("Migration 0004 : contenus et règle d'accès", () => {
     expect(await banc.en("anon", sql, ["payante-p/guide.pdf"])).toEqual([]);
     expect(await banc.en({ id: E }, sql, ["orphelin.pdf"])).toEqual([]);
     expect(await banc.en({ id: A }, sql, ["orphelin.pdf"])).toHaveLength(1);
-    await expect(banc.en({ id: E }, "insert into storage.objects (bucket_id, name) values ('ressources', 'pirate.pdf')")).rejects.toThrow();
+    await expect(banc.en({ id: E }, "insert into storage.objects (bucket_id, name) values ('ressources', 'pirate.pdf')")).rejects.toThrow(REFUS);
   });
 
   it("une adresse de formation n'a ni point ni majuscule", async () => {
@@ -136,6 +181,9 @@ describe("Migration 0004 : contenus et règle d'accès", () => {
     await expect(essai(null, "dQw4w9WgXcQ")).rejects.toThrow(/lecons_contenus_video/);
     await essai("youtube", "dQw4w9WgXcQ");
     await essai("vimeo", "76979871");
+    // Vidéo Vimeo « non répertoriée » : son code suit l'identifiant, comme dans son lien (vimeo.com/76979871/abcdef0123).
+    await essai("vimeo", "76979871/abcdef0123");
+    await expect(essai("vimeo", "76979871/xyz")).rejects.toThrow(/lecons_contenus_video/);
     await essai(null, null);
   });
 
@@ -160,7 +208,10 @@ describe("Migration 0004 : contenus et règle d'accès", () => {
     await expect(banc.db.query("update public.formations set slug = 'autre-adresse' where id = $1", [publiee])).rejects.toThrow(
       "L'adresse d'une formation publiée ne change plus.",
     );
-    await expect(banc.db.query("update public.formations set publiee_le = null, slug = 'autre-adresse' where id = $1", [publiee])).rejects.toThrow();
+    // Effacer la date de publication ne rouvre pas l'adresse.
+    await banc.db.query("update public.formations set publiee_le = null where id = $1", [publiee]);
+    const [apres] = (await banc.db.query<{ publiee_le: Date | null }>("select publiee_le from public.formations where id = $1", [publiee])).rows;
+    expect(apres.publiee_le).toEqual(publiee_le);
     await banc.db.query("update public.formations set statut = 'archivee' where id = $1", [publiee]);
     await expect(banc.db.query("delete from public.formations where id = $1", [publiee])).rejects.toThrow(
       "Une formation publiée s'archive, elle ne s'efface pas.",
@@ -169,6 +220,16 @@ describe("Migration 0004 : contenus et règle d'accès", () => {
     const brouillon = id();
     await formation(brouillon, "simple-brouillon", "brouillon", false);
     await banc.db.query("update public.formations set slug = 'brouillon-renomme' where id = $1", [brouillon]);
+    await banc.db.query("delete from public.formations where id = $1", [brouillon]);
+  });
+
+  it("une date de publication saisie sur un brouillon est ignorée", async () => {
+    const brouillon = id();
+    await banc.db.query("insert into public.formations (id, slug, titre, statut, publiee_le) values ($1, 'brouillon-date', 'Brouillon daté', 'brouillon', now())", [brouillon]);
+    await banc.db.query("update public.formations set publiee_le = now() where id = $1", [brouillon]);
+    const [{ publiee_le }] = (await banc.db.query<{ publiee_le: Date | null }>("select publiee_le from public.formations where id = $1", [brouillon])).rows;
+    expect(publiee_le).toBeNull();
+    await banc.db.query("update public.formations set slug = 'brouillon-date-renomme' where id = $1", [brouillon]);
     await banc.db.query("delete from public.formations where id = $1", [brouillon]);
   });
 
