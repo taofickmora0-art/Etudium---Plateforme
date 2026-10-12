@@ -105,6 +105,9 @@ export function LecteurEtudium({
   const [pret, setPret] = useState(false);
   const [echec, setEchec] = useState(false);
   const [enLecture, setEnLecture] = useState(false);
+  // Sur téléphone, la vidéo est trop basse pour le gros bouton et la barre ensemble : le bouton avant la première
+  // lecture, la barre ensuite (comme les lecteurs des applications).
+  const [demarre, setDemarre] = useState(false);
   const [position, setPosition] = useState(0);
   const [duree, setDuree] = useState(reference);
   const [muet, setMuet] = useState(false);
@@ -174,6 +177,7 @@ export function LecteurEtudium({
         enLectureRef.current = lecture;
         setEnLecture(lecture);
         if (lecture) {
+          setDemarre(true);
           commencer();
           void adaptateur.current?.position().then((p) => {
             suivi.current = { ...suivi.current, position: p, instant: Date.now() };
@@ -295,12 +299,20 @@ export function LecteurEtudium({
             type="button"
             aria-label="Lire la vidéo"
             onClick={lire}
-            className="focus-blanc absolute top-1/2 left-1/2 flex size-[72px] -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white text-encre"
+            className={cn(
+              "focus-blanc absolute top-1/2 left-1/2 flex size-[72px] -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white text-encre",
+              demarre && "max-sm:hidden",
+            )}
           >
             <Icon icon={PlayIcon} size={28} />
           </button>
         )}
-        <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2.5 bg-linear-to-t from-black/65 to-transparent px-[18px] pt-10 pb-4">
+        <div
+          className={cn(
+            "absolute inset-x-0 bottom-0 flex flex-col gap-1.5 bg-linear-to-t from-black/65 to-transparent px-3 pt-6 pb-2 sm:gap-2.5 sm:px-[18px] sm:pt-10 sm:pb-4",
+            !demarre && "max-sm:hidden",
+          )}
+        >
           {legende && <span className="truncate text-sm leading-5 font-medium max-lg:hidden">{legende}</span>}
           <div className="relative flex h-4 items-center rounded-full has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-white">
             <div className="h-1 w-full overflow-hidden rounded-full bg-white/28">

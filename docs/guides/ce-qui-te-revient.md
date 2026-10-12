@@ -201,3 +201,17 @@ Il faut la section 5 (tables et exemples du lot 1).
    - onglet **Notes** : écris une note, **Enregistrer la note**, recharge la page : elle est toujours là.
 5. Sur ton téléphone (ou en rétrécissant la fenêtre) : en haut, la flèche de retour et le titre de la formation ; sous la vidéo, les onglets **Programme**, **Ressources** et **Notes** ; en bas, la barre **Leçon précédente / Leçon suivante**.
 6. Ce qui arrive ensuite : le lecteur aux couleurs d’Étudium et le temps réellement regardé (1.6), « Marquer comme terminée » et la progression (1.7), le visualiseur de fichiers (1.8).
+
+## 10. Valider le lecteur vidéo (tâche 1.6), 15 minutes
+
+1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0007_visionnage.sql` (temps regardé).
+2. Connecté, ouvre une leçon qui a une vidéo YouTube (celle de la section 9) :
+   - les commandes Étudium : bouton central, barre de lecture, son, vitesse (1× → 1,25× → 1,5× → 2× → 0,75×), plein écran, sous-titres si la vidéo en a ;
+   - sous la vidéo : « Temps réellement regardé : 0 % » • « Seuil de validation fixé par la formatrice : 90 % » • « Avancer dans la barre ne compte pas ».
+3. **Le test de la tâche** : fais glisser la barre jusqu’à la fin. Le pourcentage ne bouge pas.
+4. Regarde la vidéo (la vitesse 2× est permise). Le pourcentage monte toutes les 10 secondes environ. Au seuil, « Leçon validée » s’affiche avec le message « Leçon terminée. ».
+5. Recharge la page en cours de route : le pourcentage est gardé.
+6. **Vimeo** : colle au back-office le lien d’une vidéo Vimeo publique dans une autre leçon, et refais le point 2. Sans compte Vimeo payant, les commandes de Vimeo peuvent rester visibles sous celles d’Étudium (sans être cliquables) ; ce sera réglé avec le compte Vimeo (lot 2).
+7. Sans compte (fenêtre privée), une leçon d’aperçu se lit avec les mêmes commandes, mais rien n’est mesuré.
+8. Ce qui arrive ensuite (1.7) : reprendre la vidéo là où on l’a laissée, « Marquer comme terminée » pour les leçons sans vidéo, et la progression dans le programme et dans « Mes parcours ».
+

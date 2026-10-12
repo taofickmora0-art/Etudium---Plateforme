@@ -73,5 +73,6 @@ export function CadreLecon({ connecte, titreFormation, retour, programme, barre,
       </div>
     </div>
   );
-  return connecte ? <ToastProvider>{cadre}</ToastProvider> : cadre;
+  // Toasts pour tous : le lecteur annonce « Leçon terminée. », les notes et ressources leurs erreurs.
+  return <ToastProvider>{cadre}</ToastProvider>;
 }

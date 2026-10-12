@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
-import { render, screen, within } from "@testing-library/react";
+import { render as rendre, screen, within } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { ToastProvider } from "@/components/ui/Toast";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { DonneesLecon, LeconDetail } from "@/lib/lecon/types";
@@ -7,6 +9,8 @@ import { EXCEL, EXCEL_OUVERTE, id, ZOTERO } from "./donnees";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }), usePathname: () => "/formations" }));
 vi.mock("@/lib/lecon/actions", () => ({ enregistrerNote: vi.fn(), lienRessource: vi.fn() }));
+// Le lecteur officiel (script YouTube ou Vimeo) ne se charge pas dans les tests : le lecteur Étudium reste en attente.
+vi.mock("@/lib/video/adaptateurs", () => ({ creerAdaptateur: () => new Promise(() => {}) }));
 
 const { ContenuLecon } = await import("@/components/lecon/ContenuLecon");
 const { ProgrammeLecon } = await import("@/components/lecon/ProgrammeLecon");
@@ -14,6 +18,7 @@ const { ProgrammeMobile } = await import("@/components/lecon/ProgrammeMobile");
 const { BarreLecon } = await import("@/components/lecon/NavigationLecon");
 
 const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const render = (element: ReactElement) => rendre(<ToastProvider>{element}</ToastProvider>);
 const ADRESSE = "/formations/maitriser-microsoft-excel/lecons";
 
 const SAISIR: LeconDetail = {
@@ -42,9 +47,10 @@ describe("Page leçon : contenu", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Saisir et mettre en forme des données" })).toBeInTheDocument();
     expect(screen.getByText("Leçon 2 sur 4 de ce module")).toBeInTheDocument();
     expect(screen.getByText("12 min 30")).toBeInTheDocument();
-    const video = screen.getByTitle("Vidéo : Saisir et mettre en forme des données");
-    expect(video).toHaveAttribute("src", "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0");
-    expect(video).toHaveAttribute("allowfullscreen");
+    // Le lecteur Étudium : bouton central, légende et piste.
+    expect(screen.getByRole("button", { name: "Lire la vidéo" })).toBeInTheDocument();
+    expect(screen.getByText("Module 1 · Saisir et mettre en forme des données")).toBeInTheDocument();
+    expect(screen.getByRole("slider", { name: "Avancer dans la vidéo" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Leçon précédente" })).toHaveAttribute("href", `${ADRESSE}/${id(1)}`);
     expect(screen.getByRole("link", { name: "Leçon suivante" })).toHaveAttribute("href", `${ADRESSE}/${id(3)}`);
     const [ordinateur, telephone] = screen.getAllByRole("tablist", { name: "Contenu de la leçon" });
@@ -62,14 +68,27 @@ describe("Page leçon : contenu", () => {
     expect(screen.getByText(/Ouvrez Excel\./)).toBeInTheDocument();
   });
 
-  it("une vidéo Vimeo non répertoriée passe par le lecteur Vimeo", () => {
-    render(<ContenuLecon donnees={donnees({ video: { fournisseur: "vimeo", id: "76979871/abcdef0123" } })} connecte terminees={new Set()} />);
-    expect(screen.getByTitle(/^Vidéo :/)).toHaveAttribute("src", "https://player.vimeo.com/video/76979871?dnt=1&h=abcdef0123");
+  it("pour un compte connecté, le temps réellement regardé et le seuil s'affichent sous la vidéo", () => {
+    const vu = { passages: [[0, 75]] as [number, number][], positionSecondes: 75, terminee: false };
+    const { unmount } = render(<ContenuLecon donnees={donnees({ visionnage: vu })} connecte terminees={new Set()} />);
+    expect(screen.getByText("Temps réellement regardé : 10 %")).toBeInTheDocument();
+    expect(screen.getByText("Seuil de validation fixé par la formatrice : 90 %")).toBeInTheDocument();
+    expect(screen.getByText("Avancer dans la barre ne compte pas")).toBeInTheDocument();
+    unmount();
+    render(<ContenuLecon donnees={donnees({ visionnage: { ...vu, terminee: true } })} connecte terminees={new Set()} />);
+    expect(screen.getByText("Leçon validée")).toBeInTheDocument();
+  });
+
+  it("sans la table du visionnage (migration 0007), la vidéo se lit sans mesure", () => {
+    render(<ContenuLecon donnees={donnees({ visionnage: null })} connecte terminees={new Set()} />);
+    expect(screen.getByRole("button", { name: "Lire la vidéo" })).toBeInTheDocument();
+    expect(screen.queryByText(/Temps réellement regardé/)).toBeNull();
   });
 
   it("un visiteur sur un aperçu est invité à créer son compte, y compris dans l'onglet Notes", async () => {
     render(<ContenuLecon donnees={donnees({ id: id(1), titre: "Découvrir l’interface" }, EXCEL)} connecte={false} terminees={new Set()} />);
     expect(screen.getByText("Vous regardez un aperçu gratuit")).toBeInTheDocument();
+    expect(screen.queryByText(/Temps réellement regardé/)).toBeNull();
     expect(screen.getByText("Créez votre compte gratuit pour enregistrer votre progression.")).toBeInTheDocument();
     const [ordinateur] = screen.getAllByRole("tablist", { name: "Contenu de la leçon" });
     await userEvent.click(within(ordinateur).getByRole("tab", { name: "Notes" }));

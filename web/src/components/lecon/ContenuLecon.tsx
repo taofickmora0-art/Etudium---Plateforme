@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
+import { situation } from "@/lib/lecon/regles";
 import type { DonneesLecon } from "@/lib/lecon/types";
 import { DansCetteLecon } from "./DansCetteLecon";
 import { EnTeteLecon } from "./EnTeteLecon";
 import { LeconVerrouillee } from "./LeconVerrouillee";
-import { LecteurVideo } from "./LecteurVideo";
+import { LecteurEtudium } from "./LecteurEtudium";
 import { NavigationLecon } from "./NavigationLecon";
 import { NoteProvider, NotesLecon } from "./NotesLecon";
 import { OngletsLecon } from "./OngletsLecon";
@@ -21,6 +22,7 @@ type Props = { donnees: DonneesLecon; connecte: boolean; terminees: ReadonlySet<
 export function ContenuLecon({ donnees, connecte, terminees }: Props) {
   const { fiche, lecon, note, notesDisponibles } = donnees;
   const ouverte = lecon.accessible;
+  const ou = situation(fiche.modules, lecon.id);
   const programme = <ProgrammeMobile fiche={fiche} leconId={lecon.id} connecte={connecte} terminees={terminees} />;
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -41,7 +43,20 @@ export function ContenuLecon({ donnees, connecte, terminees }: Props) {
       {!ouverte ? (
         <LeconVerrouillee fiche={fiche} leconId={lecon.id} connecte={connecte} />
       ) : (
-        lecon.video && <LecteurVideo video={lecon.video} titre={lecon.titre} />
+        lecon.video && (
+          <LecteurEtudium
+            video={lecon.video}
+            titre={lecon.titre}
+            legende={ou ? `Module ${ou.numero} · ${lecon.titre}` : lecon.titre}
+            leconId={lecon.id}
+            // Sans la table du visionnage (0007 pas encore appliquée), la vidéo se lit sans mesure.
+            suivre={connecte && lecon.visionnage !== null}
+            passagesInitiaux={lecon.visionnage?.passages ?? []}
+            reference={lecon.dureeSecondes}
+            seuil={fiche.seuilVideo}
+            termineeInitiale={lecon.visionnage?.terminee ?? false}
+          />
+        )
       )}
       <EnTeteLecon fiche={fiche} lecon={lecon} />
       {ouverte && lecon.texte && <div className="text-[15px] leading-6 whitespace-pre-line text-texte">{lecon.texte}</div>}
