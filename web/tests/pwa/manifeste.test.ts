@@ -14,12 +14,20 @@ describe("Appli installable", () => {
     expect(manifest()).toMatchObject({
       name: "Étudium",
       short_name: "Étudium",
-      start_url: "/",
+      start_url: "/accueil",
       display: "standalone",
       background_color: "#F2F6FD",
       theme_color: "#F2F6FD",
       lang: "fr",
     });
+  });
+
+  it("l'appli s'ouvre sur l'espace connecté, pas sur la future page publique", () => {
+    expect(manifest()).toMatchObject({ id: "/", start_url: "/accueil" });
+  });
+
+  it("l'appli peut tourner (tablette, vidéo en plein écran)", () => {
+    expect(manifest().orientation).toBeUndefined();
   });
 
   it("chaque icône déclarée existe", () => {

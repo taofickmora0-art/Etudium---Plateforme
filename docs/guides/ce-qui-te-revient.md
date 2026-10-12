@@ -103,6 +103,7 @@ Ton processeur (AMD Ryzen 7 3750H) fait partie de ceux que Microsoft accepte pou
    - **Appli installable (0.7)** :
      1. Ouvre http://localhost:3000 dans **Chrome**, sur l’ordinateur. À droite de la barre d’adresse apparaît l’icône **« Installer Étudium »** (un petit écran avec une flèche).
      2. Clique dessus, puis sur **Installer** : Étudium s’ouvre dans sa propre fenêtre, avec son logo dans la barre des tâches. L’onglet du navigateur montre aussi le logo Étudium.
+        - Si l’icône n’apparaît pas : menu **⋮** de Chrome (en haut à droite) → **« Caster, enregistrer et partager »** → **« Installer la page en tant qu’appli… »** (ou **« Installer Étudium… »**).
      3. Sur téléphone, l’installation demande une adresse en `https` : on la vérifiera à la mise en ligne.
 6. Dis-moi ce qui ne te va pas : une couleur, un texte, un espacement, un comportement. Je corrige avant d’attaquer la suite.
 

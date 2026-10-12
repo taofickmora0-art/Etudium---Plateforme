@@ -10,10 +10,12 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Étudium",
     description: "Formation, compétences digitales et accompagnement pour les étudiants et les jeunes diplômés.",
     lang: "fr",
-    start_url: "/",
+    // Identité fixe de l'appli installée : on pourra changer start_url sans créer une « nouvelle » appli.
+    id: "/",
+    // L'espace connecté (sans compte : la connexion, qui y ramène). « / » deviendra la page publique (lot 1).
+    start_url: "/accueil",
     scope: "/",
     display: "standalone",
-    orientation: "portrait",
     background_color: "#F2F6FD",
     theme_color: "#F2F6FD",
     icons: [

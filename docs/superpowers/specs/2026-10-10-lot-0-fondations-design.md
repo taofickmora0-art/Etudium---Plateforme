@@ -30,7 +30,7 @@
 | Comptes, base, fichiers | **Supabase** (`@supabase/ssr`) | Inscription, connexion, Google, codes par e-mail, stockage des photos de profil |
 | Validation des formulaires | **Zod** | Mêmes règles côté navigateur et côté serveur, messages en français |
 | Tests | **Vitest** pour la logique ; vérification à l'écran dans le navigateur intégré pour chaque tâche | Tes vérifications de la colonne « Tu valides quand… » restent la validation finale |
-| Appli installable | **Serwist** (PWA) | Icône, écran de lancement, installation sur téléphone |
+| Appli installable | Manifeste natif de **Next.js** (décidé à la tâche 0.7 ; **Serwist** seulement si l’on veut un jour le hors-connexion) | Icône, écran de lancement, installation sur téléphone |
 | Historique du code | **Git** dès la tâche 0.1, avec un dépôt GitHub **privé** servant de sauvegarde | Chaque tâche validée = un enregistrement, envoyé sur GitHub. Le site, lui, n'est pas mis en ligne. |
 
 Ton ordinateur a déjà ce qu'il faut : Node 24, npm et Git.
