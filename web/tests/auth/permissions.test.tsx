@@ -54,9 +54,9 @@ describe("Pages réservées", () => {
     await expect(requireSpace("admin")).rejects.toThrow("NEXT_REDIRECT:/accueil");
   });
 
-  it("sans compte, retour à la connexion", async () => {
+  it("sans compte (ou session fermée ailleurs), passage par la sortie", async () => {
     vi.mocked(getShellUser).mockResolvedValue(null);
-    await expect(requireSpace("formateur")).rejects.toThrow("NEXT_REDIRECT:/connexion");
+    await expect(requireSpace("formateur")).rejects.toThrow("NEXT_REDIRECT:/auth/sortie");
   });
 
   it("un administrateur ouvre le back-office", async () => {

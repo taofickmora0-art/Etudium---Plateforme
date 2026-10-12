@@ -9,7 +9,7 @@ import { canAccess, type Espace } from "./permissions";
  */
 export async function requireSpace(espace: Espace): Promise<ShellUser> {
   const user = await getShellUser();
-  if (!user) redirect("/connexion");
+  if (!user) redirect("/auth/sortie");
   if (!canAccess(espace, user.roles)) redirect("/accueil");
   return user;
 }

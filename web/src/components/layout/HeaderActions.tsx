@@ -19,7 +19,7 @@ export function HeaderActions({ user }: { user: ShellUser }) {
       {/* Sous 1024 px, le profil passe par l'onglet « Profil » de la barre du bas. */}
       <div ref={profil} className="hidden lg:-mt-0.5 lg:-mb-px lg:-ml-0.5 lg:flex">
         <ProfileMenu
-          user={{ initials: user.initials, name: `${user.prenom} ${user.nom}`, email: user.email }}
+          user={{ initials: user.initials, name: `${user.prenom} ${user.nom}`, email: user.email, photoUrl: user.photoUrl }}
           roles={user.roles}
           currentSpace={spaceOf(usePathname())}
           onSignOut={() => setDeconnexion(true)}

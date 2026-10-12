@@ -3,6 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { clearLocalSession } from "./local-session";
 import { authErrorMessage, safeNext } from "./messages";
 import { codeSchema, fieldErrorsFrom, newPasswordSchema, resetRequestSchema, signInSchema, signUpSchema, type FormState } from "./schemas";
 import { PENDING_EMAIL_COOKIE, PENDING_EMAIL_MAX_AGE, REMEMBER_COOKIE } from "./session-cookies";
@@ -226,12 +227,6 @@ export async function signOut(): Promise<void> {
   } catch {
     // Base injoignable : la session ne peut pas être fermée chez Supabase ; elle l'est tout de même sur cet appareil (ci-dessous).
   }
-  // Cookies de session de Supabase (« sb-<projet>-auth-token », parfois découpés en morceaux) et choix « Se souvenir de moi » :
-  // effacés dans tous les cas, sinon le rechargement ramènerait à l'accueil.
-  const magasin = await cookies();
-  magasin
-    .getAll()
-    .filter(({ name }) => name.startsWith("sb-"))
-    .forEach(({ name }) => magasin.delete(name));
-  magasin.delete(REMEMBER_COOKIE);
+  // Effacée dans tous les cas, sinon le rechargement ramènerait à l'accueil.
+  await clearLocalSession();
 }

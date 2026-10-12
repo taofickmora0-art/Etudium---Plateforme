@@ -1,4 +1,5 @@
 import { cache } from "react";
+import type { User } from "@supabase/supabase-js";
 import type { Role } from "@/components/ui/ProfileMenu";
 import { DEMO_USER } from "@/lib/demo-user";
 import { getPublicEnv } from "@/lib/env";
@@ -17,6 +18,8 @@ export type ShellUser = {
   formule: string;
   serie: number;
   points: number;
+  /** Adresse publique de la photo de profil, ou null (initiales). */
+  photoUrl: string | null;
 };
 
 const ORDRE_DES_ROLES: Role[] = ["etudiant", "formateur", "moderateur", "admin", "super_admin"];
@@ -49,6 +52,18 @@ const initiales = (prenom: string, nom: string, email: string) =>
   ((prenom[0] ?? "") + (nom[0] ?? "")).toUpperCase() || (email[0] ?? "?").toUpperCase();
 
 /**
+ * Le compte connecté, vérifié auprès de Supabase (getUser) une seule fois par requête. Contrairement à la lecture du jeton
+ * sur place (getClaims, gardée par le proxy), Supabase voit une session fermée ailleurs : mot de passe changé, compte supprimé.
+ * Hors mode démonstration seulement.
+ */
+export const getAuthUser = cache(async (): Promise<User | null> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data?.user) return null;
+  return data.user;
+});
+
+/**
  * La personne connectée, lue une seule fois par requête (React.cache) : session, profil et rôles.
  * Tant que le profil n'est pas lisible, on se rabat sur les données d'inscription.
  * Série et points arrivent au lot 6, les formules payantes au lot 2.
@@ -56,21 +71,19 @@ const initiales = (prenom: string, nom: string, email: string) =>
 export const getShellUser = cache(async (): Promise<ShellUser | null> => {
   if (demoModeActive()) return DEMO_USER;
 
-  const supabase = await createClient();
-  // getClaims vérifie le jeton sur place, comme le proxy : pas d'aller-retour réseau à chaque page.
-  const { data } = await supabase.auth.getClaims();
-  const claims = data?.claims;
-  if (!claims?.sub) return null;
+  const user = await getAuthUser();
+  if (!user) return null;
 
+  const supabase = await createClient();
   const [profil, roles] = await Promise.all([
-    supabase.from("profils").select("prenom, nom").eq("id", claims.sub).maybeSingle(),
-    supabase.from("roles").select("role").eq("profil_id", claims.sub),
+    supabase.from("profils").select("prenom, nom, photo_url").eq("id", user.id).maybeSingle(),
+    supabase.from("roles").select("role").eq("profil_id", user.id),
   ]);
 
-  const inscription = nomDepuisInscription((claims.user_metadata as Metadonnees | undefined) ?? {});
+  const inscription = nomDepuisInscription((user.user_metadata as Metadonnees | undefined) ?? {});
   const prenom = chaine(profil.data?.prenom) || inscription.prenom;
   const nom = chaine(profil.data?.nom) || inscription.nom;
-  const email = chaine(claims.email);
+  const email = chaine(user.email);
   const lus = new Set(((roles.data as { role: Role }[] | null) ?? []).map((r) => r.role));
   const tries = ORDRE_DES_ROLES.filter((r) => lus.has(r));
 
@@ -84,5 +97,6 @@ export const getShellUser = cache(async (): Promise<ShellUser | null> => {
     formule: "Gratuite",
     serie: 0,
     points: 0,
+    photoUrl: chaine(profil.data?.photo_url) || null,
   };
 });

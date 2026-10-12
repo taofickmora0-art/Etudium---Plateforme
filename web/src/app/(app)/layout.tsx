@@ -6,8 +6,9 @@ import { getShellUser } from "@/lib/auth/current-user";
 
 async function CompteDeLEntete() {
   const user = await getShellUser();
-  // Le proxy a déjà renvoyé les visiteurs sans session vers la connexion ; ceci couvre une session disparue entre-temps.
-  if (!user) redirect("/connexion");
+  // Le proxy a déjà renvoyé les visiteurs sans session. Ici, Supabase ne reconnaît plus la session (fermée sur un autre
+  // appareil, compte supprimé) : /auth/sortie l'efface de l'appareil, sinon proxy et connexion se renverraient la balle.
+  if (!user) redirect("/auth/sortie");
   return <HeaderAccount user={user} />;
 }
 

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ─── Doublures : Supabase (session + tables), configuration, cookies et redirection ───
-const auth = { getClaims: vi.fn(), signOut: vi.fn() };
+const auth = { getUser: vi.fn(), signOut: vi.fn() };
 const tables: Record<string, { data: unknown; error: unknown }> = {};
 const from = vi.fn((table: string) => {
   const resultat = () => tables[table] ?? { data: null, error: null };
@@ -42,7 +42,8 @@ vi.mock("next/navigation", () => ({
 const { getShellUser } = await import("@/lib/auth/current-user");
 const { signOut } = await import("@/lib/auth/actions");
 
-const session = (claims: Record<string, unknown>) => ({ data: { claims: { sub: "u1", email: "aicha.k@exemple.com", ...claims } }, error: null });
+// getUser interroge Supabase : une session fermée ailleurs (mot de passe changé, compte supprimé) n'y est plus valable.
+const session = (champs: Record<string, unknown>) => ({ data: { user: { id: "u1", email: "aicha.k@exemple.com", ...champs } }, error: null });
 
 describe("Compte affiché par la coque", () => {
   beforeEach(() => {
@@ -51,8 +52,20 @@ describe("Compte affiché par la coque", () => {
     for (const t of Object.keys(tables)) delete tables[t];
   });
 
+  it("une session fermée ailleurs ne donne plus de compte", async () => {
+    auth.getUser.mockResolvedValue({ data: { user: null }, error: { code: "session_not_found", status: 403 } });
+    expect(await getShellUser()).toBeNull();
+  });
+
+  it("getShellUser lit le profil, les rôles et la photo", async () => {
+    auth.getUser.mockResolvedValue(session({}));
+    tables.profils = { data: { prenom: "Aïcha", nom: "Kpadé", photo_url: "https://projet.supabase.co/a.jpg" }, error: null };
+    tables.roles = { data: [{ role: "etudiant" }], error: null };
+    expect((await getShellUser())?.photoUrl).toBe("https://projet.supabase.co/a.jpg");
+  });
+
   it("getShellUser lit le profil et les rôles", async () => {
-    auth.getClaims.mockResolvedValue(session({ user_metadata: { prenom: "Ancien", nom: "Nom" } }));
+    auth.getUser.mockResolvedValue(session({ user_metadata: { prenom: "Ancien", nom: "Nom" } }));
     tables.profils = { data: { prenom: "Aïcha", nom: "Kpadé" }, error: null };
     tables.roles = { data: [{ role: "etudiant" }], error: null };
     const user = await getShellUser();
@@ -61,33 +74,33 @@ describe("Compte affiché par la coque", () => {
   });
 
   it("les rôles suivent l'ordre du menu", async () => {
-    auth.getClaims.mockResolvedValue(session({}));
+    auth.getUser.mockResolvedValue(session({}));
     tables.profils = { data: { prenom: "Aïcha", nom: "Kpadé" }, error: null };
     tables.roles = { data: [{ role: "admin" }, { role: "etudiant" }, { role: "formateur" }], error: null };
     expect((await getShellUser())?.roles).toEqual(["etudiant", "formateur", "admin"]);
   });
 
   it("sans profil, getShellUser se rabat sur les données d'inscription", async () => {
-    auth.getClaims.mockResolvedValue(session({ user_metadata: { prenom: "Aïcha", nom: "Kpadé" } }));
+    auth.getUser.mockResolvedValue(session({ user_metadata: { prenom: "Aïcha", nom: "Kpadé" } }));
     tables.profils = { data: null, error: null };
     tables.roles = { data: [], error: null };
     expect(await getShellUser()).toMatchObject({ prenom: "Aïcha", nom: "Kpadé", initials: "AK", roles: ["etudiant"] });
   });
 
   it("un compte Google donne son prénom et son nom", async () => {
-    auth.getClaims.mockResolvedValue(session({ user_metadata: { full_name: "Koffi Jean Mensah" } }));
+    auth.getUser.mockResolvedValue(session({ user_metadata: { full_name: "Koffi Jean Mensah" } }));
     tables.profils = { data: null, error: { code: "PGRST000" } };
     expect(await getShellUser()).toMatchObject({ prenom: "Koffi", nom: "Jean Mensah", initials: "KJ" });
   });
 
   it("sans nom du tout, l'initiale vient de l'adresse", async () => {
-    auth.getClaims.mockResolvedValue(session({ user_metadata: {} }));
+    auth.getUser.mockResolvedValue(session({ user_metadata: {} }));
     tables.profils = { data: { prenom: "", nom: "" }, error: null };
     expect((await getShellUser())?.initials).toBe("A");
   });
 
   it("sans session, personne", async () => {
-    auth.getClaims.mockResolvedValue({ data: null, error: null });
+    auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
     expect(await getShellUser()).toBeNull();
   });
 
@@ -97,7 +110,7 @@ describe("Compte affiché par la coque", () => {
     const user = await getShellUser();
     vi.unstubAllEnvs();
     expect(user).toMatchObject({ prenom: "Aïcha", nom: "Kpadé", roles: ["etudiant", "formateur", "admin"] });
-    expect(auth.getClaims).not.toHaveBeenCalled();
+    expect(auth.getUser).not.toHaveBeenCalled();
   });
 });
 

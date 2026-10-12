@@ -27,7 +27,7 @@ export function MobileProfileMenu({ user }: { user: ShellUser }) {
     <div className="flex flex-col">
       <h1 className="sr-only">Profil</h1>
       <div className="flex items-center gap-3.5">
-        <Avatar initials={user.initials} size={56} />
+        <Avatar initials={user.initials} src={user.photoUrl} size={56} />
         <div className="min-w-0 flex-1">
           <h2 className="m-0 truncate text-lg leading-[26px] font-semibold text-encre">
             {user.prenom} {user.nom}

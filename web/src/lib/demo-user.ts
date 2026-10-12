@@ -14,4 +14,5 @@ export const DEMO_USER: ShellUser = {
   formule: "Standard",
   serie: 8,
   points: 165,
+  photoUrl: null,
 };

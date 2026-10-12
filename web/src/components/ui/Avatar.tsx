@@ -3,6 +3,7 @@ import { cn } from "@/lib/cn";
 
 // Planche « Boutons », « Avatars et progression ».
 const SIZES = {
+  64: "size-16 text-[23px]",
   56: "size-14 text-xl",
   52: "size-[52px] text-[19px]",
   44: "size-11 text-base",
@@ -22,16 +23,23 @@ type AvatarProps = {
   tone?: keyof typeof TONES;
   /** Nom complet annoncé à la place des initiales (« Aïcha Kpadé »). */
   name?: string;
+  /** Photo de profil : remplace les initiales. */
+  src?: string | null;
   className?: string;
 };
 
-export function Avatar({ initials, size = 40, tone = "bleu", name, className }: AvatarProps) {
+export function Avatar({ initials, size = 40, tone = "bleu", name, src, className }: AvatarProps) {
   return (
     <span
-      className={cn("flex flex-none items-center justify-center rounded-full font-semibold", SIZES[size], TONES[tone], className)}
+      className={cn("flex flex-none items-center justify-center overflow-hidden rounded-full font-semibold", SIZES[size], TONES[tone], className)}
       {...(name ? { role: "img", "aria-label": name } : {})}
     >
-      <span aria-hidden={name ? true : undefined}>{initials}</span>
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element -- photo déjà réduite à 512 px à l'envoi, servie par Supabase
+        <img src={src} alt="" className="size-full object-cover" />
+      ) : (
+        <span aria-hidden={name ? true : undefined}>{initials}</span>
+      )}
     </span>
   );
 }
