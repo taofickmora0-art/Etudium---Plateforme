@@ -6,7 +6,7 @@ import { fieldErrorsFrom, type FormState } from "@/lib/auth/schemas";
 import { createClient } from "@/lib/supabase/server";
 import { detectImageType, PHOTO_MAX_OCTETS, PHOTO_TROP_LOURDE, PHOTO_TYPE } from "./photo";
 import type { NotificationPreferences } from "./preferences";
-import { preferencesSchema, profileSchema } from "./schemas";
+import { passwordChangeSchema, preferencesSchema, profileSchema } from "./schemas";
 
 // Actions serveur de « Mon profil ». Chacune revérifie la session auprès de Supabase : on ne fait jamais confiance au navigateur.
 
@@ -89,4 +89,29 @@ export async function updatePreferences(prefs: NotificationPreferences): Promise
   } catch {
     return { ok: false };
   }
+}
+
+/**
+ * Onglet Sécurité (NdMotDePasseModifie) : le mot de passe actuel est vérifié d'abord (spec §7), puis les autres appareils
+ * sont déconnectés. Celui-ci reste connecté : la vérification lui a ouvert une session neuve.
+ */
+export async function changePassword(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = passwordChangeSchema.safeParse({ current: texte(formData, "current"), password: texte(formData, "password") });
+  if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error) };
+
+  try {
+    const { supabase, user } = await sessionUser();
+    if (!user?.email) return { status: "error", message: SESSION_EXPIREE };
+    const verification = await supabase.auth.signInWithPassword({ email: user.email, password: parsed.data.current });
+    if (verification.error) {
+      if (verification.error.code === "invalid_credentials") return { status: "error", fieldErrors: { current: "Le mot de passe actuel est incorrect." } };
+      return { status: "error", message: authErrorMessage(verification.error) };
+    }
+    const changement = await supabase.auth.updateUser({ password: parsed.data.password });
+    if (changement.error) return { status: "error", message: authErrorMessage(changement.error) };
+    await supabase.auth.signOut({ scope: "others" });
+  } catch {
+    return { status: "error", message: authErrorMessage(null) };
+  }
+  return { status: "success" };
 }
