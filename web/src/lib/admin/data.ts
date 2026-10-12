@@ -24,6 +24,9 @@ export class TablesAbsentesError extends Error {
   }
 }
 
+/** Reconnaît l'erreur par son nom : une même classe peut exister en deux exemplaires selon le chargement des modules. */
+export const estTablesAbsentes = (erreur: unknown) => erreur instanceof Error && erreur.name === "TablesAbsentesError";
+
 type ErreurSupabase = { code?: string; message?: string } | null;
 const TABLES_ABSENTES = new Set(["PGRST205", "42P01"]);
 
@@ -34,6 +37,9 @@ function verifier<T>(reponse: { data: T; error: ErreurSupabase }): T {
   }
   return reponse.data;
 }
+
+/** Un identifiant qui n'a pas la forme d'un uuid ne trouvera rien : on évite l'erreur de la base (page introuvable). */
+const estUuid = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 type Ligne = Record<string, unknown>;
 /** Une relation « un à un » arrive en objet ou en tableau selon ce que Supabase devine : on accepte les deux. */
@@ -102,7 +108,7 @@ export async function listParcours(): Promise<ParcoursAdmin[]> {
 }
 
 export async function getParcours(id: string): Promise<ParcoursAdmin | null> {
-  if (demoModeActive()) return null;
+  if (demoModeActive() || !estUuid(id)) return null;
   const supabase = await createClient();
   const ligne = verifier(await supabase.from("parcours").select(COLONNES_PARCOURS).eq("id", id).maybeSingle());
   return ligne ? versParcours(ligne as Ligne) : null;
@@ -116,7 +122,7 @@ export async function listFormateurs(): Promise<FormateurAdmin[]> {
 }
 
 export async function getFormateur(id: string): Promise<FormateurAdmin | null> {
-  if (demoModeActive()) return null;
+  if (demoModeActive() || !estUuid(id)) return null;
   const supabase = await createClient();
   const ligne = verifier(await supabase.from("formateurs").select(COLONNES_FORMATEUR).eq("id", id).maybeSingle());
   return ligne ? versFormateur(ligne as Ligne) : null;
@@ -143,7 +149,7 @@ export async function listFormations(): Promise<FormationResume[]> {
 }
 
 export async function getFormationAdmin(id: string): Promise<FormationAdmin | null> {
-  if (demoModeActive()) return null;
+  if (demoModeActive() || !estUuid(id)) return null;
   const supabase = await createClient();
   const f = verifier(
     await supabase
@@ -193,7 +199,7 @@ const versRessource = (r: Ligne): RessourceAdmin => ({
 });
 
 export async function getLeconAdmin(id: string): Promise<LeconAdmin | null> {
-  if (demoModeActive()) return null;
+  if (demoModeActive() || !estUuid(id)) return null;
   const supabase = await createClient();
   const l = verifier(
     await supabase

@@ -60,7 +60,7 @@ describe("Session vérifiée à chaque page", () => {
   it("chaque page de l'espace connecté vérifie la session", () => {
     const sansVerification = pages(join(process.cwd(), "src/app/(app)")).filter((p) => {
       const code = readFileSync(p, "utf8");
-      return !["<SessionGuard", "<ComingSoon", "<ReservedComingSoon", "redirectToSortie()"].some((m) => code.includes(m));
+      return !["<SessionGuard", "<ComingSoon", "<ReservedComingSoon", "redirectToSortie()", "requireSpace(\""].some((m) => code.includes(m));
     });
     expect(sansVerification).toEqual([]);
   });

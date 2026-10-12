@@ -42,6 +42,8 @@ export type FormState = {
   message?: string;
   fieldErrors?: Partial<Record<string, string>>;
   values?: Record<string, string>;
+  /** Page où aller après un succès (création) : le navigateur s'y rend lui-même (pas de redirect() dans l'action). */
+  redirection?: string;
 };
 
 export const IDLE: FormState = { status: "idle" };

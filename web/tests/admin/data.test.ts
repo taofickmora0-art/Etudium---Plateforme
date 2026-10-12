@@ -8,7 +8,9 @@ vi.mock("@/lib/auth/current-user", () => ({ demoModeActive: () => false }));
 const { getFormationAdmin, getLeconAdmin, compterContenus, listParcours, TablesAbsentesError } = await import("@/lib/admin/data");
 
 describe("Lecture des contenus du back-office", () => {
-  beforeEach(() => faux.vider());
+  beforeEach(() => {
+    faux.vider();
+  });
 
   it("une formation est lue avec son programme dans l'ordre", async () => {
     faux.repondre("formations.select", {
@@ -44,7 +46,7 @@ describe("Lecture des contenus du back-office", () => {
         ],
       },
     });
-    const formation = await getFormationAdmin("f1");
+    const formation = await getFormationAdmin("00000000-0000-4000-8000-000000000001");
     expect(formation?.modules.map((m) => m.titre)).toEqual(["Premier", "Second"]);
     expect(formation?.modules[0].lecons).toEqual([
       { id: "l1", titre: "Un", dureeSecondes: 370, apercu: true, aVideo: true },
@@ -72,9 +74,15 @@ describe("Lecture des contenus du back-office", () => {
         ],
       },
     });
-    const lecon = await getLeconAdmin("l1");
+    const lecon = await getLeconAdmin("00000000-0000-4000-8000-000000000002");
     expect(lecon).toMatchObject({ formationId: "f1", formationTitre: "Excel", dureeSecondes: 760, video: { fournisseur: "youtube", id: "dQw4w9WgXcQ" } });
     expect(lecon?.ressources.map((r) => r.id)).toEqual(["r1", "r2"]);
+  });
+
+  it("une adresse inventée ne trouve rien, sans interroger la base", async () => {
+    expect(await getFormationAdmin("n-importe-quoi")).toBeNull();
+    expect(await getLeconAdmin("123")).toBeNull();
+    expect(faux.appels).toEqual([]);
   });
 
   it("les tables absentes sont signalées", async () => {
