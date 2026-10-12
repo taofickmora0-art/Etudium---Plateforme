@@ -5,7 +5,8 @@ import { authErrorMessage } from "@/lib/auth/messages";
 import { fieldErrorsFrom, type FormState } from "@/lib/auth/schemas";
 import { createClient } from "@/lib/supabase/server";
 import { detectImageType, PHOTO_MAX_OCTETS, PHOTO_TROP_LOURDE, PHOTO_TYPE } from "./photo";
-import { profileSchema } from "./schemas";
+import type { NotificationPreferences } from "./preferences";
+import { preferencesSchema, profileSchema } from "./schemas";
 
 // Actions serveur de « Mon profil ». Chacune revérifie la session auprès de Supabase : on ne fait jamais confiance au navigateur.
 
@@ -74,4 +75,18 @@ export async function updatePhoto(_prev: FormState, formData: FormData): Promise
   }
   refresh();
   return { status: "success" };
+}
+
+/** Onglet Notifications : enregistre l'ensemble des préférences (le dernier état choisi). */
+export async function updatePreferences(prefs: NotificationPreferences): Promise<{ ok: boolean }> {
+  const parsed = preferencesSchema.safeParse(prefs);
+  if (!parsed.success) return { ok: false };
+  try {
+    const { supabase, user } = await sessionUser();
+    if (!user) return { ok: false };
+    const { error } = await supabase.from("profils").update({ preferences_notifications: parsed.data }).eq("id", user.id);
+    return { ok: !error };
+  } catch {
+    return { ok: false };
+  }
 }
