@@ -1,15 +1,16 @@
-/** Symbole Étudium : hexagone bleu avec un « É » (repris du design). */
-export function LogoMark({ size = 30 }: { size?: number }) {
+/** Symbole Étudium : hexagone bleu avec un « É » (repris du design) ; `inverse` : hexagone blanc, « É » bleu (fond bleu). */
+export function LogoMark({ size = 30, inverse = false }: { size?: number; inverse?: boolean }) {
+  const fond = inverse ? "#FFFFFF" : "#0B18C9";
   return (
     <svg width={size} height={size} viewBox="0 0 30 30" aria-hidden="true" className="block">
       <polygon
         points="15,4 24.5,9.5 24.5,20.5 15,26 5.5,20.5 5.5,9.5"
-        fill="#0B18C9"
-        stroke="#0B18C9"
+        fill={fond}
+        stroke={fond}
         strokeWidth="5"
         strokeLinejoin="round"
       />
-      <text x="15" y="20" textAnchor="middle" fontSize="14" fontWeight="700" fill="#FFFFFF" fontFamily="inherit">
+      <text x="15" y="20" textAnchor="middle" fontSize="14" fontWeight="700" fill={inverse ? "#0B18C9" : "#FFFFFF"} fontFamily="inherit">
         É
       </text>
     </svg>

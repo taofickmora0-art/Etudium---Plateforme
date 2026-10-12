@@ -2,7 +2,7 @@
 
 /**
  * Pages ouvertes sans compte. Tout le reste est réservé aux comptes connectés : une page ajoutée plus tard
- * est protégée d'office. Le site public (lot 1) ajoutera ses pages ici.
+ * est protégée d'office. Le site public ajoute ses pages ici (catalogue au lot 1, landing en 1.12).
  */
 export const PAGES_PUBLIQUES = [
   "/connexion",
@@ -15,6 +15,8 @@ export const PAGES_PUBLIQUES = [
   "/etat",
   "/vitrine",
   "/auth",
+  // Catalogue et fiches des formations (lot 1, spec §2) : la même adresse pour le visiteur et l'étudiant.
+  "/formations",
 ];
 /** En-tête de requête où le proxy note la page demandée (les pages n'ont pas d'autre moyen de la connaître). */
 export const EN_TETE_CHEMIN = "x-etudium-chemin";

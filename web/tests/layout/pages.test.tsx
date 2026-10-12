@@ -22,7 +22,9 @@ describe("Pages de l'espace connecté", () => {
       "/formateur",
       "/admin",
     ]);
-    const manquantes = [...hrefs].filter((href) => !existsSync(join(process.cwd(), "src/app/(app)", href, "page.tsx")));
+    // Le catalogue (« Toutes les formations ») vit dans le groupe (catalogue), ouvert aussi aux visiteurs.
+    const existe = (href: string) => ["(app)", "(catalogue)"].some((groupe) => existsSync(join(process.cwd(), "src/app", groupe, href, "page.tsx")));
+    const manquantes = [...hrefs].filter((href) => !existe(href));
     expect(manquantes).toEqual([]);
   });
 

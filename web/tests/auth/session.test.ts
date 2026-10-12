@@ -96,6 +96,17 @@ describe("Pages protégées", () => {
     expect(routeFor({ pathname: "/accueil", signedIn: true, hadSession: true })).toEqual({});
   });
 
+  it("le catalogue, les fiches et leur image de partage s'ouvrent sans compte (spec du lot 1, §2)", () => {
+    for (const pathname of ["/formations", "/formations/maitriser-microsoft-excel", "/formations/maitriser-microsoft-excel/opengraph-image"]) {
+      expect(routeFor({ pathname, signedIn: false, hadSession: false }), pathname).toEqual({});
+      expect(routeFor({ pathname, signedIn: true, hadSession: true }), pathname).toEqual({});
+    }
+  });
+
+  it("les formations gratuites restent dans l'espace connecté", () => {
+    expect(routeFor({ pathname: "/formations-gratuites", signedIn: false, hadSession: false })).toEqual({ redirect: "/connexion?next=%2Fformations-gratuites" });
+  });
+
   it("le lien de réinitialisation ouvre une session : le nouveau mot de passe reste accessible", () => {
     expect(routeFor({ pathname: "/nouveau-mot-de-passe", signedIn: true, hadSession: true })).toEqual({});
   });

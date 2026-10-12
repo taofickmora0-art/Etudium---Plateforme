@@ -9,6 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  // Adresse du site, pour les liens absolus (image de partage) : à régler à la mise en ligne (NEXT_PUBLIC_SITE_URL).
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: "Étudium",
   description: "Formation, compétences digitales et accompagnement pour les étudiants et les jeunes diplômés.",
   // Ajoutée à l'écran d'accueil de l'iPhone : s'ouvre comme une appli, sous le nom « Étudium ».
