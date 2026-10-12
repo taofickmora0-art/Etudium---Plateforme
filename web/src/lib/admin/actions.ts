@@ -386,6 +386,8 @@ export async function deleteLecon(id: string): Promise<Resultat> {
 
 const LIEN_INCONNU = "Ce lien n’est ni une vidéo YouTube ni une vidéo Vimeo.";
 const DUREE_INVALIDE = "Durée au format 12:40.";
+// Le temps réellement regardé se mesure par rapport à cette durée (migration 0007) : sans elle, la leçon ne se valide pas.
+const DUREE_REQUISE = "Saisissez la durée de la vidéo : elle sert à mesurer le temps regardé.";
 
 /** Page d'une leçon : informations, vidéo (fournisseur + identifiant, jamais le lien), « Dans cette leçon », texte. */
 export async function saveLecon(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -411,6 +413,7 @@ export async function saveLecon(_prev: FormState, fd: FormData): Promise<FormSta
   const parsed = leconSchema.safeParse(saisie);
   const erreurs = parsed.success ? {} : fieldErrorsFrom(parsed.error);
   if (duree === null) erreurs.duree = DUREE_INVALIDE;
+  else if (video && duree === 0) erreurs.duree = DUREE_REQUISE;
   if (lien && !video) erreurs.video = LIEN_INCONNU;
   if (!parsed.success || Object.keys(erreurs).length > 0) return { status: "error", fieldErrors: erreurs, values };
   if (!estUuid(id)) return { status: "error", message: ECHEC, values };

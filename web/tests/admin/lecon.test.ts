@@ -73,6 +73,13 @@ describe("Back-office : une leçon", () => {
     expect(faux.appels).toEqual([]);
   });
 
+  it("une leçon avec vidéo doit avoir sa durée : elle sert à mesurer le temps regardé", async () => {
+    const state = await saveLecon(IDLE, form({ ...SAISIE, duree: "" }));
+    expect(state.fieldErrors?.duree).toBe("Saisissez la durée de la vidéo : elle sert à mesurer le temps regardé.");
+    // Sans vidéo, la durée reste facultative.
+    expect((await saveLecon(IDLE, form({ ...SAISIE, video: "", duree: "" }))).fieldErrors?.duree).toBeUndefined();
+  });
+
   it("un lien Vimeo non répertorié garde son code", async () => {
     await saveLecon(IDLE, form({ ...SAISIE, video: "https://vimeo.com/76979871/abcdef0123" }));
     expect(faux.de("lecons_contenus", "upsert")[0].valeurs).toMatchObject({ video_fournisseur: "vimeo", video_id: "76979871/abcdef0123" });

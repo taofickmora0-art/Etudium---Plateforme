@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { versMultirange, type Intervalle } from "@/lib/video/suivi";
+import { depuisMultirange, versMultirange, type Intervalle } from "@/lib/video/suivi";
 
 // Envoi du temps réellement regardé (spec du lot 1, §5) : toutes les 10 s, à la pause et en quittant la page.
 // Une route plutôt qu'une action serveur : l'envoi doit survivre à la fermeture de la page (fetch « keepalive »).
@@ -18,7 +18,6 @@ const CORPS = z.discriminatedUnion("action", [
       .array(z.tuple([SECONDES, SECONDES]).refine(([debut, fin]) => debut < fin))
       .max(50),
     position: SECONDES,
-    duree: SECONDES.nullable().optional(),
   }),
 ]);
 
@@ -59,9 +58,13 @@ export async function POST(request: Request): Promise<Response> {
     p_lecon: corps.lecon,
     p_passages: versMultirange(corps.passages as Intervalle[]),
     p_position: Math.floor(corps.position),
-    p_duree_video: corps.duree ? Math.floor(corps.duree) : null,
   });
   if (error || !data) return reponse(409, { erreur: "Passage refusé." });
-  const resultat = data as { secondes_vues: number; reference: number; terminee: boolean };
-  return reponse(200, { secondesVues: resultat.secondes_vues, reference: resultat.reference, terminee: resultat.terminee });
+  const resultat = data as { secondes_vues: number; reference: number; terminee: boolean; passages: string };
+  return reponse(200, {
+    secondesVues: resultat.secondes_vues,
+    reference: resultat.reference,
+    terminee: resultat.terminee,
+    passages: depuisMultirange(resultat.passages ?? ""),
+  });
 }

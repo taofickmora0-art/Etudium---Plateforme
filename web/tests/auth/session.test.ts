@@ -25,6 +25,13 @@ describe("Pages protégées", () => {
     expect(routeFor({ pathname: "/certificats", signedIn: false, hadSession: true })).toEqual({ redirect: "/connexion?session=expiree&next=%2Fcertificats" });
   });
 
+  it("une route d'API n'est jamais renvoyée vers la connexion : elle répond elle-même (401)", () => {
+    // Sinon, une session expirée recevrait la page de connexion (HTML, statut 200) et la prendrait pour une réussite.
+    expect(routeFor({ pathname: "/api/visionnage", signedIn: false, hadSession: true })).toEqual({});
+    expect(routeFor({ pathname: "/api/visionnage", signedIn: false, hadSession: false })).toEqual({});
+    expect(routeFor({ pathname: "/apiculture", signedIn: false, hadSession: false })).toEqual({ redirect: "/connexion?next=%2Fapiculture" });
+  });
+
   it("le cookie d'une connexion Google abandonnée n'est pas une session", () => {
     expect(hasSessionCookie(["sb-projet-auth-token-code-verifier"])).toBe(false);
     expect(hasSessionCookie(["sb-projet-auth-token"])).toBe(true);

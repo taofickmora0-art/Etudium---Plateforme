@@ -13,7 +13,7 @@ const { POST } = await import("@/app/api/visionnage/route");
 const ADRESSE = "http://localhost:3000/api/visionnage";
 const requete = (corps: unknown, entetes: Record<string, string> = { origin: "http://localhost:3000", "content-type": "application/json" }) =>
   new Request(ADRESSE, { method: "POST", headers: { host: "localhost:3000", ...entetes }, body: typeof corps === "string" ? corps : JSON.stringify(corps) });
-const ENREGISTRER = { action: "enregistrer", lecon: id(1), passages: [[0, 40], [60, 90]], position: 90.4, duree: 370.2 };
+const ENREGISTRER = { action: "enregistrer", lecon: id(1), passages: [[0, 40], [60, 90]], position: 90.4 };
 
 describe("Route d'envoi du temps regardé", () => {
   beforeEach(() => {
@@ -55,16 +55,13 @@ describe("Route d'envoi du temps regardé", () => {
   });
 
   it("« enregistrer » envoie les passages à la base et rend le temps vu", async () => {
-    faux.repondre("rpc.enregistrer_visionnage", { data: { secondes_vues: 70, reference: 370, terminee: false } });
+    faux.repondre("rpc.enregistrer_visionnage", { data: { secondes_vues: 70, reference: 370, terminee: false, passages: "{[0,40),[60,90)}" } });
     const reponse = await POST(requete(ENREGISTRER));
     expect(reponse.status).toBe(200);
-    expect(await reponse.json()).toEqual({ secondesVues: 70, reference: 370, terminee: false });
-    expect(faux.de("rpc", "enregistrer_visionnage")[0].valeurs).toEqual({
-      p_lecon: id(1),
-      p_passages: "{[0,40),[60,90)}",
-      p_position: 90,
-      p_duree_video: 370,
-    });
+    // Les passages enregistrés par la base : le pourcentage affiché suit la base, pas seulement le navigateur.
+    expect(await reponse.json()).toEqual({ secondesVues: 70, reference: 370, terminee: false, passages: [[0, 40], [60, 90]] });
+    // La durée de référence est celle de la leçon : le navigateur ne l'envoie plus.
+    expect(faux.de("rpc", "enregistrer_visionnage")[0].valeurs).toEqual({ p_lecon: id(1), p_passages: "{[0,40),[60,90)}", p_position: 90 });
   });
 
   it("un refus de la base (passage trop long, leçon fermée…) répond 409", async () => {

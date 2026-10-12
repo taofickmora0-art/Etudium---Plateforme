@@ -6,7 +6,7 @@ import { creerBanc, MIGRATIONS_LOT_0, type Banc } from "./banc";
 // écoulé et valide la leçon au seuil de la formation (90 % par défaut).
 const MIGRATION = "supabase/migrations/0007_visionnage.sql";
 
-type Resultat = { secondes_vues: number; reference: number; terminee: boolean };
+type Resultat = { secondes_vues: number; reference: number; terminee: boolean; passages: string };
 
 describe("Migration 0007 : visionnage", () => {
   let banc: Banc;
@@ -18,15 +18,17 @@ describe("Migration 0007 : visionnage", () => {
 
   const idLecon = async (titre: string) => (await banc.db.query<{ id: string }>("select id from public.lecons where titre = $1", [titre])).rows[0].id;
   const commencer = (qui: string, lecon: string) => banc.en({ id: qui }, "select public.commencer_visionnage($1)", [lecon]);
-  const enregistrer = async (qui: string, lecon: string, passages: string, position = 0, duree: number | null = null) =>
-    (
-      await banc.en<{ r: Resultat }>({ id: qui }, "select public.enregistrer_visionnage($1, $2::int4multirange, $3, $4) as r", [
-        lecon,
-        passages,
-        position,
-        duree,
-      ])
-    )[0].r;
+  const enregistrer = async (qui: string, lecon: string, passages: string, position = 0) =>
+    (await banc.en<{ r: Resultat }>({ id: qui }, "select public.enregistrer_visionnage($1, $2::int4multirange, $3) as r", [lecon, passages, position]))[0].r;
+  /** Regarde de `debut` à `fin` en envois de 20 s, chacun 10 s après le précédent (vitesse 2×). */
+  const regarder = async (qui: string, lecon: string, debut: number, fin: number) => {
+    let r: Resultat | null = null;
+    for (let s = debut; s < fin; s += 20) {
+      await reculer(qui, lecon, 10);
+      r = await enregistrer(qui, lecon, `{[${s},${Math.min(s + 20, fin)})}`);
+    }
+    return r!;
+  };
   /** Fait comme si le dernier envoi datait de `secondes` secondes. */
   const reculer = (qui: string, lecon: string, secondes: number) =>
     banc.db.query("update public.progression_lecons set dernier_envoi = now() - make_interval(secs => $3) where profil_id = $1 and lecon_id = $2", [
@@ -59,7 +61,7 @@ describe("Migration 0007 : visionnage", () => {
   it("les passages regardés s'additionnent, sans compter deux fois le même passage", async () => {
     await commencer(E, video);
     await reculer(E, video, 30);
-    expect(await enregistrer(E, video, "{[0,40)}", 40)).toEqual({ secondes_vues: 40, reference: 370, terminee: false });
+    expect(await enregistrer(E, video, "{[0,40)}", 40)).toEqual({ secondes_vues: 40, reference: 370, terminee: false, passages: "{[0,40)}" });
     await reculer(E, video, 30);
     expect(await enregistrer(E, video, "{[20,60)}", 60)).toMatchObject({ secondes_vues: 60 });
     expect(await passagesDe(E, video)).toBe("{[0,60)}");
@@ -71,8 +73,27 @@ describe("Migration 0007 : visionnage", () => {
     expect(await passagesDe(E, video)).toBe("{[0,60)}");
   });
 
+  it("des envois rapprochés ne créent pas de temps : la réserve ne grandit qu'avec le temps réellement écoulé", async () => {
+    // Un script qui enverrait 3 s toutes les quelques millisecondes : refusé dès le premier envoi sans réserve.
+    await commencer(F, video);
+    await expect(enregistrer(F, video, "{[0,3)}")).rejects.toThrow(/plus long que le temps écoulé/);
+    // Une longue absence ne donne pas plus de 60 s d'avance.
+    await reculer(F, video, 3600);
+    await expect(enregistrer(F, video, "{[0,61)}")).rejects.toThrow(/plus long que le temps écoulé/);
+    expect(await enregistrer(F, video, "{[0,60)}")).toMatchObject({ secondes_vues: 60 });
+    // Rappeler « commencer » ne regonfle pas la réserve.
+    await commencer(F, video);
+    await expect(enregistrer(F, video, "{[60,70)}")).rejects.toThrow(/plus long que le temps écoulé/);
+  });
+
+  it("renvoyer un passage déjà enregistré ne coûte rien (réponse perdue, deuxième onglet)", async () => {
+    expect(await enregistrer(F, video, "{[0,60)}")).toMatchObject({ secondes_vues: 60 });
+  });
+
   it("sans « commencer », rien n'est enregistré", async () => {
-    await expect(enregistrer(F, video, "{[0,5)}")).rejects.toThrow(/non commencé/);
+    const G = randomUUID();
+    await banc.creerCompte(G);
+    await expect(enregistrer(G, video, "{[0,5)}")).rejects.toThrow(/non commencé/);
   });
 
   it("les passages au-delà de la durée sont coupés", async () => {
@@ -81,8 +102,7 @@ describe("Migration 0007 : visionnage", () => {
   });
 
   it("la leçon est validée au seuil (90 %), et le reste", async () => {
-    await reculer(E, video, 400);
-    expect(await enregistrer(E, video, "{[60,330)}")).toEqual({ secondes_vues: 340, reference: 370, terminee: true });
+    expect(await regarder(E, video, 60, 330)).toMatchObject({ secondes_vues: 340, reference: 370, terminee: true });
     const { rows } = await banc.db.query<{ t: string }>("select terminee_le::text as t from public.progression_lecons where profil_id = $1 and lecon_id = $2", [E, video]);
     await reculer(E, video, 10);
     expect(await enregistrer(E, video, "{[0,5)}")).toMatchObject({ terminee: true });
@@ -90,12 +110,13 @@ describe("Migration 0007 : visionnage", () => {
     expect(apres.rows[0].t).toBe(rows[0].t);
   });
 
-  it("la durée annoncée par le lecteur sert de référence si elle vaut au moins la moitié de celle de la leçon", async () => {
-    await commencer(F, video);
+  it("la durée de référence est celle de la leçon ; une leçon sans durée ne se valide pas (refus explicite)", async () => {
     await reculer(F, video, 30);
-    expect(await enregistrer(F, video, "{[0,10)}", 10, 300)).toMatchObject({ reference: 300 });
+    expect(await enregistrer(F, video, "{[60,70)}")).toMatchObject({ reference: 370 });
+    await banc.db.query("update public.lecons set duree_secondes = 0 where id = $1", [video]);
     await reculer(F, video, 30);
-    expect(await enregistrer(F, video, "{[10,20)}", 20, 100)).toMatchObject({ reference: 370 });
+    await expect(enregistrer(F, video, "{[70,80)}")).rejects.toThrow(/durée de la leçon/);
+    await banc.db.query("update public.lecons set duree_secondes = 370 where id = $1", [video]);
   });
 
   it("leçon fermée, visiteur ou leçon sans vidéo : refusé", async () => {

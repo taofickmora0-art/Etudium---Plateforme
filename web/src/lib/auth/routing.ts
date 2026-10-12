@@ -27,7 +27,11 @@ const dans = (pathname: string, chemins: string[]) => chemins.some((c) => pathna
 
 type Situation = { pathname: string; signedIn: boolean; hadSession: boolean };
 
+/** Routes d'API : elles vérifient la session elles-mêmes et répondent 401 (une redirection rendrait une page HTML). */
+const API = "/api";
+
 export function routeFor({ pathname, signedIn, hadSession }: Situation): { redirect?: string } {
+  if (dans(pathname, [API])) return {};
   if (pathname === "/") return { redirect: signedIn ? "/accueil" : "/connexion" };
   if (!dans(pathname, PAGES_PUBLIQUES) && !signedIn) {
     // Un cookie de session était là mais n'est plus valable : on l'annonce (fenêtre « Votre session a expiré »).

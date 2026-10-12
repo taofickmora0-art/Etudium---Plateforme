@@ -14,7 +14,7 @@ const { LecteurEtudium } = await import("@/components/lecon/LecteurEtudium");
 const VIDEO = { fournisseur: "youtube" as const, id: "dQw4w9WgXcQ" };
 
 /** Un faux lecteur officiel : position et durée réglables, événements déclenchés par le test. */
-function fauxLecteur({ sousTitres = false } = {}) {
+function fauxLecteur({ sousTitres = false, durees = [370] }: { sousTitres?: boolean; durees?: number[] } = {}) {
   let evenements: Evenements | null = null;
   const etat = { position: 0 };
   const adaptateur: Adaptateur = {
@@ -24,7 +24,8 @@ function fauxLecteur({ sousTitres = false } = {}) {
       etat.position = s;
     }),
     position: vi.fn(async () => etat.position),
-    duree: vi.fn(async () => 370),
+    // Comme YouTube : la durée peut valoir 0 tant que la lecture n'a pas commencé.
+    duree: vi.fn(async () => (durees.length > 1 ? durees.shift()! : durees[0])),
     setMuet: vi.fn(),
     setVitesse: vi.fn(),
     sousTitres: vi.fn(async () => sousTitres),
@@ -40,7 +41,9 @@ function fauxLecteur({ sousTitres = false } = {}) {
 }
 
 const reponses: { action: string; corps: Record<string, unknown>; init: RequestInit }[] = [];
-let resultat = { secondesVues: 10, reference: 370, terminee: false };
+let resultat: Record<string, unknown> = { secondesVues: 10, reference: 370, terminee: false };
+/** Réponses imposées, prises dans l'ordre, par action : un statut HTTP, ou « réseau » pour une coupure. */
+let imposees: Record<string, (number | "réseau")[]> = {};
 
 /** Laisse passer `secondes`, une seconde à la fois, en avançant la vidéo de `pas` secondes à chaque fois. */
 async function lirePendant(etat: { position: number }, secondes: number, pas = 1) {
@@ -79,12 +82,16 @@ describe("Lecteur aux couleurs d'Étudium", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "setInterval", "clearInterval", "clearTimeout", "Date"] });
     reponses.length = 0;
     resultat = { secondesVues: 10, reference: 370, terminee: false };
+    imposees = {};
     refresh.mockReset();
     vi.stubGlobal(
       "fetch",
       vi.fn(async (_url: string, init: RequestInit) => {
         const corps = JSON.parse(String(init.body));
         reponses.push({ action: corps.action, corps, init });
+        const impose = imposees[corps.action]?.shift();
+        if (impose === "réseau") throw new TypeError("Failed to fetch");
+        if (impose) return new Response(JSON.stringify({}), { status: impose, headers: { "content-type": "application/json" } });
         return new Response(JSON.stringify(corps.action === "commencer" ? {} : resultat), { status: 200, headers: { "content-type": "application/json" } });
       }),
     );
@@ -137,7 +144,7 @@ describe("Lecteur aux couleurs d'Étudium", () => {
     expect(reponses[0]).toMatchObject({ action: "commencer", corps: { lecon: id(1) } });
     await lirePendant(f.etat, 10);
     // Un premier envoi part au bout de 10 s (la dernière seconde peut partir avec le suivant).
-    expect(reponses.find((r) => r.action === "enregistrer")?.corps).toMatchObject({ lecon: id(1), duree: 370 });
+    expect(reponses.find((r) => r.action === "enregistrer")?.corps).toMatchObject({ lecon: id(1) });
     // Saut jusqu'à la fin, puis pause : le saut (de 10 à 361) n'est pas compté, la lecture qui suit l'est.
     f.etat.position = 360;
     await lirePendant(f.etat, 3);
@@ -208,5 +215,84 @@ describe("Lecteur aux couleurs d'Étudium", () => {
     });
     await monter({ creer });
     expect(screen.getByTitle("Vidéo : Découvrir l’interface")).toHaveAttribute("src", "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0");
+    // Le temps regardé ne peut plus être mesuré : on le dit, au lieu d'un pourcentage figé.
+    expect(screen.queryByText(/Temps réellement regardé/)).toBeNull();
+    expect(screen.getByText("Le temps regardé ne peut pas être mesuré avec ce lecteur. Rechargez la page pour réessayer.")).toBeInTheDocument();
+  });
+
+  it("une relecture de la page par le serveur (même vidéo, nouvel objet) ne recrée pas le lecteur", async () => {
+    const f = fauxLecteur();
+    const props = {
+      titre: "Découvrir l’interface",
+      leconId: id(1),
+      suivre: true,
+      passagesInitiaux: [] as [number, number][],
+      reference: 370,
+      seuil: 90,
+      termineeInitiale: false,
+      creer: f.creer,
+    };
+    const { rerender } = render(
+      <ToastProvider>
+        <LecteurEtudium video={{ ...VIDEO }} {...props} />
+      </ToastProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Lire la vidéo" }));
+    rerender(
+      <ToastProvider>
+        <LecteurEtudium video={{ ...VIDEO }} {...props} />
+      </ToastProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(f.creer).toHaveBeenCalledTimes(1);
+    expect(f.adaptateur.detruire).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Mettre en pause" })).toBeInTheDocument();
+  });
+
+  it("une durée inconnue au départ (YouTube) est relue une fois la lecture lancée", async () => {
+    const f = fauxLecteur({ durees: [0, 0, 400] });
+    await monter({ creer: f.creer, reference: 0 });
+    expect(screen.getByText("00:00 / 00:00")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Lire la vidéo" }));
+    await lirePendant(f.etat, 2);
+    expect(screen.getByText(/ \/ 06:40$/)).toBeInTheDocument();
+  });
+
+  it("si « commencer » échoue (coupure réseau), il est retenté et rien n'est perdu", async () => {
+    imposees = { commencer: ["réseau"] };
+    const f = fauxLecteur();
+    await monter({ creer: f.creer });
+    fireEvent.click(screen.getByRole("button", { name: "Lire la vidéo" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await lirePendant(f.etat, 25);
+    expect(reponses.filter((r) => r.action === "commencer").length).toBeGreaterThanOrEqual(2);
+    const envoyes = reponses.filter((r) => r.action === "enregistrer").flatMap((r) => r.corps.passages as [number, number][]);
+    expect(fusionner(envoyes)[0][0]).toBe(0);
+  });
+
+  it("après un refus (409), le visionnage repart aussitôt ; seuls les passages refusés sont perdus", async () => {
+    imposees = { enregistrer: [409] };
+    const f = fauxLecteur();
+    await monter({ creer: f.creer });
+    fireEvent.click(screen.getByRole("button", { name: "Lire la vidéo" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await lirePendant(f.etat, 10);
+    // Refus du premier envoi : « commencer » est rappelé tout de suite, sans attendre une nouvelle lecture.
+    expect(reponses.filter((r) => r.action === "commencer")).toHaveLength(2);
+    resultat = { secondesVues: 11, reference: 370, terminee: false, passages: [[9, 20]] };
+    await lirePendant(f.etat, 10);
+    const second = reponses.filter((r) => r.action === "enregistrer")[1];
+    expect((second.corps.passages as [number, number][])[0][0]).toBeGreaterThanOrEqual(9);
+    // Le pourcentage affiché suit la base : les passages refusés n'y sont pas.
+    expect(screen.getByText("Temps réellement regardé : 3 %")).toBeInTheDocument();
   });
 });

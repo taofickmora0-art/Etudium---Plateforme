@@ -190,7 +190,7 @@ Il faut la section 5 (tables et exemples du lot 1). Connecte-toi, puis ouvre **M
 Il faut la section 5 (tables et exemples du lot 1).
 
 1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0006_notes.sql` (notes privées), comme les précédents.
-2. Au back-office, ouvre **Maîtriser Microsoft Excel** → onglet Programme → leçon **Découvrir l’interface** (aperçu), et colle le lien d’une vidéo YouTube.
+2. Au back-office, ouvre **Maîtriser Microsoft Excel** → onglet Programme → leçon **Découvrir l’interface** (aperçu), colle le lien d’une vidéo YouTube et saisis sa durée exacte (par exemple 6:10) : le temps regardé se mesure par rapport à elle (tâche 1.6).
 3. Dans une **fenêtre de navigation privée** (sans compte), ouvre cette leçon depuis la fiche (lien **Aperçu**) :
    - la vidéo se lit ; un bandeau « Vous regardez un aperçu gratuit » propose de créer un compte ;
    - dans le programme à gauche, les leçons non-aperçu ont un cadenas ;

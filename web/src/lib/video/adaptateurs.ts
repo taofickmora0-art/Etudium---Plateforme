@@ -19,8 +19,12 @@ export type Adaptateur = {
   detruire(): void;
 };
 
-/** Délai au-delà duquel on revient au lecteur officiel intégré (réseau lent, bloqueur). */
-const ATTENTE = 8000;
+/**
+ * Délais au-delà desquels on revient au lecteur officiel intégré : le script (réseau coupé, bloqueur), puis la mise en
+ * route du lecteur, plus lente sur un téléphone en connexion mobile.
+ */
+const ATTENTE_SCRIPT = 15_000;
+const ATTENTE_LECTEUR = 30_000;
 
 type LecteurYouTube = {
   playVideo(): void;
@@ -63,7 +67,7 @@ declare global {
 
 const chargements = new Map<string, Promise<void>>();
 
-/** Charge un script une seule fois ; échoue après ATTENTE ou en cas d'erreur réseau. */
+/** Charge un script une seule fois ; échoue après ATTENTE_SCRIPT ou en cas d'erreur réseau. */
 function charger(src: string, dejaLa: () => boolean, attendrePret?: (fini: () => void) => void): Promise<void> {
   if (dejaLa()) return Promise.resolve();
   const existant = chargements.get(src);
@@ -74,7 +78,7 @@ function charger(src: string, dejaLa: () => boolean, attendrePret?: (fini: () =>
       chargements.delete(src);
       rejeter(new Error(`Lecteur indisponible : ${src}`));
     };
-    const delai = window.setTimeout(echouer, ATTENTE);
+    const delai = window.setTimeout(echouer, ATTENTE_SCRIPT);
     const fini = () => {
       window.clearTimeout(delai);
       resoudre();
@@ -93,9 +97,9 @@ function charger(src: string, dejaLa: () => boolean, attendrePret?: (fini: () =>
   return promesse;
 }
 
-/** Ne résout que si `promesse` aboutit avant ATTENTE. */
+/** Ne résout que si `promesse` aboutit avant ATTENTE_LECTEUR. */
 const avantDelai = <T>(promesse: Promise<T>) =>
-  Promise.race([promesse, new Promise<never>((_, rejeter) => window.setTimeout(() => rejeter(new Error("Lecteur muet")), ATTENTE))]);
+  Promise.race([promesse, new Promise<never>((_, rejeter) => window.setTimeout(() => rejeter(new Error("Lecteur muet")), ATTENTE_LECTEUR))]);
 
 async function youtube(id: string, cible: HTMLElement, ev: Evenements): Promise<Adaptateur> {
   await charger(

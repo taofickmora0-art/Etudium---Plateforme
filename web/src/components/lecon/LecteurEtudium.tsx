@@ -89,6 +89,7 @@ export function LecteurEtudium({
   termineeInitiale,
   creer = creerAdaptateur,
 }: Props) {
+  const { fournisseur, id } = video;
   const router = useRouter();
   const { toast } = useToast();
   const cadre = useRef<HTMLDivElement>(null);
@@ -98,6 +99,9 @@ export function LecteurEtudium({
   const suivi = useRef<EtatSuivi>({ position: null, instant: 0, passages: [] });
   const commence = useRef<Promise<boolean> | null>(null);
   const termineeRef = useRef(termineeInitiale);
+  // Passages déjà enregistrés par la base : le pourcentage affiché suit la base, pas seulement le navigateur.
+  const serveur = useRef<Intervalle[]>(fusionner(passagesInitiaux));
+  const titreRef = useRef(titre);
   const enLectureRef = useRef(false);
   const vitesseRef = useRef(1);
   const dureeRef = useRef(reference);
@@ -120,34 +124,60 @@ export function LecteurEtudium({
   const [referenceServeur, setReferenceServeur] = useState(reference);
   const [terminee, setTerminee] = useState(termineeInitiale);
 
-  const commencer = useCallback(() => {
-    if (!suivre) return;
-    commence.current ??= envoyerAuServeur({ action: "commencer", lecon: leconId })
-      .then((r) => r.ok)
-      .catch(() => false);
+  /** Ouvre le visionnage (une fois). Un échec (coupure réseau, refus) sera retenté au prochain envoi. */
+  const commencer = useCallback((): Promise<boolean> => {
+    if (!suivre) return Promise.resolve(false);
+    if (!commence.current) {
+      const demande = envoyerAuServeur({ action: "commencer", lecon: leconId })
+        .then((r) => r.ok)
+        .catch(() => false);
+      commence.current = demande;
+      void demande.then((ok) => {
+        if (!ok && commence.current === demande) commence.current = null;
+      });
+    }
+    return commence.current;
   }, [suivre, leconId]);
+  const commencerRef = useRef(commencer);
+
+  /** Pourcentage affiché : ce que la base a enregistré, plus ce qui attend d'être envoyé. */
+  const recalculerVus = () => setVus(fusionner([...serveur.current, ...suivi.current.passages]));
 
   /** Envoie les passages en attente. Un refus de la base les abandonne ; une coupure réseau les garde pour la suite. */
   const envoyer = useCallback(
     async (keepalive = false) => {
       if (!suivre) return;
       const lot = suivi.current.passages;
-      if (lot.length === 0 || !commence.current) return;
+      if (lot.length === 0) return;
       suivi.current = { ...suivi.current, passages: [] };
-      if (!(await commence.current)) return;
+      const remettre = () => {
+        suivi.current = { ...suivi.current, passages: fusionner([...lot, ...suivi.current.passages]) };
+      };
+      if (!(await commencer())) {
+        // Visionnage pas encore ouvert (coupure réseau) : le lot attend le prochain envoi.
+        remettre();
+        return;
+      }
       try {
         const reponse = await envoyerAuServeur(
-          { action: "enregistrer", lecon: leconId, passages: lot, position: suivi.current.position ?? 0, duree: dureeRef.current },
+          { action: "enregistrer", lecon: leconId, passages: lot, position: suivi.current.position ?? 0 },
           keepalive,
         );
         if (reponse.status === 409) {
-          // Refusé (passage trop long, autre onglet…) : on rouvrira le visionnage à la prochaine lecture.
+          // Refusé (passages trop longs, autre onglet…) : seuls ces passages sont perdus ; le visionnage repart aussitôt.
           commence.current = null;
+          void commencer();
+          recalculerVus();
           return;
         }
-        if (!reponse.ok) return;
-        const resultat = (await reponse.json()) as { reference?: number; terminee?: boolean };
+        if (!reponse.ok) {
+          remettre();
+          return;
+        }
+        const resultat = (await reponse.json()) as { reference?: number; terminee?: boolean; passages?: Intervalle[] };
         if (resultat.reference) setReferenceServeur(resultat.reference);
+        if (resultat.passages) serveur.current = fusionner(resultat.passages);
+        recalculerVus();
         if (resultat.terminee && !termineeRef.current) {
           termineeRef.current = true;
           setTerminee(true);
@@ -155,15 +185,32 @@ export function LecteurEtudium({
           router.refresh();
         }
       } catch {
-        suivi.current = { ...suivi.current, passages: fusionner([...lot, ...suivi.current.passages]) };
+        remettre();
       }
     },
-    [suivre, leconId, toast, router],
+    [suivre, leconId, toast, router, commencer],
   );
   const envoyerRef = useRef(envoyer);
   useEffect(() => {
     envoyerRef.current = envoyer;
-  }, [envoyer]);
+    commencerRef.current = commencer;
+    titreRef.current = titre;
+  }, [envoyer, commencer, titre]);
+
+  /** Relit la durée tant qu'elle est inconnue (YouTube la donne parfois à 0 avant la lecture). */
+  const relireDuree = (a: Adaptateur) => {
+    if (dureeRef.current > 0) return;
+    void a
+      .duree()
+      .then((d) => {
+        if (d > 0 && dureeRef.current <= 0) {
+          dureeRef.current = d;
+          setDuree(d);
+        }
+      })
+      .catch(() => undefined);
+  };
+  const relireDureeRef = useRef(relireDuree);
 
   // Création du lecteur officiel.
   useEffect(() => {
@@ -178,15 +225,22 @@ export function LecteurEtudium({
         setEnLecture(lecture);
         if (lecture) {
           setDemarre(true);
-          commencer();
-          void adaptateur.current?.position().then((p) => {
-            suivi.current = { ...suivi.current, position: p, instant: Date.now() };
-          });
+          void commencerRef.current();
+          const a = adaptateur.current;
+          if (a) {
+            relireDureeRef.current(a);
+            void a
+              .position()
+              .then((p) => {
+                suivi.current = { ...suivi.current, position: p, instant: Date.now() };
+              })
+              .catch(() => undefined);
+          }
         } else void envoyerRef.current();
       },
       fin: () => void envoyerRef.current(),
     };
-    creer(video, conteneur.current!, evenements)
+    creer({ fournisseur, id }, conteneur.current!, evenements)
       .then((a) => {
         if (annule) return a.detruire();
         adaptateur.current = a;
@@ -194,15 +248,21 @@ export function LecteurEtudium({
         // L'iframe officielle ne prend ni les clics ni le clavier : les commandes Étudium sont au-dessus.
         conteneur.current?.querySelectorAll("iframe").forEach((f) => {
           f.tabIndex = -1;
-          f.title = `Vidéo : ${titre}`;
+          f.title = `Vidéo : ${titreRef.current}`;
         });
-        void a.duree().then((d) => {
-          if (!annule && d > 0) {
-            dureeRef.current = d;
-            setDuree(d);
-          }
-        });
-        void a.sousTitres().then((oui) => !annule && setSousTitresDispo(oui));
+        void a
+          .duree()
+          .then((d) => {
+            if (!annule && d > 0) {
+              dureeRef.current = d;
+              setDuree(d);
+            }
+          })
+          .catch(() => undefined);
+        void a
+          .sousTitres()
+          .then((oui) => !annule && setSousTitresDispo(oui))
+          .catch(() => undefined);
       })
       .catch(() => {
         if (!annule) setEchec(true);
@@ -212,8 +272,13 @@ export function LecteurEtudium({
       void envoyerRef.current(true);
       adaptateur.current?.detruire();
       adaptateur.current = null;
+      enLectureRef.current = false;
+      setPret(false);
+      setEnLecture(false);
+      setDemarre(false);
     };
-  }, [creer, video, titre, commencer]);
+    // Une relecture de la page par le serveur donne un nouvel objet `video` : seuls le fournisseur et l'identifiant comptent.
+  }, [creer, fournisseur, id]);
 
   // Une observation par seconde : position affichée, passages réellement lus.
   useEffect(() => {
@@ -221,7 +286,13 @@ export function LecteurEtudium({
     const minuteur = window.setInterval(async () => {
       const a = adaptateur.current;
       if (!a) return;
-      const p = await a.position();
+      relireDureeRef.current(a);
+      let p: number;
+      try {
+        p = await a.position();
+      } catch {
+        return;
+      }
       setPosition(p);
       const avant = suivi.current;
       const apres = observer(avant, { position: p, instant: Date.now(), vitesse: vitesseRef.current, enLecture: enLectureRef.current });
@@ -261,7 +332,7 @@ export function LecteurEtudium({
   const lire = () => adaptateur.current?.lire();
   const basculer = () => (enLecture ? adaptateur.current?.pause() : lire());
 
-  const ligne = suivre && (
+  const ligne = suivre && !echec && (
     <div className="flex flex-wrap items-center gap-[7px] text-xs leading-[18px] text-discret">
       {terminee ? (
         <span className="flex items-center gap-1 font-medium text-reussite-texte">
@@ -282,7 +353,9 @@ export function LecteurEtudium({
     return (
       <div className="flex min-w-0 flex-col gap-2.5">
         <LecteurVideo video={video} titre={titre} />
-        {ligne}
+        {suivre && (
+          <p className="m-0 text-xs leading-[18px] text-discret">Le temps regardé ne peut pas être mesuré avec ce lecteur. Rechargez la page pour réessayer.</p>
+        )}
       </div>
     );
   }
