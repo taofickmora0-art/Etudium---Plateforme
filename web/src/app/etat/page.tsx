@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/Button";
@@ -40,8 +41,10 @@ async function EtatConnexion() {
   return <Encadre {...await lireEtat()} />;
 }
 
-/** État de l’application (tâche 0.1) : la base de test est-elle joignable ? Ouverte sans compte. */
+/** État de l’application (tâche 0.1) : la base de test est-elle joignable ? Sur l’ordinateur seulement, ouverte sans compte. */
 export default function EtatPage() {
+  // Outil de développement : en ligne, il dévoilerait la configuration (spec : rien de technique n'est public).
+  if (!devOnlyPagesVisible()) notFound();
   return (
     <div className="flex min-h-screen flex-col bg-page px-5 pb-5">
       <header className="flex items-center py-5">

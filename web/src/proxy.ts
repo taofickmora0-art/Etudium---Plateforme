@@ -59,6 +59,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Tout sauf les fichiers de Next et les fichiers statiques (avec extension).
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.[a-zA-Z0-9]+$).*)"],
+  // Tout sauf les fichiers de Next et les vrais fichiers statiques (images, icônes, manifeste, polices…).
+  // Une page dont l'adresse contient un point (« /formations/python-3.12 ») reste surveillée.
+  matcher: ["/((?!_next/static|_next/image|.*\\.(?:ico|png|jpe?g|gif|webp|avif|svg|css|js|map|txt|xml|webmanifest|woff2?|ttf|pdf)$).*)"],
 };

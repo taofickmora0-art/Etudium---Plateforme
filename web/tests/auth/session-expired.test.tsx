@@ -19,4 +19,12 @@ describe("Session expirée", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(replace).toHaveBeenCalledWith("/connexion");
   });
+
+  it("« Se reconnecter » garde la page demandée", async () => {
+    const user = userEvent.setup();
+    replace.mockClear();
+    render(<SessionExpiredDialog next="/certificats" />);
+    await user.click(screen.getByRole("button", { name: "Se reconnecter" }));
+    expect(replace).toHaveBeenCalledWith("/connexion?next=%2Fcertificats");
+  });
 });

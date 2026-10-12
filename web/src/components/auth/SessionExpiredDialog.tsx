@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 
 /** « Votre session a expiré » (NdSessionExpiree), par-dessus la connexion : se ferme seulement par « Se reconnecter ». */
-export function SessionExpiredDialog() {
+export function SessionExpiredDialog({ next }: { next?: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(true);
   const fermer = () => {
     setOpen(false);
-    router.replace("/connexion");
+    // Nettoie l'adresse (plus de fenêtre au rechargement) en gardant la page demandée.
+    router.replace(next ? `/connexion?next=${encodeURIComponent(next)}` : "/connexion");
   };
   return (
     <Dialog

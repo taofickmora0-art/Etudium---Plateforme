@@ -26,14 +26,15 @@ export function routeFor({ pathname, signedIn, hadSession }: Situation): { redir
   if (pathname === "/") return { redirect: signedIn ? "/accueil" : "/connexion" };
   if (!dans(pathname, PAGES_PUBLIQUES) && !signedIn) {
     // Un cookie de session était là mais n'est plus valable : on l'annonce (fenêtre « Votre session a expiré »).
-    return { redirect: hadSession ? "/connexion?session=expiree" : `/connexion?next=${encodeURIComponent(pathname)}` };
+    const next = `next=${encodeURIComponent(pathname)}`;
+    return { redirect: hadSession ? `/connexion?session=expiree&${next}` : `/connexion?${next}` };
   }
   if (dans(pathname, ECRANS_DE_COMPTE) && signedIn) return { redirect: "/accueil" };
   return {};
 }
 
 /** Un cookie de session Supabase (« sb-<projet>-auth-token », éventuellement découpé en morceaux) est-il présent ? */
-export const hasSessionCookie = (names: string[]) => names.some((n) => /^sb-.+-auth-token/.test(n));
+export const hasSessionCookie = (names: string[]) => names.some((n) => /^sb-.+-auth-token(\.\d+)?$/.test(n));
 
 /**
  * Mode démonstration : sur l'ordinateur de développement, tant que la base de test n'est pas configurée,

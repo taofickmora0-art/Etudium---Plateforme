@@ -27,7 +27,7 @@ function AvisDeConnexion() {
   const adresse = useSearchParams();
   return (
     <>
-      {adresse.get("session") === "expiree" && <SessionExpiredDialog />}
+      {adresse.get("session") === "expiree" && <SessionExpiredDialog next={adresse.get("next") ? safeNext(adresse.get("next")) : undefined} />}
       {adresse.get("compte") === "supprime" && <Banner tone="reussite" title="Votre compte a été supprimé." />}
       {adresse.get("erreur") === "google" && (
         <Banner tone="erreur" title="La connexion avec Google n’a pas abouti.">

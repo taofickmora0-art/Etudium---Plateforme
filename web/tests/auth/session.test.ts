@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isDemoMode, routeFor } from "@/lib/auth/routing";
+import { hasSessionCookie, isDemoMode, routeFor } from "@/lib/auth/routing";
 import { withRememberChoice } from "@/lib/auth/session-cookies";
 
 const TRENTE_JOURS = 30 * 24 * 60 * 60;
@@ -21,6 +21,16 @@ describe("Se souvenir de moi", () => {
 });
 
 describe("Pages protégées", () => {
+  it("une session expirée garde la page demandée", () => {
+    expect(routeFor({ pathname: "/certificats", signedIn: false, hadSession: true })).toEqual({ redirect: "/connexion?session=expiree&next=%2Fcertificats" });
+  });
+
+  it("le cookie d'une connexion Google abandonnée n'est pas une session", () => {
+    expect(hasSessionCookie(["sb-projet-auth-token-code-verifier"])).toBe(false);
+    expect(hasSessionCookie(["sb-projet-auth-token"])).toBe(true);
+    expect(hasSessionCookie(["sb-projet-auth-token.0", "sb-projet-auth-token.1"])).toBe(true);
+  });
+
   it("une page de l'espace connecté non listée est protégée d'office", () => {
     expect(routeFor({ pathname: "/nouvelle-page", signedIn: false, hadSession: false })).toEqual({ redirect: "/connexion?next=%2Fnouvelle-page" });
     expect(routeFor({ pathname: "/admin", signedIn: false, hadSession: false })).toEqual({ redirect: "/connexion?next=%2Fadmin" });
@@ -65,7 +75,7 @@ describe("Pages protégées", () => {
   });
 
   it("une session expirée l'annonce", () => {
-    expect(routeFor({ pathname: "/accueil", signedIn: false, hadSession: true })).toEqual({ redirect: "/connexion?session=expiree" });
+    expect(routeFor({ pathname: "/accueil", signedIn: false, hadSession: true })).toEqual({ redirect: "/connexion?session=expiree&next=%2Faccueil" });
   });
 
   it("un compte connecté ne revoit pas la connexion", () => {
