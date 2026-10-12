@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
+  experimental: {
+    // Photo de profil : 2 Mo au plus, plus l'enveloppe de l'envoi (1 Mo par défaut).
+    serverActions: { bodySizeLimit: "3mb" },
+  },
   turbopack: {
     rules: {
       "*.css": {

@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import { Avatar } from "@/components/ui/Avatar";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
@@ -13,6 +12,7 @@ import { IDLE, type FormState } from "@/lib/auth/schemas";
 import { updateProfile } from "@/lib/profile/actions";
 import type { ProfileData } from "@/lib/profile/data";
 import { NIVEAUX, PAYS } from "@/lib/profile/options";
+import { PhotoPicker } from "./PhotoPicker";
 
 const CHOISIR = { value: "", label: "Choisir…" };
 const GRILLE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(220px,calc((100%-16px)/2))),1fr))] gap-4";
@@ -30,9 +30,9 @@ export function InformationsTab({ profile }: { profile: ProfileData }) {
   const valeur = (champ: string, enregistre: string | null) => state.values?.[champ] ?? enregistre ?? "";
 
   return (
-    <div className="max-w-[680px] rounded-carte border border-bordure-carte bg-panneau p-6">
+    <div className="flex max-w-[680px] flex-col gap-5 rounded-carte border border-bordure-carte bg-panneau p-6">
+      <PhotoPicker initials={profile.initials} photoUrl={profile.photoUrl} name={`${profile.prenom} ${profile.nom}`} />
       <form action={action} noValidate className="flex flex-col gap-5">
-        <Avatar initials={profile.initials} src={profile.photoUrl} size={64} name={`${profile.prenom} ${profile.nom}`} />
         {state.status === "error" && state.message && <Banner tone="erreur" title={state.message} />}
         <div className={GRILLE}>
           <Field label="Prénom" htmlFor="profil-prenom" error={e.prenom}>

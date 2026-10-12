@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { authErrorMessage } from "@/lib/auth/messages";
 import { fieldErrorsFrom, type FormState } from "@/lib/auth/schemas";
 import { createClient } from "@/lib/supabase/server";
+import { detectImageType, PHOTO_MAX_OCTETS, PHOTO_TROP_LOURDE, PHOTO_TYPE } from "./photo";
 import { profileSchema } from "./schemas";
 
 // Actions serveur de « Mon profil ». Chacune revérifie la session auprès de Supabase : on ne fait jamais confiance au navigateur.
@@ -37,4 +38,40 @@ export async function updateProfile(_prev: FormState, formData: FormData): Promi
   // Le nom affiché dans l'en-tête et les menus suit.
   refresh();
   return { status: "success", values };
+}
+
+const PHOTO_ECHEC = "La photo n’a pas pu être enregistrée. Réessayez.";
+
+/** Photo de profil (NdProfil, « Changer la photo ») : contrôlée ici même si le navigateur l'a déjà fait. */
+export async function updatePhoto(_prev: FormState, formData: FormData): Promise<FormState> {
+  const fichier = formData.get("photo");
+  if (!(fichier instanceof File) || fichier.size === 0) return { status: "error", message: PHOTO_TYPE };
+  if (fichier.size > PHOTO_MAX_OCTETS) return { status: "error", message: PHOTO_TROP_LOURDE };
+  const octets = new Uint8Array(await fichier.arrayBuffer());
+  const type = detectImageType(octets);
+  if (!type) return { status: "error", message: PHOTO_TYPE };
+
+  try {
+    const { supabase, user } = await sessionUser();
+    if (!user) return { status: "error", message: SESSION_EXPIREE };
+    // Nom aléatoire à chaque envoi : l'adresse change, aucun cache ne montre l'ancienne photo.
+    const chemin = `${user.id}/${crypto.randomUUID()}.${type === "image/png" ? "png" : "jpg"}`;
+    const photos = supabase.storage.from("photos-profil");
+    const envoi = await photos.upload(chemin, octets, { contentType: type, upsert: false, cacheControl: "31536000" });
+    if (envoi.error) return { status: "error", message: PHOTO_ECHEC };
+    const { data } = photos.getPublicUrl(chemin);
+    const maj = await supabase.from("profils").update({ photo_url: data.publicUrl }).eq("id", user.id);
+    if (maj.error) {
+      await photos.remove([chemin]);
+      return { status: "error", message: PHOTO_ECHEC };
+    }
+    // Les anciennes photos du dossier ne servent plus.
+    const { data: fichiers } = await photos.list(user.id);
+    const anciennes = (fichiers ?? []).map((f) => `${user.id}/${f.name}`).filter((c) => c !== chemin);
+    if (anciennes.length > 0) await photos.remove(anciennes);
+  } catch {
+    return { status: "error", message: PHOTO_ECHEC };
+  }
+  refresh();
+  return { status: "success" };
 }
