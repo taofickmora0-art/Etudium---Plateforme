@@ -36,7 +36,8 @@ function LigneFormation({ carte, rang, progression }: { carte: CarteCatalogue; r
         {/* Sur téléphone, la barre se masque et l'état passe sous le titre : le titre garde toute la largeur. */}
         <span className="flex min-w-0 flex-1 flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:gap-3.5">
           <span className="w-full min-w-0 text-[15px] leading-[22px] font-medium text-encre sm:w-auto sm:flex-1">{carte.titre}</span>
-          <span className="w-[120px] flex-none max-sm:hidden">
+          {/* Décorative : l'état à droite (« 68 % », « Terminé ») le dit déjà ; sinon sa valeur s'ajouterait au nom du lien. */}
+          <span aria-hidden="true" className="w-[120px] flex-none max-sm:hidden">
             <ProgressBar value={progression?.pourcentage ?? 0} label={`Progression : ${carte.titre}`} className="h-1.5" />
           </span>
           <span className="flex flex-none sm:w-[100px] sm:justify-end">

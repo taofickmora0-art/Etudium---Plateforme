@@ -52,7 +52,25 @@ describe("Page Mes parcours", () => {
     render(<MesParcours parcours={PARCOURS} cartes={CARTES_DESIGN} progressions={progressions} />);
     const excel = screen.getByRole("link", { name: /Maîtriser Microsoft Excel/ });
     expect(within(excel).getByText("68 %")).toBeInTheDocument();
-    expect(within(excel).getByRole("progressbar")).toHaveAttribute("aria-valuenow", "68");
+    // La barre est décorative dans le lien : l'état (« 68 % ») le dit déjà.
+    expect(within(excel).getByRole("progressbar", { hidden: true })).toHaveAttribute("aria-valuenow", "68");
+  });
+
+  it("le nom de chaque ligne se limite au titre et à l'état, sans la barre de progression", () => {
+    const progressions = new Map([["maitriser-microsoft-excel", { pourcentage: 68, terminee: false }]]);
+    render(<MesParcours parcours={PARCOURS} cartes={CARTES_DESIGN} progressions={progressions} />);
+    const liste = screen.getByRole("list", { name: "Formations du parcours Réussite académique" });
+    // jsdom n'applique pas le CSS : il colle les morceaux du nom sans espace. On compare donc hors espaces.
+    const sansEspaces = (texte: string) => texte.replace(/\s/g, "");
+    for (const attendu of [
+      "Microsoft Word pour vos travaux universitaires Verrouillée",
+      "Maîtriser Microsoft Excel 68 %",
+      "PowerPoint : réussir sa soutenance Verrouillée",
+      "Zotero : gérer ses références Gratuite",
+      "Méthodologie du mémoire Verrouillée",
+    ]) {
+      expect(within(liste).getByRole("link", { name: (nom) => sansEspaces(nom) === sansEspaces(attendu) })).toBeInTheDocument();
+    }
   });
 
   it("l'onglet Digital montre ses formations", async () => {
