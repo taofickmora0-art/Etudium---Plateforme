@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { AvatarImage } from "./AvatarImage";
 
 // Planche « Boutons », « Avatars et progression ».
 const SIZES = {
@@ -35,8 +36,7 @@ export function Avatar({ initials, size = 40, tone = "bleu", name, src, classNam
       {...(name ? { role: "img", "aria-label": name } : {})}
     >
       {src ? (
-        // eslint-disable-next-line @next/next/no-img-element -- photo déjà réduite à 512 px à l'envoi, servie par Supabase
-        <img src={src} alt="" className="size-full object-cover" />
+        <AvatarImage key={src} src={src} initials={initials} hideInitials={Boolean(name)} />
       ) : (
         <span aria-hidden={name ? true : undefined}>{initials}</span>
       )}

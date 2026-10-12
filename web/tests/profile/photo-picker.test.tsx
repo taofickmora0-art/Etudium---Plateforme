@@ -21,6 +21,28 @@ describe("Changer la photo", () => {
     expect(updatePhoto).not.toHaveBeenCalled();
   });
 
+  it("un texte renommé en .jpg est refusé dans le navigateur", async () => {
+    vi.mocked(updatePhoto).mockReset();
+    const { container } = render(
+      <ToastProvider>
+        <PhotoPicker initials="AK" photoUrl={null} name="Aïcha Kpadé" />
+      </ToastProvider>,
+    );
+    const champ = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+    fireEvent.change(champ, { target: { files: [new File(["bonjour, je suis un texte"], "photo.jpg", { type: "image/jpeg" })] } });
+    expect(await screen.findByRole("alert")).toHaveTextContent("Choisissez une image JPG ou PNG.");
+    expect(updatePhoto).not.toHaveBeenCalled();
+  });
+
+  it("l'aide de la photo est annoncée avec le bouton", () => {
+    render(
+      <ToastProvider>
+        <PhotoPicker initials="AK" photoUrl={null} name="Aïcha Kpadé" />
+      </ToastProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Changer la photo" })).toHaveAccessibleDescription("JPG ou PNG, 2 Mo maximum.");
+  });
+
   it("une coupure réseau pendant l'envoi est annoncée", async () => {
     vi.mocked(updatePhoto).mockRejectedValue(new TypeError("Failed to fetch"));
     const { container } = render(

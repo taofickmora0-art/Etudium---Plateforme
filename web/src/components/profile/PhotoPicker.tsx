@@ -1,12 +1,12 @@
 "use client";
 
-import { useRef, useState, useTransition, type ChangeEvent } from "react";
+import { useId, useRef, useState, useTransition, type ChangeEvent } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { IDLE } from "@/lib/auth/schemas";
 import { updatePhoto } from "@/lib/profile/actions";
-import { checkPhotoFile, PHOTO_ECHEC, PHOTO_MAX_OCTETS, PHOTO_TROP_LOURDE } from "@/lib/profile/photo";
+import { checkPhotoFile, detectImageType, PHOTO_ECHEC, PHOTO_MAX_OCTETS, PHOTO_TROP_LOURDE, PHOTO_TYPE } from "@/lib/profile/photo";
 import { resizePhoto } from "@/lib/profile/resize-photo";
 
 /** Photo et « Changer la photo » (NdProfil). La photo est réduite dans le navigateur avant l'envoi. */
@@ -15,6 +15,7 @@ export function PhotoPicker({ initials, photoUrl, name }: { initials: string; ph
   const champ = useRef<HTMLInputElement>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, demarrer] = useTransition();
+  const aideId = useId();
 
   const choisir = (event: ChangeEvent<HTMLInputElement>) => {
     const fichier = event.target.files?.[0];
@@ -28,6 +29,12 @@ export function PhotoPicker({ initials, photoUrl, name }: { initials: string; ph
     }
     setErreur(null);
     demarrer(async () => {
+      // La signature du fichier, pas son nom : un texte renommé en .jpg n'est pas envoyé.
+      const debut = new Uint8Array(await fichier.slice(0, 8).arrayBuffer());
+      if (!detectImageType(debut)) {
+        setErreur(PHOTO_TYPE);
+        return;
+      }
       const reduite = await resizePhoto(fichier);
       if (reduite.size > PHOTO_MAX_OCTETS) {
         setErreur(PHOTO_TROP_LOURDE);
@@ -50,16 +57,26 @@ export function PhotoPicker({ initials, photoUrl, name }: { initials: string; ph
     <div className="flex flex-wrap items-center gap-4">
       <Avatar initials={initials} src={photoUrl} size={64} name={name} />
       <div className="flex min-w-0 flex-col gap-1.5">
-        <Button type="button" variant="contour" size="sm" className="self-start" loading={envoi} onClick={() => champ.current?.click()}>
+        <Button
+          type="button"
+          variant="contour"
+          size="sm"
+          className="self-start"
+          loading={envoi}
+          aria-describedby={aideId}
+          onClick={() => champ.current?.click()}
+        >
           Changer la photo
         </Button>
         <input ref={champ} type="file" accept="image/jpeg,image/png" className="sr-only" tabIndex={-1} aria-hidden="true" onChange={choisir} />
         {erreur ? (
-          <span role="alert" className="text-xs leading-[18px] text-erreur-texte">
+          <span id={aideId} role="alert" className="text-xs leading-[18px] text-erreur-texte">
             {erreur}
           </span>
         ) : (
-          <span className="text-xs leading-[18px] text-discret">JPG ou PNG, 2 Mo maximum.</span>
+          <span id={aideId} className="text-xs leading-[18px] text-discret">
+            JPG ou PNG, 2 Mo maximum.
+          </span>
         )}
       </div>
     </div>

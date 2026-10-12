@@ -51,6 +51,18 @@ describe("Photo de profil : règles", () => {
   });
 });
 
+describe("Photo de profil : réduction", () => {
+  it("la rotation des photos de téléphone est respectée", async () => {
+    const { resizePhoto } = await import("@/lib/profile/resize-photo");
+    const lire = vi.fn().mockRejectedValue(new Error("illisible"));
+    vi.stubGlobal("createImageBitmap", lire);
+    const original = new File(["x"], "photo.jpg", { type: "image/jpeg" });
+    expect(await resizePhoto(original)).toBe(original);
+    expect(lire).toHaveBeenCalledWith(original, { imageOrientation: "from-image" });
+    vi.unstubAllGlobals();
+  });
+});
+
 describe("Photo de profil : envoi", () => {
   beforeEach(() => {
     [auth.getUser, update, refresh, ...Object.values(stockage)].forEach((f) => f.mockReset());
@@ -79,7 +91,7 @@ describe("Photo de profil : envoi", () => {
     expect(state.status).toBe("success");
     const [chemin, , options] = stockage.upload.mock.calls[0];
     expect(chemin).toMatch(/^u1\/[0-9a-f-]{36}\.jpg$/);
-    expect(options).toMatchObject({ contentType: "image/jpeg", upsert: false });
+    expect(options).toMatchObject({ contentType: "image/jpeg", upsert: false, cacheControl: "604800" });
     expect(update).toHaveBeenCalledWith({ photo_url: `https://projet.supabase.co/storage/v1/object/public/photos-profil/${chemin}` });
     expect(stockage.remove).toHaveBeenCalledWith(["u1/ancienne.jpg"]);
     expect(refresh).toHaveBeenCalled();

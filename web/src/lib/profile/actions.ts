@@ -57,7 +57,7 @@ export async function updatePhoto(_prev: FormState, formData: FormData): Promise
     // Nom aléatoire à chaque envoi : l'adresse change, aucun cache ne montre l'ancienne photo.
     const chemin = `${user.id}/${crypto.randomUUID()}.${type === "image/png" ? "png" : "jpg"}`;
     const photos = supabase.storage.from("photos-profil");
-    const envoi = await photos.upload(chemin, octets, { contentType: type, upsert: false, cacheControl: "31536000" });
+    const envoi = await photos.upload(chemin, octets, { contentType: type, upsert: false, cacheControl: "604800" });
     if (envoi.error) return { status: "error", message: PHOTO_ECHEC };
     const { data } = photos.getPublicUrl(chemin);
     const maj = await supabase.from("profils").update({ photo_url: data.publicUrl }).eq("id", user.id);
@@ -124,10 +124,13 @@ export async function deleteAccount(): Promise<void> {
   const { supabase, user } = await sessionUser();
   if (!user) throw new Error("Session expirée");
   const photos = supabase.storage.from("photos-profil");
-  const { data: fichiers } = await photos.list(user.id);
-  const chemins = (fichiers ?? []).map((f) => `${user.id}/${f.name}`);
+  // Si les photos ne peuvent pas être effacées, on s'arrête : sinon elles resteraient en ligne, sans propriétaire.
+  const liste = await photos.list(user.id);
+  if (liste.error) throw new Error("Photos illisibles");
+  const chemins = (liste.data ?? []).map((f) => `${user.id}/${f.name}`);
   if (chemins.length > 0) {
-    await photos.remove(chemins);
+    const effacement = await photos.remove(chemins);
+    if (effacement.error) throw new Error("Photos non effacées");
     await supabase.from("profils").update({ photo_url: null }).eq("id", user.id);
   }
   const { error } = await supabase.rpc("supprimer_mon_compte");

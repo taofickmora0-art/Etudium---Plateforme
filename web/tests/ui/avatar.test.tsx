@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { Avatar } from "@/components/ui/Avatar";
 
@@ -12,5 +12,12 @@ describe("Avatar", () => {
     unmount();
     render(<Avatar initials="AK" />);
     expect(screen.getByText("AK")).toBeInTheDocument();
+  });
+
+  it("une photo qui ne se charge pas laisse place aux initiales", () => {
+    const { container } = render(<Avatar initials="AK" src="https://projet.supabase.co/disparue.jpg" />);
+    fireEvent.error(container.querySelector("img")!);
+    expect(screen.getByText("AK")).toBeInTheDocument();
+    expect(container.querySelector("img")).toBeNull();
   });
 });

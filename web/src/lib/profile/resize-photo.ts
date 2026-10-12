@@ -7,7 +7,8 @@ import { squareCrop } from "./photo";
  */
 export async function resizePhoto(file: File): Promise<File> {
   try {
-    const image = await createImageBitmap(file);
+    // Les photos de téléphone portent leur sens dans l'EXIF : on le respecte, pour ne pas les envoyer couchées.
+    const image = await createImageBitmap(file, { imageOrientation: "from-image" });
     const { sx, sy, side, size } = squareCrop(image.width, image.height);
     const canvas = document.createElement("canvas");
     canvas.width = size;

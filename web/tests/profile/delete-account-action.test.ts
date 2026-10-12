@@ -53,6 +53,16 @@ describe("Supprimer son compte", () => {
     expect(jar.has("sb-projet-auth-token")).toBe(true);
   });
 
+  it("si les photos ne peuvent pas être effacées, le compte n'est pas supprimé", async () => {
+    stockage.remove.mockResolvedValue({ data: null, error: { message: "refus" } });
+    await expect(deleteAccount()).rejects.toThrow();
+    expect(rpc).not.toHaveBeenCalled();
+    stockage.remove.mockReset();
+    stockage.list.mockResolvedValue({ data: null, error: { message: "refus" } });
+    await expect(deleteAccount()).rejects.toThrow();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("sans session, rien n'est supprimé", async () => {
     auth.getUser.mockResolvedValue({ data: { user: null }, error: { code: "session_not_found" } });
     await expect(deleteAccount()).rejects.toThrow();
