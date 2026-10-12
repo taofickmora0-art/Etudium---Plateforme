@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { demoModeActive } from "@/lib/auth/current-user";
 import type { Badge, CouleurParcours, Niveau } from "@/lib/contenus/libelles";
 import { liste, parOrdre, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
@@ -73,8 +74,11 @@ const versLecon = (l: Ligne): LeconFiche & { ordre: number } => ({
   ordre: Number(l.ordre ?? 0),
 });
 
-/** La fiche d'une formation publiée, avec son programme dans l'ordre ; null si l'adresse ne correspond à rien. */
-export async function getFiche(slug: string): Promise<FicheFormation | null> {
+/**
+ * La fiche d'une formation publiée, avec son programme dans l'ordre ; null si l'adresse ne correspond à rien.
+ * Lue une seule fois par requête : la page et ses métadonnées (aperçu du lien) la demandent toutes deux.
+ */
+export const getFiche = cache(async (slug: string): Promise<FicheFormation | null> => {
   if (demoModeActive() || !ADRESSE.test(slug)) return null;
   const supabase = await createClient();
   const f = verifier(
@@ -113,4 +117,4 @@ export async function getFiche(slug: string): Promise<FicheFormation | null> {
       }),
     ),
   };
-}
+});

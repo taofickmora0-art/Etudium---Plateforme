@@ -1,14 +1,26 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { FicheConnectee } from "@/components/catalogue/FicheConnectee";
 import { FichePublique } from "@/components/catalogue/FichePublique";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { getFiche } from "@/lib/catalogue/data";
+import { metadonneesFiche } from "@/lib/catalogue/partage";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { compteConnecte } from "@/lib/catalogue/visiteur";
 
 type Params = { params: Promise<{ slug: string }> };
+
+/** Titre, description et image du lien partagé (spec du lot 1, §9). */
+export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const { slug } = await params;
+  try {
+    return metadonneesFiche(await getFiche(slug));
+  } catch {
+    return metadonneesFiche(null);
+  }
+}
 
 async function Fiche({ params }: Params) {
   const [compte, { slug }] = await Promise.all([compteConnecte(), params]);
