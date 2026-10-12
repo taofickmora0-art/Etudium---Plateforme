@@ -35,6 +35,10 @@ Le cahier des charges ne répond pas à ces questions. Pour chacune, je te fais 
 
 Une seule adresse par formation, pour le visiteur comme pour l'étudiant : le lien partagé sur WhatsApp fonctionne pour tout le monde. La page s'adapte à la personne (vue publique ou vue inscrite).
 
+- **Adresses des formations :** lettres minuscules sans accents, chiffres et tirets seulement (`maitriser-microsoft-excel`, `node-js`), jamais de point. Elles sont créées à partir du titre et restent fixes une fois la formation publiée, pour que les liens partagés continuent de marcher.
+- **Image de partage :** son adresse est publique, car WhatsApp la lit sans compte.
+- **Après une reconnexion :** on revient à la page demandée avec ses filtres (`/formations?parcours=digital`), pas seulement à la page.
+
 | Adresse | Écran du design | Ce qui fonctionne |
 |---|---|---|
 | `/` | `NdLanding` | Landing page (visiteur). Un compte connecté va directement à `/accueil`. |
