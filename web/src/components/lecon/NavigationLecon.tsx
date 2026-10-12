@@ -6,49 +6,53 @@ import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
 import { voisines } from "@/lib/lecon/regles";
+import { BoutonFin } from "./BoutonFin";
 
 type Props = { fiche: FicheFormation; leconId: string };
 
-/** Ordinateur (NdLecon §2.6) : « Leçon précédente » à gauche, « Leçon suivante » à droite ; une voisine absente disparaît. */
+/**
+ * Ordinateur (NdLecon §2.6) : « Leçon précédente » à gauche ; à droite, le bouton de fin et « Leçon suivante ».
+ * Une voisine absente disparaît.
+ */
 export function NavigationLecon({ fiche, leconId }: Props) {
   const { precedente, suivante } = voisines(fiche.modules, leconId);
-  if (!precedente && !suivante) return null;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 max-lg:hidden">
+    <div className="flex flex-wrap items-start justify-between gap-2 max-lg:hidden">
       {precedente && (
         <Link href={adresseLecon(fiche.slug, precedente.id)} className={buttonVariants({ variant: "contour" })}>
           <Icon icon={ArrowLeft02Icon} size={18} />
           <span>Leçon précédente</span>
         </Link>
       )}
-      {suivante && (
-        <Link href={adresseLecon(fiche.slug, suivante.id)} className={cn(buttonVariants({ variant: "contour" }), "ml-auto")}>
-          <span>Leçon suivante</span>
-          <Icon icon={ArrowRight02Icon} size={18} />
-        </Link>
-      )}
+      <div className="ml-auto flex flex-wrap items-start gap-2">
+        <BoutonFin leconId={leconId} variante="ordinateur" />
+        {suivante && (
+          <Link href={adresseLecon(fiche.slug, suivante.id)} className={buttonVariants({ variant: "contour" })}>
+            <span>Leçon suivante</span>
+            <Icon icon={ArrowRight02Icon} size={18} />
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
 
 /**
- * Barre basse du téléphone (NdMobLecon §3.8), toujours visible. La tâche 1.7 y placera « Marquer comme terminée » ;
- * d'ici là, « Leçon suivante » tient la place du bouton principal.
+ * Barre basse du téléphone (NdMobLecon §3.8), toujours visible : « Leçon précédente » et le bouton de fin, qui mène à
+ * la leçon suivante une fois la leçon terminée (et pour un visiteur, qui n'a rien à terminer).
  */
 export function BarreLecon({ fiche, leconId }: Props) {
   const { precedente, suivante } = voisines(fiche.modules, leconId);
   return (
-    <div className="flex gap-2">
+    <div className="flex items-end gap-2">
       {precedente && (
         <Link href={adresseLecon(fiche.slug, precedente.id)} className={cn(buttonVariants({ variant: "contour" }), "h-12 flex-none px-2.5")}>
           Leçon précédente
         </Link>
       )}
-      {suivante && (
-        <Link href={adresseLecon(fiche.slug, suivante.id)} className={cn(buttonVariants(), "h-12 min-w-0 flex-1 px-2.5")}>
-          Leçon suivante
-        </Link>
-      )}
+      <div className="flex min-w-0 flex-1">
+        <BoutonFin leconId={leconId} variante="telephone" suivante={suivante ? adresseLecon(fiche.slug, suivante.id) : undefined} />
+      </div>
     </div>
   );
 }

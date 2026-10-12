@@ -10,7 +10,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({ ...faux.client, auth: { getUser: async () => ({ data: { user: compte }, error: null }) } }),
 }));
 
-const { enregistrerNote, lienRessource } = await import("@/lib/lecon/actions");
+const { enregistrerNote, lienRessource, ouvrirLecon, terminerLecon } = await import("@/lib/lecon/actions");
 
 const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const RESSOURCE = { id: id(301), titre: "Données de l’enquête", fichier: `${id(1)}/abc.xlsx`, format: XLSX, telechargeable: true };
@@ -91,3 +91,35 @@ describe("Lien de téléchargement d'une ressource", () => {
     expect(await lienRessource(id(301))).toEqual({ erreur: "Le lien n’a pas pu être créé. Réessayez." });
   });
 });
+
+describe("Fin et visite d'une leçon", () => {
+  beforeEach(() => {
+    faux.vider();
+    compte = { id: "compte-1" };
+    refresh.mockReset();
+  });
+
+  it("« Marquer comme terminée » appelle la base puis relit la page", async () => {
+    expect(await terminerLecon(id(2))).toEqual({ ok: true });
+    expect(faux.de("rpc", "terminer_lecon")[0].valeurs).toEqual({ p_lecon: id(2) });
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("un refus de la base, une leçon mal désignée ou une session expirée laissent un message", async () => {
+    faux.repondre("rpc.terminer_lecon", { error: { code: "22023", message: "Une leçon vidéo se termine en la regardant." } });
+    expect(await terminerLecon(id(1))).toEqual({ ok: false, erreur: "La leçon n’a pas pu être marquée comme terminée. Réessayez." });
+    expect(await terminerLecon("abc")).toEqual({ ok: false, erreur: "La leçon n’a pas pu être marquée comme terminée. Réessayez." });
+    compte = null;
+    expect(await terminerLecon(id(2))).toEqual({ ok: false, erreur: "Connectez-vous pour enregistrer votre progression." });
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("la visite d'une leçon est notée, sans bruit en cas d'erreur", async () => {
+    await ouvrirLecon(id(4));
+    expect(faux.de("rpc", "ouvrir_lecon")[0].valeurs).toEqual({ p_lecon: id(4) });
+    faux.repondre("rpc.ouvrir_lecon", { error: { code: "PGRST202", message: "absente" } });
+    await expect(ouvrirLecon(id(4))).resolves.toBeUndefined();
+    await expect(ouvrirLecon("abc")).resolves.toBeUndefined();
+  });
+});
+

@@ -55,3 +55,30 @@ export async function lienRessource(ressourceId: string): Promise<{ url: string 
   if (!url) return { erreur: LIEN_ECHEC };
   return { url: `${url}&download=${encodeURIComponent(nomDeTelechargement(texte(ressource.titre), texte(ressource.format)))}` };
 }
+
+const FIN_ECHEC = "La leçon n’a pas pu être marquée comme terminée. Réessayez.";
+
+/** « Marquer comme terminée » : leçon sans vidéo seulement (la base refuse une leçon vidéo, qui se termine en la regardant). */
+export async function terminerLecon(leconId: string): Promise<{ ok: true } | { ok: false; erreur: string }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data?.user) return { ok: false, erreur: "Connectez-vous pour enregistrer votre progression." };
+  if (!UUID.test(leconId)) return { ok: false, erreur: FIN_ECHEC };
+  const reponse = await supabase.rpc("terminer_lecon", { p_lecon: leconId });
+  if (reponse.error) return { ok: false, erreur: FIN_ECHEC };
+  // Programme, pourcentage et temps restant sont relus.
+  refresh();
+  return { ok: true };
+}
+
+/** Note la visite d'une leçon (dernière leçon ouverte, pour « Continuer »). Une erreur n'empêche rien. */
+export async function ouvrirLecon(leconId: string): Promise<void> {
+  if (!UUID.test(leconId)) return;
+  try {
+    const supabase = await createClient();
+    await supabase.rpc("ouvrir_lecon", { p_lecon: leconId });
+  } catch {
+    // Base injoignable ou migration 0008 absente : la leçon s'affiche quand même.
+  }
+}
+

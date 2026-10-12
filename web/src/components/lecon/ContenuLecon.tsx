@@ -12,6 +12,7 @@ import { NoteProvider, NotesLecon } from "./NotesLecon";
 import { OngletsLecon } from "./OngletsLecon";
 import { ProgrammeMobile } from "./ProgrammeMobile";
 import { RessourcesLecon } from "./RessourcesLecon";
+import { VisiteLecon } from "./VisiteLecon";
 
 type Props = { donnees: DonneesLecon; connecte: boolean; terminees: ReadonlySet<string> };
 
@@ -26,6 +27,7 @@ export function ContenuLecon({ donnees, connecte, terminees }: Props) {
   const programme = <ProgrammeMobile fiche={fiche} leconId={lecon.id} connecte={connecte} terminees={terminees} />;
   return (
     <div className="flex min-w-0 flex-col gap-6">
+      {ouverte && connecte && <VisiteLecon leconId={lecon.id} />}
       {ouverte && !connecte && (
         // Spec Q1 : le visiteur regarde l'aperçu ; on l'invite à créer son compte pour garder sa progression.
         <Banner
@@ -55,6 +57,7 @@ export function ContenuLecon({ donnees, connecte, terminees }: Props) {
             reference={lecon.dureeSecondes}
             seuil={fiche.seuilVideo}
             termineeInitiale={lecon.visionnage?.terminee ?? false}
+            positionInitiale={lecon.visionnage?.positionSecondes ?? 0}
           />
         )
       )}

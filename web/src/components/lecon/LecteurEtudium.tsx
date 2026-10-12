@@ -20,6 +20,7 @@ import { dureeLecon } from "@/lib/lecon/regles";
 import type { VideoLecon } from "@/lib/lecon/types";
 import { creerAdaptateur, type Adaptateur, type Evenements } from "@/lib/video/adaptateurs";
 import { ajouter, fusionner, observer, pourcentageVu, type EtatSuivi, type Intervalle } from "@/lib/video/suivi";
+import { useEtatLecon } from "./EtatLecon";
 import { LecteurVideo } from "./LecteurVideo";
 
 type Props = {
@@ -35,6 +36,8 @@ type Props = {
   reference: number;
   seuil: number;
   termineeInitiale: boolean;
+  /** Où reprendre la vidéo (dernière position enregistrée), en secondes. */
+  positionInitiale?: number;
   /** Remplace la création du lecteur officiel (tests). */
   creer?: typeof creerAdaptateur;
 };
@@ -87,6 +90,7 @@ export function LecteurEtudium({
   reference,
   seuil,
   termineeInitiale,
+  positionInitiale = 0,
   creer = creerAdaptateur,
 }: Props) {
   const { fournisseur, id } = video;
@@ -102,6 +106,10 @@ export function LecteurEtudium({
   // Passages déjà enregistrés par la base : le pourcentage affiché suit la base, pas seulement le navigateur.
   const serveur = useRef<Intervalle[]>(fusionner(passagesInitiaux));
   const titreRef = useRef(titre);
+  const repriseRef = useRef(positionInitiale);
+  // Le bouton de fin (page leçon) apprend ainsi que la leçon est validée.
+  const etatLecon = useEtatLecon();
+  const marquerRef = useRef(etatLecon?.marquerTerminee);
   const enLectureRef = useRef(false);
   const vitesseRef = useRef(1);
   const dureeRef = useRef(reference);
@@ -181,6 +189,7 @@ export function LecteurEtudium({
         if (resultat.terminee && !termineeRef.current) {
           termineeRef.current = true;
           setTerminee(true);
+          marquerRef.current?.();
           toast({ tone: "reussite", title: "Leçon terminée." });
           router.refresh();
         }
@@ -195,7 +204,8 @@ export function LecteurEtudium({
     envoyerRef.current = envoyer;
     commencerRef.current = commencer;
     titreRef.current = titre;
-  }, [envoyer, commencer, titre]);
+    marquerRef.current = etatLecon?.marquerTerminee;
+  }, [envoyer, commencer, titre, etatLecon]);
 
   /** Relit la durée tant qu'elle est inconnue (YouTube la donne parfois à 0 avant la lecture). */
   const relireDuree = (a: Adaptateur) => {
@@ -259,6 +269,20 @@ export function LecteurEtudium({
             }
           })
           .catch(() => undefined);
+        // Reprise là où on l'avait laissée : pas pour quelques secondes, ni à quelques secondes de la fin.
+        const reprise = repriseRef.current;
+        if (reprise > 5) {
+          void a
+            .duree()
+            .then((d) => {
+              const fin = d > 0 ? d : dureeRef.current;
+              if (!annule && (fin <= 0 || reprise < fin - 10)) {
+                a.aller(reprise);
+                setPosition(reprise);
+              }
+            })
+            .catch(() => undefined);
+        }
         void a
           .sousTitres()
           .then((oui) => !annule && setSousTitresDispo(oui))

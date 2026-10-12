@@ -1,12 +1,18 @@
 // @vitest-environment jsdom
 import { render, screen, within } from "@testing-library/react";
+import { ToastProvider } from "@/components/ui/Toast";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DonneesLecon } from "@/lib/lecon/types";
 import { EXCEL_OUVERTE, id } from "./donnees";
 
 const enregistrerNote = vi.fn();
-vi.mock("@/lib/lecon/actions", () => ({ enregistrerNote: (...args: unknown[]) => enregistrerNote(...args), lienRessource: vi.fn() }));
+vi.mock("@/lib/lecon/actions", () => ({
+  enregistrerNote: (...args: unknown[]) => enregistrerNote(...args),
+  lienRessource: vi.fn(),
+  ouvrirLecon: vi.fn(async () => undefined),
+  terminerLecon: vi.fn(),
+}));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }), usePathname: () => "/formations" }));
 
 const { NotesLecon } = await import("@/components/lecon/NotesLecon");
@@ -67,7 +73,11 @@ describe("Notes privées d'une leçon", () => {
 
   it("la note enregistrée, ou en cours de saisie, survit à un aller-retour entre onglets", async () => {
     enregistrerNote.mockResolvedValue({ ok: true });
-    render(<ContenuLecon donnees={DONNEES} connecte terminees={new Set()} />);
+    render(
+      <ToastProvider>
+        <ContenuLecon donnees={DONNEES} connecte terminees={new Set()} />
+      </ToastProvider>,
+    );
     await ouvrir(0, "Notes");
     await userEvent.clear(champs()[0]);
     await userEvent.type(champs()[0], "Nouvelle");
@@ -83,7 +93,11 @@ describe("Notes privées d'une leçon", () => {
   });
 
   it("les onglets de l'ordinateur et du téléphone montrent la même note", async () => {
-    render(<ContenuLecon donnees={DONNEES} connecte terminees={new Set()} />);
+    render(
+      <ToastProvider>
+        <ContenuLecon donnees={DONNEES} connecte terminees={new Set()} />
+      </ToastProvider>,
+    );
     await ouvrir(0, "Notes");
     await userEvent.type(champs()[0], " modifiée");
     await ouvrir(1, "Notes");

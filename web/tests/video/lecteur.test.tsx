@@ -10,6 +10,12 @@ const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh }), usePathname: () => "/formations" }));
 
 const { LecteurEtudium } = await import("@/components/lecon/LecteurEtudium");
+const { EtatLeconProvider, useEtatLecon } = await import("@/components/lecon/EtatLecon");
+
+function SondeEtat() {
+  const etat = useEtatLecon();
+  return <span>{etat?.terminee ? "état : terminée" : "état : à faire"}</span>;
+}
 
 const VIDEO = { fournisseur: "youtube" as const, id: "dQw4w9WgXcQ" };
 
@@ -295,4 +301,54 @@ describe("Lecteur aux couleurs d'Étudium", () => {
     // Le pourcentage affiché suit la base : les passages refusés n'y sont pas.
     expect(screen.getByText("Temps réellement regardé : 3 %")).toBeInTheDocument();
   });
+
+  it("la vidéo reprend là où on l'avait laissée (au-delà des 5 premières secondes)", async () => {
+    const f = fauxLecteur();
+    await monter({ creer: f.creer, positionInitiale: 250 });
+    expect(f.adaptateur.aller).toHaveBeenCalledWith(250);
+    expect(screen.getByText("04:10 / 06:10")).toBeInTheDocument();
+  });
+
+  it("une position de quelques secondes, ou presque à la fin, repart du début", async () => {
+    const f = fauxLecteur();
+    await monter({ creer: f.creer, positionInitiale: 3 });
+    const g = fauxLecteur();
+    await monter({ creer: g.creer, positionInitiale: 365 });
+    expect(f.adaptateur.aller).not.toHaveBeenCalled();
+    expect(g.adaptateur.aller).not.toHaveBeenCalled();
+  });
+
+  it("la validation par la base est annoncée au bouton de fin (état partagé)", async () => {
+    resultat = { secondesVues: 340, reference: 370, terminee: true };
+    const f = fauxLecteur();
+    render(
+      <ToastProvider>
+        <EtatLeconProvider termineeInitiale={false} avecVideo seuil={90} actif>
+          <LecteurEtudium
+            video={VIDEO}
+            titre="Découvrir l’interface"
+            leconId={id(1)}
+            suivre
+            passagesInitiaux={[]}
+            reference={370}
+            seuil={90}
+            termineeInitiale={false}
+            creer={f.creer}
+          />
+          <SondeEtat />
+        </EtatLeconProvider>
+      </ToastProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByText("état : à faire")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Lire la vidéo" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await lirePendant(f.etat, 10);
+    expect(screen.getByText("état : terminée")).toBeInTheDocument();
+  });
 });
+

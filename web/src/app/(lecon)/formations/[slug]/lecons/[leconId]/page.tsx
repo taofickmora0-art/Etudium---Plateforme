@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { CadreLecon } from "@/components/lecon/CadreLecon";
+import { EtatLeconProvider } from "@/components/lecon/EtatLecon";
 import { ContenuLecon } from "@/components/lecon/ContenuLecon";
 import { BarreLecon } from "@/components/lecon/NavigationLecon";
 import { ProgrammeLecon } from "@/components/lecon/ProgrammeLecon";
@@ -11,6 +12,8 @@ import { getFiche } from "@/lib/catalogue/data";
 import { compteConnecte } from "@/lib/catalogue/visiteur";
 import { getLecon } from "@/lib/lecon/data";
 import { voisines } from "@/lib/lecon/regles";
+import { lireProgression } from "@/lib/progression/data";
+import { etatFormation } from "@/lib/progression/regles";
 import type { DonneesLecon } from "@/lib/lecon/types";
 
 type Params = { params: Promise<{ slug: string; leconId: string }> };
@@ -33,28 +36,32 @@ async function Lecon({ params }: Params) {
   const [compte, { slug, leconId }] = await Promise.all([compteConnecte(), params]);
   const connecte = compte !== null;
   let donnees: DonneesLecon | null;
+  let lignes: Awaited<ReturnType<typeof lireProgression>>;
   try {
-    donnees = await getLecon(slug, leconId, connecte);
+    [donnees, lignes] = await Promise.all([getLecon(slug, leconId, connecte), connecte ? lireProgression() : null]);
   } catch (erreur) {
     return siTablesAbsentes(erreur);
   }
   // Formation non publiée, leçon d'une autre formation ou adresse inventée : page introuvable.
   if (!donnees) notFound();
 
-  const { fiche } = donnees;
-  // La progression (leçons terminées) arrive avec la tâche 1.7.
-  const terminees = new Set<string>();
+  const { fiche, lecon } = donnees;
+  const terminees = lignes ? etatFormation(fiche, lignes).terminees : new Set<string>();
   const { precedente, suivante } = voisines(fiche.modules, leconId);
+  // Bouton de fin : compte connecté, leçon ouverte, et progression disponible en base (0007, 0008).
+  const actif = connecte && lecon.accessible && lignes !== null;
   return (
-    <CadreLecon
-      connecte={connecte}
-      titreFormation={fiche.titre}
-      retour={connecte ? "/mes-formations" : `/formations/${fiche.slug}`}
-      programme={<ProgrammeLecon fiche={fiche} leconId={leconId} connecte={connecte} terminees={terminees} />}
-      barre={precedente || suivante ? <BarreLecon fiche={fiche} leconId={leconId} /> : undefined}
-    >
-      <ContenuLecon donnees={donnees} connecte={connecte} terminees={terminees} />
-    </CadreLecon>
+    <EtatLeconProvider key={leconId} termineeInitiale={terminees.has(leconId)} avecVideo={lecon.video !== null} seuil={fiche.seuilVideo} actif={actif}>
+      <CadreLecon
+        connecte={connecte}
+        titreFormation={fiche.titre}
+        retour={connecte ? "/mes-formations" : `/formations/${fiche.slug}`}
+        programme={<ProgrammeLecon fiche={fiche} leconId={leconId} connecte={connecte} terminees={terminees} />}
+        barre={precedente || suivante || actif ? <BarreLecon fiche={fiche} leconId={leconId} /> : undefined}
+      >
+        <ContenuLecon donnees={donnees} connecte={connecte} terminees={terminees} />
+      </CadreLecon>
+    </EtatLeconProvider>
   );
 }
 
