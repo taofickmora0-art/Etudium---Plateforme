@@ -1,7 +1,8 @@
-import type { Role } from "@/components/ui/ProfileMenu";
-
 // Qui entre dans quel espace (spec §4 et §7, feuille de route 0.6). Écrit une seule fois : les menus et la
 // vérification des pages (requireSpace) s'en servent. Le lot 6 affinera ce que chacun voit dans le back-office.
+
+/** Rôles d'un compte (table roles, spec §4). Un compte sans rôle lu est étudiant. */
+export type Role = "etudiant" | "formateur" | "moderateur" | "admin" | "super_admin";
 
 export type Espace = "etudiant" | "formateur" | "admin";
 

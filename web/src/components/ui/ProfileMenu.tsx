@@ -2,13 +2,13 @@
 
 import { CreditCardIcon, Home03Icon, Logout03Icon, Shield01Icon, TeachingIcon, UserIcon } from "@hugeicons/core-free-icons";
 import { DropdownMenu } from "radix-ui";
-import { canAccess, type Espace } from "@/lib/auth/permissions";
+import { canAccess, type Espace, type Role } from "@/lib/auth/permissions";
 import { cn } from "@/lib/cn";
 import { Avatar } from "./Avatar";
 import { MenuEntries, menuSeparatorClasses, menuSurfaceClasses, type MenuEntry } from "./Menu";
 import { ProfileButton } from "./TopBarButtons";
 
-export type Role = "etudiant" | "formateur" | "moderateur" | "admin" | "super_admin";
+export type { Role } from "@/lib/auth/permissions";
 
 type ProfileMenuProps = {
   user: { initials: string; name: string; email: string; photoUrl?: string | null };

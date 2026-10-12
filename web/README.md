@@ -30,7 +30,7 @@ Après une modification de `.env.local`, arrêtez puis relancez `npm run dev` : 
 
 ## Pages utiles
 
-- `/etat` : état de la connexion à la base (ouverte sans compte)
+- `/etat` : état de la connexion à la base (ouverte sans compte, sur l’ordinateur seulement, jamais sur le site en ligne)
 - `/connexion`, `/inscription`, `/mot-de-passe-oublie` : écrans de compte
 - `/accueil` : espace connecté (demande un compte dès que la base est branchée)
 - `/profil` : mon profil (informations, photo, notifications, mot de passe, suppression du compte)

@@ -1,6 +1,6 @@
 import { cache } from "react";
 import type { User } from "@supabase/supabase-js";
-import type { Role } from "@/components/ui/ProfileMenu";
+import type { Role } from "@/lib/auth/permissions";
 import { DEMO_USER } from "@/lib/demo-user";
 import { getPublicEnv } from "@/lib/env";
 import { photoPublicUrl } from "@/lib/profile/photo-url";

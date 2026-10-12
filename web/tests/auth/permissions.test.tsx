@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HeaderActions } from "@/components/layout/HeaderActions";
 import { MobileProfileMenu } from "@/components/layout/MobileProfileMenu";
 import { ReservedComingSoon } from "@/components/layout/ReservedComingSoon";
-import type { Role } from "@/components/ui/ProfileMenu";
+import type { Role } from "@/lib/auth/permissions";
 import { getShellUser } from "@/lib/auth/current-user";
 import { canAccess, spaceOf } from "@/lib/auth/permissions";
 import { requireSpace } from "@/lib/auth/require-space";

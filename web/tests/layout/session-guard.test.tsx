@@ -54,4 +54,15 @@ describe("Session vérifiée à chaque page", () => {
     });
     expect(sansVerification).toEqual([]);
   });
+
+  it("chaque page d'un espace réservé vérifie le rôle", () => {
+    // Le proxy ne connaît que la session : le rôle (formateur, admin…) est vérifié par la page elle-même.
+    for (const espace of ["admin", "formateur"]) {
+      const sansRole = pages(join(process.cwd(), "src/app/(app)", espace)).filter((p) => {
+        const code = readFileSync(p, "utf8");
+        return ![`requireSpace("${espace}")`, `<ReservedComingSoon espace="${espace}"`].some((m) => code.includes(m));
+      });
+      expect(sansRole, espace).toEqual([]);
+    }
+  });
 });

@@ -19,6 +19,7 @@ Les noms des menus de Supabase et de Google changent parfois un peu. Si un écra
 3. Colle (**Ctrl+V**), puis **Run**. Le résultat attendu est **« Success. No rows returned »**.
 4. Vérifie dans **Table Editor** : deux tables, **profils** et **roles**, toutes deux vides. Dans **Storage**, un espace **photos-profil** est apparu (il servira à la photo de profil).
 5. Recommence les étapes 1 à 3 avec le second fichier, `web/supabase/migrations/0002_profil.sql` (page « Mon profil », tâche 0.5) : **New query**, coller, **Run**, même résultat attendu. Il règle ce que chacun peut modifier dans son profil, rend les photos affichables et permet de supprimer son compte.
+6. Puis le troisième, `web/supabase/migrations/0003_finitions.sql` (finitions du lot 0), de la même façon. Il fait vérifier par la base que la photo de profil est bien un fichier envoyé par la personne elle-même, et accélère les règles d’accès. Une photo déjà envoyée est conservée.
 
 Ces tables se remplissent toutes seules : chaque nouveau compte reçoit son profil (prénom, nom) et le rôle « étudiant ».
 

@@ -1,4 +1,4 @@
-// Pages « Bientôt disponible » (sans icônes : le proxy s'en sert pour savoir quelles pages protéger).
+// Pages « Bientôt disponible » : textes seuls, sans icônes (lus par la coque côté serveur et par les tests).
 
 const LOT_1 = "au lot 1, Catalogue et apprentissage";
 const LOT_5 = "au lot 5, Communauté et accompagnement";
