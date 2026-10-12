@@ -14,7 +14,6 @@ export const PAGES_A_VENIR = {
   notifications: { titre: "Notifications", quand: LOT_5, description: "Toutes vos notifications seront réunies ici." },
   "mes-formations": { titre: "Mes formations", quand: LOT_1, description: "Vous retrouverez ici les formations que vous suivez." },
   parcours: { titre: "Mes parcours", quand: LOT_1, description: "Vos parcours et leurs formations s’afficheront ici." },
-  "formations-gratuites": { titre: "Formations gratuites", quand: LOT_1, description: "Les formations gratuites s’afficheront ici." },
   favoris: { titre: "Favoris", quand: LOT_1, description: "Les formations que vous mettez de côté s’afficheront ici." },
   recherche: { titre: "Recherche", quand: LOT_1, description: "Vous pourrez chercher une formation, un parcours ou une ressource." },
   aide: { titre: "Aide", quand: LOT_1, description: "Les réponses aux questions fréquentes s’afficheront ici." },

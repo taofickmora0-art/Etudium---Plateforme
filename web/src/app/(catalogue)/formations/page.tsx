@@ -1,9 +1,26 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
-import { Heading } from "@/components/ui/Text";
+import { PageCatalogue } from "@/components/catalogue/PageCatalogue";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { compteConnecte } from "@/lib/catalogue/visiteur";
 
-export const metadata: Metadata = { title: "Toutes les formations · Étudium" };
+export const metadata: Metadata = {
+  title: "Toutes les formations · Étudium",
+  description: "Réussite académique, compétences digitales et business en ligne. Chaque fiche propose un aperçu gratuit.",
+};
 
-/** Catalogue des formations (rempli à l'étape suivante de la tâche 1.3). */
-export default function Page() {
-  return <Heading level="page">Toutes les formations</Heading>;
+type Recherche = { searchParams: Promise<Record<string, string | string[] | undefined>> };
+
+async function Contenu({ searchParams }: Recherche) {
+  const [compte, params] = await Promise.all([compteConnecte(), searchParams]);
+  return <PageCatalogue params={params} variante={compte ? "connecte" : "public"} chemin="/formations" />;
+}
+
+/** Catalogue (spec du lot 1, §2) : NdCataloguePublic pour un visiteur, NdCatalogue pour un compte connecté. */
+export default function Page({ searchParams }: Recherche) {
+  return (
+    <Suspense fallback={<Skeleton className="h-96 rounded-panneau" />}>
+      <Contenu searchParams={searchParams} />
+    </Suspense>
+  );
 }

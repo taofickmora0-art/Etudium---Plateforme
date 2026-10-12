@@ -13,6 +13,8 @@ export function CardShell({
   description,
   parcours,
   tag,
+  parcoursTag,
+  titleAs: Titre = "h3",
   describedBy,
   children,
 }: {
@@ -21,14 +23,19 @@ export function CardShell({
   description: string;
   parcours: Parcours;
   tag?: CardTag;
+  /** Puce du parcours, avant le badge (carte du catalogue public). */
+  parcoursTag?: CardTag;
+  /** Niveau du titre de la carte dans la page. */
+  titleAs?: "h2" | "h3";
   describedBy?: string;
   children: ReactNode;
 }) {
   const id = useId();
+  const etiquettes = [parcoursTag, tag].filter((t): t is CardTag => Boolean(t));
   return (
     <Link
       href={href}
-      aria-labelledby={tag ? `${id}-titre ${id}-etiquette` : `${id}-titre`}
+      aria-labelledby={etiquettes.length > 0 ? `${id}-titre ${id}-etiquette` : `${id}-titre`}
       aria-describedby={describedBy}
       className="focus-etudium box-border flex min-w-0 flex-col rounded-carte border border-bordure-carte bg-panneau px-[19px] pt-[22px] pb-[17px] text-inherit no-underline transition-colors hover:border-bordure-champ"
     >
@@ -36,15 +43,19 @@ export function CardShell({
         <span className="ml-1">
           <CourseIllustration parcours={parcours} />
         </span>
-        {tag && (
-          <span id={`${id}-etiquette`}>
-            <Tag tone={tag.tone}>{tag.label}</Tag>
+        {etiquettes.length > 0 && (
+          <span id={`${id}-etiquette`} className="flex flex-wrap justify-end gap-1.5">
+            {etiquettes.map((t) => (
+              <Tag key={t.label} tone={t.tone}>
+                {t.label}
+              </Tag>
+            ))}
           </span>
         )}
       </div>
-      <h3 id={`${id}-titre`} title={title} className="mt-[21px] mb-0 truncate text-base leading-6 font-semibold text-encre">
+      <Titre id={`${id}-titre`} title={title} className="mt-[21px] mb-0 truncate text-base leading-6 font-semibold text-encre">
         {title}
-      </h3>
+      </Titre>
       <p className="mt-[11px] mb-0 line-clamp-2 h-10 text-xs leading-5 text-discret">{description}</p>
       {children}
     </Link>

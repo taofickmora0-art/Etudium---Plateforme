@@ -1,6 +1,6 @@
 "use client";
 
-import { Sorting01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Sorting01Icon } from "@hugeicons/core-free-icons";
 import { DropdownMenu } from "radix-ui";
 import { cn } from "@/lib/cn";
 import { Button } from "./Button";
@@ -12,16 +12,20 @@ type SortMenuProps = {
   onValueChange: (value: string) => void;
   /** Intertitre du menu. */
   title?: string;
+  /** Texte du bouton (« Trier : parcours ») ; par défaut, l'option choisie. */
+  triggerLabel?: string;
+  /** Hauteur du bouton : 48 px dans la barre d'outils du catalogue (NdCatalogue). */
+  triggerClassName?: string;
 };
 
 /** Menu de tri : l'option choisie est cochée (planche « Menus », « Tri, option cochée »). */
-export function SortMenu({ options, value, onValueChange, title = "Trier par" }: SortMenuProps) {
+export function SortMenu({ options, value, onValueChange, title = "Trier par", triggerLabel, triggerClassName }: SortMenuProps) {
   const current = options.find((o) => o.value === value);
   return (
     <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger asChild>
-        <Button variant="contour" iconLeft={Sorting01Icon}>
-          {current ? current.label : title}
+        <Button variant="contour" iconLeft={Sorting01Icon} iconRight={triggerLabel ? ArrowDown01Icon : undefined} className={triggerClassName}>
+          {triggerLabel ?? (current ? current.label : title)}
         </Button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>

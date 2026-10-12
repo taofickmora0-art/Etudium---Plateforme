@@ -23,7 +23,8 @@ export function badgeDeCarte(carte: Pick<CarteCatalogue, "gratuite" | "badge" | 
   if (carte.gratuite) return { tone: "gratuit", label: "Gratuit" };
   if (carte.badge === "populaire") return { tone: "populaire", label: "Populaire" };
   if (carte.badge === "nouveau") return { tone: "nouveau", label: "Nouveau" };
-  if (carte.achatSepare) return { tone: "complementaire", label: "Complémentaire" };
+  // Couleurs du catalogue du design : « Complémentaire » en bleu, comme « Nouveau ».
+  if (carte.achatSepare) return { tone: "nouveau", label: "Complémentaire" };
   return undefined;
 }
 

@@ -42,7 +42,8 @@ describe("Règles d'affichage du catalogue", () => {
     expect(badgeDeCarte(parSlug("zotero-gerer-ses-references"))).toEqual({ tone: "gratuit", label: "Gratuit" });
     expect(badgeDeCarte(parSlug("maitriser-microsoft-excel"))).toEqual({ tone: "populaire", label: "Populaire" });
     expect(badgeDeCarte(parSlug("intelligence-artificielle-etudes"))).toEqual({ tone: "nouveau", label: "Nouveau" });
-    expect(badgeDeCarte(parSlug("marketing-digital-debutants"))).toEqual({ tone: "complementaire", label: "Complémentaire" });
+    // Couleurs du catalogue du design : « Complémentaire » en bleu, comme « Nouveau ».
+    expect(badgeDeCarte(parSlug("marketing-digital-debutants"))).toEqual({ tone: "nouveau", label: "Complémentaire" });
     expect(badgeDeCarte(parSlug("microsoft-word-travaux-universitaires"))).toBeUndefined();
   });
 
