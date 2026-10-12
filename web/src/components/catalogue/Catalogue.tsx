@@ -24,6 +24,8 @@ type CatalogueProps = {
   variante: "public" | "connecte";
   /** « /formations-gratuites » : la page « Formations gratuites » du menu de l'espace connecté. */
   chemin: "/formations" | "/formations-gratuites";
+  /** Filtres fixés par la page (« Formations gratuites ») : « Effacer les filtres » y revient. */
+  imposer?: Partial<Filtres>;
 };
 
 // « Note des étudiants » arrive avec les avis (tâche 1.11).
@@ -48,16 +50,24 @@ const GRILLE_CONNECTEE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(2
  * Catalogue des formations (NdCataloguePublic pour un visiteur, NdCatalogue et NdMobCatalogue pour un compte connecté).
  * Les filtres s'appliquent tout de suite et restent dans l'adresse, sans recharger la page.
  */
-export function Catalogue({ cartes, parcours, filtresInitiaux, variante, chemin }: CatalogueProps) {
+/**
+ * La version connectée n'a ni liste « Niveau » ni puce « Incluses » : ces filtres venus de l'adresse (lien copié depuis
+ * le catalogue public) cacheraient des formations sans moyen de les retirer. On les ignore.
+ */
+const pourVariante = (f: Filtres, variante: CatalogueProps["variante"]): Filtres =>
+  variante === "connecte" ? { ...f, niveau: "tous", acces: f.acces === "incluses" ? "tout" : f.acces } : f;
+
+export function Catalogue({ cartes, parcours, filtresInitiaux, variante, chemin, imposer }: CatalogueProps) {
   const router = useRouter();
-  const [filtres, setFiltres] = useState(filtresInitiaux);
+  const base: Filtres = { ...FILTRES_PAR_DEFAUT, ...imposer };
+  const [filtres, setFiltres] = useState(() => pourVariante(filtresInitiaux, variante));
   const visibles = useMemo(() => appliquerFiltres(cartes, filtres), [cartes, filtres]);
   const niveaux = NIVEAUX.filter((n) => cartes.some((c) => c.niveau === n.value));
 
   const changer = (partiel: Partial<Filtres>) => {
     const suivants = { ...filtres, ...partiel };
     setFiltres(suivants);
-    window.history.replaceState(null, "", `${chemin}${ecrireFiltres(suivants)}`);
+    window.history.replaceState(null, "", `${chemin}${ecrireFiltres(suivants, base)}`);
   };
 
   const vide = (
@@ -67,7 +77,7 @@ export function Catalogue({ cartes, parcours, filtresInitiaux, variante, chemin 
       description="Essayez un autre mot-clé ou retirez un filtre."
       className="border-0"
       action={
-        <Button variant="contour" onClick={() => changer({ ...FILTRES_PAR_DEFAUT, tri: filtres.tri })}>
+        <Button variant="contour" onClick={() => changer({ ...base, tri: filtres.tri })}>
           Effacer les filtres
         </Button>
       }

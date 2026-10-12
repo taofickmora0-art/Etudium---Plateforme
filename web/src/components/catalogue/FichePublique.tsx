@@ -35,7 +35,7 @@ function CarteOffre({ fiche }: { fiche: FicheFormation }) {
       )}
       <Link
         href="/inscription"
-        className="focus-etudium mt-[18px] inline-flex h-12 w-full items-center justify-center gap-2 rounded-[14px] bg-bleu px-[18px] text-base leading-none font-medium whitespace-nowrap text-white no-underline transition-colors hover:bg-bleu-survol"
+        className="focus-etudium mt-[18px] inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[14px] bg-bleu px-[18px] py-3 text-center text-base leading-tight font-medium text-white no-underline transition-colors hover:bg-bleu-survol"
       >
         Créer mon compte gratuit
       </Link>
@@ -129,7 +129,7 @@ export function FichePublique({ fiche }: { fiche: FicheFormation }) {
                     <span />
                   )}
                   {premierApercu && (
-                    <LienContourBlanc href={adresseLecon(fiche.slug, premierApercu.id)} hauteur="h-11 px-4 text-sm">
+                    <LienContourBlanc href={adresseLecon(fiche.slug, premierApercu.id)} hauteur="min-h-11 px-4 py-2.5 text-sm">
                       <Icon icon={PlayCircleIcon} size={18} />
                       <span>Voir l’aperçu gratuit</span>
                     </LienContourBlanc>

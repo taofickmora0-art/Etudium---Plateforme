@@ -36,12 +36,15 @@ export function lireFiltres(params: Record<string, string | string[] | undefined
   };
 }
 
-/** « ?q=excel&parcours=… » sans les valeurs par défaut (ordre stable) ; « » si tout est par défaut. */
-export function ecrireFiltres(filtres: Filtres): string {
+/**
+ * « ?q=excel&parcours=… » sans les valeurs de `base` (par défaut : les valeurs par défaut), ordre stable ; « » si rien
+ * ne diffère. Sur « Formations gratuites », la base porte déjà « gratuites » : l'adresse reste nue.
+ */
+export function ecrireFiltres(filtres: Filtres, base: Filtres = FILTRES_PAR_DEFAUT): string {
   const params = new URLSearchParams();
   for (const cle of ["q", "parcours", "acces", "niveau", "tri"] as const) {
     const valeur = cle === "q" ? filtres.q.trim() : filtres[cle];
-    if (valeur && valeur !== FILTRES_PAR_DEFAUT[cle]) params.set(cle, valeur);
+    if (valeur && valeur !== base[cle]) params.set(cle, valeur);
   }
   const query = params.toString();
   return query ? `?${query}` : "";

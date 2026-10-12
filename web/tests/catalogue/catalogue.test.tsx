@@ -10,8 +10,12 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace: vi.fn(), 
 
 const { Catalogue } = await import("@/components/catalogue/Catalogue");
 
-const afficher = (variante: "public" | "connecte", chemin: "/formations" | "/formations-gratuites" = "/formations", filtres = FILTRES_PAR_DEFAUT) =>
-  render(<Catalogue cartes={CARTES_DESIGN} parcours={PARCOURS_DESIGN} filtresInitiaux={filtres} variante={variante} chemin={chemin} />);
+const afficher = (
+  variante: "public" | "connecte",
+  chemin: "/formations" | "/formations-gratuites" = "/formations",
+  filtres = FILTRES_PAR_DEFAUT,
+  imposer?: Partial<typeof FILTRES_PAR_DEFAUT>,
+) => render(<Catalogue cartes={CARTES_DESIGN} parcours={PARCOURS_DESIGN} filtresInitiaux={filtres} variante={variante} chemin={chemin} imposer={imposer} />);
 const cartes = () => screen.queryAllByRole("link").filter((a) => a.getAttribute("href")?.startsWith("/formations/"));
 
 describe("Catalogue des formations", () => {
@@ -90,5 +94,18 @@ describe("Catalogue des formations", () => {
     expect(cartes()).toHaveLength(2);
     await userEvent.click(within(screen.getByRole("group", { name: "Filtrer par parcours" })).getByRole("button", { name: "Digital" }));
     expect(push).toHaveBeenLastCalledWith("/formations?parcours=competences-digitales");
+  });
+
+  it("« Effacer les filtres » sur Formations gratuites garde les formations gratuites", async () => {
+    afficher("connecte", "/formations-gratuites", { ...FILTRES_PAR_DEFAUT, acces: "gratuites", q: "introuvable" }, { acces: "gratuites" });
+    expect(screen.getByText("Aucune formation ne correspond")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Effacer les filtres" }));
+    expect(cartes()).toHaveLength(2);
+    expect(window.history.replaceState).toHaveBeenLastCalledWith(null, "", "/formations-gratuites");
+  });
+
+  it("en connecté, un niveau ou l'accès « incluses » venus de l'adresse ne cachent pas de formations (pas de commande pour les retirer)", () => {
+    afficher("connecte", "/formations", { ...FILTRES_PAR_DEFAUT, niveau: "avance", acces: "incluses" });
+    expect(cartes()).toHaveLength(10);
   });
 });

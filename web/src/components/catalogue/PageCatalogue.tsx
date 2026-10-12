@@ -1,6 +1,6 @@
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { listCatalogue, listParcoursCatalogue } from "@/lib/catalogue/data";
-import { lireFiltres, type Filtres } from "@/lib/catalogue/filtres";
+import { ecrireFiltres, lireFiltres, type Filtres } from "@/lib/catalogue/filtres";
 import { Catalogue } from "./Catalogue";
 
 type Params = Record<string, string | string[] | undefined>;
@@ -28,5 +28,17 @@ export async function PageCatalogue({
   }
   const [cartes, parcours] = donnees;
   const filtres = { ...lireFiltres(params, parcours.map((p) => p.slug)), ...imposer };
-  return <Catalogue cartes={cartes} parcours={parcours} filtresInitiaux={filtres} variante={variante} chemin={chemin} />;
+  // La clé suit les filtres de l'adresse : une navigation (« Toutes les formations » dans le menu) repart de zéro
+  // au lieu de garder l'état précédent du catalogue.
+  return (
+    <Catalogue
+      key={ecrireFiltres(filtres) || "tous"}
+      cartes={cartes}
+      parcours={parcours}
+      filtresInitiaux={filtres}
+      variante={variante}
+      chemin={chemin}
+      imposer={imposer}
+    />
+  );
 }

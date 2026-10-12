@@ -72,7 +72,7 @@ function CarteAcces({ fiche }: { fiche: FicheFormation }) {
           <p className="m-0 mt-2 text-sm leading-[22px] text-texte">Incluse dans les formules Basique, Standard et Premium.</p>
         </>
       )}
-      {parcours && <p className="m-0 mt-3.5 text-center text-xs leading-[18px] text-pretty text-discret">Incluse dans votre parcours {parcours.nom}.</p>}
+      {parcours && <p className="m-0 mt-3.5 text-center text-xs leading-[18px] text-pretty text-discret">Incluse dans le parcours {parcours.nom}.</p>}
     </div>
   );
 }

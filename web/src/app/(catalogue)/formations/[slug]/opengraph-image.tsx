@@ -34,9 +34,8 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         flexDirection: "column",
         justifyContent: "space-between",
         padding: 64,
+        // Fond bleu uni : le moteur d'image (Satori) ne dessine pas la trame de points des bandeaux.
         backgroundColor: "#0B18C9",
-        backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.13) 1.2px, transparent 1.2px)",
-        backgroundSize: "22px 22px",
         color: "#FFFFFF",
       }}
     >
@@ -46,7 +45,12 @@ export default async function Image({ params }: { params: Promise<{ slug: string
             <svg width="60" height="60" viewBox="0 0 30 30">
               <polygon points={HEXAGONE} fill="#FFFFFF" stroke="#FFFFFF" strokeWidth="5" strokeLinejoin="round" />
             </svg>
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, color: "#0B18C9" }}>É</div>
+            {/* Satori n'applique pas « inset » : boîte posée explicitement sur l'hexagone. */}
+            <div
+              style={{ position: "absolute", top: 0, left: 0, width: 60, height: 60, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, color: "#0B18C9" }}
+            >
+              É
+            </div>
           </div>
           <div style={{ fontSize: 36, letterSpacing: -0.5 }}>Étudium</div>
         </div>

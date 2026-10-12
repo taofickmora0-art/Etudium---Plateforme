@@ -113,17 +113,18 @@ export function BandeAppelAction() {
           <div className="flex flex-wrap gap-3">
             <Link
               href="/inscription"
-              className="focus-blanc inline-flex h-[52px] items-center justify-center gap-2 rounded-[14px] bg-white px-[22px] text-base leading-none font-semibold whitespace-nowrap text-bleu no-underline transition-colors hover:bg-bleu-clair"
+              className="focus-blanc inline-flex min-h-[52px] items-center justify-center gap-2 rounded-[14px] bg-white px-[22px] py-3 text-center text-base leading-tight font-semibold text-bleu no-underline transition-colors hover:bg-bleu-clair"
             >
               <span>Créer mon compte gratuit</span>
               <Icon icon={ArrowRight02Icon} size={18} />
             </Link>
-            <LienContourBlanc href="/formations" hauteur="h-[52px] px-[22px] text-base">
+            <LienContourBlanc href="/formations" hauteur="min-h-[52px] px-[22px] py-3 text-base">
               Découvrir les formations
             </LienContourBlanc>
           </div>
         </div>
-        <div className="flex-none px-5 py-3">
+        {/* Les illustrations (près de 320 px de large) passent sous le texte : masquées sur petit écran pour ne pas déborder. */}
+        <div data-illustrations className="flex-none px-5 py-3 max-sm:hidden">
           <PilesParcours taille="lg" />
         </div>
       </div>
@@ -137,7 +138,7 @@ export function LienContourBlanc({ href, hauteur, children }: { href: string; ha
     <Link
       href={href}
       className={cn(
-        "focus-blanc box-border inline-flex items-center justify-center gap-2 rounded-[14px] border border-white/45 bg-transparent leading-none font-semibold whitespace-nowrap text-white no-underline transition-colors hover:bg-white/14",
+        "focus-blanc box-border inline-flex items-center justify-center gap-2 rounded-[14px] border border-white/45 bg-transparent text-center leading-tight font-semibold text-white no-underline transition-colors hover:bg-white/14",
         hauteur,
       )}
     >

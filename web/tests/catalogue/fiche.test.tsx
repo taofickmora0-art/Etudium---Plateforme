@@ -80,7 +80,8 @@ describe("Fiche d'une formation, pour un compte connecté", () => {
     expect(within(programme).getByText("Les formules essentielles").closest("[aria-disabled]")).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByText("Incluse dans les formules Basique, Standard et Premium.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Voir l’aperçu gratuit/ })).toHaveAttribute("href", `${ADRESSE}/l1`);
-    expect(screen.getByText("Incluse dans votre parcours Réussite académique.")).toBeInTheDocument();
+    // Lot 1 : personne n'a encore d'abonnement, la formation n'est pas « dans votre parcours ».
+    expect(screen.getByText("Incluse dans le parcours Réussite académique.")).toBeInTheDocument();
   });
 
   it("formation gratuite : toutes les leçons sont ouvertes, et l'on commence en un clic", () => {
@@ -112,5 +113,12 @@ describe("Fiche d'une formation, pour un compte connecté", () => {
     render(<FicheConnectee fiche={{ ...EXCEL, modules: [], nbLecons: 0, dureeSecondes: 0 }} />);
     expect(screen.getByText("Le programme arrive bientôt.")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Commencer/ })).toBeNull();
+  });
+
+  it("sur petit écran, rien ne déborde : boutons qui passent à la ligne, illustrations masquées", () => {
+    render(<FichePublique fiche={EXCEL} />);
+    for (const lien of screen.getAllByRole("link", { name: "Créer mon compte gratuit" })) expect(lien.className).not.toMatch(/(^|s)whitespace-nowrap/);
+    const bande = screen.getByText("Commencez gratuitement dès aujourd’hui").closest("section")!;
+    expect(bande.querySelector("[data-illustrations]")).toHaveClass("max-sm:hidden");
   });
 });
