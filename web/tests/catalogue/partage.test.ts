@@ -5,6 +5,7 @@ import { parSlug } from "./cartes-design";
 
 const FICHE: FicheFormation = {
   ...parSlug("maitriser-microsoft-excel"),
+  seuilVideo: 90,
   description: "Des formules aux tableaux croisés dynamiques, apprenez à analyser vos données de mémoire et à présenter des résultats clairs.",
   objectifs: [],
   competences: [],

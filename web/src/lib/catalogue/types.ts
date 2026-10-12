@@ -47,6 +47,8 @@ export type FormateurFiche = { nom: string; titre: string; domaine: string; pres
 
 export type FicheFormation = CarteCatalogue & {
   description: string;
+  /** Part d'une vidéo à regarder réellement pour terminer une leçon, en % (spec Q4). */
+  seuilVideo: number;
   objectifs: string[];
   competences: string[];
   formateur: FormateurFiche | null;

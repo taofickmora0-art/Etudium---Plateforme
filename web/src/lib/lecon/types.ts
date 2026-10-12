@@ -1,4 +1,5 @@
 import type { FicheFormation } from "@/lib/catalogue/types";
+import type { Intervalle } from "@/lib/video/suivi";
 
 // Ce que la page leçon lit de la base. Le contenu (vidéo, texte, ressources) n'existe que si la personne a accès.
 
@@ -13,6 +14,9 @@ export type RessourceLecon = {
 
 export type VideoLecon = { fournisseur: "youtube" | "vimeo"; id: string };
 
+/** Temps regardé de la leçon par le compte connecté (migration 0007). */
+export type VisionnageLecon = { passages: Intervalle[]; positionSecondes: number; terminee: boolean };
+
 export type LeconDetail = {
   id: string;
   titre: string;
@@ -26,6 +30,8 @@ export type LeconDetail = {
   video: VideoLecon | null;
   texte: string;
   ressources: RessourceLecon[];
+  /** Null pour un visiteur, une leçon fermée, ou sans la table du visionnage. */
+  visionnage: VisionnageLecon | null;
 };
 
 export type DonneesLecon = {

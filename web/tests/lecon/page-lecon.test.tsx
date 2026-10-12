@@ -27,6 +27,7 @@ const SAISIR: LeconDetail = {
   video: { fournisseur: "youtube", id: "dQw4w9WgXcQ" },
   texte: "",
   ressources: [{ id: id(301), titre: "Classeur d’exemple", format: XLSX, tailleOctets: 84_000, telechargeable: true }],
+  visionnage: null,
 };
 const donnees = (lecon: Partial<LeconDetail>, fiche = EXCEL_OUVERTE): DonneesLecon => ({
   fiche,

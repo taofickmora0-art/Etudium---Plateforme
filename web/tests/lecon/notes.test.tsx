@@ -25,6 +25,7 @@ const DONNEES: DonneesLecon = {
     video: null,
     texte: "",
     ressources: [],
+    visionnage: null,
   },
   note: "Ancienne",
   notesDisponibles: true,

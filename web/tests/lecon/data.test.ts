@@ -22,6 +22,7 @@ const ligneFormation = (fiche: FicheFormation) => ({
   achat_separe: fiche.achatSepare,
   badge: fiche.badge,
   publiee_le: fiche.publieeLe,
+  seuil_video: 85,
   formations_parcours: [],
   description: fiche.description,
   objectifs: [],
@@ -93,12 +94,29 @@ describe("Lecture de la page leçon", () => {
         { id: "r1", titre: "Classeur d’exemple", format: XLSX, tailleOctets: 84_000, telechargeable: true },
         { id: "r2", titre: "Guide de l’interface", format: "application/pdf", tailleOctets: 1_200_000, telechargeable: false },
       ],
+      visionnage: { passages: [], positionSecondes: 0, terminee: false },
     });
     expect(donnees).toMatchObject({ note: "Ma note", notesDisponibles: true });
     expect(donnees?.fiche.modules[0].lecons[1].titreCourt).toBe("Saisir et mettre en forme");
     const [appel] = faux.de("lecons", "select");
     expect(appel.filtres).toContainEqual(["eq", "id", id(1)]);
     expect(faux.de("notes_lecons", "select")[0].filtres).toContainEqual(["eq", "lecon_id", id(1)]);
+  });
+
+  it("pour un compte connecté, le temps regardé de la leçon est lu ; la fiche porte le seuil de validation", async () => {
+    faux.repondre("lecons.select", { data: LECON_APERCU });
+    faux.repondre("progression_lecons.select", { data: { passages: "{[0,40),[60,90)}", position_secondes: 90, terminee_le: "2026-10-12T10:00:00Z" } });
+    const donnees = await getLecon("maitriser-microsoft-excel", id(1), true);
+    expect(donnees?.lecon.visionnage).toEqual({ passages: [[0, 40], [60, 90]], positionSecondes: 90, terminee: true });
+    expect(donnees?.fiche.seuilVideo).toBe(85);
+    expect(faux.de("progression_lecons", "select")[0].filtres).toContainEqual(["eq", "lecon_id", id(1)]);
+  });
+
+  it("sans visionnage enregistré, ou sans la table (migration 0007), le temps regardé est vide", async () => {
+    faux.repondre("lecons.select", { data: LECON_APERCU });
+    expect((await getLecon("maitriser-microsoft-excel", id(1), true))?.lecon.visionnage).toEqual({ passages: [], positionSecondes: 0, terminee: false });
+    faux.repondre("progression_lecons.select", { error: { code: "PGRST205" } });
+    expect((await getLecon("maitriser-microsoft-excel", id(1), true))?.lecon.visionnage).toBeNull();
   });
 
   it("une leçon fermée ne livre ni vidéo, ni texte, ni ressources, même si la base en renvoyait", async () => {
@@ -115,8 +133,11 @@ describe("Lecture de la page leçon", () => {
 
   it("pour un visiteur, la note n'est pas demandée", async () => {
     faux.repondre("lecons.select", { data: LECON_APERCU });
-    expect(await getLecon("maitriser-microsoft-excel", id(1), false)).toMatchObject({ note: null, notesDisponibles: true });
+    const visiteur = await getLecon("maitriser-microsoft-excel", id(1), false);
+    expect(visiteur).toMatchObject({ note: null, notesDisponibles: true });
+    expect(visiteur?.lecon.visionnage).toBeNull();
     expect(faux.de("notes_lecons")).toEqual([]);
+    expect(faux.de("progression_lecons")).toEqual([]);
   });
 
   it("une leçon sans vidéo, ou supprimée entre-temps", async () => {

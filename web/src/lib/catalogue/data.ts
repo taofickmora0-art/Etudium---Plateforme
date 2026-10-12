@@ -86,7 +86,7 @@ export const getFiche = cache(async (slug: string): Promise<FicheFormation | nul
     await supabase
       .from("formations")
       .select(
-        `${COLONNES_CARTE}, description, objectifs, competences, formateurs(nom, titre, domaine, presentation), ` +
+        `${COLONNES_CARTE}, description, seuil_video, objectifs, competences, formateurs(nom, titre, domaine, presentation), ` +
           "modules(id, titre, ordre, lecons(id, titre, titre_court, duree_secondes, apercu, ordre, accessible))",
       )
       .eq("statut", "publiee")
@@ -105,6 +105,7 @@ export const getFiche = cache(async (slug: string): Promise<FicheFormation | nul
       modules.flatMap((m) => m.lecons.map((l) => ({ duree_secondes: l.dureeSecondes }))),
     ),
     description: texte(f.description),
+    seuilVideo: Number(f.seuil_video ?? 90),
     objectifs: textes(f.objectifs),
     competences: textes(f.competences),
     formateur: formateur

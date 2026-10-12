@@ -16,6 +16,7 @@ const EXCEL: FicheFormation = {
   ...parSlug("maitriser-microsoft-excel"),
   dureeSecondes: 8407,
   nbLecons: 12,
+  seuilVideo: 90,
   description: "Des formules aux tableaux croisés dynamiques, apprenez à analyser vos données de mémoire et à présenter des résultats clairs.",
   objectifs: ["Construire des formules fiables et lisibles", "Créer des tableaux croisés dynamiques"],
   competences: ["Formules", "Graphiques"],

@@ -2,7 +2,8 @@ import { demoModeActive } from "@/lib/auth/current-user";
 import { getFiche } from "@/lib/catalogue/data";
 import { estTablesAbsentes, liste, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
-import type { DonneesLecon, LeconDetail, RessourceLecon, VideoLecon } from "./types";
+import { depuisMultirange } from "@/lib/video/suivi";
+import type { DonneesLecon, LeconDetail, RessourceLecon, VideoLecon, VisionnageLecon } from "./types";
 
 // Lecture de la page leçon. Le programme vient de la fiche (formations publiées, accès calculé par la base) ;
 // la base ne renvoie le contenu et les ressources qu'avec l'accès à la leçon (règles de la 0004), et on ne les garde
@@ -40,6 +41,7 @@ function versLecon(l: Ligne): LeconDetail {
     video: versVideo(contenu),
     texte: texte(contenu?.texte),
     ressources: accessible ? [...liste(l.ressources)].sort((a, b) => rangDe(a) - rangDe(b)).map(versRessource) : [],
+    visionnage: null,
   };
 }
 
@@ -51,6 +53,24 @@ async function lireNote(leconId: string): Promise<{ note: string | null; notesDi
     return { note: texte(ligne?.texte) || null, notesDisponibles: true };
   } catch (erreur) {
     if (estTablesAbsentes(erreur)) return { note: null, notesDisponibles: false };
+    throw erreur;
+  }
+}
+
+/** Le temps regardé de la leçon ; une table absente (0007 pas encore appliquée) ne bloque pas la page. */
+async function lireVisionnage(leconId: string): Promise<VisionnageLecon | null> {
+  const supabase = await createClient();
+  try {
+    const ligne = verifier(
+      await supabase.from("progression_lecons").select("passages, position_secondes, terminee_le").eq("lecon_id", leconId).maybeSingle(),
+    ) as Ligne | null;
+    return {
+      passages: depuisMultirange(texte(ligne?.passages)),
+      positionSecondes: Number(ligne?.position_secondes ?? 0),
+      terminee: Boolean(ligne?.terminee_le),
+    };
+  } catch (erreur) {
+    if (estTablesAbsentes(erreur)) return null;
     throw erreur;
   }
 }
@@ -74,6 +94,8 @@ export async function getLecon(slug: string, leconId: string, connecte: boolean)
   ) as Ligne | null;
   if (!ligne) return null;
 
-  const notes = connecte ? await lireNote(leconId) : { note: null, notesDisponibles: true };
-  return { fiche, lecon: versLecon(ligne), ...notes };
+  const lecon = versLecon(ligne);
+  if (!connecte) return { fiche, lecon, note: null, notesDisponibles: true };
+  const [notes, visionnage] = await Promise.all([lireNote(leconId), lecon.accessible ? lireVisionnage(leconId) : null]);
+  return { fiche, lecon: { ...lecon, visionnage }, ...notes };
 }

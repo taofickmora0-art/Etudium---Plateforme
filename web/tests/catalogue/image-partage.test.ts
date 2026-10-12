@@ -7,7 +7,7 @@ const getFiche = vi.fn();
 vi.mock("@/lib/catalogue/data", () => ({ getFiche: (slug: string) => getFiche(slug) }));
 
 const { default: Image } = await import("@/app/(catalogue)/formations/[slug]/opengraph-image");
-const FICHE: FicheFormation = { ...parSlug("maitriser-microsoft-excel"), description: "", objectifs: [], competences: [], formateur: null, modules: [] };
+const FICHE: FicheFormation = { ...parSlug("maitriser-microsoft-excel"), description: "", seuilVideo: 90, objectifs: [], competences: [], formateur: null, modules: [] };
 
 /** Pixels bleu Étudium (#0B18C9, à l'anticrénelage près) dans un carré de l'image. */
 async function pixelsBleus(png: Buffer, x0: number, y0: number, cote: number) {

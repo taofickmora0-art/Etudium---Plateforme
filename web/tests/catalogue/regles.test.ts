@@ -6,6 +6,7 @@ import { parSlug } from "./cartes-design";
 const fiche = (champs: Partial<FicheFormation>): FicheFormation => ({
   ...parSlug("maitriser-microsoft-excel"),
   description: "",
+  seuilVideo: 90,
   objectifs: [],
   competences: [],
   formateur: null,
