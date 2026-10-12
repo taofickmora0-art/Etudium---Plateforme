@@ -94,6 +94,12 @@ Ton processeur (AMD Ryzen 7 3750H) fait partie de ceux que Microsoft accepte pou
 4. **Écrans de compte (0.4)**, même sans base : http://localhost:3000/connexion, `/inscription`, `/mot-de-passe-oublie`, `/nouveau-mot-de-passe`. Compare-les avec les écrans du design (connexion, inscription, code, mot de passe). Les pages `/conditions` et `/confidentialite` ont un texte provisoire : dis-moi s’il te convient en attendant le texte définitif.
 5. **Connexion pour de vrai (0.4)** : suis le guide [Brancher la connexion](brancher-la-connexion.md) jusqu’à sa vérification finale.
    - **Rôles (0.6)** : à la fin de ce guide, la section « Devenir super-administrateur » donne ton rôle et explique comment vérifier qu’un compte étudiant ne peut pas ouvrir `/admin`. Sans base, en mode démonstration, `/admin` et `/formateur` s’ouvrent déjà : l’utilisatrice de démonstration a ces rôles.
+   - **Mon profil (0.5)** : sans base, http://localhost:3000/profil montre déjà les trois onglets avec les données d’Aïcha (les enregistrements répondent « Une erreur est survenue… »). Une fois la base branchée, avec les deux fichiers SQL appliqués (étape 1 du guide) :
+     1. Modifie tes informations, recharge la page : elles restent.
+     2. Change ta photo : elle apparaît dans l’en-tête et dans le menu du profil.
+     3. Change deux interrupteurs de l’onglet Notifications, recharge : ils restent.
+     4. Connecte-toi dans deux navigateurs (Chrome et Edge). Change ton mot de passe dans le premier (onglet Sécurité). Dans le second, clique sur n’importe quelle page : la connexion s’ouvre avec « Votre session a expiré ».
+     5. Avec un compte de test (créé avec une autre adresse), onglet Sécurité → « Supprimer mon compte », saisis SUPPRIMER : la connexion s’ouvre avec « Votre compte a été supprimé », et le compte a disparu de **Table Editor → profils**.
 6. Dis-moi ce qui ne te va pas : une couleur, un texte, un espacement, un comportement. Je corrige avant d’attaquer la suite.
 
 > Pour tester sur ton téléphone pendant que l’application tourne sur l’ordinateur, les deux doivent être sur le même Wi-Fi ; dis-le-moi et je te donne la marche à suivre.
