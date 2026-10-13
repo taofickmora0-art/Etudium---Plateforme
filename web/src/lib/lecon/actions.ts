@@ -82,3 +82,21 @@ export async function ouvrirLecon(leconId: string): Promise<void> {
   }
 }
 
+
+/**
+ * Lien de consultation (visualiseur intégré, spec §6) : 60 s, sans téléchargement, pour une ressource en consultation
+ * seule d'une leçon ouverte. Le visualiseur lit le fichier une fois, à l'ouverture.
+ */
+export async function lienConsultation(ressourceId: string): Promise<{ url: string; format: string } | { erreur: string }> {
+  if (!UUID.test(ressourceId)) return { erreur: FICHIER_INACCESSIBLE };
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("ressources").select("id, fichier, format, telechargeable").eq("id", ressourceId).maybeSingle();
+  const ressource = error ? null : (data as Ligne | null);
+  if (!ressource) return { erreur: FICHIER_INACCESSIBLE };
+  if (ressource.telechargeable === true) return { erreur: "Ce fichier se télécharge." };
+  const format = texte(ressource.format);
+  if (!formatParMime(format)?.consultable) return { erreur: "Ce format ne s’affiche pas ici." };
+  const lien = await supabase.storage.from("ressources").createSignedUrl(texte(ressource.fichier), 60);
+  const url = lien.error ? "" : texte(lien.data?.signedUrl);
+  return url ? { url, format } : { erreur: LIEN_ECHEC };
+}

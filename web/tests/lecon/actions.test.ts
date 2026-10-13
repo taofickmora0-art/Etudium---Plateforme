@@ -10,7 +10,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({ ...faux.client, auth: { getUser: async () => ({ data: { user: compte }, error: null }) } }),
 }));
 
-const { enregistrerNote, lienRessource, ouvrirLecon, terminerLecon } = await import("@/lib/lecon/actions");
+const { enregistrerNote, lienConsultation, lienRessource, ouvrirLecon, terminerLecon } = await import("@/lib/lecon/actions");
 
 const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const RESSOURCE = { id: id(301), titre: "Données de l’enquête", fichier: `${id(1)}/abc.xlsx`, format: XLSX, telechargeable: true };
@@ -120,6 +120,37 @@ describe("Fin et visite d'une leçon", () => {
     faux.repondre("rpc.ouvrir_lecon", { error: { code: "PGRST202", message: "absente" } });
     await expect(ouvrirLecon(id(4))).resolves.toBeUndefined();
     await expect(ouvrirLecon("abc")).resolves.toBeUndefined();
+  });
+});
+
+describe("Lien de consultation (visualiseur)", () => {
+  const PDF = { ...RESSOURCE, titre: "Guide", fichier: `${id(1)}/guide.pdf`, format: "application/pdf", telechargeable: false };
+
+  beforeEach(() => {
+    faux.vider();
+  });
+
+  it("une ressource absente, téléchargeable ou d'un format non affichable est refusée", async () => {
+    expect(await lienConsultation("abc")).toEqual({ erreur: "Ce fichier n’est pas accessible." });
+    expect(await lienConsultation(id(301))).toEqual({ erreur: "Ce fichier n’est pas accessible." });
+    faux.repondre("ressources.select", { data: { ...PDF, telechargeable: true } });
+    expect(await lienConsultation(id(301))).toEqual({ erreur: "Ce fichier se télécharge." });
+    faux.repondre("ressources.select", { data: { ...PDF, format: XLSX } });
+    expect(await lienConsultation(id(301))).toEqual({ erreur: "Ce format ne s’affiche pas ici." });
+    expect(faux.de("storage.ressources")).toEqual([]);
+  });
+
+  it("le lien dure 60 secondes, sans téléchargement, et donne le format", async () => {
+    faux.repondre("ressources.select", { data: PDF });
+    faux.repondre("storage.ressources.createSignedUrl", { data: { signedUrl: "https://stockage/guide?token=abc" } });
+    expect(await lienConsultation(id(301))).toEqual({ url: "https://stockage/guide?token=abc", format: "application/pdf" });
+    expect(faux.de("storage.ressources", "createSignedUrl")[0].valeurs).toEqual([PDF.fichier, 60]);
+  });
+
+  it("si le lien ne peut pas être créé, un message le dit", async () => {
+    faux.repondre("ressources.select", { data: PDF });
+    faux.repondre("storage.ressources.createSignedUrl", { error: { message: "panne" } });
+    expect(await lienConsultation(id(301))).toEqual({ erreur: "Le lien n’a pas pu être créé. Réessayez." });
   });
 });
 
