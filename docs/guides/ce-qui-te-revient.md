@@ -269,7 +269,7 @@ Pas de migration pour cette tâche : il faut seulement que la 0003 à la 0009 so
 2. Ouvre la première leçon de Zotero, puis reviens à l’Accueil :
    - tuiles « Progression globale » et « Formations en cours » ;
    - « Continuer l’apprentissage » montre Zotero, avec « Module 1 · {titre de la leçon} · {durée} » ;
-   - **Reprendre la leçon** ouvre la bonne leçon ; **Voir le parcours** ouvre Mes parcours.
+   - **Reprendre la leçon** ouvre la bonne leçon ; **Voir le parcours** ouvre Mes parcours, sur l’onglet du parcours de la formation.
 3. Ouvre une leçon d’une deuxième formation, puis reviens :
    - elle passe dans « Continuer l’apprentissage » ;
    - Zotero passe dans « À faire » (« Leçon suivante ») ;
