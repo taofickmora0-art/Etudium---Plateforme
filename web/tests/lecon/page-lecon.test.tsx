@@ -8,7 +8,13 @@ import type { DonneesLecon, LeconDetail } from "@/lib/lecon/types";
 import { EXCEL, EXCEL_OUVERTE, id, ZOTERO } from "./donnees";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }), usePathname: () => "/formations" }));
-vi.mock("@/lib/lecon/actions", () => ({ enregistrerNote: vi.fn(), lienRessource: vi.fn(), ouvrirLecon: vi.fn(async () => undefined), terminerLecon: vi.fn() }));
+vi.mock("@/lib/lecon/actions", () => ({
+  enregistrerNote: vi.fn(),
+  lienRessource: vi.fn(),
+  lienConsultation: vi.fn(),
+  ouvrirLecon: vi.fn(async () => undefined),
+  terminerLecon: vi.fn(),
+}));
 // Le lecteur officiel (script YouTube ou Vimeo) ne se charge pas dans les tests : le lecteur Étudium reste en attente.
 vi.mock("@/lib/video/adaptateurs", () => ({ creerAdaptateur: () => new Promise(() => {}) }));
 

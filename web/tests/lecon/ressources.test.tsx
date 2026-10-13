@@ -6,7 +6,12 @@ import type { RessourceLecon } from "@/lib/lecon/types";
 import { id } from "./donnees";
 
 const lienRessource = vi.fn();
-vi.mock("@/lib/lecon/actions", () => ({ lienRessource: (...args: unknown[]) => lienRessource(...args), enregistrerNote: vi.fn() }));
+const lienConsultation = vi.fn();
+vi.mock("@/lib/lecon/actions", () => ({
+  lienRessource: (...args: unknown[]) => lienRessource(...args),
+  lienConsultation: (...args: unknown[]) => lienConsultation(...args),
+  enregistrerNote: vi.fn(),
+}));
 
 const { RessourcesLecon } = await import("@/components/lecon/RessourcesLecon");
 
@@ -61,11 +66,16 @@ describe("Ressources d'une leçon", () => {
     expect(bouton).toBeEnabled();
   });
 
-  it("« Consulter » attend le visualiseur (tâche 1.8)", () => {
+  it("« Consulter » ouvre le visualiseur intégré", async () => {
+    lienConsultation.mockResolvedValue({ erreur: "Ce fichier n’est pas accessible." });
     render(<RessourcesLecon ressources={RESSOURCES} />);
     const consulter = screen.getByRole("button", { name: "Consulter Guide des tableaux croisés" });
-    expect(consulter).toBeDisabled();
-    expect(consulter).toHaveAttribute("title", "Bientôt disponible");
+    expect(consulter).toBeEnabled();
+    await userEvent.click(consulter);
+    expect(screen.getByRole("dialog", { name: "Guide des tableaux croisés" })).toBeInTheDocument();
+    expect(lienConsultation).toHaveBeenCalledWith(id(302));
+    await userEvent.click(screen.getByRole("button", { name: "Fermer" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("sans ressource, la liste le dit", () => {

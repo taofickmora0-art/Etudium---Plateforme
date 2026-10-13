@@ -18,6 +18,7 @@ import { cn } from "@/lib/cn";
 import { lienRessource } from "@/lib/lecon/actions";
 import { LIEN_ECHEC, metaRessource } from "@/lib/lecon/regles";
 import type { RessourceLecon } from "@/lib/lecon/types";
+import { VisualiseurRessource } from "./VisualiseurRessource";
 
 /** Icône du format (le design n'en montre qu'une ; une par famille aide à reconnaître le fichier). */
 function iconeDu(format: string): IconSvgElement {
@@ -53,6 +54,7 @@ function ContenuBouton({ icone, libelle }: { icone: IconSvgElement; libelle: str
 export function RessourcesLecon({ ressources }: { ressources: RessourceLecon[] }) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState<string | null>(null);
+  const [consultee, setConsultee] = useState<RessourceLecon | null>(null);
 
   if (ressources.length === 0) return <p className="m-0 text-sm leading-[22px] text-discret">Aucune ressource pour cette leçon.</p>;
 
@@ -100,14 +102,15 @@ export function RessourcesLecon({ ressources }: { ressources: RessourceLecon[] }
                 <ContenuBouton icone={Download04Icon} libelle="Télécharger" />
               </button>
             ) : (
-              // Le visualiseur intégré (consultation sans téléchargement) arrive avec la tâche 1.8.
-              <button type="button" aria-label={`Consulter ${r.titre}`} disabled title="Bientôt disponible" className={BOUTON}>
+              // Consultation seule : le visualiseur intégré, sans téléchargement ni impression (spec §6).
+              <button type="button" aria-label={`Consulter ${r.titre}`} onClick={() => setConsultee(r)} className={BOUTON}>
                 <ContenuBouton icone={ViewIcon} libelle="Consulter" />
               </button>
             )}
           </li>
         ))}
       </ul>
+      <VisualiseurRessource ressource={consultee} onFermer={() => setConsultee(null)} />
     </div>
   );
 }

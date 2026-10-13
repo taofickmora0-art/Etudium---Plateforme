@@ -228,3 +228,16 @@ Il faut la section 5 (tables et exemples du lot 1).
 4. Arrête une vidéo vers 4:00, ouvre une autre page, puis reviens : la vidéo reprend à 4:00.
 5. Sur téléphone : une fois la leçon terminée, le bouton du bas devient **Leçon suivante**.
 
+## 12. Valider le visualiseur de documents (tâche 1.8), 10 minutes
+
+1. Au back-office, dans une leçon ouverte (par exemple une leçon d’aperçu d’Excel), ajoute deux ressources **en consultation seule** : un PDF de plusieurs pages, et une image (JPG ou PNG).
+2. Sur la page de la leçon, onglet **Ressources**, clique **Consulter** sur le PDF :
+   - le document s’ouvre en grand, page par page ;
+   - il n’y a ni bouton de téléchargement ni bouton d’impression ;
+   - **Agrandir** / **Réduire** change la taille (de 75 % à 200 %) ;
+   - « Document en consultation seule. » en bas.
+3. Fais de même avec l’image.
+4. Avec le document ouvert, appuie sur **Ctrl + P** : l’aperçu d’impression n’affiche pas le document (seulement une phrase).
+5. Sur ton téléphone (Android surtout) : le document s’ouvre en plein écran, sans téléchargement, et défile avec le doigt. **C’est le test le plus important** : sur Android, Chrome ne sait pas afficher un PDF dans une page ; le visualiseur le fait.
+6. Rappel honnête : une capture d’écran reste possible. Le visualiseur ne prétend pas l’empêcher.
+

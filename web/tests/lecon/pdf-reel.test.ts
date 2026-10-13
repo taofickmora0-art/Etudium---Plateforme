@@ -1,0 +1,56 @@
+import { createCanvas } from "@napi-rs/canvas";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+// Le vrai pdf.js (pas un faux document) : ouvre un PDF fabriqué ici et dessine sa page 1. Le navigateur, lui, se
+// vérifie avec le guide (section 12) ; ce test garde l'adaptateur juste quand pdf.js change de version.
+
+/** Un PDF d'une page A4 : le mot « Etudium » et un rectangle bleu. */
+function petitPdf(): ArrayBuffer {
+  const flux = "BT /F1 48 Tf 72 700 Td (Etudium) Tj ET 0 0 1 rg 72 400 450 200 re f";
+  const objets = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+    `<< /Length ${flux.length} >>\nstream\n${flux}\nendstream`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+  ];
+  let sortie = "%PDF-1.4\n";
+  const positions: number[] = [];
+  objets.forEach((objet, i) => {
+    positions.push(sortie.length);
+    sortie += `${i + 1} 0 obj\n${objet}\nendobj\n`;
+  });
+  const xref = sortie.length;
+  sortie += `xref\n0 ${objets.length + 1}\n0000000000 65535 f \n${positions.map((p) => `${String(p).padStart(10, "0")} 00000 n \n`).join("")}`;
+  sortie += `trailer\n<< /Size ${objets.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return new TextEncoder().encode(sortie).buffer as ArrayBuffer;
+}
+
+describe("Adaptateur pdf.js (vrai pdf.js)", () => {
+  const avant = (globalThis as { window?: unknown }).window;
+  beforeAll(() => {
+    // Ce dont pdf.js et l'adaptateur ont besoin d'une fenêtre de navigateur.
+    (globalThis as { window?: unknown }).window = { devicePixelRatio: 2, requestAnimationFrame: (f: (t: number) => void) => setTimeout(() => f(Date.now()), 0) };
+  });
+  afterAll(() => {
+    (globalThis as { window?: unknown }).window = avant;
+  });
+
+  it("ouvre un PDF, compte ses pages et dessine la page 1 à la largeur demandée, nette (densité 2)", async () => {
+    const { ouvrirPdf } = await import("@/lib/ressources/pdf");
+    const document = await ouvrirPdf(petitPdf());
+    expect(document.pages).toBe(1);
+    // Un canvas de Node n'a pas de style : on lui en donne un, comme celui d'une page.
+    const canvas = Object.assign(createCanvas(1, 1), { style: {} as CSSStyleDeclaration });
+    await document.dessiner(1, canvas as unknown as HTMLCanvasElement, 300);
+    expect(canvas.width).toBe(600);
+    expect(canvas.style.width).toBe("300px");
+    expect(Math.round(canvas.height)).toBe(Math.floor((842 / 595) * 600));
+    // Le rectangle bleu est bien dessiné.
+    const pixels = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
+    let bleus = 0;
+    for (let i = 0; i < pixels.length; i += 4) if (pixels[i + 2] > 200 && pixels[i] < 60 && pixels[i + 1] < 60) bleus++;
+    expect(bleus).toBeGreaterThan(10_000);
+    document.fermer();
+  }, 30_000);
+});

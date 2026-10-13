@@ -10,6 +10,7 @@ const enregistrerNote = vi.fn();
 vi.mock("@/lib/lecon/actions", () => ({
   enregistrerNote: (...args: unknown[]) => enregistrerNote(...args),
   lienRessource: vi.fn(),
+  lienConsultation: vi.fn(),
   ouvrirLecon: vi.fn(async () => undefined),
   terminerLecon: vi.fn(),
 }));

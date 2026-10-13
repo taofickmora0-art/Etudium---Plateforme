@@ -14,9 +14,9 @@ type Tache = { cancel(): void; promise: Promise<unknown> };
 
 /** Lit un PDF déjà téléchargé (le lien temporaire peut expirer ensuite : tout est en mémoire). */
 export async function ouvrirPdf(donnees: ArrayBuffer): Promise<DocumentPdf> {
-  const pdfjs = await import("pdfjs-dist");
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-    pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/legacy/build/pdf.worker.min.mjs", import.meta.url).toString();
   }
   const chargement = pdfjs.getDocument({ data: new Uint8Array(donnees) });
   const document = await chargement.promise;
