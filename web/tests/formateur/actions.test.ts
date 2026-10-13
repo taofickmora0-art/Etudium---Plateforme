@@ -100,6 +100,25 @@ describe("Actions du formateur", () => {
     expect(await deleteFormation(F, "formateur")).toEqual({ ok: true, redirection: "/formateur/formations" });
   });
 
+  it("supprimer un brouillon retire ses fichiers et sa couverture avant la formation (ensuite, ils ne seraient plus à lui)", async () => {
+    faux.repondre("formations.select", { data: { statut: "brouillon", publiee_le: null } });
+    faux.repondre("storage.ressources.list", { data: [{ name: "a.pdf" }] });
+    faux.repondre("storage.couvertures.list", { data: [{ name: "c.jpg" }] });
+    expect(await deleteFormation(F, "formateur")).toMatchObject({ ok: true });
+    const ordre = faux.appels.map((a) => `${a.table}.${a.op}`).filter((c) => c.endsWith(".remove") || c === "formations.delete");
+    expect(ordre).toEqual(["storage.ressources.remove", "storage.couvertures.remove", "formations.delete"]);
+    expect(faux.de("storage.ressources", "remove")[0].valeurs).toEqual([[`${F}/a.pdf`]]);
+    expect(faux.de("storage.couvertures", "remove")[0].valeurs).toEqual([[`${F}/c.jpg`]]);
+  });
+
+  it("un compte de l'équipe qui est aussi formateur enregistre les Informations depuis l'espace formateur (contenu seulement)", async () => {
+    getShellUser.mockResolvedValue({ roles: ["etudiant", "formateur", "admin"] });
+    faux.repondre("formations_parcours.select", { data: [] });
+    const state = await saveFormationInfos(IDLE, form({ id: F, espace: "formateur", titre: "Excel", slug: "excel", resume: "", description: "", objectifs: "", competences: "", niveau: "debutant" }));
+    expect(state.status).toBe("success");
+    expect(Object.keys(faux.de("formations", "update")[0].valeurs as object).sort()).toEqual(["competences", "description", "niveau", "objectifs", "resume", "slug", "titre"]);
+  });
+
   it("le formateur réordonne modules, leçons et ressources, pas les parcours", async () => {
     expect(await deplacer("modules", M, 1)).toEqual({ ok: true });
     expect(await deplacer("parcours", M, 1)).toEqual({ ok: false, message: "Accès réservé à l’équipe." });

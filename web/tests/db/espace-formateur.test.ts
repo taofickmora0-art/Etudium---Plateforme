@@ -214,6 +214,17 @@ describe("Migration 0014 : droits du formateur", () => {
   });
 });
 
+describe("Migration 0014 : relecture finale", () => {
+  it("un formateur ne note pas sa propre formation, même payante et terminée", async () => {
+    const lecons = await banc.db.query<{ id: string }>("select l.id from public.lecons l join public.modules m on m.id = l.module_id where m.formation_id = $1", [PUB]);
+    for (const l of lecons.rows) await banc.en({ id: F }, "select public.terminer_lecon($1)", [l.id]);
+    expect(await banc.en<{ p: boolean }>({ id: F }, "select public.peut_donner_avis($1) as p", [PUB])).toEqual([{ p: false }]);
+    await expect(banc.en({ id: F }, "select public.enregistrer_avis($1, 5::smallint, 'Excellent')", [PUB])).rejects.toThrow();
+    // L'étudiant qui a terminé la formation, lui, peut toujours.
+    expect(await banc.en<{ p: boolean }>({ id: E }, "select public.peut_donner_avis($1) as p", [PUB])).toEqual([{ p: true }]);
+  });
+});
+
 describe("Migration 0014 : relecture", () => {
   const relecture = async (id: string) =>
     un<{ envoyee: boolean; renvoyee: boolean; remarque: string | null; statut: string }>(

@@ -215,8 +215,10 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
     return { status: "error", message: ECHEC, values };
   }
   if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
-  // Un formateur n'enregistre que le contenu : les réglages commerciaux et le formateur attribué reviennent à l'équipe.
-  const parsed = garde.equipe ? formationInfosSchema.safeParse(saisie) : formationInfosSchema.pick(CHAMPS_DU_CONTENU).safeParse(saisie);
+  // Depuis l'espace formateur (ou pour un formateur), seulement le contenu : les réglages commerciaux et le formateur
+  // attribué reviennent à l'équipe, et ce formulaire ne les envoie pas (un membre de l'équipe peut aussi être formateur).
+  const complet = garde.equipe && espaceDe(fd) === "admin";
+  const parsed = complet ? formationInfosSchema.safeParse(saisie) : formationInfosSchema.pick(CHAMPS_DU_CONTENU).safeParse(saisie);
   if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values };
   if (!estUuid(id)) return { status: "error", message: ECHEC, values };
 
@@ -283,13 +285,16 @@ export async function deleteFormation(id: string, espace: EspaceEdition = "admin
     const { data: formation } = await supabase.from("formations").select("statut, publiee_le").eq("id", id).maybeSingle();
     if (!formation) return { ok: false, message: ECHEC };
     if ((formation as { publiee_le: string | null }).publiee_le) return { ok: false, message: PUBLIEE_ARCHIVER };
-    // Les fichiers de la formation vivent dans son dossier « <id>/ » de l'espace ressources.
-    const { data: fichiers } = await supabase.storage.from("ressources").list(id, { limit: 1000 });
+    // Les fichiers de la formation vivent dans son dossier « <id>/ » des espaces ressources et couvertures. Ils sont
+    // retirés avant la ligne : ensuite, le dossier n'appartiendrait plus à aucune formation et un formateur ne pourrait
+    // plus les supprimer (règles de la 0014). Le brouillon vient d'être vérifié : sa suppression ne sera pas refusée.
+    for (const espaceFichiers of ["ressources", "couvertures"] as const) {
+      const { data: fichiers } = await supabase.storage.from(espaceFichiers).list(id, { limit: 1000 });
+      const chemins = ((fichiers as { name: string }[] | null) ?? []).map((f) => `${id}/${f.name}`);
+      if (chemins.length > 0) await supabase.storage.from(espaceFichiers).remove(chemins);
+    }
     const { error } = await supabase.from("formations").delete().eq("id", id);
     if (error) return { ok: false, message: error.code === "P0001" && error.message ? typographie(error.message) : ECHEC };
-    // La ligne d'abord, puis les fichiers : en cas d'échec, mieux vaut un fichier orphelin qu'une ressource sans fichier.
-    const chemins = ((fichiers as { name: string }[] | null) ?? []).map((f) => `${id}/${f.name}`);
-    if (chemins.length > 0) await supabase.storage.from("ressources").remove(chemins);
   } catch {
     return { ok: false, message: ECHEC };
   }

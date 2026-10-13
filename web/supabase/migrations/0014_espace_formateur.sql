@@ -122,6 +122,28 @@ as $$
   );
 $$;
 
+-- Avis (0010, 0013) : un formateur ne note pas sa propre formation. Il en lit toutes les leçons (ci-dessus), même
+-- payantes : il pourrait sinon atteindre les 50 % et se donner une note. La suspension (0013) est gardée.
+create or replace function public.peut_donner_avis(p_formation uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select (select auth.uid()) is not null
+    and not public.compte_suspendu()
+    and not public.formateur_de(p_formation)
+    and exists (select 1 from public.formations f where f.id = p_formation and f.statut = 'publiee')
+    and (
+      select count(*) > 0 and count(p.terminee_le) * 2 >= count(*)
+      from public.lecons l
+      join public.modules m on m.id = l.module_id
+      left join public.progression_lecons p on p.lecon_id = l.id and p.profil_id = (select auth.uid())
+      where m.formation_id = p_formation
+    );
+$$;
+
 -- ─── Écriture : le formateur écrit dans ses formations ──────────────────────────────────────────────
 -- Une règle par action, comme celles de l'équipe (0004) ; la condition dépend de la table.
 do $$
