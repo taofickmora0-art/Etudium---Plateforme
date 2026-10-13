@@ -28,6 +28,21 @@ export const estColonneAbsente = (erreur: ErreurSupabase) => erreur?.code === "4
 /** Une fonction d'une migration pas encore appliquée (PostgREST : PGRST202 ; Postgres : 42883). */
 export const estFonctionAbsente = (erreur: ErreurSupabase) => erreur?.code === "PGRST202" || erreur?.code === "42883";
 
+type ReponseLecture = { data: unknown; error: ErreurSupabase };
+
+/**
+ * Lit avec des colonnes facultatives (migrations récentes) : `variantes` va de la plus complète à la plus réduite.
+ * Une colonne absente (42703) fait relire avec la variante suivante ; la dernière doit toujours exister.
+ */
+export async function lireAvecRepli(variantes: string[], lire: (colonnes: string) => PromiseLike<ReponseLecture>): Promise<unknown> {
+  for (const [rang, colonnes] of variantes.entries()) {
+    const reponse = await lire(colonnes);
+    if (estColonneAbsente(reponse.error) && rang < variantes.length - 1) continue;
+    return verifier(reponse);
+  }
+  return null;
+}
+
 export type Ligne = Record<string, unknown>;
 /** Une relation « un à un » arrive en objet ou en tableau selon ce que Supabase devine : on accepte les deux. */
 export const un = (valeur: unknown): Ligne | null =>

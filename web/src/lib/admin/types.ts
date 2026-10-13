@@ -45,6 +45,8 @@ export type FormationAdmin = FormationResume & {
   publieeLe: string | null;
   parcoursIds: string[];
   modules: ModuleAdmin[];
+  /** Chemin de l'image de couverture (migration 0012), ou null. */
+  couverture: string | null;
 };
 
 export type RessourceAdmin = {

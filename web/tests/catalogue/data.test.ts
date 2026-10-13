@@ -103,11 +103,23 @@ describe("Lecture du catalogue", () => {
   it("sans la migration 0010 (colonne absente, 42703), le catalogue et la fiche se relisent sans les notes", async () => {
     const reponse = (appel: { valeurs?: unknown }) => (String(appel.valeurs).includes("note_moyenne") ? { error: { code: "42703" } } : { data: [LIGNE] });
     faux.repondre("formations.select", reponse);
-    expect(await listCatalogue()).toMatchObject([{ slug: "maitriser-microsoft-excel", note: null, nbAvis: 0 }]);
-    expect(faux.de("formations", "select")).toHaveLength(2);
+    expect(await listCatalogue()).toMatchObject([{ slug: "maitriser-microsoft-excel", note: null, nbAvis: 0, couverture: null }]);
+    // Avec la couverture (0012), puis avec les seules notes (0010), puis sans colonne facultative.
+    expect(faux.de("formations", "select")).toHaveLength(3);
     faux.vider();
     faux.repondre("formations.select", (appel) => (String(appel.valeurs).includes("note_moyenne") ? { error: { code: "42703" } } : { data: LIGNE }));
     expect(await getFiche("maitriser-microsoft-excel")).toMatchObject({ slug: "maitriser-microsoft-excel", note: null, nbAvis: 0 });
+  });
+
+  it("la couverture est lue (migration 0012) ; sans elle, les notes restent", async () => {
+    faux.repondre("formations.select", { data: [{ ...LIGNE, note_moyenne: 4.8, nb_avis: 126, couverture: "f1/a.jpg" }] });
+    expect(await listCatalogue()).toMatchObject([{ couverture: "f1/a.jpg", note: 4.8 }]);
+    expect(String(faux.de("formations", "select")[0].valeurs)).toContain("note_moyenne, nb_avis, couverture");
+    faux.vider();
+    faux.repondre("formations.select", (appel) =>
+      String(appel.valeurs).includes("couverture") ? { error: { code: "42703" } } : { data: [{ ...LIGNE, note_moyenne: 4.8, nb_avis: 126 }] },
+    );
+    expect(await listCatalogue()).toMatchObject([{ couverture: null, note: 4.8, nbAvis: 126 }]);
   });
 
   it("les tables absentes sont signalées", async () => {

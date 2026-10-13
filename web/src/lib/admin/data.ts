@@ -1,6 +1,6 @@
 import { demoModeActive } from "@/lib/auth/current-user";
 import type { Badge, CouleurParcours, Niveau, StatutFormation } from "@/lib/contenus/libelles";
-import { estTablesAbsentes, liste, parOrdre, TablesAbsentesError, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
+import { estTablesAbsentes, lireAvecRepli, liste, parOrdre, TablesAbsentesError, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import type {
   FormateurAdmin,
@@ -123,17 +123,18 @@ export async function listFormations(): Promise<FormationResume[]> {
 export async function getFormationAdmin(id: string): Promise<FormationAdmin | null> {
   if (demoModeActive() || !estUuid(id)) return null;
   const supabase = await createClient();
-  const f = verifier(
-    await supabase
+  // La couverture (0012) est facultative : sans la migration, le back-office s'ouvre sans elle.
+  const f = (await lireAvecRepli([", couverture", ""], (couverture) =>
+    supabase
       .from("formations")
       .select(
-        "id, slug, titre, statut, niveau, resume, description, objectifs, competences, formateur_id, gratuite, achat_separe, prix_fcfa, badge, seuil_video, publiee_le, " +
+        `id, slug, titre, statut, niveau, resume, description, objectifs, competences, formateur_id, gratuite, achat_separe, prix_fcfa, badge, seuil_video, publiee_le${couverture}, ` +
           "formations_parcours(parcours_id, parcours(nom_court)), " +
           "modules(id, titre, ordre, lecons(id, titre, duree_secondes, apercu, ordre, lecons_contenus(video_id)))",
       )
       .eq("id", id)
       .maybeSingle(),
-  ) as Ligne | null;
+  )) as Ligne | null;
   if (!f) return null;
   const modules = liste(f.modules).map(versModule).sort(parOrdre);
   return {
@@ -157,6 +158,7 @@ export async function getFormationAdmin(id: string): Promise<FormationAdmin | nu
     publieeLe: typeof f.publiee_le === "string" ? f.publiee_le : null,
     parcoursIds: liste(f.formations_parcours).map((lien) => String(lien.parcours_id)),
     modules,
+    couverture: texte(f.couverture) || null,
   };
 }
 

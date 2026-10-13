@@ -12,6 +12,15 @@ describe("Lecture des contenus du back-office", () => {
     faux.vider();
   });
 
+  it("la formation porte sa couverture (0012) ; sans la colonne, le back-office s'ouvre quand même", async () => {
+    const ligne = { id: "f1", slug: "excel", titre: "Excel", statut: "brouillon", niveau: "debutant", modules: [], formations_parcours: [] };
+    faux.repondre("formations.select", { data: { ...ligne, couverture: "f1/a.jpg" } });
+    expect(await getFormationAdmin("00000000-0000-4000-8000-000000000001")).toMatchObject({ couverture: "f1/a.jpg" });
+    faux.vider();
+    faux.repondre("formations.select", (appel) => (String(appel.valeurs).includes("couverture") ? { error: { code: "42703" } } : { data: ligne }));
+    expect(await getFormationAdmin("00000000-0000-4000-8000-000000000001")).toMatchObject({ titre: "Excel", couverture: null });
+  });
+
   it("une formation est lue avec son programme dans l'ordre", async () => {
     faux.repondre("formations.select", {
       data: {

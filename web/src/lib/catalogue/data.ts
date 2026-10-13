@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { demoModeActive } from "@/lib/auth/current-user";
 import type { Badge, CouleurParcours, Niveau } from "@/lib/contenus/libelles";
-import { estColonneAbsente, liste, parOrdre, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
+import { lireAvecRepli, liste, parOrdre, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import type { CarteCatalogue, FicheFormation, LeconFiche, ModuleFiche, ParcoursCatalogue } from "./types";
 
@@ -15,15 +15,10 @@ const COLONNES_PARCOURS = "slug, nom, nom_court, couleur, ordre, actif";
 const COLONNES_CARTE =
   "id, slug, titre, resume, niveau, gratuite, achat_separe, badge, publiee_le, " + `formations_parcours(ordre, parcours(${COLONNES_PARCOURS}))`;
 
-// Note moyenne et nombre d'avis (migration 0010). Sans la 0010, la colonne manque (42703) : on relit sans elles.
-const COLONNES_NOTE = ", note_moyenne, nb_avis";
-type Reponse = { data: unknown; error: { code?: string; message?: string } | null };
-
-async function avecNotes(lire: (notes: string) => PromiseLike<Reponse>): Promise<unknown> {
-  const reponse = await lire(COLONNES_NOTE);
-  if (estColonneAbsente(reponse.error)) return verifier(await lire(""));
-  return verifier(reponse);
-}
+// Colonnes des migrations récentes : note et nombre d'avis (0010), couverture (0012). Une colonne absente (42703)
+// fait relire sans elle : le catalogue s'affiche avant que les migrations soient appliquées.
+const COLONNES_FACULTATIVES = [", note_moyenne, nb_avis, couverture", ", note_moyenne, nb_avis", ""];
+const avecNotes = (lire: Parameters<typeof lireAvecRepli>[1]) => lireAvecRepli(COLONNES_FACULTATIVES, lire);
 
 const versParcours = (p: Ligne): ParcoursCatalogue => ({
   slug: texte(p.slug),
@@ -55,6 +50,7 @@ function versCarte(f: Ligne, lecons: Ligne[]): CarteCatalogue {
     parcours,
     note: f.note_moyenne === null || f.note_moyenne === undefined ? null : Number(f.note_moyenne),
     nbAvis: Number(f.nb_avis ?? 0),
+    couverture: texte(f.couverture) || null,
   };
 }
 

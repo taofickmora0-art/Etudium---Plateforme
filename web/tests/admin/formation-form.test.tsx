@@ -35,6 +35,7 @@ const FORMATION: FormationAdmin = {
   publieeLe: "2026-08-13T00:00:00Z",
   parcoursIds: ["p1"],
   modules: [],
+  couverture: null,
 };
 const PARCOURS = [
   { id: "p1", slug: "reussite-academique", nom: "Réussite académique", nomCourt: "Académique", description: "", couleur: "academique" as const, ordre: 1, actif: true },

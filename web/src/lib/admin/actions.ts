@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { authErrorMessage } from "@/lib/auth/messages";
 import { fieldErrorsFrom, type FormState } from "@/lib/auth/schemas";
 import type { createClient } from "@/lib/supabase/server";
+import { cheminValide } from "@/lib/couvertures/regles";
 import { exigerEquipe } from "./garde";
 import { formatParMime } from "./fichiers";
 import { formateurSchema, formationInfosSchema, leconSchema, lignes, moduleSchema, parcoursSchema, ressourceSchema } from "./schemas";
@@ -519,6 +520,63 @@ export async function deleteRessource(id: string): Promise<Resultat> {
     const { error } = await supabase.from("ressources").delete().eq("id", id);
     if (error) return { ok: false, message: ECHEC };
     await retirerFichiers(supabase, ressource ? [ressource] : []);
+  } catch {
+    return { ok: false, message: ECHEC };
+  }
+  refresh();
+  return { ok: true };
+}
+
+// ─── Image de couverture d'une formation (spec des couvertures, 13 octobre 2026) ───────────────────
+// Comme les ressources, le navigateur dépose le fichier dans l'espace « couvertures » (règle de la 0012 : l'équipe,
+// dans le dossier de la formation) ; ces actions l'enregistrent sur la formation et suppriment l'ancien fichier.
+
+async function couvertureActuelle(supabase: Supabase, formationId: string): Promise<string | null> {
+  const { data } = await supabase.from("formations").select("couverture").eq("id", formationId).maybeSingle();
+  const chemin = (data as { couverture?: string | null } | null)?.couverture;
+  return typeof chemin === "string" && chemin ? chemin : null;
+}
+
+/** Supprime un ancien fichier ; un échec ne remet pas en cause l'enregistrement (fichier orphelin sans effet). */
+async function supprimerFichier(supabase: Supabase, chemin: string | null) {
+  if (!chemin) return;
+  try {
+    await supabase.storage.from("couvertures").remove([chemin]);
+  } catch {
+    // Rien : la formation pointe déjà vers sa nouvelle image.
+  }
+}
+
+/** Enregistre l'image déposée comme couverture de la formation, puis supprime l'ancienne. */
+export async function enregistrerCouverture(formationId: string, chemin: string): Promise<Resultat> {
+  if (!estUuid(formationId)) return { ok: false, message: ECHEC };
+  if (!cheminValide(formationId, chemin)) return { ok: false, message: HORS_DOSSIER };
+  try {
+    const garde = await exigerEquipe();
+    if ("erreur" in garde) return { ok: false, message: garde.erreur };
+    const { supabase } = garde;
+    const ancienne = await couvertureActuelle(supabase, formationId);
+    const { error } = await supabase.from("formations").update({ couverture: chemin }).eq("id", formationId);
+    if (error) return { ok: false, message: ECHEC };
+    if (ancienne !== chemin) await supprimerFichier(supabase, ancienne);
+  } catch {
+    return { ok: false, message: ECHEC };
+  }
+  refresh();
+  return { ok: true };
+}
+
+/** Retire la couverture : la formation reprend la couverture par défaut de son parcours. */
+export async function retirerCouverture(formationId: string): Promise<Resultat> {
+  if (!estUuid(formationId)) return { ok: false, message: ECHEC };
+  try {
+    const garde = await exigerEquipe();
+    if ("erreur" in garde) return { ok: false, message: garde.erreur };
+    const { supabase } = garde;
+    const ancienne = await couvertureActuelle(supabase, formationId);
+    const { error } = await supabase.from("formations").update({ couverture: null }).eq("id", formationId);
+    if (error) return { ok: false, message: ECHEC };
+    await supprimerFichier(supabase, ancienne);
   } catch {
     return { ok: false, message: ECHEC };
   }

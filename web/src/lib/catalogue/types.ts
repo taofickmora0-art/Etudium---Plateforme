@@ -31,6 +31,8 @@ export type CarteCatalogue = {
   /** Moyenne des avis visibles, au dixième ; null sans avis ou sans la migration 0010. */
   note: number | null;
   nbAvis: number;
+  /** Chemin de l'image de couverture (espace « couvertures ») ; null : couverture par défaut du parcours. */
+  couverture: string | null;
 };
 
 export type LeconFiche = {

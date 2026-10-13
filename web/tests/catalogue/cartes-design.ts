@@ -31,6 +31,7 @@ const carte = (
   parcours: [{ ...parcours, position }],
   note: null,
   nbAvis: 0,
+  couverture: null,
   ...champs,
 });
 
