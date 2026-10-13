@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Dialog as RadixDialog } from "radix-ui";
 import { cn } from "@/lib/cn";
@@ -50,6 +50,9 @@ export function Dialog({ open, onOpenChange, title, description, icon, iconTone 
   const block = (event: Event) => {
     if (!dismissible) event.preventDefault();
   };
+  // L'élément qui avait le focus à l'ouverture : sans déclencheur Radix (fenêtre ouverte par un état), Radix ne sait
+  // pas où rendre le focus et le laisse retomber sur la page.
+  const ouvreur = useRef<HTMLElement | null>(null);
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
@@ -57,8 +60,12 @@ export function Dialog({ open, onOpenChange, title, description, icon, iconTone 
         <RadixDialog.Overlay className="fixed inset-0 z-50 bg-[#36476C]/60 motion-safe:animate-fondu max-sm:bg-encre/50" />
         <RadixDialog.Content
           onEscapeKeyDown={block}
+          onOpenAutoFocus={() => {
+            const actif = document.activeElement;
+            ouvreur.current = actif instanceof HTMLElement && actif !== document.body ? actif : null;
+          }}
           onCloseAutoFocus={(event) => {
-            const target = returnFocus?.();
+            const target = returnFocus?.() ?? (ouvreur.current?.isConnected ? ouvreur.current : null);
             if (target) {
               event.preventDefault();
               target.focus();

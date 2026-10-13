@@ -8,11 +8,14 @@ import type { AvisEquipe, AvisFormation, Etoiles } from "./types";
 
 type Reponse = { data: unknown; error: { code?: string; message?: string } | null };
 
-/** Rend les lignes, null si la fonction n'est pas encore dans la base, ou lève. */
+/**
+ * Rend les lignes, ou null : fonction pas encore dans la base, ou toute autre erreur. Les avis ne sont qu'une section
+ * de la fiche : un incident sur eux ne doit pas mettre la page entière en erreur (il est consigné).
+ */
 function lignes(reponse: Reponse): Ligne[] | null {
   if (reponse.error) {
-    if (estFonctionAbsente(reponse.error)) return null;
-    throw new Error(reponse.error.message ?? "Lecture des avis impossible.");
+    if (!estFonctionAbsente(reponse.error)) console.error("Lecture des avis impossible :", reponse.error.message ?? reponse.error.code);
+    return null;
   }
   return liste(reponse.data);
 }

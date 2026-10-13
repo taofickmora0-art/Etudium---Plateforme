@@ -30,6 +30,9 @@ export function BoutonAvis({ formation, avis }: Props) {
   const [note, setNote] = useState<Etoiles | null>(null);
   const [commentaire, setCommentaire] = useState("");
   const [message, setMessage] = useState<string>();
+  // La suppression s'ouvre depuis la première fenêtre : le focus revient toujours sur le bouton de l'avis.
+  const bouton = useId();
+  const retour = () => document.getElementById(bouton);
 
   const ouvrir = () => {
     setNote(avis?.note ?? null);
@@ -40,12 +43,13 @@ export function BoutonAvis({ formation, avis }: Props) {
 
   return (
     <>
-      <Button variant="contour" size="sm" iconLeft={StarIcon} onClick={ouvrir}>
+      <Button id={bouton} variant="contour" size="sm" iconLeft={StarIcon} onClick={ouvrir}>
         {avis ? "Modifier mon avis" : "Laisser un avis"}
       </Button>
       <ConfirmDialog
         open={ouvert}
         onOpenChange={setOuvert}
+        returnFocus={retour}
         title={`Votre avis sur ${formation.titre}`}
         description="Votre note et votre commentaire s’affichent sur la fiche, avec votre prénom et l’initiale de votre nom."
         icon={StarIcon}
@@ -84,6 +88,7 @@ export function BoutonAvis({ formation, avis }: Props) {
       <ConfirmDialog
         open={suppression}
         onOpenChange={setSuppression}
+        returnFocus={retour}
         title="Supprimer votre avis ?"
         description="Votre note et votre commentaire seront retirés de la fiche."
         tone="danger"

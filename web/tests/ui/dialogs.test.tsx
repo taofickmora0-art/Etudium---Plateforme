@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Logout03Icon } from "@hugeicons/core-free-icons";
@@ -22,6 +23,26 @@ describe("Fenêtres", () => {
     expect(screen.getByRole("dialog", { name: "Se déconnecter ?" })).toHaveAccessibleDescription(/Votre progression est enregistrée/);
     await user.keyboard("{Escape}");
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("à la fermeture, le focus revient sur le bouton qui l'a ouverte, même sans déclencheur Radix", async () => {
+    function Ouvreur() {
+      const [ouvert, setOuvert] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setOuvert(true)}>
+            Se déconnecter
+          </button>
+          <ConfirmDialog {...DECONNEXION} open={ouvert} onOpenChange={setOuvert} onConfirm={() => {}} />
+        </>
+      );
+    }
+    const user = userEvent.setup();
+    render(<Ouvreur />);
+    const bouton = screen.getByRole("button", { name: "Se déconnecter" });
+    await user.click(bouton);
+    await user.click(screen.getByRole("button", { name: "Annuler" }));
+    expect(bouton).toHaveFocus();
   });
 
   it("le focus reste dans la fenêtre", async () => {

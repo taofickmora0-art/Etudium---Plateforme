@@ -48,6 +48,15 @@ describe("Avis : lecture", () => {
     expect(await lireAvis(id(9))).toBeNull();
   });
 
+  it("une autre erreur de lecture ne casse pas la fiche : null, comme sans avis", async () => {
+    const erreur = vi.spyOn(console, "error").mockImplementation(() => {});
+    faux.repondre("rpc.avis_formation", { data: [] });
+    faux.repondre("rpc.repartition_avis", { error: { code: "PGRST203", message: "Plusieurs fonctions" } });
+    expect(await lireAvis(id(9))).toBeNull();
+    expect(erreur).toHaveBeenCalled();
+    erreur.mockRestore();
+  });
+
   it("les avis de l'équipe ; null sans la 0010", async () => {
     faux.repondre("rpc.avis_equipe", {
       data: [{ id: id(1), formation_titre: "Maîtriser Microsoft Excel", formation_slug: "maitriser-microsoft-excel", auteur: "Fifamè A.", note: 4, commentaire: "", masque: true, cree_le: "2026-10-12T10:00:00Z" }],

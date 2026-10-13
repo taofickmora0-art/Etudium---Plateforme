@@ -67,6 +67,8 @@ describe("Laisser ou modifier son avis", () => {
     expect(enregistrerAvis).toHaveBeenCalledWith(id(9), 4, "Très clair.");
     expect(await screen.findByText("Votre avis est publié.")).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: /Votre avis sur/ })).toBeNull();
+    // Le clavier reprend là où il était : sur le bouton de l'avis.
+    expect(screen.getByRole("button", { name: "Laisser un avis" })).toHaveFocus();
   });
 
   it("un refus de la base s'affiche dans la fenêtre, qui reste ouverte", async () => {
@@ -95,5 +97,6 @@ describe("Laisser ou modifier son avis", () => {
     await user.click(within(confirmation).getByRole("button", { name: "Supprimer" }));
     expect(supprimerAvis).toHaveBeenCalledWith(id(9));
     expect(await screen.findByText("Votre avis est supprimé.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Modifier mon avis" })).toHaveFocus();
   });
 });
