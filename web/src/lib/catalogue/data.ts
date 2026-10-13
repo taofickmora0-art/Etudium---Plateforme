@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { demoModeActive } from "@/lib/auth/current-user";
 import type { Badge, CouleurParcours, Niveau } from "@/lib/contenus/libelles";
-import { liste, parOrdre, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
+import { estColonneAbsente, liste, parOrdre, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import type { CarteCatalogue, FicheFormation, LeconFiche, ModuleFiche, ParcoursCatalogue } from "./types";
 
@@ -14,6 +14,16 @@ const ADRESSE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const COLONNES_PARCOURS = "slug, nom, nom_court, couleur, ordre, actif";
 const COLONNES_CARTE =
   "id, slug, titre, resume, niveau, gratuite, achat_separe, badge, publiee_le, " + `formations_parcours(ordre, parcours(${COLONNES_PARCOURS}))`;
+
+// Note moyenne et nombre d'avis (migration 0010). Sans la 0010, la colonne manque (42703) : on relit sans elles.
+const COLONNES_NOTE = ", note_moyenne, nb_avis";
+type Reponse = { data: unknown; error: { code?: string; message?: string } | null };
+
+async function avecNotes(lire: (notes: string) => PromiseLike<Reponse>): Promise<unknown> {
+  const reponse = await lire(COLONNES_NOTE);
+  if (estColonneAbsente(reponse.error)) return verifier(await lire(""));
+  return verifier(reponse);
+}
 
 const versParcours = (p: Ligne): ParcoursCatalogue => ({
   slug: texte(p.slug),
@@ -43,18 +53,17 @@ function versCarte(f: Ligne, lecons: Ligne[]): CarteCatalogue {
     dureeSecondes: lecons.reduce((total, l) => total + Number(l.duree_secondes ?? 0), 0),
     nbLecons: lecons.length,
     parcours,
+    note: f.note_moyenne === null || f.note_moyenne === undefined ? null : Number(f.note_moyenne),
+    nbAvis: Number(f.nb_avis ?? 0),
   };
 }
 
 export async function listCatalogue(): Promise<CarteCatalogue[]> {
   if (demoModeActive()) return [];
   const supabase = await createClient();
-  const lignes = verifier(
-    await supabase
-      .from("formations")
-      .select(`${COLONNES_CARTE}, modules(lecons(duree_secondes))`)
-      .eq("statut", "publiee"),
-  ) as Ligne[] | null;
+  const lignes = (await avecNotes((notes) =>
+    supabase.from("formations").select(`${COLONNES_CARTE}${notes}, modules(lecons(duree_secondes))`).eq("statut", "publiee"),
+  )) as Ligne[] | null;
   return (lignes ?? []).map((f) => versCarte(f, liste(f.modules).flatMap((m) => liste(m.lecons))));
 }
 
@@ -75,8 +84,8 @@ const versLecon = (l: Ligne): LeconFiche & { ordre: number } => ({
   ordre: Number(l.ordre ?? 0),
 });
 
-const COLONNES_FICHE =
-  `${COLONNES_CARTE}, description, seuil_video, objectifs, competences, formateurs(nom, titre, domaine, presentation), ` +
+const colonnesFiche = (notes: string) =>
+  `${COLONNES_CARTE}${notes}, description, seuil_video, objectifs, competences, formateurs(nom, titre, domaine, presentation), ` +
   "modules(id, titre, ordre, lecons(id, titre, titre_court, duree_secondes, apercu, ordre, accessible))";
 
 /** Une ligne de formation (avec son programme) → fiche : modules et leçons dans l'ordre. */
@@ -114,7 +123,7 @@ function versFiche(f: Ligne): FicheFormation {
 export const getFiche = cache(async (slug: string): Promise<FicheFormation | null> => {
   if (demoModeActive() || !ADRESSE.test(slug)) return null;
   const supabase = await createClient();
-  const f = verifier(await supabase.from("formations").select(COLONNES_FICHE).eq("statut", "publiee").eq("slug", slug).maybeSingle()) as Ligne | null;
+  const f = (await avecNotes((notes) => supabase.from("formations").select(colonnesFiche(notes)).eq("statut", "publiee").eq("slug", slug).maybeSingle())) as Ligne | null;
   return f ? versFiche(f) : null;
 });
 
@@ -127,6 +136,6 @@ export type StatutFiche = "publiee" | "archivee" | "brouillon";
 export async function listFiches(ids: string[]): Promise<(FicheFormation & { statut: StatutFiche })[]> {
   if (demoModeActive() || ids.length === 0) return [];
   const supabase = await createClient();
-  const lignes = verifier(await supabase.from("formations").select(`${COLONNES_FICHE}, statut`).in("id", ids)) as Ligne[] | null;
+  const lignes = (await avecNotes((notes) => supabase.from("formations").select(`${colonnesFiche(notes)}, statut`).in("id", ids))) as Ligne[] | null;
   return liste(lignes).map((f) => ({ ...versFiche(f), statut: (texte(f.statut) || "publiee") as StatutFiche }));
 }

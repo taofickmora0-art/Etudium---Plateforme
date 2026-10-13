@@ -28,6 +28,9 @@ export type CarteCatalogue = {
   nbLecons: number;
   /** Parcours de la formation, avec sa position dans chacun. */
   parcours: (ParcoursCatalogue & { position: number })[];
+  /** Moyenne des avis visibles, au dixième ; null sans avis ou sans la migration 0010. */
+  note: number | null;
+  nbAvis: number;
 };
 
 export type LeconFiche = {

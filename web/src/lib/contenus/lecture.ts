@@ -23,6 +23,11 @@ export function verifier<T>(reponse: { data: T; error: ErreurSupabase }): T {
   return reponse.data;
 }
 
+/** Une colonne d'une migration pas encore appliquée (note des avis, 0010). */
+export const estColonneAbsente = (erreur: ErreurSupabase) => erreur?.code === "42703";
+/** Une fonction d'une migration pas encore appliquée (PostgREST : PGRST202 ; Postgres : 42883). */
+export const estFonctionAbsente = (erreur: ErreurSupabase) => erreur?.code === "PGRST202" || erreur?.code === "42883";
+
 export type Ligne = Record<string, unknown>;
 /** Une relation « un à un » arrive en objet ou en tableau selon ce que Supabase devine : on accepte les deux. */
 export const un = (valeur: unknown): Ligne | null =>

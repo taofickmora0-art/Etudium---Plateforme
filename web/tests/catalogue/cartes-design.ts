@@ -29,6 +29,8 @@ const carte = (
   dureeSecondes: 3600,
   nbLecons: 6,
   parcours: [{ ...parcours, position }],
+  note: null,
+  nbAvis: 0,
   ...champs,
 });
 

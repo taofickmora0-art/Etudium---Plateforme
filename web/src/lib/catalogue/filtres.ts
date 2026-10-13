@@ -5,7 +5,7 @@ import type { CarteCatalogue } from "./types";
 // résultat. Les mêmes fonctions servent au premier affichage (serveur) et ensuite (navigateur).
 
 export type Acces = "tout" | "gratuites" | "incluses";
-export type Tri = "parcours" | "recentes" | "duree";
+export type Tri = "parcours" | "recentes" | "note" | "duree";
 
 export type Filtres = {
   q: string;
@@ -19,7 +19,7 @@ export type Filtres = {
 export const FILTRES_PAR_DEFAUT: Filtres = { q: "", parcours: "tous", acces: "tout", niveau: "tous", tri: "parcours" };
 
 const ACCES: Acces[] = ["tout", "gratuites", "incluses"];
-const TRIS: Tri[] = ["parcours", "recentes", "duree"];
+const TRIS: Tri[] = ["parcours", "recentes", "note", "duree"];
 const NIVEAUX: (Niveau | "tous")[] = ["tous", "debutant", "intermediaire", "avance"];
 
 const premier = (valeur: string | string[] | undefined) => (Array.isArray(valeur) ? valeur[0] : valeur) ?? "";
@@ -71,6 +71,8 @@ const COMPARER: Record<Tri, (a: CarteCatalogue, b: CarteCatalogue) => number> = 
     return pa - pb || ra - rb || a.titre.localeCompare(b.titre, "fr");
   },
   recentes: (a, b) => b.publieeLe.localeCompare(a.publieeLe) || a.titre.localeCompare(b.titre, "fr"),
+  // Meilleure moyenne d'abord, puis le plus d'avis ; les formations sans avis en dernier.
+  note: (a, b) => (b.note ?? -1) - (a.note ?? -1) || b.nbAvis - a.nbAvis || a.titre.localeCompare(b.titre, "fr"),
   duree: (a, b) => a.dureeSecondes - b.dureeSecondes || a.titre.localeCompare(b.titre, "fr"),
 };
 
