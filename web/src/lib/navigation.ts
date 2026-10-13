@@ -129,9 +129,9 @@ export const MENUS: Record<Espace, { libelle: string; groupes: GroupeNav[] }> = 
         titre: "Enseignement",
         entrees: [
           { href: "/formateur/formations", label: "Mes formations", icon: CourseIcon },
-          { href: "/formateur/apprenants", label: "Apprenants", icon: StudentsIcon },
           { href: "/formateur/corrections", label: "Corrections", icon: AssignmentsIcon },
           { href: "/formateur/sessions", label: "Sessions live", icon: Video01Icon },
+          { href: "/formateur/etudiants", label: "Étudiants", icon: StudentsIcon },
           { href: "/formateur/messages", label: "Messages", icon: BubbleChatIcon },
         ],
       },
@@ -152,7 +152,7 @@ export const NAV_BAS_PAR_ESPACE: Record<Espace, NavEntry[]> = {
   formateur: [
     TABLEAU_FORMATEUR,
     { href: "/formateur/formations", label: "Formations", icon: CourseIcon },
-    { href: "/formateur/apprenants", label: "Apprenants", icon: StudentsIcon },
+    { href: "/formateur/etudiants", label: "Étudiants", icon: StudentsIcon },
     { href: "/formateur/sessions", label: "Sessions live", icon: Video01Icon },
     PROFIL,
   ],

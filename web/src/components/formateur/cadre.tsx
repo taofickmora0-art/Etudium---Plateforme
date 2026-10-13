@@ -11,6 +11,15 @@ export function SansFiche() {
   return <Banner tone="attention" title="Votre compte n’est pas encore relié à une fiche formateur. Contactez l’équipe Étudium." />;
 }
 
+/** La migration 0015 (suivi des étudiants, tableau de bord) n'est pas encore appliquée. */
+export function MigrationSuiviAbsente() {
+  return (
+    <Banner tone="attention" title="Le suivi des étudiants n’est pas encore dans la base.">
+      Appliquez la migration 0015 (guide « Ce qui te revient », section 20).
+    </Banner>
+  );
+}
+
 /** La migration 0014 n'est pas encore appliquée : on le dit au lieu d'afficher une erreur. */
 export function MigrationFormateurAbsente() {
   return (

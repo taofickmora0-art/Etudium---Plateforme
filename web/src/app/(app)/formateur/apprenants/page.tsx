@@ -1,14 +1,17 @@
 import { Suspense } from "react";
-import { comingSoonMetadata } from "@/components/layout/ComingSoon";
-import { ReservedComingSoon } from "@/components/layout/ReservedComingSoon";
+import { redirect } from "next/navigation";
+import { requireSpace } from "@/lib/auth/require-space";
 
-export const metadata = comingSoonMetadata("formateur/apprenants");
+/** Ancienne adresse de la page « Étudiants » (nom du design) : un formateur y est renvoyé. */
+async function Redirection(): Promise<null> {
+  await requireSpace("formateur");
+  redirect("/formateur/etudiants");
+}
 
-/** Réservée aux rôles de l'espace (lib/auth/permissions) : un autre compte est renvoyé vers l'accueil. */
 export default function Page() {
   return (
     <Suspense fallback={null}>
-      <ReservedComingSoon espace="formateur" page="formateur/apprenants" />
+      <Redirection />
     </Suspense>
   );
 }

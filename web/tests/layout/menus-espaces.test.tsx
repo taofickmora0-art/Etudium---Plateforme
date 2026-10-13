@@ -38,19 +38,19 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
     expect(screen.getByRole("link", { name: "Tableau de bord" })).toHaveAttribute("aria-current", "page");
   });
 
-  it("espace formateur : son propre menu, sans les entrées de l'étudiant", () => {
-    render(<SidebarNavLinks pathname="/formateur/apprenants" />);
+  it("espace formateur : son propre menu (noms et ordre du design NdFormateur), sans les entrées de l'étudiant", () => {
+    render(<SidebarNavLinks pathname="/formateur/etudiants/123" />);
     const nav = screen.getByRole("navigation", { name: "Navigation de l’espace formateur" });
     expect(liens(nav)).toEqual([
       ["Tableau de bord", "/formateur"],
       ["Mes formations", "/formateur/formations"],
-      ["Apprenants", "/formateur/apprenants"],
       ["Corrections", "/formateur/corrections"],
       ["Sessions live", "/formateur/sessions"],
+      ["Étudiants", "/formateur/etudiants"],
       ["Messages", "/formateur/messages"],
     ]);
     expect(within(nav).getByRole("group", { name: "Enseignement" })).toBeInTheDocument();
-    expect(within(nav).getByRole("link", { name: "Apprenants" })).toHaveAttribute("aria-current", "page");
+    expect(within(nav).getByRole("link", { name: "Étudiants" })).toHaveAttribute("aria-current", "page");
   });
 
   it("espace étudiant : le menu ne change pas", () => {
@@ -76,7 +76,7 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
     expect(screen.getByRole("link", { name: "Avis" })).toHaveAttribute("aria-current", "page");
     unmount();
     const formateur = render(<BottomNavLinks pathname="/formateur" />);
-    expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual(["Tableau de bord", "Formations", "Apprenants", "Sessions live", "Profil"]);
+    expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual(["Tableau de bord", "Formations", "Étudiants", "Sessions live", "Profil"]);
     formateur.unmount();
     render(<BottomNavLinks pathname="/accueil" />);
     expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual(["Accueil", "Formations", "Communauté", "Certificats", "Profil"]);

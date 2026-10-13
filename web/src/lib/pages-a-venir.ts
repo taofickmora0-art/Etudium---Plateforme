@@ -23,10 +23,9 @@ export const PAGES_A_VENIR = {
   "admin/paiements": { titre: "Abonnements et paiements", quand: "au lot 2, Abonnements et paiement", description: "Les formules, les abonnements et les paiements s’afficheront ici." },
   "admin/moderation": { titre: "Modération", quand: LOT_5, description: "Les publications et les signalements à examiner s’afficheront ici." },
   // Espace formateur (son propre menu)
-  "formateur/apprenants": { titre: "Apprenants", quand: LOT_4, description: "La progression, les quiz et les exercices de vos apprenants s’afficheront ici." },
   "formateur/corrections": { titre: "Corrections", quand: LOT_4, description: "Les exercices à corriger s’afficheront ici." },
   "formateur/sessions": { titre: "Sessions live", quand: LOT_5, description: "Vous pourrez organiser vos sessions live et voir les inscrits." },
-  "formateur/messages": { titre: "Messages", quand: LOT_5, description: "Vous pourrez écrire à vos apprenants." },
+  "formateur/messages": { titre: "Messages", quand: LOT_5, description: "Vous pourrez écrire à vos étudiants." },
 } satisfies Record<string, { titre: string; quand: string; description: string }>;
 
 export type PageAVenir = keyof typeof PAGES_A_VENIR;
