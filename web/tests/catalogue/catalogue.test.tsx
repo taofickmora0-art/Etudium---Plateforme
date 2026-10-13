@@ -80,9 +80,13 @@ describe("Catalogue des formations", () => {
     expect(within(excel).queryByText("Académique")).toBeNull();
     expect(within(excel).getByText("Populaire")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Trier : parcours/ }));
-    expect(screen.queryByRole("menuitemradio", { name: "Note des étudiants" })).toBeNull();
+    expect(screen.getAllByRole("menuitemradio").map((m) => m.textContent)).toEqual(["Parcours", "Les plus récentes", "Note des étudiants", "Durée"]);
     await userEvent.click(screen.getByRole("menuitemradio", { name: "Les plus récentes" }));
     expect(cartes()[0]).toHaveAttribute("href", "/formations/intelligence-artificielle-etudes");
+    await userEvent.click(screen.getByRole("button", { name: /Trier : les plus récentes/i }));
+    await userEvent.click(screen.getByRole("menuitemradio", { name: "Note des étudiants" }));
+    // Sans avis, les formations restent classées par titre.
+    expect(cartes()[0]).toHaveAttribute("href", "/formations/canva-debutant-a-expert");
   });
 
   it("en connecté, la puce Gratuites mène à la page des formations gratuites, et inversement", async () => {

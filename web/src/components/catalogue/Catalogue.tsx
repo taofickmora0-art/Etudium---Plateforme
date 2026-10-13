@@ -28,10 +28,10 @@ type CatalogueProps = {
   imposer?: Partial<Filtres>;
 };
 
-// « Note des étudiants » arrive avec les avis (tâche 1.11).
 const TRIS: { value: Tri; label: string }[] = [
   { value: "parcours", label: "Parcours" },
   { value: "recentes", label: "Les plus récentes" },
+  { value: "note", label: "Note des étudiants" },
   { value: "duree", label: "Durée" },
 ];
 

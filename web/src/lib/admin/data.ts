@@ -1,6 +1,6 @@
 import { demoModeActive } from "@/lib/auth/current-user";
 import type { Badge, CouleurParcours, Niveau, StatutFormation } from "@/lib/contenus/libelles";
-import { estTablesAbsentes, liste, parOrdre, TablesAbsentesError, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
+import { estFonctionAbsente, estTablesAbsentes, liste, parOrdre, TablesAbsentesError, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import type {
   FormateurAdmin,
@@ -210,12 +210,14 @@ export async function getLeconAdmin(id: string): Promise<LeconAdmin | null> {
 
 /** Le résumé de l'accueil du back-office. */
 export async function compterContenus(): Promise<ResumeContenus> {
-  if (demoModeActive()) return { parcours: 0, formateurs: 0, publiees: 0, brouillons: 0, archivees: 0 };
+  if (demoModeActive()) return { parcours: 0, formateurs: 0, publiees: 0, brouillons: 0, archivees: 0, avis: null, avisMasques: 0 };
   const supabase = await createClient();
-  const [parcours, formateurs, formations] = await Promise.all([
+  const [parcours, formateurs, formations, avis] = await Promise.all([
     supabase.from("parcours").select("id", { count: "exact", head: true }),
     supabase.from("formateurs").select("id", { count: "exact", head: true }),
     supabase.from("formations").select("statut"),
+    // Tous les avis, vus par l'équipe (migration 0010) ; sans elle, pas de ligne « Avis ».
+    supabase.rpc("avis_equipe"),
   ]);
   verifier(parcours);
   verifier(formateurs);
@@ -227,5 +229,12 @@ export async function compterContenus(): Promise<ResumeContenus> {
     publiees: compter("publiee"),
     brouillons: compter("brouillon"),
     archivees: compter("archivee"),
+    ...compterAvis(avis),
   };
+}
+
+function compterAvis(reponse: { data: unknown; error: { code?: string; message?: string } | null }): Pick<ResumeContenus, "avis" | "avisMasques"> {
+  if (estFonctionAbsente(reponse.error)) return { avis: null, avisMasques: 0 };
+  const avis = liste(verifier(reponse));
+  return { avis: avis.length, avisMasques: avis.filter((a) => a.masque === true).length };
 }

@@ -18,8 +18,10 @@ describe("Accueil du back-office", () => {
   });
 
   it("l'accueil du back-office résume les contenus", async () => {
-    compterContenus.mockResolvedValue({ parcours: 3, formateurs: 1, publiees: 10, brouillons: 0, archivees: 0 });
+    compterContenus.mockResolvedValue({ parcours: 3, formateurs: 1, publiees: 10, brouillons: 0, archivees: 0, avis: 3, avisMasques: 1 });
     render(await ResumeBackOffice());
+    expect(screen.getByRole("link", { name: /Avis/ })).toHaveAttribute("href", "/admin/avis");
+    expect(screen.getByText("3 avis · 1 masqué")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Parcours/ })).toHaveAttribute("href", "/admin/parcours");
     expect(screen.getByText("3 parcours")).toBeInTheDocument();
     expect(screen.getByText("1 fiche")).toBeInTheDocument();
@@ -27,8 +29,10 @@ describe("Accueil du back-office", () => {
   });
 
   it("les pluriels suivent les nombres", async () => {
-    compterContenus.mockResolvedValue({ parcours: 1, formateurs: 2, publiees: 1, brouillons: 2, archivees: 3 });
+    compterContenus.mockResolvedValue({ parcours: 1, formateurs: 2, publiees: 1, brouillons: 2, archivees: 3, avis: null, avisMasques: 0 });
     render(await ResumeBackOffice());
+    // Sans la migration 0010, pas de ligne « Avis ».
+    expect(screen.queryByRole("link", { name: /Avis/ })).toBeNull();
     expect(screen.getByText("1 parcours")).toBeInTheDocument();
     expect(screen.getByText("2 fiches")).toBeInTheDocument();
     expect(screen.getByText("1 publiée · 2 brouillons · 3 archivées")).toBeInTheDocument();
