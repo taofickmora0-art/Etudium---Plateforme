@@ -326,3 +326,24 @@ Pas de migration pour cette tâche : il faut seulement que la 0003 à la 0009 so
    - C’est la couverture, cadrée en 1200 × 630 ; une photo prise au téléphone, en hauteur ou en largeur, est bien droite.
    - Le vrai test WhatsApp (coller le lien dans une conversation) se fera à la mise en ligne.
 
+## 18. Valider la page Utilisateurs, 15 minutes
+
+1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0013_utilisateurs.sql` (après la 0012).
+2. Il te faut un compte de test : dans une fenêtre de navigation privée, inscris-toi sur http://localhost:3000/inscription avec une autre adresse e-mail. Garde cette fenêtre ouverte.
+3. Avec ton compte, Back-office → **Utilisateurs** :
+   - tu apparais avec l’étiquette **Super admin** ;
+   - cherche-toi par ton prénom tapé sans accent, puis par le début de ton adresse e-mail. L’adresse de la page ne change pas ;
+   - essaie les filtres **Équipe** et **Étudiants**.
+4. Ouvre le compte de test :
+   - **Identité** et **Activité** s’affichent (« Aucune formation commencée. » s’il n’a rien suivi) ;
+   - **Rôles** : coche **Formateur**, choisis « Créer une fiche à son nom », puis **Enregistrer les rôles**. La confirmation dit « Donner : Formateur. », puis « Rôles enregistrés. » ;
+   - la fiche formateur apparaît avec son lien ; Back-office → **Formateurs** : elle y est ;
+   - dans la fenêtre privée, rond de profil : **Espace formateur** apparaît ;
+   - décoche **Formateur** et enregistre : la fiche reste dans Formateurs, sans compte relié.
+5. Sur ta propre fiche : pas de bouton **Suspendre**. Décoche **Super admin** et enregistre : la base refuse avec « Vous ne pouvez pas vous retirer le rôle super admin. ».
+6. Sur le compte de test, **Suspendre le compte** avec le motif « Test » :
+   - la fiche affiche « Suspendu depuis le … , par » ton nom, et le motif ;
+   - dans la fenêtre privée, clique sur n’importe quelle page : le compte est déconnecté avec « Ce compte est suspendu. Pour en savoir plus, contactez l’équipe Étudium. » ;
+   - reconnecte-toi avec ce compte : même message, la connexion est refusée.
+7. **Réactiver le compte** : dans la fenêtre privée, la connexion remarche.
+
