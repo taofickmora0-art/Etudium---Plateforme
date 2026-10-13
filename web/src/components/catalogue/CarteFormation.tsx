@@ -30,6 +30,8 @@ export function CarteFormation({
       parcours={couleur}
       duration={dureeLisible(carte.dureeSecondes) || undefined}
       level={libelleNiveau(carte.niveau)}
+      rating={carte.note ?? undefined}
+      reviews={carte.nbAvis}
       tag={sansEtiquette ? undefined : badgeDeCarte(carte)}
       parcoursTag={variante === "public" && parcours && !sansEtiquette ? { tone: couleur as TagTone, label: parcours.nomCourt } : undefined}
       titleAs={titleAs}

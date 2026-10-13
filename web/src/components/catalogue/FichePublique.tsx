@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { ArrowRight01Icon, ChartIncreaseIcon, Clock01Icon, PlayCircleIcon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, ChartIncreaseIcon, Clock01Icon, PlayCircleIcon, StarIcon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { SectionAvis } from "@/components/avis/SectionAvis";
+import { formatNote, libelleNombreAvis } from "@/lib/avis/regles";
+import type { AvisFormation } from "@/lib/avis/types";
 import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
 import { Tag, type TagTone } from "@/components/ui/Tag";
@@ -7,7 +10,7 @@ import { badgeDeCarte, dureeLisible, leconsApercu, nombreDeLecons, parcoursPrinc
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { libelleNiveau } from "@/lib/contenus/libelles";
 import { cn } from "@/lib/cn";
-import { AvisVides, BandeAppelAction, CarteFormateur, elementsInclus, initialesDe, LienContourBlanc, ListeCochee, MOTIF_BLEU } from "./BlocsFiche";
+import { BandeAppelAction, CarteFormateur, elementsInclus, initialesDe, LienContourBlanc, ListeCochee, MOTIF_BLEU } from "./BlocsFiche";
 import { adresseLecon, ProgrammeFiche, resumeProgramme } from "./ProgrammeFiche";
 
 const SECTION = "box-border rounded-panneau bg-panneau p-[clamp(24px,4vw,48px)]";
@@ -62,13 +65,14 @@ function CarteOffre({ fiche }: { fiche: FicheFormation }) {
 }
 
 /** Fiche formation pour un visiteur (NdFormationPublic) : bandeau, apprentissages, programme, avis, appel à l'action. */
-export function FichePublique({ fiche }: { fiche: FicheFormation }) {
+export function FichePublique({ fiche, avis = null }: { fiche: FicheFormation; /** Null sans la migration 0010. */ avis?: AvisFormation | null }) {
   const parcours = [...fiche.parcours].sort((a, b) => a.ordre - b.ordre)[0];
   const badge = badgeDeCarte(fiche);
   const apercus = leconsApercu(fiche);
   const premierApercu = apercus[0];
   const duree = dureeLisible(fiche.dureeSecondes);
   const meta = [
+    fiche.nbAvis > 0 && fiche.note !== null && { icone: StarIcon, texte: `${formatNote(fiche.note)} (${libelleNombreAvis(fiche.nbAvis)})` },
     duree && { icone: Clock01Icon, texte: duree },
     fiche.nbLecons > 0 && { icone: PlayCircleIcon, texte: nombreDeLecons(fiche.nbLecons) },
     { icone: ChartIncreaseIcon, texte: libelleNiveau(fiche.niveau) },
@@ -214,7 +218,7 @@ export function FichePublique({ fiche }: { fiche: FicheFormation }) {
       <section className={SECTION}>
         <h2 className={TITRE_SECTION}>Avis des étudiants</h2>
         <div className="mt-7">
-          <AvisVides variante="public" />
+          <SectionAvis variante="public" formation={{ id: fiche.id, titre: fiche.titre }} donnees={avis} peutNoter={false} />
         </div>
       </section>
 

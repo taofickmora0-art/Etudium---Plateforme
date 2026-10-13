@@ -10,6 +10,7 @@ const SIZES = {
   48: "size-12 text-[17px]",
   44: "size-11 text-base",
   40: "size-10 text-sm",
+  36: "size-9 text-[13px]",
   32: "size-8 text-xs",
 } as const;
 

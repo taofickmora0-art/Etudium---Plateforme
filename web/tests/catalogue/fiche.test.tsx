@@ -123,3 +123,16 @@ describe("Fiche d'une formation, pour un compte connecté", () => {
     expect(bande.querySelector("[data-illustrations]")).toHaveClass("max-sm:hidden");
   });
 });
+
+describe("Note de la formation dans le bandeau (tâche 1.11)", () => {
+  it("« 4,8 (126 avis) » avec au moins un avis, rien sans avis", () => {
+    const { unmount } = render(<FichePublique fiche={{ ...EXCEL, note: 4.8, nbAvis: 126 }} />);
+    expect(screen.getByText("4,8 (126 avis)")).toBeInTheDocument();
+    unmount();
+    const connectee = render(<FicheConnectee fiche={{ ...EXCEL, note: 4.8, nbAvis: 126 }} />);
+    expect(screen.getByText("4,8 (126 avis)")).toBeInTheDocument();
+    connectee.unmount();
+    render(<FichePublique fiche={EXCEL} />);
+    expect(screen.queryByText(/\(\d+ avis\)/)).toBeNull();
+  });
+});

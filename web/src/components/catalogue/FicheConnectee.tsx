@@ -1,16 +1,19 @@
 import Link from "next/link";
-import { ArrowRight01Icon, ArrowRight02Icon, Clock01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, ArrowRight02Icon, Clock01Icon, SquareLock02Icon, StarIcon } from "@hugeicons/core-free-icons";
+import { SectionAvis } from "@/components/avis/SectionAvis";
 import { BoutonFavori } from "@/components/favoris/BoutonFavori";
-import { Icon } from "@/components/ui/Icon";
+import { Icon, type IconSvgElement } from "@/components/ui/Icon";
 import { MetaDot, ProgressBar } from "@/components/ui/Progress";
 import { Tag, type TagTone } from "@/components/ui/Tag";
 import { Heading, Lead } from "@/components/ui/Text";
 import { dureeLisible, etatAcces, leconsApercu, nombreDeLecons, parcoursPrincipal, premiereLeconOuverte } from "@/lib/catalogue/regles";
+import { formatNote, libelleNombreAvis, peutDonnerAvis } from "@/lib/avis/regles";
+import type { AvisFormation } from "@/lib/avis/types";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { formatDuree } from "@/lib/admin/duree";
 import { libelleNiveau } from "@/lib/contenus/libelles";
 import type { EtatProgression } from "@/lib/progression/regles";
-import { AvisVides, CarteFormateur, elementsInclus, ListeCochee } from "./BlocsFiche";
+import { CarteFormateur, elementsInclus, ListeCochee } from "./BlocsFiche";
 import { adresseLecon, ProgrammeFiche, resumeProgramme } from "./ProgrammeFiche";
 
 const CARTE = "box-border flex min-w-0 flex-col rounded-carte border border-bordure-carte bg-panneau p-5";
@@ -146,15 +149,24 @@ export function FicheConnectee({
   fiche,
   progression = null,
   favori = null,
+  avis = null,
 }: {
   fiche: FicheFormation;
   progression?: EtatProgression | null;
   /** Formation dans les favoris du compte ; null sans la table des favoris (migration 0009). */
   favori?: boolean | null;
+  /** Avis de la formation ; null sans la migration 0010. */
+  avis?: AvisFormation | null;
 }) {
   const parcours = [...fiche.parcours].sort((a, b) => a.ordre - b.ordre)[0];
   const duree = dureeLisible(fiche.dureeSecondes);
-  const meta = [duree, libelleNiveau(fiche.niveau), fiche.nbLecons > 0 ? nombreDeLecons(fiche.nbLecons) : "", fiche.formateur?.nom ?? ""].filter(Boolean);
+  const meta = [
+    fiche.nbAvis > 0 && fiche.note !== null && { icone: StarIcon, marge: "-mx-px", texte: `${formatNote(fiche.note)} (${libelleNombreAvis(fiche.nbAvis)})` },
+    duree && { icone: Clock01Icon, marge: "-mx-[1.5px]", texte: duree },
+    { texte: libelleNiveau(fiche.niveau) },
+    fiche.nbLecons > 0 && { texte: nombreDeLecons(fiche.nbLecons) },
+    fiche.formateur && { texte: fiche.formateur.nom },
+  ].filter(Boolean) as { icone?: IconSvgElement; marge?: string; texte: string }[];
 
   return (
     <div className="flex flex-col">
@@ -186,16 +198,15 @@ export function FicheConnectee({
       <div className="mt-[21px] flex flex-wrap items-center gap-3">
         {parcours && <Tag tone={parcoursPrincipal(fiche) as TagTone}>{parcours.nomCourt}</Tag>}
         <div className="flex flex-wrap items-center gap-[7px] text-sm leading-[22px] text-discret">
-          {meta.flatMap((texte, index) => {
-            const element =
-              index === 0 && duree ? (
-                <span key={texte} className="flex items-center gap-1">
-                  <Icon icon={Clock01Icon} size={18} className="-mx-[1.5px]" />
-                  {texte}
-                </span>
-              ) : (
-                <span key={texte}>{texte}</span>
-              );
+          {meta.flatMap(({ icone, marge, texte }, index) => {
+            const element = icone ? (
+              <span key={texte} className="flex items-center gap-1">
+                <Icon icon={icone} size={18} className={marge} />
+                {texte}
+              </span>
+            ) : (
+              <span key={texte}>{texte}</span>
+            );
             return index === 0 ? [element] : [<MetaDot key={`point-${texte}`} />, element];
           })}
         </div>
@@ -232,10 +243,12 @@ export function FicheConnectee({
             <EnTeteSection titre="Programme" id="programme-titre" suite={fiche.modules.length > 0 ? resumeProgramme(fiche) : undefined} />
             <ProgrammeFiche fiche={fiche} variante="connecte" progression={progression?.commencee ? progression : null} />
           </section>
-          <div className="flex min-w-0 flex-col gap-4">
-            <EnTeteSection titre="Avis des étudiants" />
-            <AvisVides variante="connecte" />
-          </div>
+          <SectionAvis
+            variante="connecte"
+            formation={{ id: fiche.id, titre: fiche.titre }}
+            donnees={avis}
+            peutNoter={progression ? peutDonnerAvis(progression) : false}
+          />
         </div>
         <div className="min-w-0 flex-[1_1_300px]">
           <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(216px,calc((100%-32px)/3))),1fr))] gap-4">

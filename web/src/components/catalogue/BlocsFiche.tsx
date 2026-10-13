@@ -63,12 +63,12 @@ export function CarteFormateur({ formateur, variante }: { formateur: FormateurFi
   );
 }
 
-/** Avis : la table arrive en 1.11 ; d'ici là, aucune note inventée (spec §7). */
-export function AvisVides({ variante }: { variante: "public" | "connecte" }) {
+/** Pas encore d'avis : jamais de note inventée (spec §7). La phrase des 50 % s'efface quand le bouton est là. */
+export function AvisVides({ variante, phrase = true }: { variante: "public" | "connecte"; phrase?: boolean }) {
   return (
     <div className="flex flex-col gap-2">
       <p className={cn("m-0 font-medium text-encre", variante === "public" ? "text-lg leading-[26px]" : "text-base leading-6")}>Pas encore d’avis</p>
-      <p className="m-0 text-[13px] leading-5 text-pretty text-discret">Vous pourrez laisser un avis à partir de 50 % de progression.</p>
+      {phrase && <p className="m-0 text-[13px] leading-5 text-pretty text-discret">Vous pourrez laisser un avis à partir de 50 % de progression.</p>}
     </div>
   );
 }
