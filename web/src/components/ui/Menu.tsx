@@ -85,15 +85,28 @@ type MenuProps = {
   align?: "start" | "center" | "end";
   /** Largeur de la surface (220 px par défaut). */
   className?: string;
+  /**
+   * À la fermeture, le menu rend le focus à son bouton. Quand l'entrée choisie ouvre une fenêtre, renvoyer faux :
+   * la fenêtre garde le focus (sinon le menu le lui reprendrait juste après son ouverture).
+   */
+  rendreLeFocus?: () => boolean;
 };
 
 /** Menu d'actions déroulant : s'ouvre au clic ou au clavier (Entrée, flèches), se ferme avec Échap. */
-export function Menu({ trigger, items, label, align = "end", className }: MenuProps) {
+export function Menu({ trigger, items, label, align = "end", className, rendreLeFocus }: MenuProps) {
   return (
     <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger asChild>{trigger}</DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content aria-label={label} align={align} sideOffset={8} className={cn(menuSurfaceClasses, "w-[220px]", className)}>
+        <DropdownMenu.Content
+          aria-label={label}
+          align={align}
+          sideOffset={8}
+          className={cn(menuSurfaceClasses, "w-[220px]", className)}
+          onCloseAutoFocus={(e) => {
+            if (rendreLeFocus && !rendreLeFocus()) e.preventDefault();
+          }}
+        >
           <MenuEntries items={items} />
         </DropdownMenu.Content>
       </DropdownMenu.Portal>

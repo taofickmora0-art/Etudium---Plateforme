@@ -4,17 +4,18 @@ import { PageAdmin } from "@/components/admin/PageAdmin";
 import { ListeComptes } from "@/components/admin/utilisateurs/ListeComptes";
 import { MigrationAbsente } from "@/components/admin/utilisateurs/MigrationAbsente";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { getAuthUser } from "@/lib/auth/current-user";
 import { requireSpace } from "@/lib/auth/require-space";
 import { lireComptes } from "@/lib/utilisateurs/data";
 
 export const metadata: Metadata = { title: "Utilisateurs · Back-office · Étudium" };
 
 async function Utilisateurs() {
-  await requireSpace("admin");
-  const lecture = await lireComptes("", "tous", 1);
+  const moi = await requireSpace("admin");
+  const [lecture, connecte] = await Promise.all([lireComptes("", "tous", 1), getAuthUser()]);
   return (
-    <PageAdmin titre="Utilisateurs" description="Les comptes des étudiants, des formateurs et de l’équipe : rôles, activité, suspension." fil={[{ label: "Utilisateurs" }]}>
-      {lecture.migrationAbsente ? <MigrationAbsente /> : <ListeComptes initial={lecture.donnees} />}
+    <PageAdmin titre="Utilisateurs" description="Comptes étudiants et formateurs, avec leur formule et leur statut." fil={[{ label: "Utilisateurs" }]}>
+      {lecture.migrationAbsente ? <MigrationAbsente /> : <ListeComptes initial={lecture.donnees} moi={{ id: connecte?.id ?? "", roles: moi.roles }} />}
     </PageAdmin>
   );
 }

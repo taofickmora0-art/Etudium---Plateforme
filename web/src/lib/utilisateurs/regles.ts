@@ -7,11 +7,11 @@ import type { FiltreComptes } from "./types";
 export const COMPTES_PAR_PAGE = 25;
 export const MOTIF_MAX = 500;
 
+/** Les filtres du design (NdAdminUtilisateurs) ; l'équipe apparaît dans « Tous ». */
 export const FILTRES_COMPTES: { value: FiltreComptes; label: string }[] = [
   { value: "tous", label: "Tous" },
   { value: "etudiants", label: "Étudiants" },
   { value: "formateurs", label: "Formateurs" },
-  { value: "equipe", label: "Équipe" },
   { value: "suspendus", label: "Suspendus" },
 ];
 
@@ -35,6 +35,25 @@ export const estFiltre = (valeur: unknown): valeur is FiltreComptes => FILTRES_C
 export function nomAffiche(prenom: string, nom: string): string {
   return [prenom.trim(), nom.trim()].filter(Boolean).join(" ") || "Sans nom";
 }
+
+/** « Koffi D. » (fenêtres et messages du design) ; le prénom ou le nom seul ; sinon l'adresse. */
+export function nomCourt(prenom: string, nom: string, email: string): string {
+  const p = prenom.trim();
+  const n = nom.trim();
+  if (p && n) return `${p} ${n[0].toUpperCase()}.`;
+  return p || n || email;
+}
+
+/** Le rôle affiché dans le tableau : le plus élevé du compte. */
+export const rolePrincipal = (roles: Role[]): Role => [...ROLES_ORDONNES].reverse().find((r) => roles.includes(r)) ?? "etudiant";
+
+/** La formule du tableau : « Gratuit » pour un étudiant tant que les abonnements n'existent pas (lot 2), « — » sinon. */
+export const formuleAffichee = (roles: Role[]): string => (rolePrincipal(roles) === "etudiant" ? "Gratuit" : "—");
+
+const DATE_NUMERIQUE = new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Africa/Porto-Novo" });
+
+/** « 12/09/2026 » (colonne « Inscrit le » du design), à l'heure du Bénin. */
+export const dateNumerique = (iso: string) => DATE_NUMERIQUE.format(new Date(iso));
 
 /** Initiales de l'avatar : prénom et nom (« FA »), sinon la première lettre de l'adresse. */
 export function initialesCompte(prenom: string, nom: string, email: string): string {

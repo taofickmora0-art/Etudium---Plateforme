@@ -72,30 +72,76 @@ beforeEach(() => {
 });
 
 describe("Liste des comptes", () => {
-  it("une ligne par compte : nom (ou « Sans nom »), adresse, rôles en étiquettes, Suspendu signalé, lien vers la fiche", () => {
-    avecToast(<ListeComptes initial={PAGE} />);
-    const lignes = within(screen.getByRole("list", { name: "Comptes" })).getAllByRole("listitem");
-    expect(lignes).toHaveLength(2);
-    expect(within(lignes[0]).getByText("Fifamè Adjovi")).toBeInTheDocument();
-    expect(within(lignes[0]).getByText(/fifame@exemple\.com · Inscrit le 12 oct\. 2026 · Dernière connexion : Jamais/)).toBeInTheDocument();
-    expect(within(lignes[0]).getByText("Formateur")).toBeInTheDocument();
-    expect(within(lignes[0]).queryByText("Étudiant")).not.toBeInTheDocument();
-    expect(within(lignes[0]).getByRole("link")).toHaveAttribute("href", `/admin/utilisateurs/${ID}`);
-    expect(within(lignes[1]).getByText("Sans nom")).toBeInTheDocument();
-    expect(within(lignes[1]).getByText(/Dernière connexion : 13 oct\. 2026/)).toBeInTheDocument();
-    expect(within(lignes[1]).getByText("Admin")).toBeInTheDocument();
-    expect(within(lignes[1]).getByText("Suspendu")).toBeInTheDocument();
+  const ADMIN = { id: "moi", roles: ["etudiant", "admin"] as Role[] };
+  const lignes = () => within(screen.getByRole("table", { name: "Comptes" })).getAllByRole("row").slice(1);
+
+  it("le tableau du design : utilisateur, e-mail, rôle, formule, statut, inscription", () => {
+    avecToast(<ListeComptes initial={PAGE} moi={ADMIN} />);
+    const entetes = within(screen.getByRole("table", { name: "Comptes" })).getAllByRole("columnheader").map((c) => c.textContent);
+    expect(entetes.slice(0, 6)).toEqual(["Utilisateur", "E-mail", "Rôle", "Formule", "Statut", "Inscrit le"]);
+    const [premier, second] = lignes();
+    expect(within(premier).getAllByRole("cell").map((c) => c.textContent)).toEqual(["FAFifamè Adjovi", "fifame@exemple.com", "Formateur", "—", "Actif", "12/10/2026", ""]);
+    expect(within(premier).getByRole("link", { name: "Fifamè Adjovi" })).toHaveAttribute("href", `/admin/utilisateurs/${ID}`);
+    expect(within(second).getAllByRole("cell").map((c) => c.textContent)).toEqual(["RSans nom", "rodrigue@exemple.com", "Admin", "—", "Suspendu", "11/10/2026", ""]);
+  });
+
+  it("le menu d'une ligne : voir le profil, et suspendre selon les droits", async () => {
+    const user = userEvent.setup();
+    avecToast(<ListeComptes initial={{ total: 1, comptes: [{ ...PAGE.comptes[0], roles: ["etudiant"] }] }} moi={ADMIN} />);
+    await user.click(screen.getByRole("button", { name: "Actions pour Fifamè Adjovi" }));
+    expect(screen.getByRole("menuitem", { name: "Voir le profil" })).toHaveAttribute("href", `/admin/utilisateurs/${ID}`);
+    expect(screen.getByRole("menuitem", { name: "Suspendre le compte" })).toBeInTheDocument();
+  });
+
+  it("la fenêtre ouverte depuis le menu reçoit le focus (le menu ne le reprend pas en se fermant)", async () => {
+    const user = userEvent.setup();
+    avecToast(<ListeComptes initial={{ total: 1, comptes: [{ ...PAGE.comptes[0], roles: ["etudiant"] }] }} moi={ADMIN} />);
+    await user.click(screen.getByRole("button", { name: "Actions pour Fifamè Adjovi" }));
+    await user.click(screen.getByRole("menuitem", { name: "Suspendre le compte" }));
+    const fenetre = await screen.findByRole("dialog", { name: "Suspendre ce compte ?" });
+    await waitFor(() => expect(fenetre).toContainElement(document.activeElement as HTMLElement));
+  });
+
+  it("suspendre depuis la liste : la fenêtre du design, le motif, puis la liste est relue", async () => {
+    const user = userEvent.setup();
+    avecToast(<ListeComptes initial={{ total: 1, comptes: [{ ...PAGE.comptes[0], roles: ["etudiant"] }] }} moi={ADMIN} />);
+    await user.click(screen.getByRole("button", { name: "Actions pour Fifamè Adjovi" }));
+    await user.click(screen.getByRole("menuitem", { name: "Suspendre le compte" }));
+    const fenetre = await screen.findByRole("dialog", { name: "Suspendre ce compte ?" });
+    expect(fenetre).toHaveTextContent("Fifamè A. ne pourra plus se connecter ni publier. Ses formations et ses certificats sont conservés, et vous pourrez réactiver le compte à tout moment.");
+    await user.type(within(fenetre).getByRole("textbox", { name: "Motif (visible par l’équipe)" }), "Spam");
+    await user.click(within(fenetre).getByRole("button", { name: "Suspendre le compte" }));
+    expect(suspendreCompte).toHaveBeenCalledWith(ID, "Spam");
+    expect(await screen.findByText("Compte suspendu")).toBeInTheDocument();
+    expect(screen.getByText("Fifamè A. ne peut plus se connecter. Vous pourrez réactiver le compte à tout moment.")).toBeInTheDocument();
+    await waitFor(() => expect(chercherComptes).toHaveBeenCalledWith("", "tous", 1));
+  });
+
+  it("un compte de l'équipe, pour un admin : pas de suspension ; un compte suspendu : réactiver", async () => {
+    const user = userEvent.setup();
+    const premier = avecToast(<ListeComptes initial={PAGE} moi={ADMIN} />);
+    await user.click(screen.getByRole("button", { name: "Actions pour rodrigue@exemple.com" }));
+    expect(screen.queryByRole("menuitem", { name: "Suspendre le compte" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Réactiver le compte" })).not.toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    premier.unmount();
+    const suspendu = { ...PAGE.comptes[0], suspendu: true, roles: ["etudiant"] as Role[] };
+    avecToast(<ListeComptes initial={{ total: 1, comptes: [suspendu] }} moi={ADMIN} />);
+    await user.click(screen.getByRole("button", { name: "Actions pour Fifamè Adjovi" }));
+    await user.click(screen.getByRole("menuitem", { name: "Réactiver le compte" }));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Réactiver" }));
+    expect(reactiverCompte).toHaveBeenCalledWith(ID);
   });
 
   it("liste vide : le message", () => {
-    avecToast(<ListeComptes initial={{ total: 0, comptes: [] }} />);
+    avecToast(<ListeComptes initial={{ total: 0, comptes: [] }} moi={ADMIN} />);
     expect(screen.getByText("Aucun compte ne correspond à cette recherche.")).toBeInTheDocument();
   });
 
   it("la recherche appelle l'action et ne touche pas à l'adresse de la page", async () => {
     const user = userEvent.setup();
-    avecToast(<ListeComptes initial={PAGE} />);
-    await user.type(screen.getByRole("searchbox", { name: "Rechercher un compte" }), "fifa");
+    avecToast(<ListeComptes initial={PAGE} moi={ADMIN} />);
+    await user.type(screen.getByRole("searchbox", { name: "Rechercher un utilisateur" }), "fifa");
     await waitFor(() => expect(chercherComptes).toHaveBeenLastCalledWith("fifa", "tous", 1));
     expect(chercherComptes).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(screen.getByText("Aucun compte ne correspond à cette recherche.")).toBeInTheDocument());
@@ -106,7 +152,7 @@ describe("Liste des comptes", () => {
 
   it("un filtre relance la recherche, page 1", async () => {
     const user = userEvent.setup();
-    avecToast(<ListeComptes initial={PAGE} />);
+    avecToast(<ListeComptes initial={PAGE} moi={ADMIN} />);
     await user.click(screen.getByRole("button", { name: "Suspendus" }));
     await waitFor(() => expect(chercherComptes).toHaveBeenCalledWith("", "suspendus", 1));
   });
@@ -114,14 +160,15 @@ describe("Liste des comptes", () => {
   it("un échec de chargement est annoncé", async () => {
     chercherComptes.mockResolvedValue({ ok: false, message: "La liste n’a pas pu être chargée. Réessayez." });
     const user = userEvent.setup();
-    avecToast(<ListeComptes initial={PAGE} />);
-    await user.click(screen.getByRole("button", { name: "Équipe" }));
+    avecToast(<ListeComptes initial={PAGE} moi={ADMIN} />);
+    await user.click(screen.getByRole("button", { name: "Formateurs" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("La liste n’a pas pu être chargée. Réessayez.");
   });
 
-  it("au-delà de 25 comptes, la pagination charge la page suivante", async () => {
+  it("au-delà de 25 comptes : « 2 sur 60 utilisateurs » et la page suivante", async () => {
     const user = userEvent.setup();
-    avecToast(<ListeComptes initial={{ ...PAGE, total: 60 }} />);
+    avecToast(<ListeComptes initial={{ ...PAGE, total: 60 }} moi={ADMIN} />);
+    expect(screen.getByText("2 sur 60 utilisateurs")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /page 2/i }));
     await waitFor(() => expect(chercherComptes).toHaveBeenCalledWith("", "tous", 2));
   });
@@ -202,9 +249,10 @@ describe("Suspension d'un compte", () => {
     const user = userEvent.setup();
     avecToast(<SuspensionCompte compte={COMPTE} droits={{ suspendre: true, reactiver: false }} />);
     await user.click(screen.getByRole("button", { name: "Suspendre le compte" }));
-    const fenetre = screen.getByRole("dialog");
-    await user.type(within(fenetre).getByRole("textbox", { name: /Motif/ }), "Spam répété");
-    await user.click(within(fenetre).getByRole("button", { name: "Suspendre" }));
+    const fenetre = screen.getByRole("dialog", { name: "Suspendre ce compte ?" });
+    expect(fenetre).toHaveTextContent("Fifamè A. ne pourra plus se connecter ni publier.");
+    await user.type(within(fenetre).getByRole("textbox", { name: "Motif (visible par l’équipe)" }), "Spam répété");
+    await user.click(within(fenetre).getByRole("button", { name: "Suspendre le compte" }));
     expect(suspendreCompte).toHaveBeenCalledWith(ID, "Spam répété");
   });
 

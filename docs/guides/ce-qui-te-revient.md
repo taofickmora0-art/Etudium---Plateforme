@@ -330,10 +330,11 @@ Pas de migration pour cette tâche : il faut seulement que la 0003 à la 0009 so
 
 1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0013_utilisateurs.sql` (après la 0012).
 2. Il te faut un compte de test : dans une fenêtre de navigation privée, inscris-toi sur http://localhost:3000/inscription avec une autre adresse e-mail. Garde cette fenêtre ouverte.
-3. Avec ton compte, Back-office → **Utilisateurs** :
-   - tu apparais avec l’étiquette **Super admin** ;
+3. Avec ton compte, Back-office → **Utilisateurs** : un tableau comme dans le design (Utilisateur, E-mail, Rôle, Formule, Statut, Inscrit le) :
+   - ta ligne affiche le rôle **Super admin** ;
    - cherche-toi par ton prénom tapé sans accent, puis par le début de ton adresse e-mail. L’adresse de la page ne change pas ;
-   - essaie les filtres **Équipe** et **Étudiants**.
+   - essaie les filtres **Étudiants** et **Formateurs** ;
+   - sur ton téléphone, le tableau défile de côté dans son cadre ; le menu **⋮** d’une ligne propose « Voir le profil ».
 4. Ouvre le compte de test :
    - **Identité** et **Activité** s’affichent (« Aucune formation commencée. » s’il n’a rien suivi) ;
    - **Rôles** : coche **Formateur**, choisis « Créer une fiche à son nom », puis **Enregistrer les rôles**. La confirmation dit « Donner : Formateur. », puis « Rôles enregistrés. » ;
@@ -341,7 +342,8 @@ Pas de migration pour cette tâche : il faut seulement que la 0003 à la 0009 so
    - dans la fenêtre privée, rond de profil : **Espace formateur** apparaît ;
    - décoche **Formateur** et enregistre : la fiche reste dans Formateurs, sans compte relié.
 5. Sur ta propre fiche : pas de bouton **Suspendre**. Décoche **Super admin** et enregistre : la base refuse avec « Vous ne pouvez pas vous retirer le rôle super admin. ».
-6. Sur le compte de test, **Suspendre le compte** avec le motif « Test » :
+6. Sur le compte de test, **Suspendre le compte** (depuis sa fiche, ou le menu **⋮** de sa ligne), avec le motif « Test » :
+   - la fenêtre dit « Suspendre ce compte ? » ; le message « Compte suspendu » s’affiche, et sa ligne passe à **Suspendu** ;
    - la fiche affiche « Suspendu depuis le … , par » ton nom, et le motif ;
    - dans la fenêtre privée, clique sur n’importe quelle page : le compte est déconnecté avec « Ce compte est suspendu. Pour en savoir plus, contactez l’équipe Étudium. » ;
    - reconnecte-toi avec ce compte : même message, la connexion est refusée.
