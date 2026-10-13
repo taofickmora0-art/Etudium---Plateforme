@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ETATS, etatFormation, TON_ETAT } from "@/lib/contenus/etat";
+import { correspondAuFiltre, ETATS, etatFormation, TON_ETAT } from "@/lib/contenus/etat";
 
 // État affiché d'une formation (spec de l'espace formateur, §2) : le statut enregistré, plus la relecture.
 
@@ -26,5 +26,14 @@ describe("État d'une formation", () => {
   it("les libellés et les tons", () => {
     expect(ETATS).toEqual({ brouillon: "Brouillon", en_attente: "En attente de validation", a_corriger: "À corriger", publiee: "Publiée", archivee: "Archivée" });
     expect(TON_ETAT).toEqual({ brouillon: "enAttente", en_attente: "populaire", a_corriger: "echoue", publiee: "valide", archivee: "aCorriger" });
+  });
+
+  it("le filtre du back-office : Brouillons réunit les brouillons et ceux à corriger", () => {
+    expect(correspondAuFiltre("brouillon", "brouillon")).toBe(true);
+    expect(correspondAuFiltre("a_corriger", "brouillon")).toBe(true);
+    expect(correspondAuFiltre("en_attente", "brouillon")).toBe(false);
+    expect(correspondAuFiltre("en_attente", "en_attente")).toBe(true);
+    expect(correspondAuFiltre("publiee", "publiee")).toBe(true);
+    expect(correspondAuFiltre("archivee", "publiee")).toBe(false);
   });
 });

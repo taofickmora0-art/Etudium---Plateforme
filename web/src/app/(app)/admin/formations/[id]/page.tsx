@@ -7,12 +7,11 @@ import { PageAdmin } from "@/components/admin/PageAdmin";
 import { ProgrammeEditor } from "@/components/admin/ProgrammeEditor";
 import { PublicationPanel } from "@/components/admin/PublicationPanel";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
-import { TON_STATUT } from "@/components/admin/tons";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tag } from "@/components/ui/Tag";
 import { getFormationAdmin, listFormateurs, listParcours } from "@/lib/admin/data";
 import { requireSpace } from "@/lib/auth/require-space";
-import { STATUTS } from "@/lib/contenus/libelles";
+import { ETATS, TON_ETAT } from "@/lib/contenus/etat";
 
 export const metadata: Metadata = { title: "Formation · Back-office · Étudium" };
 
@@ -35,13 +34,13 @@ async function FicheFormation({ params, searchParams }: Params) {
     <PageAdmin
       titre={formation.titre}
       fil={[{ label: "Formations", href: "/admin/formations" }, { label: formation.titre }]}
-      action={<Tag tone={TON_STATUT[formation.statut]}>{STATUTS[formation.statut]}</Tag>}
+      action={<Tag tone={TON_ETAT[formation.etat]}>{ETATS[formation.etat]}</Tag>}
     >
       <FormationOnglets
         ongletInitial={onglet && ONGLETS.includes(onglet) ? onglet : "informations"}
         informations={<FormationInfosForm formation={formation} parcours={parcours} formateurs={formateurs} />}
         programme={<ProgrammeEditor formation={formation} />}
-        publication={<PublicationPanel id={formation.id} statut={formation.statut} />}
+        publication={<PublicationPanel id={formation.id} formation={formation} formateurNom={formateurs.find((f) => f.id === formation.formateurId)?.nom ?? null} />}
       />
     </PageAdmin>
   );

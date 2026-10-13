@@ -65,15 +65,18 @@ describe("Fiche d'une formation au back-office", () => {
   });
 
   it("les boutons de publication suivent le statut", () => {
-    const { unmount } = avecNotifications(<PublicationPanel id="f1" statut="brouillon" />);
+    const pub = (statut: "brouillon" | "publiee" | "archivee") => (
+      <PublicationPanel id="f1" formation={{ ...FORMATION, statut, etat: statut }} formateurNom={null} />
+    );
+    const { unmount } = avecNotifications(pub("brouillon"));
     expect(screen.getByRole("button", { name: "Publier" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Supprimer le brouillon" })).toBeInTheDocument();
     unmount();
-    const publiee = avecNotifications(<PublicationPanel id="f1" statut="publiee" />);
+    const publiee = avecNotifications(pub("publiee"));
     expect(screen.getByRole("button", { name: "Archiver" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Supprimer le brouillon" })).toBeNull();
     publiee.unmount();
-    avecNotifications(<PublicationPanel id="f1" statut="archivee" />);
+    avecNotifications(pub("archivee"));
     expect(screen.getByRole("button", { name: "Republier" })).toBeInTheDocument();
   });
 });

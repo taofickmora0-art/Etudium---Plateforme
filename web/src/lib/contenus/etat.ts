@@ -28,3 +28,11 @@ export const TON_ETAT: Record<EtatFormation, TagTone> = {
   publiee: "valide",
   archivee: "aCorriger",
 };
+
+/** Filtres de la liste des formations du back-office (« toutes » n'en est pas un : rien n'est filtré). */
+export type FiltreEtat = "en_attente" | "brouillon" | "publiee" | "archivee";
+
+/** « Brouillons » réunit les brouillons et ceux à corriger : ni en ligne, ni en attente de l'équipe. */
+export function correspondAuFiltre(etat: EtatFormation, filtre: FiltreEtat): boolean {
+  return filtre === "brouillon" ? etat === "brouillon" || etat === "a_corriger" : etat === filtre;
+}

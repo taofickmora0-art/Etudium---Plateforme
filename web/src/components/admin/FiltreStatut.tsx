@@ -5,6 +5,7 @@ import { FilterChips } from "@/components/ui/FilterChips";
 
 const OPTIONS = [
   { value: "toutes", label: "Toutes" },
+  { value: "en_attente", label: "En attente" },
   { value: "brouillon", label: "Brouillons" },
   { value: "publiee", label: "Publiées" },
   { value: "archivee", label: "Archivées" },

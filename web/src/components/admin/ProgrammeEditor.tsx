@@ -15,6 +15,7 @@ import { Heading } from "@/components/ui/Text";
 import { TextInput } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
 import { addLecon, addModule, deleteLecon, deleteModule, renameModule } from "@/lib/admin/actions";
+import { baseFormations, type EspaceEdition } from "@/lib/admin/espace";
 import { formatDuree } from "@/lib/admin/duree";
 import type { FormationAdmin, LeconResume, ModuleAdmin } from "@/lib/admin/types";
 import { BoutonsOrdre } from "./BoutonsOrdre";
@@ -87,7 +88,9 @@ function FormulaireTitre({
   );
 }
 
-function ModuleBloc({ formationId, module, rang, premier, dernier }: { formationId: string; module: ModuleAdmin; rang: number; premier: boolean; dernier: boolean }) {
+type ModuleBlocProps = { formationId: string; module: ModuleAdmin; rang: number; premier: boolean; dernier: boolean; espace: EspaceEdition };
+
+function ModuleBloc({ formationId, module, rang, premier, dernier, espace }: ModuleBlocProps) {
   const titreId = useId();
   const [confirmation, setConfirmation] = useState<"module" | LeconResume | null>(null);
   const { erreur, reinitialiser, supprimer } = useSuppression();
@@ -120,7 +123,7 @@ function ModuleBloc({ formationId, module, rang, premier, dernier }: { formation
               <IconTile icon={PlayCircleIcon} />
               <span className="flex min-w-[150px] flex-1 flex-col gap-0.5">
                 <Link
-                  href={`/admin/formations/${formationId}/lecons/${l.id}`}
+                  href={`${baseFormations(espace)}/${formationId}/lecons/${l.id}`}
                   className="focus-etudium truncate text-[15px] leading-[22px] font-medium text-encre no-underline hover:underline"
                 >
                   {l.titre}
@@ -135,7 +138,7 @@ function ModuleBloc({ formationId, module, rang, premier, dernier }: { formation
           ))}
         </List>
       )}
-      <FormulaireTitre action={addLecon} champs={{ module_id: module.id }} label="Nouvelle leçon" bouton="Ajouter la leçon" succes="Leçon créée" vider />
+      <FormulaireTitre action={addLecon} champs={{ module_id: module.id, espace }} label="Nouvelle leçon" bouton="Ajouter la leçon" succes="Leçon créée" vider />
 
       <ConfirmDialog
         open={confirmation === "module"}
@@ -165,16 +168,23 @@ function ModuleBloc({ formationId, module, rang, premier, dernier }: { formation
   );
 }
 
+type ProgrammeEditorProps = {
+  formation: Pick<FormationAdmin, "id" | "modules">;
+  /** Adresse de base des formations : le back-office, ou l'espace formateur (spec de l'espace formateur, §6). */
+  base?: "/admin/formations" | "/formateur/formations";
+};
+
 /** Onglet « Programme » : modules et leçons, dans l'ordre, avec ajout, renommage, ordre et suppression. */
-export function ProgrammeEditor({ formation }: { formation: Pick<FormationAdmin, "id" | "modules"> }) {
+export function ProgrammeEditor({ formation, base = "/admin/formations" }: ProgrammeEditorProps) {
   const { modules } = formation;
+  const espace: EspaceEdition = base === "/formateur/formations" ? "formateur" : "admin";
   return (
     <div className="flex max-w-[680px] flex-col gap-4">
       {modules.length === 0 ? (
         <EmptyState icon={CourseIcon} title="Aucun module pour le moment" description="Commencez par ajouter un module, puis ses leçons." />
       ) : (
         modules.map((m, index) => (
-          <ModuleBloc key={m.id} formationId={formation.id} module={m} rang={index + 1} premier={index === 0} dernier={index === modules.length - 1} />
+          <ModuleBloc key={m.id} formationId={formation.id} module={m} rang={index + 1} premier={index === 0} dernier={index === modules.length - 1} espace={espace} />
         ))
       )}
       <div className="rounded-carte border border-dashed border-bordure-carte bg-panneau p-5">

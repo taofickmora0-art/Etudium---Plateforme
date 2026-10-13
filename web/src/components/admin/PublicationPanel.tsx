@@ -7,19 +7,53 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { deleteFormation, setStatutFormation } from "@/lib/admin/actions";
+import type { FormationAdmin } from "@/lib/admin/types";
 import type { StatutFormation } from "@/lib/contenus/libelles";
+import { dateCourte } from "@/lib/utilisateurs/regles";
+import { RenvoyerAuFormateur } from "./RenvoyerAuFormateur";
 
 type Resultat = { ok: boolean; message?: string; redirection?: string };
 type Confirmation = "publier" | "archiver" | "supprimer" | null;
 
 const EXPLICATION: Record<StatutFormation, string> = {
-  brouillon: "Brouillon : visible seulement par l’équipe.",
+  brouillon: "Brouillon : visible seulement par l’équipe et par son formateur.",
   publiee: "Publiée : visible dans le catalogue.",
   archivee: "Archivée : retirée du catalogue. Rien n’est supprimé.",
 };
 
-/** Onglet « Publication » : publier, archiver, republier, ou supprimer un brouillon (spec du lot 1, §10). */
-export function PublicationPanel({ id, statut }: { id: string; statut: StatutFormation }) {
+type Props = {
+  id: string;
+  formation: Pick<FormationAdmin, "statut" | "etat" | "envoyeeLe" | "renvoyeeLe" | "remarqueRelecture" | "modifieeParFormateurLe" | "publieeLe">;
+  /** Nom de la fiche formateur de la formation, ou null. */
+  formateurNom: string | null;
+};
+
+/** Ce que l'équipe doit savoir de la relecture (spec de l'espace formateur, §4). */
+function EtatRelecture({ formation, formateurNom }: Omit<Props, "id">) {
+  if (formation.etat === "en_attente" && formation.envoyeeLe) {
+    return (
+      <p className="m-0 text-[15px] leading-6 font-medium text-encre">
+        {`Envoyée en relecture le ${dateCourte(formation.envoyeeLe)}${formateurNom ? ` par ${formateurNom}` : ""}`}
+      </p>
+    );
+  }
+  if (formation.etat === "a_corriger" && formation.renvoyeeLe) {
+    return (
+      <div className="flex flex-col gap-1">
+        <p className="m-0 text-[15px] leading-6 font-medium text-encre">{`Renvoyée au formateur le ${dateCourte(formation.renvoyeeLe)}`}</p>
+        {formation.remarqueRelecture && <p className="m-0 text-sm leading-[22px] break-words whitespace-pre-line text-discret">{formation.remarqueRelecture}</p>}
+      </div>
+    );
+  }
+  if (formation.statut === "publiee" && formation.modifieeParFormateurLe) {
+    return <p className="m-0 text-sm leading-[22px] text-discret">{`Modifiée par le formateur le ${dateCourte(formation.modifieeParFormateurLe)}`}</p>;
+  }
+  return null;
+}
+
+/** Onglet « Publication » : publier, archiver, republier, renvoyer au formateur, ou supprimer un brouillon (spec du lot 1, §10). */
+export function PublicationPanel({ id, formation, formateurNom }: Props) {
+  const { statut } = formation;
   const router = useRouter();
   const { toast } = useToast();
   const [confirmation, setConfirmation] = useState<Confirmation>(null);
@@ -43,9 +77,11 @@ export function PublicationPanel({ id, statut }: { id: string; statut: StatutFor
 
   return (
     <div className="flex max-w-[680px] flex-col gap-4 rounded-carte border border-bordure-carte bg-panneau p-6">
+      <EtatRelecture formation={formation} formateurNom={formateurNom} />
       <p className="m-0 text-[15px] leading-6 text-texte">{EXPLICATION[statut]}</p>
       <div className="flex flex-wrap gap-2">
         {statut === "brouillon" && <Button onClick={() => ouvrir("publier")}>Publier</Button>}
+        {formation.etat === "en_attente" && <RenvoyerAuFormateur id={id} />}
         {statut === "publiee" && (
           <Button variant="contour" onClick={() => ouvrir("archiver")}>
             Archiver

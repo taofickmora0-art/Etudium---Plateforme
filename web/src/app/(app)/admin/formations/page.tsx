@@ -5,7 +5,6 @@ import { BookOpen01Icon } from "@hugeicons/core-free-icons";
 import { FiltreStatut } from "@/components/admin/FiltreStatut";
 import { PageAdmin } from "@/components/admin/PageAdmin";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
-import { TON_STATUT } from "@/components/admin/tons";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { IconTile } from "@/components/ui/IconTile";
@@ -15,7 +14,9 @@ import { Tag } from "@/components/ui/Tag";
 import { listFormations } from "@/lib/admin/data";
 import type { FormationResume } from "@/lib/admin/types";
 import { requireSpace } from "@/lib/auth/require-space";
-import { libelleNiveau, STATUTS, type StatutFormation } from "@/lib/contenus/libelles";
+import { correspondAuFiltre, ETATS, TON_ETAT, type FiltreEtat } from "@/lib/contenus/etat";
+import { libelleNiveau } from "@/lib/contenus/libelles";
+import { dateCourte } from "@/lib/utilisateurs/regles";
 
 export const metadata: Metadata = { title: "Formations · Back-office · Étudium" };
 
@@ -27,20 +28,29 @@ const NOUVELLE = (
   </Button>
 );
 
+const FILTRES: FiltreEtat[] = ["en_attente", "brouillon", "publiee", "archivee"];
+
 const sousTitre = (f: FormationResume) =>
-  [f.parcours.join(", ") || "Sans parcours", libelleNiveau(f.niveau), `${f.nbLecons} ${f.nbLecons > 1 ? "leçons" : "leçon"}`].join(" · ");
+  [
+    f.parcours.join(", ") || "Sans parcours",
+    libelleNiveau(f.niveau),
+    `${f.nbLecons} ${f.nbLecons > 1 ? "leçons" : "leçon"}`,
+    f.modifieeParFormateurLe && `Modifiée par le formateur le ${dateCourte(f.modifieeParFormateurLe)}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
 async function ListeFormations({ searchParams }: Recherche) {
   await requireSpace("admin");
   const { statut } = await searchParams;
-  const filtre = statut && statut in STATUTS ? (statut as StatutFormation) : null;
+  const filtre = FILTRES.find((f) => f === statut) ?? null;
   let formations: FormationResume[];
   try {
     formations = await listFormations();
   } catch (erreur) {
     return <PageAdmin titre="Formations" fil={[{ label: "Formations" }]}>{siTablesAbsentes(erreur)}</PageAdmin>;
   }
-  const affichees = filtre ? formations.filter((f) => f.statut === filtre) : formations;
+  const affichees = filtre ? formations.filter((f) => correspondAuFiltre(f.etat, filtre)) : formations;
   return (
     <PageAdmin titre="Formations" description="Brouillons, formations publiées et archivées." fil={[{ label: "Formations" }]} action={NOUVELLE}>
       <div className="flex max-w-[680px] flex-col gap-4">
@@ -59,7 +69,7 @@ async function ListeFormations({ searchParams }: Recherche) {
                 leading={<IconTile icon={BookOpen01Icon} />}
                 title={f.titre}
                 subtitle={sousTitre(f)}
-                trailing={<Tag tone={TON_STATUT[f.statut]}>{STATUTS[f.statut]}</Tag>}
+                trailing={<Tag tone={TON_ETAT[f.etat]}>{ETATS[f.etat]}</Tag>}
                 href={`/admin/formations/${f.id}`}
               />
             ))}
