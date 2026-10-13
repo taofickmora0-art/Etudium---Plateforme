@@ -237,7 +237,8 @@ Il faut la section 5 (tables et exemples du lot 1).
    - **Agrandir** / **Réduire** change la taille (de 75 % à 200 %) ;
    - « Document en consultation seule. » en bas.
 3. Fais de même avec l’image.
-4. Avec le document ouvert, appuie sur **Ctrl + P** : l’aperçu d’impression n’affiche pas le document (seulement une phrase).
-5. Sur ton téléphone (Android surtout) : le document s’ouvre en plein écran, sans téléchargement, et défile avec le doigt. **C’est le test le plus important** : sur Android, Chrome ne sait pas afficher un PDF dans une page ; le visualiseur le fait.
-6. Rappel honnête : une capture d’écran reste possible. Le visualiseur ne prétend pas l’empêcher.
+4. Avec le document ouvert, appuie sur **Ctrl + P** : l’aperçu d’impression montre la page de la leçon derrière, mais pas le document (à sa place, une phrase).
+5. Essaie aussi : un PDF **scanné en noir et blanc** (il doit s’afficher, pas rester blanc), une présentation en **paysage**, un PDF de **plus de 100 pages** sur ton téléphone (le défilement reste fluide), et le défilement au clavier (Tab jusqu’au document, puis les flèches).
+6. Sur ton téléphone (Android surtout) : le document s’ouvre en plein écran, sans téléchargement, et défile avec le doigt. **C’est le test le plus important** : sur Android, Chrome ne sait pas afficher un PDF dans une page ; le visualiseur le fait.
+7. Rappel honnête : une capture d’écran reste possible. Le visualiseur ne prétend pas l’empêcher.
 
