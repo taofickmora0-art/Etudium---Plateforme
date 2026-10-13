@@ -68,6 +68,32 @@ as $$
 $$;
 revoke execute on function public.suivi_formateur(uuid) from public, anon, authenticated;
 
+-- ─── Remarques privées du formateur sur un étudiant ─────────────────────────────────────────────────
+-- Une par formateur et par étudiant. Lues par leur auteur et par l'équipe, jamais par l'étudiant ; écrites seulement
+-- par enregistrer_remarque (plus bas), qui vérifie que l'étudiant suit l'une des formations du formateur.
+create table if not exists public.remarques_formateur (
+  formateur uuid not null references public.profils (id) on delete cascade,
+  etudiant uuid not null references public.profils (id) on delete cascade,
+  texte text not null,
+  modifiee_le timestamptz not null default now(),
+  primary key (formateur, etudiant),
+  constraint remarques_formateur_texte_longueur check (char_length(texte) between 1 and 2000)
+);
+alter table public.remarques_formateur enable row level security;
+revoke all on public.remarques_formateur from anon;
+revoke insert, update, delete, truncate on public.remarques_formateur from authenticated;
+
+drop policy if exists "remarques : leur auteur et l'équipe" on public.remarques_formateur;
+create policy "remarques : leur auteur et l'équipe" on public.remarques_formateur
+  for select to authenticated
+  using (formateur = (select auth.uid()) or (select public.equipe_contenus()));
+
+-- Un compte suspendu ne lit plus rien (comme ses autres données, 0013).
+drop policy if exists "compte suspendu : rien" on public.remarques_formateur;
+create policy "compte suspendu : rien" on public.remarques_formateur
+  as restrictive for all to authenticated
+  using (not (select public.compte_suspendu())) with check (not (select public.compte_suspendu()));
+
 -- ─── Les étudiants du formateur ─────────────────────────────────────────────────────────────────────
 -- Une page de 25 lignes (étudiant, formation), les plus récemment actifs d'abord. Filtres : une de ses formations,
 -- l'état (a_risque, terminees ; toute autre valeur : tous), le nom (sans accents ni majuscules, jamais de joker).
@@ -189,7 +215,11 @@ begin
       from public.suivi_formateur(v_fiche) s
       where s.etudiant = p_etudiant
     ),
-    'remarque', null
+    'remarque', (
+      select jsonb_build_object('texte', r.texte, 'modifiee_le', r.modifiee_le)
+      from public.remarques_formateur r
+      where r.formateur = (select auth.uid()) and r.etudiant = p_etudiant
+    )
   ) into v_resultat
   from public.profils pr
   where pr.id = p_etudiant;
@@ -201,5 +231,145 @@ revoke execute on function public.etudiants_formateur(text, uuid, text, integer,
 revoke execute on function public.etudiant_formateur(uuid, timestamptz) from public, anon;
 grant execute on function public.etudiants_formateur(text, uuid, text, integer, timestamptz) to authenticated;
 grant execute on function public.etudiant_formateur(uuid, timestamptz) to authenticated;
+
+-- ─── Écrire une remarque ────────────────────────────────────────────────────────────────────────────
+-- Sur un étudiant de ses formations seulement. Espaces de début et de fin retirés ; vide : la remarque est supprimée.
+create or replace function public.enregistrer_remarque(p_etudiant uuid, p_texte text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_fiche uuid := public.ma_fiche_formateur();
+  v_texte text := regexp_replace(coalesce(p_texte, ''), '^\s+|\s+$', '', 'g');
+begin
+  if v_fiche is null then
+    raise exception 'Votre compte n’est pas encore relié à une fiche formateur.' using errcode = '42501';
+  end if;
+  if not exists (select 1 from public.suivi_formateur(v_fiche) s where s.etudiant = p_etudiant) then
+    raise exception 'Cet étudiant ne suit aucune de vos formations.';
+  end if;
+  if char_length(v_texte) = 0 then
+    delete from public.remarques_formateur where formateur = (select auth.uid()) and etudiant = p_etudiant;
+    return;
+  end if;
+  if char_length(v_texte) > 2000 then
+    raise exception 'La remarque dépasse 2 000 caractères.';
+  end if;
+  insert into public.remarques_formateur (formateur, etudiant, texte)
+  values ((select auth.uid()), p_etudiant, v_texte)
+  on conflict (formateur, etudiant) do update set texte = excluded.texte, modifiee_le = now();
+end;
+$$;
+
+-- Les remarques des formateurs sur un compte, pour l'équipe (fiche du compte au back-office), les plus récentes d'abord.
+-- L'auteur est nommé par sa fiche formateur, sinon par son prénom et son nom.
+create or replace function public.remarques_compte(p_compte uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.equipe_contenus() then
+    raise exception 'Accès réservé à l’équipe.' using errcode = '42501';
+  end if;
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'formateur_nom', coalesce(
+        (select fo.nom from public.formateurs fo where fo.compte_id = r.formateur),
+        nullif(btrim(p.prenom || ' ' || p.nom), ''),
+        'Formateur'
+      ),
+      'texte', r.texte,
+      'modifiee_le', r.modifiee_le
+    ) order by r.modifiee_le desc)
+    from public.remarques_formateur r
+    left join public.profils p on p.id = r.formateur
+    where r.etudiant = p_compte
+  ), '[]'::jsonb);
+end;
+$$;
+
+-- ─── Tableau de bord du formateur (design NdFormateur) ──────────────────────────────────────────────
+-- Ses formations (dont brouillons), ses étudiants (dont nouveaux ce mois, heure du Bénin : UTC+1 toute l'année),
+-- la progression moyenne, les 5 étudiants les plus inactifs parmi ceux à risque, et le détail par formation.
+create or replace function public.tableau_de_bord_formateur(p_maintenant timestamptz default now())
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_fiche uuid := public.ma_fiche_formateur();
+  v_debut_mois timestamptz := (date_trunc('month', (p_maintenant at time zone 'UTC') + interval '1 hour') - interval '1 hour') at time zone 'UTC';
+  v_resultat jsonb;
+begin
+  if v_fiche is null then
+    raise exception 'Votre compte n’est pas encore relié à une fiche formateur.' using errcode = '42501';
+  end if;
+
+  with s as (
+    select x.*, public.etat_suivi(x.terminees, x.total, x.derniere_activite, p_maintenant) as etat
+    from public.suivi_formateur(v_fiche) x
+  ),
+  premieres as (
+    select etudiant, min(premiere_ouverture) as premiere from s group by etudiant
+  )
+  select jsonb_build_object(
+    'prenom', (select pr.prenom from public.profils pr where pr.id = (select auth.uid())),
+    'formations', (
+      select jsonb_build_object('total', count(*), 'brouillons', count(*) filter (where f.statut = 'brouillon'))
+      from public.formations f where f.formateur_id = v_fiche
+    ),
+    'etudiants', jsonb_build_object(
+      'total', (select count(*) from premieres),
+      'ce_mois', (select count(*) from premieres where premiere >= v_debut_mois)
+    ),
+    'progression_moyenne', (select round(avg(s.terminees::numeric * 100 / s.total))::integer from s where s.total > 0),
+    'a_risque', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'etudiant_id', r.etudiant,
+        'prenom', r.prenom,
+        'nom', r.nom,
+        'formation_titre', r.formation_titre,
+        'jours', floor(extract(epoch from (p_maintenant - r.derniere_activite)) / 86400)::integer,
+        'pourcentage', case when r.total > 0 then round(r.terminees::numeric * 100 / r.total)::integer else 0 end
+      ) order by r.derniere_activite, r.etudiant)
+      from (select * from s where s.etat = 'a_risque' order by s.derniere_activite, s.etudiant limit 5) r
+    ), '[]'::jsonb),
+    'formations_detail', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', f.id,
+        'titre', f.titre,
+        'statut', f.statut,
+        'envoyee_le', f.envoyee_le,
+        'renvoyee_le', f.renvoyee_le,
+        'inscrits', (select count(*) from s where s.formation = f.id),
+        'progression_moyenne', (select round(avg(s.terminees::numeric * 100 / s.total))::integer from s where s.formation = f.id and s.total > 0),
+        'completion', (
+          select case when count(*) = 0 then null else round(count(*) filter (where s.etat = 'terminee')::numeric * 100 / count(*))::integer end
+          from s where s.formation = f.id
+        ),
+        'note_moyenne', f.note_moyenne,
+        'nb_avis', f.nb_avis
+      ) order by f.modifie_le desc, f.id)
+      from public.formations f
+      where f.formateur_id = v_fiche
+    ), '[]'::jsonb)
+  ) into v_resultat;
+  return v_resultat;
+end;
+$$;
+
+revoke execute on function public.enregistrer_remarque(uuid, text) from public, anon;
+revoke execute on function public.remarques_compte(uuid) from public, anon;
+revoke execute on function public.tableau_de_bord_formateur(timestamptz) from public, anon;
+grant execute on function public.enregistrer_remarque(uuid, text) to authenticated;
+grant execute on function public.remarques_compte(uuid) to authenticated;
+grant execute on function public.tableau_de_bord_formateur(timestamptz) to authenticated;
 
 commit;

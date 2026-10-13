@@ -185,3 +185,126 @@ describe("Migration 0015 : suivi des étudiants", () => {
     expect((await liste(F, "fifame")).total).toBe(1);
   });
 });
+
+describe("Migration 0015 : remarques privées", () => {
+  const remarque = async (qui: string, etudiant: string, texte: string) => banc.en({ id: qui }, "select public.enregistrer_remarque($1, $2)", [etudiant, texte]);
+  const remarqueDeF = async (etudiant: string) =>
+    (await banc.en<{ r: { remarque: { texte: string; modifiee_le: string } | null } }>({ id: F }, "select public.etudiant_formateur($1) as r", [etudiant]))[0].r.remarque;
+
+  it("une remarque : écrite par le formateur pour son étudiant, relue sur la fiche", async () => {
+    await remarque(F, E1, "  A du mal avec les formules.  ");
+    expect(await remarqueDeF(E1)).toMatchObject({ texte: "A du mal avec les formules.", modifiee_le: expect.any(String) });
+    await remarque(F, E1, "Progresse bien.");
+    expect((await remarqueDeF(E1))!.texte).toBe("Progresse bien.");
+  });
+
+  it("un texte vide supprime la remarque ; plus de 2 000 caractères refusé", async () => {
+    await remarque(F, E2, "Relancer.");
+    await remarque(F, E2, "   ");
+    expect(await remarqueDeF(E2)).toBeNull();
+    await expect(remarque(F, E2, "x".repeat(2001))).rejects.toThrow(/2 000 caractères/);
+  });
+
+  it("ni l'étudiant ni un autre formateur ne la lisent ; l'équipe oui, avec le nom de la fiche", async () => {
+    await remarque(G, E3, "Remarque de G.");
+    expect(await banc.en({ id: E1 }, "select texte from public.remarques_formateur")).toEqual([]);
+    expect(await banc.en<{ texte: string }>({ id: F }, "select texte from public.remarques_formateur")).toEqual([{ texte: "Progresse bien." }]);
+    expect(await banc.en<{ texte: string }>({ id: G }, "select texte from public.remarques_formateur")).toEqual([{ texte: "Remarque de G." }]);
+    expect((await banc.en({ id: A }, "select texte from public.remarques_formateur")).length).toBe(2);
+    const [{ r }] = await banc.en<{ r: { formateur_nom: string; texte: string }[] }>({ id: A }, "select public.remarques_compte($1) as r", [E1]);
+    expect(r).toEqual([expect.objectContaining({ formateur_nom: expect.stringMatching(/^Test /), texte: "Progresse bien." })]);
+    await expect(banc.en({ id: F }, "select public.remarques_compte($1)", [E1])).rejects.toThrow(/équipe/);
+  });
+
+  it("pas de remarque sur un étudiant d'un autre formateur ; pas d'écriture directe", async () => {
+    await expect(remarque(F, E3, "Intrus.")).rejects.toThrow(/ne suit aucune de vos formations/);
+    await expect(remarque(H, E1, "Sans fiche.")).rejects.toThrow(SANS_FICHE);
+    await expect(banc.en({ id: F }, "insert into public.remarques_formateur (formateur, etudiant, texte) values ($1, $2, 'Directe')", [F, E1])).rejects.toThrow(REFUS);
+    await expect(banc.en({ id: F }, "update public.remarques_formateur set texte = 'Directe'")).rejects.toThrow(REFUS);
+  });
+});
+
+describe("Migration 0015 : tableau de bord du formateur", () => {
+  const MAINTENANT = "2026-10-14T12:00:00Z";
+  const E4 = randomUUID();
+  const E5 = randomUUID();
+  let W: string;
+  const fixe = (compte: string, lecon: string, ouverte: string, vue: string, terminee: string | null = null) =>
+    banc.db.query(
+      "insert into public.progression_lecons (profil_id, lecon_id, ouverte_le, vue_le, terminee_le) values ($1, $2, $3, $4, $5)",
+      [compte, lecon, ouverte, vue, terminee],
+    );
+  type Tableau = {
+    prenom: string;
+    formations: { total: number; brouillons: number };
+    etudiants: { total: number; ce_mois: number };
+    progression_moyenne: number | null;
+    a_risque: { etudiant_id: string; formation_titre: string; jours: number; pourcentage: number }[];
+    formations_detail: { id: string; titre: string; statut: string; inscrits: number; progression_moyenne: number | null; completion: number | null; note_moyenne: number | null }[];
+  };
+  const tableau = async (qui = F) => (await banc.en<{ r: Tableau }>({ id: qui }, "select public.tableau_de_bord_formateur($1) as r", [MAINTENANT]))[0].r;
+
+  beforeAll(async () => {
+    // Des données datées autour de MAINTENANT, à la place de celles des tests précédents.
+    await banc.db.query(
+      "delete from public.progression_lecons where lecon_id in (select l.id from public.lecons l join public.modules m on m.id = l.module_id where m.formation_id = any($1))",
+      [[X, Y]],
+    );
+    await banc.creerCompte(E4);
+    await banc.creerCompte(E5);
+    const leconsX5 = (await banc.db.query<{ id: string }>("select l.id from public.lecons l join public.modules m on m.id = l.module_id where m.formation_id = $1 order by l.ordre", [X])).rows.map((l) => l.id);
+    for (const l of leconsX5) await fixe(E1, l, "2026-10-01T10:00:00Z", "2026-10-13T10:00:00Z", "2026-10-13T10:00:00Z"); // X terminée
+    await fixe(E2, leconsX5[0], "2026-09-20T12:00:00Z", "2026-09-20T12:00:00Z"); // X, 24 jours sans activité, arrivé en septembre
+    await fixe(E4, leconsY[0], "2026-10-02T12:00:00Z", "2026-10-02T12:00:00Z"); // Y, 12 jours sans activité
+    await fixe(E5, leconsY[0], "2026-10-14T09:00:00Z", "2026-10-14T09:00:00Z", "2026-10-14T09:00:00Z"); // Y, 1 / 2 aujourd'hui
+    await fixe(F, leconsX5[1], "2026-10-14T09:00:00Z", "2026-10-14T09:00:00Z"); // le formateur lui-même
+    await fixe(A, leconsX5[2], "2026-10-14T09:00:00Z", "2026-10-14T09:00:00Z"); // l'équipe
+    W = (await un<{ id: string }>("insert into public.formations (titre, slug, formateur_id) values ('Brouillon', $1, $2) returning id", [randomUUID(), FA])).id;
+  });
+
+  it("chiffres : formations, étudiants (+ce mois), progression moyenne ; ni le formateur ni l'équipe", async () => {
+    const t = await tableau();
+    expect(t.prenom).toBe("Test");
+    expect(t.formations).toEqual({ total: 3, brouillons: 1 });
+    // E1, E2, E4, E5 ; ce mois (depuis le 1er octobre, heure du Bénin) : E1, E4, E5.
+    expect(t.etudiants).toEqual({ total: 4, ce_mois: 3 });
+    // Moyenne de 100 (E1 X), 0 (E2 X), 0 (E4 Y), 50 (E5 Y) = 37,5 → 38.
+    expect(t.progression_moyenne).toBe(38);
+  });
+
+  it("à risque : les plus inactifs d'abord, avec leurs jours et leur progression", async () => {
+    const t = await tableau();
+    expect(t.a_risque.map((r) => [r.etudiant_id, r.jours, r.pourcentage])).toEqual([
+      [E2, 24, 0],
+      [E4, 12, 0],
+    ]);
+    expect(t.a_risque[0].formation_titre).toBe("Maîtriser Microsoft Excel");
+  });
+
+  it("détail par formation : inscrits, progression moyenne, complétion ; une formation sans étudiant n'a pas de chiffres", async () => {
+    const detail = Object.fromEntries((await tableau()).formations_detail.map((f) => [f.id, f]));
+    expect(detail[X]).toMatchObject({ inscrits: 2, progression_moyenne: 50, completion: 50, statut: "publiee" });
+    expect(detail[Y]).toMatchObject({ inscrits: 2, progression_moyenne: 25, completion: 0 });
+    expect(detail[W]).toMatchObject({ inscrits: 0, progression_moyenne: null, completion: null, statut: "brouillon" });
+  });
+
+  it("au plus 5 étudiants à risque", async () => {
+    for (let i = 0; i < 6; i++) {
+      const id = randomUUID();
+      await banc.creerCompte(id);
+      await fixe(id, leconsY[1], "2026-09-01T12:00:00Z", `2026-09-0${i + 2}T12:00:00Z`);
+    }
+    expect((await tableau()).a_risque).toHaveLength(5);
+  });
+
+  it("refus : sans fiche ; un autre formateur ne voit que ses formations", async () => {
+    await expect(banc.en({ id: E1 }, "select public.tableau_de_bord_formateur()")).rejects.toThrow(SANS_FICHE);
+    await expect(banc.en("anon", "select public.tableau_de_bord_formateur()")).rejects.toThrow(REFUS);
+    expect((await tableau(G)).formations.total).toBe(1);
+  });
+
+  it("la migration reste rejouable", async () => {
+    await banc.appliquer(MIGRATION);
+    expect((await tableau()).etudiants.total).toBeGreaterThan(0);
+  });
+});
