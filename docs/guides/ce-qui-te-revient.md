@@ -347,3 +347,28 @@ Pas de migration pour cette tâche : il faut seulement que la 0003 à la 0009 so
    - reconnecte-toi avec ce compte : même message, la connexion est refusée.
 7. **Réactiver le compte** : dans la fenêtre privée, la connexion remarche.
 
+## 19. Valider l’espace formateur, « Mes formations », 20 minutes
+
+1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0014_espace_formateur.sql` (après la 0013).
+   - Si un jour tu rejoues une migration plus ancienne, rejoue ensuite toutes les suivantes, dans l’ordre, jusqu’à la 0014.
+2. Back-office → **Utilisateurs** → le compte de test (section 18) : donne-lui le rôle **Formateur** avec « Créer une fiche à son nom ».
+3. Dans la fenêtre privée du compte de test, rond de profil → **Espace formateur** → **Mes formations** :
+   - « Vous n’avez pas encore de formation… » ;
+   - **Nouvelle formation** : un titre, puis l’éditeur s’ouvre.
+     - Dans Informations, pas de choix du formateur, ni de gratuité, ni de prix. À la place, le bloc « Réglé par l’équipe Étudium ».
+     - Remplis le résumé, choisis un parcours, ajoute une image de couverture.
+   - **Programme** : un module, une leçon (une vidéo YouTube et sa durée) ;
+   - **Publication** : **Envoyer en relecture**. L’état devient « En attente de validation ». Modifie encore le résumé : c’est permis.
+4. Avec ton compte, Back-office → **Formations** → filtre **En attente** : la formation y est, avec « Envoyée en relecture le … par » le nom de sa fiche.
+   - **Renvoyer au formateur** avec la remarque « Ajoute une description. ».
+5. Dans la fenêtre privée : la formation est « À corriger », avec ta remarque. Ajoute une description, puis **Envoyer en relecture**.
+6. Avec ton compte :
+   - dans Informations, règle la gratuité ou un prix ;
+   - **Publier** ;
+   - la formation apparaît dans le catalogue.
+7. Dans la fenêtre privée :
+   - l’état est « Publiée », « En ligne depuis le … » ;
+   - corrige un texte ;
+   - au back-office, la formation affiche « Modifiée par le formateur le … », dans sa ligne et dans l’onglet Publication.
+8. Dans la fenêtre privée, ouvre l’adresse d’une formation publiée d’un autre formateur sous `/formateur/formations/<identifiant>` : « page introuvable ».
+
