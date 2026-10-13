@@ -18,11 +18,11 @@ describe("Corrections de la relecture de la coque", () => {
     expect(screen.getByRole("navigation", { name: "Navigation" }).parentElement).toHaveClass("sticky", "bottom-0");
   });
 
-  it("les menus s'affichent avant de connaître l'adresse (rendu préalable)", () => {
+  it("les menus s'affichent avant de connaître l'adresse (rendu préalable) : la coque de l'espace les connaît", () => {
     render(
       <>
-        <SidebarNavLinks pathname={null} />
-        <BottomNavLinks pathname={null} />
+        <SidebarNavLinks pathname={null} espace="etudiant" />
+        <BottomNavLinks pathname={null} espace="etudiant" />
       </>,
     );
     expect(screen.getByRole("navigation", { name: "Navigation principale" })).toBeInTheDocument();

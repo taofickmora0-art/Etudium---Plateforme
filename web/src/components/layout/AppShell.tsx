@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { Espace } from "@/lib/auth/permissions";
 import { AppHeader } from "./AppHeader";
 import { MobileNav } from "./MobileNav";
 import { SidebarNav } from "./SidebarNav";
@@ -11,7 +12,7 @@ import { SidebarNav } from "./SidebarNav";
  *   l'en-tête et la barre du bas restent collés : chaque page s'ouvre en haut, le retour arrière retrouve la position,
  *   et les barres du navigateur peuvent se replier.
  */
-export function AppShell({ account, children }: { account?: ReactNode; children: ReactNode }) {
+export function AppShell({ account, espace, children }: { account?: ReactNode; /** Espace connu d'avance (menus du rendu préalable). */ espace?: Espace; children: ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col bg-page lg:px-5 lg:pb-5">
       <a
@@ -22,7 +23,7 @@ export function AppShell({ account, children }: { account?: ReactNode; children:
       </a>
       <AppHeader account={account} />
       <div className="flex flex-1 lg:items-stretch lg:rounded-coque lg:bg-coque">
-        <SidebarNav className="hidden lg:flex" />
+        <SidebarNav className="hidden lg:flex" espace={espace} />
         <main
           id="contenu"
           tabIndex={-1}
@@ -32,7 +33,7 @@ export function AppShell({ account, children }: { account?: ReactNode; children:
         </main>
       </div>
       <div className="sticky bottom-0 z-30 bg-page px-2 pb-2 lg:hidden">
-        <MobileNav />
+        <MobileNav espace={espace} />
       </div>
     </div>
   );

@@ -6,14 +6,15 @@ import { describe, expect, it, vi } from "vitest";
 import { ComingSoonView } from "@/components/layout/ComingSoon";
 import { MobileProfileMenu } from "@/components/layout/MobileProfileMenu";
 import { DEMO_USER } from "@/lib/demo-user";
-import { NAV_BAS, NAV_MENU_TELEPHONE, NAV_MON_ESPACE, NAV_PRINCIPALE } from "@/lib/navigation";
+import { MENUS, NAV_BAS_PAR_ESPACE, NAV_MENU_TELEPHONE } from "@/lib/navigation";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/menu" }));
 
 describe("Pages de l'espace connecté", () => {
   it("chaque lien du menu mène à une page", () => {
     const hrefs = new Set([
-      ...[NAV_PRINCIPALE, NAV_MON_ESPACE, NAV_BAS, NAV_MENU_TELEPHONE].flat().map((e) => e.href),
+      ...Object.values(MENUS).flatMap((m) => m.groupes.flatMap((g) => g.entrees)).map((e) => e.href),
+      ...[...Object.values(NAV_BAS_PAR_ESPACE).flat(), ...NAV_MENU_TELEPHONE].map((e) => e.href),
       // en-tête et menu du profil
       "/recherche",
       "/notifications",
@@ -23,7 +24,7 @@ describe("Pages de l'espace connecté", () => {
       "/admin",
     ]);
     // Le catalogue (« Toutes les formations ») vit dans le groupe (catalogue), ouvert aussi aux visiteurs.
-    const existe = (href: string) => ["(app)", "(catalogue)"].some((groupe) => existsSync(join(process.cwd(), "src/app", groupe, href, "page.tsx")));
+    const existe = (href: string) => ["(app)", "(app)/(etudiant)", "(catalogue)"].some((groupe) => existsSync(join(process.cwd(), "src/app", groupe, href, "page.tsx")));
     const manquantes = [...hrefs].filter((href) => !existe(href));
     expect(manquantes).toEqual([]);
   });

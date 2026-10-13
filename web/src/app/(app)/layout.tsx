@@ -1,24 +1,10 @@
-import { Suspense, type ReactNode } from "react";
-import { AppShell } from "@/components/layout/AppShell";
-import { CompteDeLEntete } from "@/components/layout/CompteDeLEntete";
+import type { ReactNode } from "react";
 import { ToastProvider } from "@/components/ui/Toast";
 
 /**
- * Espace connecté. La coque et la page s'affichent sans attendre la lecture du compte (guide « Authentication with
- * Cache Components ») : seule la partie de l'en-tête propre au compte arrive ensuite.
+ * Espace connecté. Chaque espace a sa coque et son menu (étudiant : (etudiant)/layout ; formateur et back-office :
+ * leur propre layout) : l'espace est connu du serveur, sans attendre l'adresse côté navigateur.
  */
 export default function AppLayout({ children }: { children: ReactNode }) {
-  return (
-    <ToastProvider>
-      <AppShell
-        account={
-          <Suspense fallback={null}>
-            <CompteDeLEntete />
-          </Suspense>
-        }
-      >
-        {children}
-      </AppShell>
-    </ToastProvider>
-  );
+  return <ToastProvider>{children}</ToastProvider>;
 }

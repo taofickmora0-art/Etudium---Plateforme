@@ -15,6 +15,7 @@ export async function CadreSelonVisiteur({ children }: { children: ReactNode }) 
   return (
     <ToastProvider>
       <AppShell
+        espace="etudiant"
         account={
           <Suspense fallback={null}>
             <CompteDeLEntete />

@@ -2,6 +2,7 @@
 
 const LOT_1 = "au lot 1, Catalogue et apprentissage";
 const LOT_5 = "au lot 5, Communauté et accompagnement";
+const LOT_4 = "au lot 4, Espace formateur";
 
 /**
  * Pages « Bientôt disponible » : clé = adresse sans « / ». `quand` dit à quel moment l'écran arrive,
@@ -18,6 +19,16 @@ export const PAGES_A_VENIR = {
   abonnement: { titre: "Mon abonnement", quand: "au lot 2, Abonnements et paiement", description: "Votre formule, vos paiements et vos reçus s’afficheront ici." },
   formateur: { titre: "Espace formateur", quand: "au lot 4, Espace formateur", description: "Les formateurs y créeront et suivront leurs formations." },
   admin: { titre: "Back-office", quand: "au lot 1, avec le back-office de saisie", description: "L’équipe Étudium y gérera les formations et les comptes." },
+  // Back-office (menu de l'équipe)
+  "admin/utilisateurs": { titre: "Utilisateurs", quand: "au lot 6, Back-office complet", description: "Les comptes des étudiants, des formateurs et de l’équipe s’afficheront ici." },
+  "admin/paiements": { titre: "Abonnements et paiements", quand: "au lot 2, Abonnements et paiement", description: "Les formules, les abonnements et les paiements s’afficheront ici." },
+  "admin/moderation": { titre: "Modération", quand: LOT_5, description: "Les publications et les signalements à examiner s’afficheront ici." },
+  // Espace formateur (son propre menu)
+  "formateur/formations": { titre: "Mes formations", quand: LOT_4, description: "Vous y créerez vos formations et suivrez leur publication." },
+  "formateur/apprenants": { titre: "Apprenants", quand: LOT_4, description: "La progression, les quiz et les exercices de vos apprenants s’afficheront ici." },
+  "formateur/corrections": { titre: "Corrections", quand: LOT_4, description: "Les exercices à corriger s’afficheront ici." },
+  "formateur/sessions": { titre: "Sessions live", quand: LOT_5, description: "Vous pourrez organiser vos sessions live et voir les inscrits." },
+  "formateur/messages": { titre: "Messages", quand: LOT_5, description: "Vous pourrez écrire à vos apprenants." },
 } satisfies Record<string, { titre: string; quand: string; description: string }>;
 
 export type PageAVenir = keyof typeof PAGES_A_VENIR;

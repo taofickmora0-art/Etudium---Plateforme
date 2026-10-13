@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
-import { ActionButton, CounterPill, LogoButton, SearchButton } from "@/components/ui/TopBarButtons";
+import { CounterPill, LogoButton, SearchButton } from "@/components/ui/TopBarButtons";
 import type { ShellUser } from "@/lib/auth/current-user";
 import { LIENS_ENTETE_TELEPHONE } from "@/lib/navigation";
+import { BoutonAjouterFormation } from "./BoutonAjouterFormation";
 import { HeaderActions } from "./HeaderActions";
 
 /**
@@ -17,9 +18,7 @@ export function AppHeader({ account }: { account?: ReactNode }) {
       <div className="flex min-w-0 flex-wrap items-center gap-2 lg:gap-3">
         <LogoButton href="/accueil" />
         <SearchButton href="/recherche" className="hidden gap-1.5 pr-4 pl-3.5 lg:flex" />
-        <ActionButton href="/formations" className="hidden lg:flex">
-          Ajouter une formation
-        </ActionButton>
+        <BoutonAjouterFormation className="hidden lg:flex" />
       </div>
       <div className="relative flex flex-wrap items-center gap-2 lg:gap-3">
         {LIENS_ENTETE_TELEPHONE.map((e) => (

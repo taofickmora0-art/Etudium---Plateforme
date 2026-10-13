@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { IconSvgElement } from "@/components/ui/Icon";
 import { Heading } from "@/components/ui/Text";
-import { NAV_MENU_TELEPHONE, NAV_MON_ESPACE, NAV_PRINCIPALE, PAGES_A_VENIR, type PageAVenir } from "@/lib/navigation";
+import { MENUS, NAV_MENU_TELEPHONE, PAGES_A_VENIR, type PageAVenir } from "@/lib/navigation";
 import { SessionGuard } from "./SessionGuard";
 
 // Pages qui ne sont pas dans les menus, mais dans l'en-tête ou le menu du profil.
@@ -17,7 +17,8 @@ const ICONES_HORS_MENU: Partial<Record<PageAVenir, IconSvgElement>> = {
 };
 
 function iconePour(page: PageAVenir): IconSvgElement {
-  const entree = [...NAV_PRINCIPALE, ...NAV_MON_ESPACE, ...NAV_MENU_TELEPHONE].find((e) => e.href === `/${page}`);
+  const toutes = [...Object.values(MENUS).flatMap((m) => m.groupes.flatMap((g) => g.entrees)), ...NAV_MENU_TELEPHONE];
+  const entree = toutes.find((e) => e.href === `/${page}` && !e.exact);
   return entree?.icon ?? ICONES_HORS_MENU[page] ?? SparklesIcon;
 }
 
@@ -26,9 +27,17 @@ export function comingSoonMetadata(page: PageAVenir): Metadata {
   return { title: `${PAGES_A_VENIR[page].titre} · Étudium` };
 }
 
+/** Le retour d'une page à venir : le tableau de bord de son espace (back-office, formateur), sinon l'accueil. */
+function retourDe(page: PageAVenir) {
+  if (page.startsWith("admin/")) return { href: "/admin", libelle: "Retour au tableau de bord" };
+  if (page.startsWith("formateur/")) return { href: "/formateur", libelle: "Retour au tableau de bord" };
+  return { href: "/accueil", libelle: "Retour à l’accueil" };
+}
+
 /** Contenu d'une page « Bientôt disponible » : ce que contiendra l'écran et à quel lot il arrive. */
 export function ComingSoonView({ page }: { page: PageAVenir }) {
   const { titre, quand, description } = PAGES_A_VENIR[page];
+  const retour = retourDe(page);
   return (
     <div className="flex flex-col gap-6">
       <Heading level="page">{titre}</Heading>
@@ -38,7 +47,7 @@ export function ComingSoonView({ page }: { page: PageAVenir }) {
         description={`${description} Cette page arrive ${quand}.`}
         action={
           <Button asChild>
-            <Link href="/accueil">Retour à l’accueil</Link>
+            <Link href={retour.href}>{retour.libelle}</Link>
           </Button>
         }
       />
