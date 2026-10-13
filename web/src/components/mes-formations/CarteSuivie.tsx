@@ -1,6 +1,7 @@
 import { CourseCard } from "@/components/ui/CourseCard";
 import type { Parcours } from "@/components/ui/CourseIllustration";
 import { parcoursPrincipal } from "@/lib/catalogue/regles";
+import { urlCouverture } from "@/lib/couvertures/adresse";
 import type { EtatSuivi, FormationSuivie } from "@/lib/mes-formations/regles";
 
 /** Ce qu'une carte de formation suivie affiche (données simples, transmises aux composants du navigateur). */
@@ -14,6 +15,8 @@ export type VueCarteSuivie = {
   etat: EtatSuivi;
   href: string | null;
   favori: boolean;
+  /** Adresse de l'image de couverture ; null : couverture par défaut du parcours. */
+  couverture: string | null;
 };
 
 export function versVueCarte(s: FormationSuivie): VueCarteSuivie {
@@ -27,6 +30,7 @@ export function versVueCarte(s: FormationSuivie): VueCarteSuivie {
     etat: s.etat,
     href: s.href,
     favori: s.favori,
+    couverture: urlCouverture(s.fiche.couverture),
   };
 }
 
@@ -47,6 +51,7 @@ export function CarteSuivie({ vue, sansEtiquette = false }: { vue: VueCarteSuivi
       state={state}
       titleAs="h2"
       sansEtiquette={sansEtiquette}
+      couverture={vue.couverture}
     />
   );
 }

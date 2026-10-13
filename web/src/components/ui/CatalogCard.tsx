@@ -18,6 +18,8 @@ type CatalogCardProps = {
   /** « Débutant », « Intermédiaire »… */
   level: string;
   tag?: CardTag;
+  /** Adresse de l'image de couverture ; null : couverture par défaut du parcours. */
+  couverture?: string | null;
   /** Puce du parcours, avant le badge (catalogue public). */
   parcoursTag?: CardTag;
   titleAs?: "h2" | "h3";
@@ -26,7 +28,7 @@ type CatalogCardProps = {
 const formatNote = (n: number) => n.toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /** Carte du catalogue : comme la carte de formation, avec note, durée et niveau à la place de la progression. */
-export function CatalogCard({ href, title, description, parcours, rating, reviews, duration, level, tag, parcoursTag, titleAs }: CatalogCardProps) {
+export function CatalogCard({ href, title, description, parcours, rating, reviews, duration, level, tag, parcoursTag, titleAs, couverture = null }: CatalogCardProps) {
   const metaId = useId();
   const avecNote = rating !== undefined && reviews !== undefined && reviews > 0;
   const note = avecNote ? formatNote(rating) : "";
@@ -51,7 +53,7 @@ export function CatalogCard({ href, title, description, parcours, rating, review
     <span key="niveau">{level}</span>,
   ].filter(Boolean);
   return (
-    <CardShell href={href} title={title} description={description} parcours={parcours} tag={tag} parcoursTag={parcoursTag} titleAs={titleAs} describedBy={metaId}>
+    <CardShell href={href} title={title} description={description} parcours={parcours} tag={tag} parcoursTag={parcoursTag} titleAs={titleAs} describedBy={metaId} couverture={couverture}>
       <div aria-hidden="true" className="mt-4 h-px bg-bordure-carte" />
       <div id={metaId} className="mt-3 flex flex-wrap items-center gap-[7px] text-xs leading-[18px] text-discret">
         {elements.flatMap((element, index) => (index === 0 ? [element] : [<MetaDot key={`point-${index}`} />, element]))}

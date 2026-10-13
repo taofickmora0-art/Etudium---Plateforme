@@ -1,7 +1,8 @@
 import { useId, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import Link from "next/link";
-import { CourseIllustration, type Parcours } from "./CourseIllustration";
+import type { Parcours } from "./CourseIllustration";
+import { Couverture } from "./Couverture";
 import { ProgressBar, ProgressMeta } from "./Progress";
 import { Tag, type TagTone } from "./Tag";
 
@@ -17,6 +18,7 @@ export function CardShell({
   parcoursTag,
   titleAs: Titre = "h3",
   describedBy,
+  couverture = null,
   children,
 }: {
   /** Sans adresse, la carte n'est pas un lien (formation verrouillée dont la fiche n'existe plus). */
@@ -30,19 +32,20 @@ export function CardShell({
   /** Niveau du titre de la carte dans la page. */
   titleAs?: "h2" | "h3";
   describedBy?: string;
+  /** Adresse de l'image de couverture ; null : couverture par défaut du parcours. */
+  couverture?: string | null;
   children: ReactNode;
 }) {
   const id = useId();
   const etiquettes = [parcoursTag, tag].filter((t): t is CardTag => Boolean(t));
-  const classes = "box-border flex min-w-0 flex-col rounded-carte border border-bordure-carte bg-panneau px-[19px] pt-[22px] pb-[17px] text-inherit no-underline";
+  const classes = "box-border flex min-w-0 flex-col overflow-hidden rounded-carte border border-bordure-carte bg-panneau text-inherit no-underline";
   const contenu = (
     <>
-      <div className="flex items-start justify-between gap-2">
-        <span className="ml-1">
-          <CourseIllustration parcours={parcours} />
-        </span>
+      {/* La couverture en haut, sur toute la largeur ; les étiquettes posées dessus (spec des couvertures). */}
+      <div data-couverture="" className="relative">
+        <Couverture src={couverture} parcours={parcours} sizes="(max-width: 640px) 100vw, 360px" />
         {etiquettes.length > 0 && (
-          <span id={`${id}-etiquette`} className="flex flex-wrap justify-end gap-1.5">
+          <span id={`${id}-etiquette`} className="absolute top-3 right-3 left-3 flex flex-wrap justify-end gap-1.5">
             {etiquettes.map((t) => (
               <Tag key={t.label} tone={t.tone}>
                 {t.label}
@@ -51,11 +54,13 @@ export function CardShell({
           </span>
         )}
       </div>
-      <Titre id={`${id}-titre`} title={title} className="mt-[21px] mb-0 truncate text-base leading-6 font-semibold text-encre">
-        {title}
-      </Titre>
-      <p className="mt-[11px] mb-0 line-clamp-2 h-10 text-xs leading-5 text-discret">{description}</p>
-      {children}
+      <div className="flex min-w-0 flex-1 flex-col px-[19px] pt-4 pb-[17px]">
+        <Titre id={`${id}-titre`} title={title} className="m-0 truncate text-base leading-6 font-semibold text-encre">
+          {title}
+        </Titre>
+        <p className="mt-[11px] mb-0 line-clamp-2 h-10 text-xs leading-5 text-discret">{description}</p>
+        {children}
+      </div>
     </>
   );
   if (!href) return <div className={classes}>{contenu}</div>;
@@ -88,14 +93,16 @@ type CourseCardProps = {
   titleAs?: "h2" | "h3";
   /** Aucune étiquette, pas même « Verrouillée » : un bouton occupe le coin (cœur de la page Favoris). */
   sansEtiquette?: boolean;
+  /** Adresse de l'image de couverture ; null : couverture par défaut du parcours. */
+  couverture?: string | null;
 };
 
 /** Carte de formation : illustration, titre, deux lignes de description, progression. */
-export function CourseCard({ href, title, description, parcours, progress, timeLabel, state, tag, titleAs, sansEtiquette = false }: CourseCardProps) {
+export function CourseCard({ href, title, description, parcours, progress, timeLabel, state, tag, titleAs, sansEtiquette = false, couverture = null }: CourseCardProps) {
   const metaId = useId();
   const shownTag = sansEtiquette ? undefined : state === "verrouillee" ? { tone: "verrouillee" as const, label: "Verrouillée" } : tag;
   return (
-    <CardShell href={href} title={title} description={description} parcours={parcours} tag={shownTag} describedBy={metaId} titleAs={titleAs}>
+    <CardShell href={href} title={title} description={description} parcours={parcours} tag={shownTag} describedBy={metaId} titleAs={titleAs} couverture={couverture}>
       <ProgressBar value={progress} label={`Progression de ${title}`} className="mt-[17px] -ml-px" />
       <ProgressMeta id={metaId} value={progress} timeLabel={timeLabel} className="mt-2 flex-nowrap" />
     </CardShell>

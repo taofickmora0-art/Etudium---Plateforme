@@ -18,6 +18,7 @@ const vue = (o: Partial<VueCarteSuivie>): VueCarteSuivie => ({
   etat: "enCours",
   href: "/formations/maitriser-microsoft-excel/lecons/l4",
   favori: false,
+  couverture: null,
   ...o,
 });
 const SUIVIES = [

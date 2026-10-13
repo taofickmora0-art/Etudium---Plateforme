@@ -24,6 +24,7 @@ const SUIVIE: VueCarteSuivie = {
   etat: "enCours",
   href: `/formations/${excel.slug}/lecons/l4`,
   favori: false,
+  couverture: null,
 };
 const PARCOURS = PARCOURS_DESIGN.map((p) => ({ ...p, description: p.slug === "reussite-academique" ? "Bureautique et Excel pour réussir à l’université." : "" }));
 const monter = (q: string, autres: Partial<Parameters<typeof PageRecherche>[0]> = {}) =>

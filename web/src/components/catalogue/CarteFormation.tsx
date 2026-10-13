@@ -3,6 +3,7 @@ import type { TagTone } from "@/components/ui/Tag";
 import { badgeDeCarte, dureeLisible, parcoursPrincipal } from "@/lib/catalogue/regles";
 import type { CarteCatalogue } from "@/lib/catalogue/types";
 import { libelleNiveau } from "@/lib/contenus/libelles";
+import { urlCouverture } from "@/lib/couvertures/adresse";
 
 /**
  * Carte d'une formation du catalogue : la variante publique porte aussi la puce du parcours (NdCataloguePublic).
@@ -30,6 +31,7 @@ export function CarteFormation({
       parcours={couleur}
       duration={dureeLisible(carte.dureeSecondes) || undefined}
       level={libelleNiveau(carte.niveau)}
+      couverture={urlCouverture(carte.couverture)}
       rating={carte.note ?? undefined}
       reviews={carte.nbAvis}
       tag={sansEtiquette ? undefined : badgeDeCarte(carte)}
