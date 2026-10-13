@@ -26,6 +26,9 @@ describe("Proxy : ce qu'il surveille", () => {
     // Fichiers à la racine du site (robots.txt, sitemap.xml… que Next pourra générer) : servis sans compte.
     for (const fichier of ["/icons/icone-192.png", "/manifest.webmanifest", "/icon.svg", "/_next/static/x.js", "/apple-icon.png", "/robots.txt", "/sitemap.xml"])
       expect(motif.test(fichier), fichier).toBe(false);
+    // Fichiers de décodage de pdf.js (visualiseur, tâche 1.8) : servis à tous, visiteurs compris (aperçus gratuits).
+    for (const fichier of ["/pdfjs/wasm/jbig2.wasm", "/pdfjs/wasm/jbig2_nowasm_fallback.js", "/pdfjs/standard_fonts/FoxitSerif.pfb"])
+      expect(motif.test(fichier), fichier).toBe(false);
   });
 
   it("le mode démonstration laisse tout passer", async () => {

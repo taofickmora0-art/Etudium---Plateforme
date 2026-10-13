@@ -16,6 +16,7 @@ const IMAGE: RessourceLecon = { id: id(303), titre: "Schéma du tableau", format
 function fauxDocument(pages = 3) {
   const document = {
     pages,
+    ratio: 0.75,
     dessiner: vi.fn<DocumentPdf["dessiner"]>(async () => undefined),
     fermer: vi.fn(),
   };
@@ -119,4 +120,78 @@ describe("Visualiseur des ressources en consultation seule", () => {
     await attendre();
     expect(document.fermer).toHaveBeenCalled();
   });
+
+  describe("pages dessinées à l'approche, libérées en s'éloignant", () => {
+    type Observateur = { rappel: IntersectionObserverCallback; options?: IntersectionObserverInit; cibles: Element[] };
+    const observateurs: Observateur[] = [];
+    beforeEach(() => {
+      observateurs.length = 0;
+      vi.stubGlobal(
+        "IntersectionObserver",
+        class {
+          o: Observateur;
+          constructor(rappel: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+            this.o = { rappel, options, cibles: [] };
+            observateurs.push(this.o);
+          }
+          observe(cible: Element) {
+            this.o.cibles.push(cible);
+          }
+          disconnect() {}
+          unobserve() {}
+        },
+      );
+    });
+    /** Fait entrer ou sortir la page `numero` de la zone. */
+    const zone = async (numero: number, dedans: boolean) => {
+      const o = observateurs.find((x) => x.cibles.some((c) => c.getAttribute("aria-label") === `Page ${numero} sur 3`))!;
+      await act(async () => {
+        o.rappel([{ isIntersecting: dedans, target: o.cibles[0] } as unknown as IntersectionObserverEntry], {} as IntersectionObserver);
+      });
+    };
+
+    it("la zone est celle du document qui défile, avec un écran d'avance", async () => {
+      consulter.mockResolvedValue({ url: "https://stockage/guide", format: "application/pdf" });
+      ouvrir.mockResolvedValue(fauxDocument());
+      await monter(PDF);
+      const region = screen.getByRole("region", { name: "Document" });
+      expect(observateurs.length).toBeGreaterThan(0);
+      for (const o of observateurs) {
+        // Comparaison par identité : toMatchObject parcourrait tout le DOM de l'élément.
+        expect(o.options?.root).toBe(region);
+        expect(o.options?.rootMargin).toBe("100% 0px");
+      }
+    });
+
+    it("une page n'est dessinée qu'en approchant ; elle est libérée en s'éloignant, et n'est pas redessinée au zoom", async () => {
+      const document = fauxDocument();
+      consulter.mockResolvedValue({ url: "https://stockage/guide", format: "application/pdf" });
+      ouvrir.mockResolvedValue(document);
+      await monter(PDF);
+      expect(document.dessiner).not.toHaveBeenCalled();
+      await zone(2, true);
+      expect(document.dessiner).toHaveBeenCalledWith(2, expect.any(HTMLCanvasElement), expect.any(Number));
+      const canvas = document.dessiner.mock.calls[0][1] as HTMLCanvasElement;
+      canvas.width = 800;
+      canvas.height = 600;
+      await zone(2, false);
+      expect(canvas.width).toBe(0);
+      expect(canvas.height).toBe(0);
+      const avant = document.dessiner.mock.calls.length;
+      await userEvent.click(screen.getByRole("button", { name: "Agrandir" }));
+      await attendre();
+      expect(document.dessiner.mock.calls.length).toBe(avant);
+      await zone(2, true);
+      expect(document.dessiner.mock.calls.length).toBe(avant + 1);
+    });
+  });
+
+  it("au clavier, le document défile : la zone reçoit le focus ; le zoom est annoncé", async () => {
+    consulter.mockResolvedValue({ url: "https://stockage/guide", format: "application/pdf" });
+    ouvrir.mockResolvedValue(fauxDocument());
+    await monter(PDF);
+    expect(screen.getByRole("region", { name: "Document" })).toHaveAttribute("tabindex", "0");
+    expect(screen.getByText("100 %")).toHaveAttribute("aria-live", "polite");
+  });
 });
+

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Fichiers de pdf.js copiés par scripts/copier-pdfjs.mjs (code tiers, déjà compilé).
+    "public/pdfjs/**",
   ]),
 ]);
 

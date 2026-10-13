@@ -61,8 +61,9 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Tout sauf les fichiers de Next et les vrais fichiers statiques : images, icônes, manifeste et polices partout ;
+  // Tout sauf les fichiers de Next, ceux de pdf.js (public/pdfjs) et les vrais fichiers statiques : images, icônes,
+  // manifeste et polices partout ;
   // scripts, styles, textes, XML et PDF seulement à la racine (robots.txt, sitemap.xml…).
   // Une page dont l'adresse contient un point (« /formations/python-3.12 », « /formations/node.js ») reste surveillée.
-  matcher: ["/((?!_next/static|_next/image|.*\\.(?:ico|png|jpe?g|gif|webp|avif|svg|webmanifest|woff2?|ttf)$|[^/]*\\.(?:css|js|map|txt|xml|pdf)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|pdfjs/|.*\\.(?:ico|png|jpe?g|gif|webp|avif|svg|webmanifest|woff2?|ttf)$|[^/]*\\.(?:css|js|map|txt|xml|pdf)$).*)"],
 };

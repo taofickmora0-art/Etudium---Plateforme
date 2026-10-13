@@ -29,45 +29,44 @@ type Etat = { type: "chargement" } | { type: "erreur"; message: string } | { typ
 const BOUTON_OUTIL =
   "focus-etudium flex size-9 flex-none cursor-pointer items-center justify-center rounded-puce text-texte transition-colors hover:bg-coque disabled:cursor-not-allowed disabled:opacity-45";
 
-/** Une page du PDF, dessinée quand elle approche de l'écran (un document de 300 pages reste fluide sur téléphone). */
-function PagePdf({ document, numero, largeur }: { document: DocumentPdf; numero: number; largeur: number }) {
+/**
+ * Une page du PDF. Elle n'est dessinée qu'à moins d'un écran de la zone visible du document, et libérée (canvas vidé)
+ * quand elle s'en éloigne : un document de 300 pages reste léger sur téléphone, et un zoom ne redessine que les pages
+ * proches. Avant d'être dessinée, elle garde la taille d'une page du document (portrait ou paysage).
+ */
+function PagePdf({ document, numero, largeur, racine }: { document: DocumentPdf; numero: number; largeur: number; racine: HTMLElement | null }) {
   const cadre = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
-  const [visible, setVisible] = useState(typeof IntersectionObserver === "undefined");
-  const [dessinee, setDessinee] = useState(false);
+  const sansObservateur = typeof IntersectionObserver === "undefined";
+  const [dansZone, setDansZone] = useState(sansObservateur);
 
   useEffect(() => {
-    if (visible || !cadre.current) return;
-    const observateur = new IntersectionObserver(
-      (entrees) => {
-        if (entrees.some((e) => e.isIntersecting)) setVisible(true);
-      },
-      { rootMargin: "100% 0px" },
-    );
+    if (sansObservateur || !racine || !cadre.current) return;
+    // La zone est celle du document qui défile (pas la fenêtre du navigateur), avec un écran d'avance.
+    const observateur = new IntersectionObserver((entrees) => setDansZone(entrees.some((e) => e.isIntersecting)), { root: racine, rootMargin: "100% 0px" });
     observateur.observe(cadre.current);
     return () => observateur.disconnect();
-  }, [visible]);
+  }, [racine, sansObservateur]);
 
   useEffect(() => {
-    if (!visible || !canvas.current) return;
-    let annule = false;
-    document
-      .dessiner(numero, canvas.current, largeur)
-      .then(() => !annule && setDessinee(true))
-      .catch(() => undefined);
-    return () => {
-      annule = true;
-    };
-  }, [visible, document, numero, largeur]);
+    const element = canvas.current;
+    if (!element) return;
+    if (!dansZone) {
+      // Hors de la zone : la mémoire du dessin est rendue.
+      element.width = 0;
+      element.height = 0;
+      return;
+    }
+    void document.dessiner(numero, element, largeur).catch(() => undefined);
+  }, [dansZone, document, numero, largeur]);
 
   return (
     <div
       ref={cadre}
       role="img"
       aria-label={`Page ${numero} sur ${document.pages}`}
-      // Hauteur d'une page A4 tant qu'elle n'est pas dessinée : le défilement reste stable.
-      style={dessinee ? undefined : { minHeight: Math.round(largeur * 1.414) }}
-      className="mx-auto w-max max-w-none bg-panneau shadow-pastille"
+      style={{ width: largeur, minHeight: Math.round(largeur * document.ratio) }}
+      className="mx-auto max-w-none flex-none bg-panneau shadow-pastille"
       onContextMenu={(e) => e.preventDefault()}
     >
       <canvas ref={canvas} aria-hidden="true" className="block" />
@@ -79,7 +78,8 @@ function PagePdf({ document, numero, largeur }: { document: DocumentPdf; numero:
 function Contenu({ ressource, ouvrir, consulter, onReessayer }: { ressource: RessourceLecon; ouvrir: typeof ouvrirPdf; consulter: typeof lienConsultation; onReessayer: () => void }) {
   const [etat, setEtat] = useState<Etat>({ type: "chargement" });
   const [zoom, setZoom] = useState(1);
-  const corps = useRef<HTMLDivElement>(null);
+  // La zone du document qui défile : racine de l'observation des pages, et largeur de référence.
+  const [corps, setCorps] = useState<HTMLDivElement | null>(null);
   const [largeurCadre, setLargeurCadre] = useState(LARGEUR_PAR_DEFAUT);
 
   useEffect(() => {
@@ -115,15 +115,14 @@ function Contenu({ ressource, ouvrir, consulter, onReessayer }: { ressource: Res
 
   // Largeur du cadre : les pages s'y ajustent (à 100 %), et suivent un changement de taille (rotation du téléphone).
   useEffect(() => {
-    const element = corps.current;
-    if (!element) return;
+    if (!corps) return;
     const mesurer = () => {
-      if (element.clientWidth > 0) setLargeurCadre(element.clientWidth - 32);
+      if (corps.clientWidth > 0) setLargeurCadre(corps.clientWidth - 32);
     };
     const observateur = new ResizeObserver(mesurer);
-    observateur.observe(element);
+    observateur.observe(corps);
     return () => observateur.disconnect();
-  }, []);
+  }, [corps]);
 
   const rang = ZOOMS.indexOf(zoom);
   const largeur = Math.round(largeurCadre * zoom);
@@ -137,14 +136,17 @@ function Contenu({ ressource, ouvrir, consulter, onReessayer }: { ressource: Res
             <button type="button" aria-label="Réduire" disabled={rang <= 0} onClick={() => setZoom(ZOOMS[rang - 1])} className={BOUTON_OUTIL}>
               <Icon icon={MinusSignIcon} size={18} />
             </button>
-            <span className="w-12 text-center text-[13px] leading-5 font-medium text-texte tabular-nums">{Math.round(zoom * 100)} %</span>
+            <span aria-live="polite" className="w-12 text-center text-[13px] leading-5 font-medium text-texte tabular-nums">
+              {Math.round(zoom * 100)} %
+            </span>
             <button type="button" aria-label="Agrandir" disabled={rang >= ZOOMS.length - 1} onClick={() => setZoom(ZOOMS[rang + 1])} className={BOUTON_OUTIL}>
               <Icon icon={PlusSignIcon} size={18} />
             </button>
           </div>
         )}
       </div>
-      <div ref={corps} className="min-h-0 flex-1 overflow-auto bg-page p-4">
+      {/* La zone qui défile reçoit le focus : au clavier, les flèches et Page suivante font défiler le document. */}
+      <div ref={setCorps} role="region" aria-label="Document" tabIndex={0} className="focus-etudium min-h-0 flex-1 overflow-auto bg-page p-4">
         {/* À l'impression, le document est remplacé par une phrase : le visualiseur n'est pas fait pour imprimer. */}
         <p className="m-0 hidden text-sm text-texte print:block">L’impression de ce document n’est pas disponible.</p>
         <div className="print:hidden">
@@ -178,7 +180,7 @@ function Contenu({ ressource, ouvrir, consulter, onReessayer }: { ressource: Res
           {etat.type === "pdf" && (
             <div className="flex flex-col gap-4">
               {Array.from({ length: etat.document.pages }, (_, i) => (
-                <PagePdf key={i + 1} document={etat.document} numero={i + 1} largeur={largeur} />
+                <PagePdf key={i + 1} document={etat.document} numero={i + 1} largeur={largeur} racine={corps} />
               ))}
             </div>
           )}
