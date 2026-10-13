@@ -277,3 +277,24 @@ Pas de migration pour cette tâche : il faut seulement que la 0003 à la 0009 so
 4. **Le critère de la tâche** : déconnecte-toi, reconnecte-toi. Tu arrives sur l’Accueil et tu reprends ta dernière leçon en un clic.
 5. Sur téléphone : ni tuiles ni « Explorer le catalogue » (comme la maquette) ; **Reprendre la leçon** prend toute la largeur.
 
+## 15. Valider les avis (tâche 1.11), 15 minutes
+
+1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0010_avis.sql` (après la 0009).
+2. **Sous 50 %** : sur une fiche où tu as terminé moins de la moitié des leçons, « Avis des étudiants » dit « Vous pourrez laisser un avis à partir de 50 % de progression. », sans bouton.
+3. **Atteindre 50 %** : la moitié des leçons d’une formation doivent être terminées (pas d’arrondi : 6 sur 12, 2 sur 4). Deux façons :
+   - sur la formation que tu as créée au back-office (tâche 1.2) : une leçon sans vidéo se termine avec « Marquer comme terminée » ;
+   - avec ton compte admin, qui ouvre toutes les leçons : 6 leçons d’Excel sur 12.
+
+   Le bouton **Laisser un avis** apparaît alors dans « Avis des étudiants ».
+4. **Laisser un avis** : 4 étoiles et un commentaire, puis **Publier mon avis**.
+   - « Votre avis est publié. » s’affiche ;
+   - la fiche montre la note (« 4,0 », « 1 avis »), les barres et ta carte « Votre avis » ;
+   - le bandeau de la fiche montre « 4,0 (1 avis) » ;
+   - la carte du catalogue montre « 4,0 (1) » ;
+   - le tri **Note des étudiants** la met en tête.
+5. **Modifier mon avis** : la fenêtre reprend ta note et ton commentaire. **Supprimer mon avis** demande confirmation, puis l’avis disparaît.
+6. **Masquer** : republie un avis, puis va dans Back-office → **Avis** → **Masquer**.
+   - En navigation privée (sans compte), la fiche ne le montre plus, et la note disparaît.
+   - Avec ton compte, tu le vois encore, marqué « Masqué par l’équipe ».
+   - **Réafficher** le remet.
+
