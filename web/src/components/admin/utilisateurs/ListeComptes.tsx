@@ -10,6 +10,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Menu, type MenuEntry } from "@/components/ui/Menu";
 import { Pagination } from "@/components/ui/Pagination";
 import { SearchInput } from "@/components/ui/SearchInput";
+import { CELLULE_TABLEAU, TableauListe } from "@/components/ui/TableauListe";
 import { Tag } from "@/components/ui/Tag";
 import type { Role } from "@/lib/auth/permissions";
 import { chercherComptes } from "@/lib/utilisateurs/actions";
@@ -31,7 +32,6 @@ import { FenetresSuspension, type FenetreSuspension } from "./FenetresSuspension
 
 const DELAI_RECHERCHE_MS = 300;
 const COLONNES = ["Utilisateur", "E-mail", "Rôle", "Formule", "Statut", "Inscrit le"];
-const CELLULE = "h-14 border-t border-bordure-carte px-4 py-2 text-left align-middle";
 
 type Props = {
   initial: PageComptes;
@@ -131,57 +131,41 @@ export function ListeComptes({ initial, moi }: Props) {
         {donnees.comptes.length === 0 ? (
           <p className="m-0 text-sm leading-[22px] text-discret">Aucun compte ne correspond à cette recherche.</p>
         ) : (
-          <div role="region" aria-label="Tableau des comptes" tabIndex={0} className="focus-etudium relative overflow-x-auto rounded-2xl border border-bordure-carte">
-            <table aria-label="Comptes" aria-busy={chargement} className="w-full min-w-[900px] border-collapse text-sm leading-5 text-texte">
-              <thead>
-                <tr>
-                  {COLONNES.map((titre) => (
-                    <th key={titre} scope="col" className="bg-page px-4 py-3.5 text-left text-[13px] font-medium whitespace-nowrap text-ardoise">
-                      {titre}
-                    </th>
-                  ))}
-                  <th scope="col" className="w-[50px] bg-page px-4 py-3.5">
-                    <span className="sr-only">Actions</span>
-                  </th>
+          <TableauListe nom="Comptes" nomCadre="Tableau des comptes" colonnes={COLONNES} actions occupe={chargement}>
+            {donnees.comptes.map((c) => {
+              const nom = nomAffiche(c.prenom, c.nom);
+              const nomActions = nom === "Sans nom" ? c.email : nom;
+              return (
+                <tr key={c.id}>
+                  <td className={CELLULE_TABLEAU}>
+                    <span className="flex items-center gap-2.5 whitespace-nowrap">
+                      <Avatar initials={initialesCompte(c.prenom, c.nom, c.email)} size={32} />
+                      <Link href={`/admin/utilisateurs/${c.id}`} className="focus-etudium font-medium text-encre no-underline hover:underline">
+                        {nom}
+                      </Link>
+                    </span>
+                  </td>
+                  <td className={CELLULE_TABLEAU}>{c.email}</td>
+                  <td className={CELLULE_TABLEAU}>{LIBELLES_ROLES[rolePrincipal(c.roles)]}</td>
+                  <td className={CELLULE_TABLEAU}>{formuleAffichee(c.roles) === "Gratuit" ? <Tag tone="enAttente">Gratuit</Tag> : "—"}</td>
+                  <td className={CELLULE_TABLEAU}>{c.suspendu ? <Tag tone="echoue">Suspendu</Tag> : <Tag tone="valide">Actif</Tag>}</td>
+                  <td className={`${CELLULE_TABLEAU} whitespace-nowrap`}>{dateNumerique(c.inscritLe)}</td>
+                  <td className={`${CELLULE_TABLEAU} text-right`}>
+                    <Menu
+                      label={`Actions pour ${nomActions}`}
+                      trigger={<IconButton icon={MoreVerticalIcon} label={`Actions pour ${nomActions}`} variant="discret" size="sm" data-actions-compte={c.id} />}
+                      items={actions(c)}
+                      rendreLeFocus={() => {
+                        const rendre = !fenetreDemandee.current;
+                        fenetreDemandee.current = false;
+                        return rendre;
+                      }}
+                    />
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {donnees.comptes.map((c) => {
-                  const nom = nomAffiche(c.prenom, c.nom);
-                  const nomActions = nom === "Sans nom" ? c.email : nom;
-                  return (
-                    <tr key={c.id}>
-                      <td className={CELLULE}>
-                        <span className="flex items-center gap-2.5 whitespace-nowrap">
-                          <Avatar initials={initialesCompte(c.prenom, c.nom, c.email)} size={32} />
-                          <Link href={`/admin/utilisateurs/${c.id}`} className="focus-etudium font-medium text-encre no-underline hover:underline">
-                            {nom}
-                          </Link>
-                        </span>
-                      </td>
-                      <td className={CELLULE}>{c.email}</td>
-                      <td className={CELLULE}>{LIBELLES_ROLES[rolePrincipal(c.roles)]}</td>
-                      <td className={CELLULE}>{formuleAffichee(c.roles) === "Gratuit" ? <Tag tone="enAttente">Gratuit</Tag> : "—"}</td>
-                      <td className={CELLULE}>{c.suspendu ? <Tag tone="echoue">Suspendu</Tag> : <Tag tone="valide">Actif</Tag>}</td>
-                      <td className={`${CELLULE} whitespace-nowrap`}>{dateNumerique(c.inscritLe)}</td>
-                      <td className={`${CELLULE} text-right`}>
-                        <Menu
-                          label={`Actions pour ${nomActions}`}
-                          trigger={<IconButton icon={MoreVerticalIcon} label={`Actions pour ${nomActions}`} variant="discret" size="sm" data-actions-compte={c.id} />}
-                          items={actions(c)}
-                          rendreLeFocus={() => {
-                            const rendre = !fenetreDemandee.current;
-                            fenetreDemandee.current = false;
-                            return rendre;
-                          }}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+              );
+            })}
+          </TableauListe>
         )}
         {pages > 1 && (
           <Pagination page={page} pageCount={pages} onPageChange={(p) => charger(recherche, filtre, p)} label={`${donnees.comptes.length} sur ${donnees.total} utilisateurs`} />
