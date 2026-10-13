@@ -1,10 +1,11 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight01Icon, Cancel01Icon, PlayCircleIcon, Route01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { CarteFormation } from "@/components/catalogue/CarteFormation";
 import { CarteSuivie, type VueCarteSuivie } from "@/components/mes-formations/CarteSuivie";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { GRILLE_CARTES } from "@/components/ui/grilles";
+import { Groupe } from "@/components/ui/Groupe";
 import { Icon } from "@/components/ui/Icon";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Tag } from "@/components/ui/Tag";
@@ -30,8 +31,6 @@ type Props = {
 
 /** Leçons montrées au plus ; au-delà, la page invite à préciser la recherche. */
 const LECONS_MAX = 20;
-// Grille de l'annexe (§0.2) : trois colonnes au plus, puis deux, puis une.
-const GRILLE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(232px,calc((100%-40px)/3))),1fr))] gap-5";
 const TUILE: Record<CouleurParcours, string> = {
   academique: "bg-bleu-pale text-bleu",
   digital: "bg-premium-fond text-premium-texte",
@@ -39,26 +38,6 @@ const TUILE: Record<CouleurParcours, string> = {
 };
 
 const pluriel = (n: number, mot: string) => `${n} ${n > 1 ? `${mot}s` : mot}`;
-
-/** Un groupe de résultats (annexe §0.2 GROUPE) : titre, nombre, lien facultatif à droite. */
-function Groupe({ titre, nombre, lien, children }: { titre: string; nombre?: number; lien?: { href: string; libelle: string }; children: ReactNode }) {
-  return (
-    <section className="flex min-w-0 flex-col gap-3.5">
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <h2 className="m-0 text-xl leading-7 font-semibold text-encre">{titre}</h2>
-          {nombre !== undefined && <Tag tone="enAttente">{String(nombre)}</Tag>}
-        </div>
-        {lien && (
-          <Link href={lien.href} className="focus-etudium text-sm leading-[22px] font-medium text-bleu no-underline hover:underline">
-            {lien.libelle}
-          </Link>
-        )}
-      </div>
-      {children}
-    </section>
-  );
-}
 
 /** Un parcours trouvé (annexe §6.5 b) : tuile à sa couleur, nom, description, nombre de formations. */
 function CarteParcours({ parcours, formations }: { parcours: ParcoursCatalogue; formations: number }) {
@@ -112,7 +91,7 @@ export function PageRecherche({ q, resultats, cartes, recommandees, suivies, ter
   const lecons = resultats?.lecons ?? [];
   const recommandations = recommandees.length > 0 && (
     <Groupe titre="Recommandé pour vous" lien={{ href: "/formations", libelle: "Tout voir" }}>
-      <div className={GRILLE}>
+      <div className={GRILLE_CARTES}>
         {recommandees.map((carte) => (
           <CarteFormation key={carte.id} carte={carte} variante="connecte" />
         ))}
@@ -151,8 +130,8 @@ export function PageRecherche({ q, resultats, cartes, recommandees, suivies, ter
               {`${pluriel(total, "résultat")} pour « ${q} »`}
             </p>
             {resultats.formations.length > 0 && (
-              <Groupe titre="Formations" nombre={resultats.formations.length}>
-                <div className={GRILLE}>
+              <Groupe titre="Formations" etiquette={String(resultats.formations.length)}>
+                <div className={GRILLE_CARTES}>
                   {resultats.formations.map((carte) => {
                     const suivie = suivies.get(carte.id);
                     return suivie ? <CarteSuivie key={carte.id} vue={suivie} /> : <CarteFormation key={carte.id} carte={carte} variante="connecte" />;
@@ -161,8 +140,8 @@ export function PageRecherche({ q, resultats, cartes, recommandees, suivies, ter
               </Groupe>
             )}
             {resultats.parcours.length > 0 && (
-              <Groupe titre="Parcours" nombre={resultats.parcours.length}>
-                <div className={GRILLE}>
+              <Groupe titre="Parcours" etiquette={String(resultats.parcours.length)}>
+                <div className={GRILLE_CARTES}>
                   {resultats.parcours.map((p) => (
                     <CarteParcours key={p.slug} parcours={p} formations={cartes.filter((c) => c.parcours.some((x) => x.slug === p.slug)).length} />
                   ))}
@@ -170,7 +149,7 @@ export function PageRecherche({ q, resultats, cartes, recommandees, suivies, ter
               </Groupe>
             )}
             {lecons.length > 0 && (
-              <Groupe titre="Leçons" nombre={lecons.length}>
+              <Groupe titre="Leçons" etiquette={String(lecons.length)}>
                 <div className="box-border flex min-w-0 flex-col rounded-carte border border-bordure-carte bg-panneau px-[15px] py-1">
                   <ul className="m-0 flex list-none flex-col p-0 [&>li+li]:border-t [&>li+li]:border-bordure-carte">
                     {lecons.slice(0, LECONS_MAX).map((lecon) => (

@@ -6,6 +6,7 @@ import { CourseIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterChips } from "@/components/ui/FilterChips";
+import { GRILLE_CARTES } from "@/components/ui/grilles";
 import { Heading, Lead } from "@/components/ui/Text";
 import type { FiltreMesFormations } from "@/lib/mes-formations/regles";
 import { CarteSuivie, type VueCarteSuivie } from "./CarteSuivie";
@@ -34,8 +35,6 @@ const garder: Record<FiltreMesFormations, (v: VueCarteSuivie) => boolean> = {
   favoris: (v) => v.favori,
 };
 
-// Grille de l'annexe (§0.2) : trois colonnes au plus, puis deux, puis une.
-const GRILLE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(232px,calc((100%-40px)/3))),1fr))] gap-5";
 
 /** Mes formations (NdMesFormations, NdMobFormations) : les formations commencées, de la plus récente à la plus ancienne. */
 export function MesFormations({ suivies }: { suivies: VueCarteSuivie[] }) {
@@ -76,7 +75,7 @@ export function MesFormations({ suivies }: { suivies: VueCarteSuivie[] }) {
             {visibles.length === 0 ? (
               <p className="m-0 text-sm leading-[22px] text-discret">{VIDE[filtre]}</p>
             ) : (
-              <div className={GRILLE}>
+              <div className={GRILLE_CARTES}>
                 {visibles.map((vue) => (
                   <CarteSuivie key={vue.id} vue={vue} />
                 ))}

@@ -6,6 +6,7 @@ import { FavouriteIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { GRILLE_CARTES } from "@/components/ui/grilles";
 import { Icon } from "@/components/ui/Icon";
 import { Heading, Lead } from "@/components/ui/Text";
 import { retirerFavori } from "@/lib/favoris/actions";
@@ -15,8 +16,6 @@ export type Favori = { id: string; titre: string; /** La carte de la formation (
 
 const AIDE = "Ajoutez une formation à vos favoris depuis sa fiche, pour la retrouver ici.";
 const ECHEC = "Le favori n’a pas pu être retiré. Réessayez.";
-// Grille de l'annexe (§0.2) : trois colonnes au plus, puis deux, puis une.
-const GRILLE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(232px,calc((100%-40px)/3))),1fr))] gap-5";
 
 /**
  * Favoris (NdFavoris, NdFavorisVide) : les formations mises de côté depuis leur fiche, la plus récente d'abord.
@@ -49,7 +48,7 @@ export function PageFavoris({ favoris }: { favoris: Favori[] }) {
           />
         ) : (
           <div className="flex min-w-0 flex-col gap-6">
-            <ul className={`m-0 list-none p-0 ${GRILLE}`}>
+            <ul className={`m-0 list-none p-0 ${GRILLE_CARTES}`}>
               {visibles.map((favori) => (
                 <li key={favori.id} className="relative flex min-w-0 flex-col">
                   {favori.carte}

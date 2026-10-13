@@ -8,7 +8,18 @@ import { libelleNiveau } from "@/lib/contenus/libelles";
  * Carte d'une formation du catalogue : la variante publique porte aussi la puce du parcours (NdCataloguePublic).
  * `sansEtiquette` : pas de badge, un bouton occupe le coin (cœur de la page Favoris).
  */
-export function CarteFormation({ carte, variante, sansEtiquette = false }: { carte: CarteCatalogue; variante: "public" | "connecte"; sansEtiquette?: boolean }) {
+export function CarteFormation({
+  carte,
+  variante,
+  sansEtiquette = false,
+  titleAs = "h2",
+}: {
+  carte: CarteCatalogue;
+  variante: "public" | "connecte";
+  sansEtiquette?: boolean;
+  /** h3 sous le titre d'une section (tableau de bord). */
+  titleAs?: "h2" | "h3";
+}) {
   const couleur = parcoursPrincipal(carte);
   const parcours = [...carte.parcours].sort((a, b) => a.ordre - b.ordre)[0];
   return (
@@ -21,7 +32,7 @@ export function CarteFormation({ carte, variante, sansEtiquette = false }: { car
       level={libelleNiveau(carte.niveau)}
       tag={sansEtiquette ? undefined : badgeDeCarte(carte)}
       parcoursTag={variante === "public" && parcours && !sansEtiquette ? { tone: couleur as TagTone, label: parcours.nomCourt } : undefined}
-      titleAs="h2"
+      titleAs={titleAs}
     />
   );
 }

@@ -12,6 +12,7 @@ const TONES = {
   blanc: "bg-panneau text-texte",
   reussite: "bg-reussite-fond text-reussite-texte",
   attention: "bg-attention-fond text-attention-texte",
+  information: "bg-bleu-pale text-bleu",
 } as const;
 
 export type IconTileTone = keyof typeof TONES;
