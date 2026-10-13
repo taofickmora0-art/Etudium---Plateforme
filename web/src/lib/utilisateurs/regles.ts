@@ -36,6 +36,13 @@ export function nomAffiche(prenom: string, nom: string): string {
   return [prenom.trim(), nom.trim()].filter(Boolean).join(" ") || "Sans nom";
 }
 
+/** Initiales de l'avatar : prénom et nom (« FA »), sinon la première lettre de l'adresse. */
+export function initialesCompte(prenom: string, nom: string, email: string): string {
+  const mots = `${prenom} ${nom}`.trim().split(/\s+/).filter(Boolean);
+  if (mots.length === 0) return (email.trim()[0] ?? "?").toUpperCase();
+  return (mots[0][0] + (mots.length > 1 ? mots[mots.length - 1][0] : "")).toUpperCase();
+}
+
 /** Le résumé d'un changement de rôles, pour la confirmation : « Donner : Formateur. Retirer : Admin. » */
 export function resumeChangement(avant: Role[], apres: Role[]): string {
   const libelles = (roles: Role[]) => roles.map((r) => LIBELLES_ROLES[r]).join(", ");

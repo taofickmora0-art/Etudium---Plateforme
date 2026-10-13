@@ -97,9 +97,9 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
   });
 
   it("une page à venir du back-office ou de l'espace formateur ramène à son tableau de bord", () => {
-    const { unmount } = render(<ComingSoonView page="admin/utilisateurs" />);
-    expect(screen.getByRole("heading", { level: 1, name: "Utilisateurs" })).toBeInTheDocument();
-    expect(screen.getByText(/au lot 6/)).toBeInTheDocument();
+    const { unmount } = render(<ComingSoonView page="admin/paiements" />);
+    expect(screen.getByRole("heading", { level: 1, name: "Abonnements et paiements" })).toBeInTheDocument();
+    expect(screen.getByText(/au lot 2/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Retour au tableau de bord" })).toHaveAttribute("href", "/admin");
     unmount();
     render(<ComingSoonView page="formateur/sessions" />);
