@@ -1,0 +1,48 @@
+import { notFound } from "next/navigation";
+import { FormationInfosForm } from "@/components/admin/FormationInfosForm";
+import { FormationOnglets } from "@/components/admin/FormationOnglets";
+import { PageAdmin } from "@/components/admin/PageAdmin";
+import { ProgrammeEditor } from "@/components/admin/ProgrammeEditor";
+import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
+import { Tag } from "@/components/ui/Tag";
+import { getFormationAdmin, listParcours } from "@/lib/admin/data";
+import { ETATS, TON_ETAT } from "@/lib/contenus/etat";
+import { estMaFormation } from "@/lib/formateur/data";
+import { MES_FORMATIONS, RACINE_FORMATEUR } from "./cadre";
+import { PublicationFormateur } from "./PublicationFormateur";
+
+type Params = { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string }> };
+
+const ONGLETS = ["informations", "programme", "publication"];
+
+/**
+ * L'éditeur d'une formation, dans l'espace formateur (spec de l'espace formateur, §3) : celui du back-office, réglé pour
+ * le formateur. Une formation qui n'est pas la sienne (même publiée, donc lisible) donne la page introuvable.
+ */
+export async function EditeurFormateur({ params, searchParams }: Params) {
+  const [{ id }, { onglet }] = await Promise.all([params, searchParams]);
+  if (!(await estMaFormation(id))) notFound();
+  let donnees;
+  try {
+    donnees = await Promise.all([getFormationAdmin(id), listParcours()]);
+  } catch (erreur) {
+    return siTablesAbsentes(erreur);
+  }
+  const [formation, parcours] = donnees;
+  if (!formation) notFound();
+  return (
+    <PageAdmin
+      titre={formation.titre}
+      racine={RACINE_FORMATEUR}
+      fil={[MES_FORMATIONS, { label: formation.titre }]}
+      action={<Tag tone={TON_ETAT[formation.etat]}>{ETATS[formation.etat]}</Tag>}
+    >
+      <FormationOnglets
+        ongletInitial={onglet && ONGLETS.includes(onglet) ? onglet : "informations"}
+        informations={<FormationInfosForm formation={formation} parcours={parcours} formateurs={[]} espace="formateur" />}
+        programme={<ProgrammeEditor formation={formation} base="/formateur/formations" />}
+        publication={<PublicationFormateur id={formation.id} formation={formation} />}
+      />
+    </PageAdmin>
+  );
+}

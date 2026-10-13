@@ -89,7 +89,7 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
     unmount();
     chemin = "/formateur";
     const formateur = render(<BoutonAjouterFormation />);
-    expect(screen.getByRole("link", { name: "Ajouter une formation" })).toHaveAttribute("href", "/formateur/formations");
+    expect(screen.getByRole("link", { name: "Ajouter une formation" })).toHaveAttribute("href", "/formateur/formations/nouvelle");
     formateur.unmount();
     chemin = "/accueil";
     render(<BoutonAjouterFormation />);

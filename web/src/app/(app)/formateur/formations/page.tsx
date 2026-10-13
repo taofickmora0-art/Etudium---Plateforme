@@ -1,14 +1,21 @@
 import { Suspense } from "react";
-import { comingSoonMetadata } from "@/components/layout/ComingSoon";
-import { ReservedComingSoon } from "@/components/layout/ReservedComingSoon";
+import type { Metadata } from "next";
+import { MesFormations } from "@/components/formateur/MesFormations";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { requireSpace } from "@/lib/auth/require-space";
 
-export const metadata = comingSoonMetadata("formateur/formations");
+export const metadata: Metadata = { title: "Mes formations · Espace formateur · Étudium" };
 
-/** Réservée aux rôles de l'espace (lib/auth/permissions) : un autre compte est renvoyé vers l'accueil. */
+async function Contenu() {
+  await requireSpace("formateur");
+  return <MesFormations />;
+}
+
+/** Mes formations (spec de l'espace formateur, §3) : réservée aux formateurs, rien n'est rendu avant la vérification. */
 export default function Page() {
   return (
-    <Suspense fallback={null}>
-      <ReservedComingSoon espace="formateur" page="formateur/formations" />
+    <Suspense fallback={<Skeleton className="h-60 max-w-[680px] rounded-carte" />}>
+      <Contenu />
     </Suspense>
   );
 }
