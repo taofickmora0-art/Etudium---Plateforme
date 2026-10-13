@@ -300,3 +300,33 @@ describe("Migration 0013 : comptes et rôles", () => {
     expect((await fiche(A, F))!.fiche_formateur).not.toBeNull();
   });
 });
+
+describe("Migration 0013 : relecture finale", () => {
+  const X = randomUUID(); // compte suspendu
+  const Y = randomUUID(); // témoin actif
+  beforeAll(async () => {
+    await banc.creerCompte(X);
+    await banc.creerCompte(Y);
+    await banc.en({ id: A }, "select public.suspendre_compte($1, 'Abus')", [X]);
+  });
+
+  it("un compte suspendu ne supprime pas son compte (sa suspension serait effacée avec lui)", async () => {
+    await expect(banc.en({ id: X }, "select public.supprimer_mon_compte()")).rejects.toThrow(/suspendu/);
+    expect(await suspendu(X)).toBe(true);
+    expect((await banc.db.query("select 1 from auth.users where id = $1", [X])).rows).toHaveLength(1);
+  });
+
+  it("un compte suspendu ne dépose plus rien dans le stockage (photo de profil comprise)", async () => {
+    await expect(banc.en({ id: X }, "insert into storage.objects (bucket_id, name) values ('photos-profil', $1)", [`${X}/photo.jpg`])).rejects.toThrow(REFUS);
+    expect(await banc.en({ id: Y }, "insert into storage.objects (bucket_id, name) values ('photos-profil', $1) returning name", [`${Y}/photo.jpg`])).toEqual([{ name: `${Y}/photo.jpg` }]);
+  });
+
+  it("seul changer_roles relie une fiche formateur : l'équipe n'écrit pas compte_id directement", async () => {
+    const fiche = (await banc.db.query<{ id: string }>("select id from public.formateurs where compte_id is null limit 1")).rows[0].id;
+    await expect(banc.en({ id: M }, "update public.formateurs set compte_id = $1 where id = $2", [Y, fiche])).rejects.toThrow(/permission denied/);
+    await expect(banc.en({ id: M }, "insert into public.formateurs (nom, compte_id) values ('Pirate', $1)", [Y])).rejects.toThrow(/permission denied/);
+    // Le contenu des fiches reste modifiable par l'équipe, comme avant.
+    expect(await banc.en({ id: M }, "update public.formateurs set titre = 'Formatrice' where id = $1 returning titre", [fiche])).toEqual([{ titre: "Formatrice" }]);
+    expect(await banc.en({ id: M }, "insert into public.formateurs (nom, titre, domaine, presentation) values ('Nouvelle', '', '', '') returning nom")).toEqual([{ nom: "Nouvelle" }]);
+  });
+});

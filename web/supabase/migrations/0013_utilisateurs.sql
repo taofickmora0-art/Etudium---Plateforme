@@ -134,6 +134,33 @@ begin
 end;
 $$;
 
+-- Stockage (photos de profil, ressources, couvertures) : plus rien pour un compte suspendu, ni lecture ni dépôt.
+-- Règle restrictive elle aussi : elle s'ajoute aux règles de chaque espace sans les réécrire.
+drop policy if exists "compte suspendu : rien" on storage.objects;
+create policy "compte suspendu : rien" on storage.objects
+  as restrictive for all to authenticated
+  using (not (select public.compte_suspendu()))
+  with check (not (select public.compte_suspendu()));
+
+-- Supprimer son compte (0002) : refusé à un compte suspendu, dont la suspension serait effacée avec lui (il pourrait
+-- ensuite se réinscrire avec la même adresse). Ses données sont gardées (spec, §4).
+create or replace function public.supprimer_mon_compte()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if (select auth.uid()) is null then
+    raise exception 'non connecté';
+  end if;
+  if public.compte_suspendu() then
+    raise exception 'Ce compte est suspendu.' using errcode = '42501';
+  end if;
+  delete from auth.users where id = (select auth.uid());
+end;
+$$;
+
 -- ─── Suspendre et réactiver ─────────────────────────────────────────────────────────────────────────
 -- Un admin ou le super admin, pour un étudiant ou un formateur ; le super admin seul pour un membre de l'équipe.
 -- Personne ne se suspend soi-même ; un compte super admin ne se suspend pas (retirer d'abord son rôle).
@@ -337,6 +364,11 @@ $$;
 -- ─── Changer les rôles d'un compte (super admin seul) ───────────────────────────────────────────────
 -- Une fiche formateur n'est reliée qu'à un compte.
 create unique index if not exists formateurs_compte_unique on public.formateurs (compte_id) where compte_id is not null;
+
+-- Le lien entre une fiche et un compte ne s'écrit que par changer_roles (super admin) : l'équipe garde le droit
+-- d'écrire le contenu des fiches (0004), mais plus la colonne compte_id directement.
+revoke insert, update on public.formateurs from authenticated;
+grant insert (nom, titre, domaine, presentation, photo), update (nom, titre, domaine, presentation, photo) on public.formateurs to authenticated;
 
 -- D'un seul coup : les rôles voulus (Étudiant toujours gardé) et, pour Formateur, la fiche reliée (existante libre,
 -- ou créée à son nom). Retirer Formateur détache la fiche, qui reste avec ses formations.
