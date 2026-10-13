@@ -259,3 +259,21 @@ Il faut la section 5 (tables et exemples du lot 1).
    - « zotéro » (avec l’accent) trouve Zotero ; « EXCEL » en majuscules aussi ;
    - un mot inconnu : « Aucun résultat pour … », puis « Recommandé pour vous ».
 
+## 14. Valider le tableau de bord (tâche 1.10), 10 minutes
+
+Pas de migration pour cette tâche : il faut seulement que la 0003 à la 0009 soient appliquées.
+
+1. **Compte neuf** (aucune leçon ouverte) : l’Accueil affiche « Commencez votre première formation ».
+   - **Voir les formations gratuites** ouvre le catalogue filtré sur les gratuites ;
+   - en dessous, « Formations gratuites » montre jusqu’à trois cartes.
+2. Ouvre la première leçon de Zotero, puis reviens à l’Accueil :
+   - tuiles « Progression globale » et « Formations en cours » ;
+   - « Continuer l’apprentissage » montre Zotero, avec « Module 1 · {titre de la leçon} · {durée} » ;
+   - **Reprendre la leçon** ouvre la bonne leçon ; **Voir le parcours** ouvre Mes parcours.
+3. Ouvre une leçon d’une deuxième formation, puis reviens :
+   - elle passe dans « Continuer l’apprentissage » ;
+   - Zotero passe dans « À faire » (« Leçon suivante ») ;
+   - « Recommandé pour vous » propose des formations des mêmes parcours que tu n’as pas commencées.
+4. **Le critère de la tâche** : déconnecte-toi, reconnecte-toi. Tu arrives sur l’Accueil et tu reprends ta dernière leçon en un clic.
+5. Sur téléphone : ni tuiles ni « Explorer le catalogue » (comme la maquette) ; **Reprendre la leçon** prend toute la largeur.
+
