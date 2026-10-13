@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { REMEMBER_COOKIE, rememberFromCookie, withRememberChoice } from "@/lib/auth/session-cookies";
 import { getPublicEnv } from "@/lib/env";
 
@@ -12,6 +13,9 @@ export async function createClient(options: { remember?: boolean } = {}) {
   // Les cookies d'abord : pendant la compilation, Next met cette lecture en attente (la page sera rendue à la requête),
   // et une configuration absente ne fait pas échouer la compilation.
   const cookieStore = await cookies();
+  // Le client lit l'heure dès sa création (expiration du jeton) : il ne naît qu'à une vraie requête, jamais pendant le
+  // pré-rendu (Cache Components le refuse : « Date.now() while prerendering »).
+  await connection();
   const { supabaseUrl, supabaseKey } = getPublicEnv();
   const remember = options.remember ?? rememberFromCookie(cookieStore.get(REMEMBER_COOKIE)?.value);
 
