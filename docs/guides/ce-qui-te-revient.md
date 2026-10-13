@@ -242,3 +242,20 @@ Il faut la section 5 (tables et exemples du lot 1).
 6. Sur ton téléphone (Android surtout) : le document s’ouvre en plein écran, sans téléchargement, et défile avec le doigt. **C’est le test le plus important** : sur Android, Chrome ne sait pas afficher un PDF dans une page ; le visualiseur le fait.
 7. Rappel honnête : une capture d’écran reste possible. Le visualiseur ne prétend pas l’empêcher.
 
+## 13. Valider Mes formations, Favoris et Recherche (tâche 1.9), 15 minutes
+
+1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0009_favoris.sql`.
+2. **Mes formations** (menu) : les formations dont tu as ouvert au moins une leçon, la plus récente en premier.
+   - Filtres **Toutes**, **En cours** (même à 0 %), **Terminées**, **Verrouillées**, **Favoris**.
+   - Chaque carte mène à la leçon où reprendre.
+   - Au back-office, archive une formation que tu as commencée : elle reste dans Mes formations, avec le badge « Verrouillée », et sa carte n’est plus un lien.
+3. **Favoris** :
+   - sur la fiche d’une formation, **Ajouter aux favoris** devient « Dans vos favoris » ;
+   - la page Favoris la montre (avec sa progression si tu l’as commencée) ;
+   - le cœur de la carte → « Retirer des favoris ? » → **Retirer** : elle disparaît ;
+   - sans favori : « Aucun favori pour le moment ».
+4. **Recherche** (loupe en haut) :
+   - « excel » : la formation, le parcours qui la contient, et les leçons du module « Bases d’Excel » ;
+   - « zotéro » (avec l’accent) trouve Zotero ; « EXCEL » en majuscules aussi ;
+   - un mot inconnu : « Aucun résultat pour … », puis « Recommandé pour vous ».
+
