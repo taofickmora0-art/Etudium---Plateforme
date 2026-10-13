@@ -1,7 +1,7 @@
 import { estFonctionAbsente, liste, texte, un, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import { estRole } from "./regles";
-import type { CompteDetail, CompteResume, FiltreComptes, Lecture, PageComptes } from "./types";
+import type { CompteDetail, CompteResume, FiltreComptes, Lecture, PageComptes, RemarqueFormateur } from "./types";
 
 // Lecture des comptes par les fonctions de la migration 0013, réservées à l'équipe (spec des utilisateurs, §2, §3, §5).
 // Sans la migration : migrationAbsente (la page le dit) ; toute autre erreur est relancée (écran d'erreur).
@@ -86,4 +86,16 @@ export async function lireFichesLibres(): Promise<{ id: string; nom: string }[]>
   const { data, error } = await supabase.from("formateurs").select("id, nom").is("compte_id", null).order("nom");
   if (error) echec("des fiches formateur", error);
   return liste(data).map((f) => ({ id: texte(f.id), nom: texte(f.nom) }));
+}
+
+/** Les remarques des formateurs sur un compte (migration 0015), pour la fiche du compte au back-office. */
+export async function lireRemarquesFormateurs(compteId: string): Promise<Lecture<RemarqueFormateur[]>> {
+  if (!UUID.test(compteId)) return { migrationAbsente: false, donnees: [] };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("remarques_compte", { p_compte: compteId });
+  if (error) return estFonctionAbsente(error) ? { migrationAbsente: true } : echec("des remarques", error);
+  return {
+    migrationAbsente: false,
+    donnees: liste(data).map((r) => ({ formateurNom: texte(r.formateur_nom), texte: texte(r.texte), modifieeLe: texte(r.modifiee_le) })),
+  };
 }

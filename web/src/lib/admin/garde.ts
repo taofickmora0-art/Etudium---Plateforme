@@ -19,6 +19,16 @@ export async function exigerEquipe(): Promise<{ supabase: Supabase } | { erreur:
   return { supabase: await createClient() };
 }
 
+export const ACCES_FORMATEUR = "Accès réservé aux formateurs.";
+
+/** Le suivi des étudiants : l'espace formateur (rôle formateur, ou super admin qui passe partout). */
+export async function exigerFormateur(): Promise<{ supabase: Supabase } | { erreur: string }> {
+  const user = await getShellUser();
+  if (!user) return { erreur: SESSION_EXPIREE };
+  if (!canAccess("formateur", user.roles)) return { erreur: ACCES_FORMATEUR };
+  return { supabase: await createClient() };
+}
+
 export const ACCES_EDITEUR = "Accès réservé aux formateurs et à l’équipe.";
 
 /**

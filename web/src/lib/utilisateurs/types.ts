@@ -34,3 +34,6 @@ export type Lecture<T> = { migrationAbsente: true } | { migrationAbsente: false;
 export type ChoixFiche = { existante: string } | { nouvelle: true } | null;
 
 export type Resultat = { ok: boolean; message?: string };
+
+/** Une remarque d'un formateur sur ce compte (migration 0015), lue par l'équipe. */
+export type RemarqueFormateur = { formateurNom: string; texte: string; modifieeLe: string };

@@ -6,7 +6,7 @@ import { fauxSupabase } from "../admin/faux-supabase";
 const faux = fauxSupabase();
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => faux.client }));
 
-const { lireComptes, lireCompte, lireFichesLibres } = await import("@/lib/utilisateurs/data");
+const { lireComptes, lireCompte, lireFichesLibres, lireRemarquesFormateurs } = await import("@/lib/utilisateurs/data");
 
 const ID = "11111111-1111-4111-8111-111111111111";
 const LIGNE = {
@@ -93,5 +93,16 @@ describe("Lecture des comptes", () => {
     const [appel] = faux.de("formateurs", "select");
     expect(appel.filtres).toContainEqual(["is", "compte_id", null]);
     expect(appel.filtres).toContainEqual(["order", "nom"]);
+  });
+
+  it("les remarques des formateurs sur un compte (migration 0015)", async () => {
+    faux.repondre("rpc.remarques_compte", { data: [{ formateur_nom: "Dr Mireille Adjovi", texte: "Progresse bien.", modifiee_le: "2026-10-13T09:00:00+00:00" }] });
+    expect(await lireRemarquesFormateurs(ID)).toEqual({
+      migrationAbsente: false,
+      donnees: [{ formateurNom: "Dr Mireille Adjovi", texte: "Progresse bien.", modifieeLe: "2026-10-13T09:00:00+00:00" }],
+    });
+    expect(faux.de("rpc", "remarques_compte")[0].valeurs).toEqual({ p_compte: ID });
+    faux.repondre("rpc.remarques_compte", { error: { code: "PGRST202" } });
+    expect(await lireRemarquesFormateurs(ID)).toEqual({ migrationAbsente: true });
   });
 });
