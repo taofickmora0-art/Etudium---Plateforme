@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowRight01Icon, ArrowRight02Icon, Clock01Icon, SquareLock02Icon, StarIcon } from "@hugeicons/core-free-icons";
 import { SectionAvis } from "@/components/avis/SectionAvis";
+import { Couverture } from "@/components/ui/Couverture";
+import { urlCouverture } from "@/lib/couvertures/adresse";
 import { BoutonFavori } from "@/components/favoris/BoutonFavori";
 import { Icon, type IconSvgElement } from "@/components/ui/Icon";
 import { MetaDot, ProgressBar } from "@/components/ui/Progress";
@@ -251,6 +253,9 @@ export function FicheConnectee({
           />
         </div>
         <div className="min-w-0 flex-[1_1_300px]">
+          <div data-couverture-fiche="" className="mb-4">
+            <Couverture src={urlCouverture(fiche.couverture)} parcours={parcoursPrincipal(fiche)} sizes="(max-width: 1024px) 100vw, 400px" prioritaire className="rounded-carte" />
+          </div>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(216px,calc((100%-32px)/3))),1fr))] gap-4">
             <CarteAcces fiche={fiche} progression={progression} favori={favori} />
             {fiche.formateur && <CarteFormateur formateur={fiche.formateur} variante="connecte" />}

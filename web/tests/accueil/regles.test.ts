@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { tableauDeBord } from "@/lib/accueil/regles";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { formationsSuivies, type FicheSuivie } from "@/lib/mes-formations/regles";
@@ -44,11 +44,19 @@ describe("Tableau de bord", () => {
       pourcentage: 8,
       temps: suivies.find((s) => s.fiche.id === EXCEL_OUVERTE.id)!.temps,
       href: `/formations/maitriser-microsoft-excel/lecons/${id(2)}`,
+      couverture: null,
     });
     expect(t.aFaire).toEqual([
       { id: ZOTERO.id, titre: "Leçon suivante", sousTitre: "Zotero : gérer ses références · Installer Zotero", href: `/formations/zotero-gerer-ses-references/lecons/${id(21)}` },
     ]);
     expect(t.gratuites).toEqual([]);
+  });
+
+  it("la reprise porte l'adresse de la couverture de la formation", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://projet.supabase.co");
+    const t = tableau([avec({ ...EXCEL_OUVERTE, couverture: "11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222.jpg" })], [ligne(EXCEL_OUVERTE.id, 2, false, 5)]);
+    expect(t.reprise?.couverture).toBe("https://projet.supabase.co/storage/v1/object/public/couvertures/11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222.jpg");
+    vi.unstubAllEnvs();
   });
 
   it("une leçon sans durée : le sous-titre s'arrête au titre de la leçon", () => {

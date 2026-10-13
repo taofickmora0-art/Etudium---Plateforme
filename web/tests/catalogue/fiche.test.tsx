@@ -136,3 +136,24 @@ describe("Note de la formation dans le bandeau (tâche 1.11)", () => {
     expect(screen.queryByText(/\(\d+ avis\)/)).toBeNull();
   });
 });
+
+describe("Image de couverture de la fiche", () => {
+  const AVEC = { ...EXCEL, couverture: "11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222.jpg" };
+  const image = (racine: HTMLElement) =>
+    [...racine.querySelectorAll("[data-couverture-fiche] img")].some((i) => decodeURIComponent(i.getAttribute("src") ?? "").includes("https://projet.supabase.co/storage/v1/object/public/couvertures/11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222.jpg"));
+
+  it("fiche publique et fiche connectée : la couverture quand elle existe, la couverture par défaut sinon", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://projet.supabase.co");
+    const publique = render(<FichePublique fiche={AVEC} />);
+    expect(image(publique.container)).toBe(true);
+    publique.unmount();
+    const connectee = render(<FicheConnectee fiche={AVEC} />);
+    expect(image(connectee.container)).toBe(true);
+    connectee.unmount();
+    const sans = render(<FicheConnectee fiche={EXCEL} />);
+    expect(sans.container.querySelector("[data-couverture-fiche] img")).toBeNull();
+    expect(sans.container.querySelector("[data-couverture-fiche] [data-parcours='academique']")).not.toBeNull();
+    vi.unstubAllEnvs();
+  });
+});
+

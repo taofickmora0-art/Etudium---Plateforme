@@ -1,7 +1,7 @@
 import { useId } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { CourseIllustration } from "@/components/ui/CourseIllustration";
+import { Couverture } from "@/components/ui/Couverture";
 import { ProgressBar, ProgressMeta } from "@/components/ui/Progress";
 import { Tag } from "@/components/ui/Tag";
 import type { Reprise } from "@/lib/accueil/regles";
@@ -15,9 +15,8 @@ export function CarteReprise({ reprise }: { reprise: Reprise }) {
   return (
     <div className="box-border flex min-w-0 flex-col rounded-carte border border-bordure-carte bg-panneau px-[19px] pt-[22px] pb-[17px] max-sm:px-4 max-sm:pt-[18px] max-sm:pb-4">
       <div className="flex items-start gap-4 max-sm:gap-3.5">
-        <span className="ml-1 flex flex-none max-sm:ml-0">
-          <CourseIllustration parcours={reprise.parcours} />
-        </span>
+        {/* Vignette 16:9 de la couverture (spec des couvertures), à la place de l'illustration de 48 px. */}
+        <Couverture src={reprise.couverture} parcours={reprise.parcours} sizes="112px" className="w-28 flex-none rounded-[10px]" />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <h3 id={titre} className="m-0 text-base leading-6 font-semibold text-encre wrap-anywhere">
             {reprise.titre}

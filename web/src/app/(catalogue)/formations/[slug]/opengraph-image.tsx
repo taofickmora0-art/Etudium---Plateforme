@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { PALETTES, PLAQUES } from "@/components/ui/CourseIllustration";
 import { getFiche } from "@/lib/catalogue/data";
+import { urlCouverture } from "@/lib/couvertures/adresse";
 import { dureeLisible, nombreDeLecons, parcoursPrincipal } from "@/lib/catalogue/regles";
 
 // Image de l'aperçu d'un lien partagé (WhatsApp, Facebook…) : spec du lot 1, §9. Générée à la demande, rien à fournir.
@@ -8,6 +9,22 @@ import { dureeLisible, nombreDeLecons, parcoursPrincipal } from "@/lib/catalogue
 export const alt = "Formation Étudium";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+
+/**
+ * La couverture en adresse « data: » pour l'image générée ; null si elle ne se charge pas, ou si son format n'est pas
+ * lu par le générateur (WebP) : l'image bleue la remplace alors.
+ */
+async function couvertureEnDonnees(url: string | null): Promise<string | null> {
+  if (!url) return null;
+  try {
+    const reponse = await fetch(url);
+    const type = reponse.headers.get("content-type") ?? "";
+    if (!reponse.ok || !/^image\/(jpeg|png)/.test(type)) return null;
+    return `data:${type};base64,${Buffer.from(await reponse.arrayBuffer()).toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
 
 const HEXAGONE = "15,4 24.5,9.5 24.5,20.5 15,26 5.5,20.5 5.5,9.5";
 
@@ -24,6 +41,16 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const couleurs = PALETTES[parcoursPrincipal(fiche)];
   const parcours = [...fiche.parcours].sort((a, b) => a.ordre - b.ordre)[0];
   const meta = [dureeLisible(fiche.dureeSecondes), fiche.nbLecons > 0 ? nombreDeLecons(fiche.nbLecons) : "", fiche.gratuite ? "Gratuite" : ""].filter(Boolean).join(" · ");
+
+  // Avec une couverture, l'image partagée est la couverture elle-même, cadrée en 1200 × 630.
+  const couverture = await couvertureEnDonnees(urlCouverture(fiche.couverture));
+  if (couverture) {
+    return new ImageResponse(
+      // eslint-disable-next-line @next/next/no-img-element -- image générée (next/og), pas une page
+      <img src={couverture} alt="" width={size.width} height={size.height} style={{ width: "100%", height: "100%", objectFit: "cover" }} />,
+      { ...size },
+    );
+  }
 
   return new ImageResponse(
     <div

@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { ArrowLeft02Icon, CheckmarkCircle02Icon, Clock01Icon, PlayCircleIcon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
+import { Couverture } from "@/components/ui/Couverture";
 import { Icon } from "@/components/ui/Icon";
 import { ProgressBar } from "@/components/ui/Progress";
-import { dureeLisible } from "@/lib/catalogue/regles";
+import { dureeLisible, parcoursPrincipal } from "@/lib/catalogue/regles";
 import type { FicheFormation, LeconFiche } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
+import { urlCouverture } from "@/lib/couvertures/adresse";
 import { etatLigne, tempsRestant, type EtatLigne } from "@/lib/lecon/regles";
 
 type Props = { fiche: FicheFormation; leconId: string; connecte: boolean; terminees: ReadonlySet<string> };
@@ -60,6 +62,7 @@ export function ProgrammeLecon({ fiche, leconId, connecte, terminees }: Props) {
         <span>{connecte ? "Mes formations" : "Toutes les formations"}</span>
       </Link>
       <div className="flex flex-col px-3 pt-1.5 pb-2.5">
+        <Couverture src={urlCouverture(fiche.couverture)} parcours={parcoursPrincipal(fiche)} sizes="280px" className="mb-3 rounded-[12px]" />
         <Link href={`/formations/${fiche.slug}`} className="focus-etudium text-base leading-6 font-semibold text-encre no-underline hover:underline">
           {fiche.titre}
         </Link>

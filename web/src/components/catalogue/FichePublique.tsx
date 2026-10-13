@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowRight01Icon, ChartIncreaseIcon, Clock01Icon, PlayCircleIcon, StarIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { SectionAvis } from "@/components/avis/SectionAvis";
+import { Couverture } from "@/components/ui/Couverture";
+import { urlCouverture } from "@/lib/couvertures/adresse";
 import { formatNote, libelleNombreAvis } from "@/lib/avis/regles";
 import type { AvisFormation } from "@/lib/avis/types";
 import { Avatar } from "@/components/ui/Avatar";
@@ -71,6 +73,7 @@ export function FichePublique({ fiche, avis = null }: { fiche: FicheFormation; /
   const apercus = leconsApercu(fiche);
   const premierApercu = apercus[0];
   const duree = dureeLisible(fiche.dureeSecondes);
+  const couverture = urlCouverture(fiche.couverture);
   const meta = [
     fiche.nbAvis > 0 && fiche.note !== null && { icone: StarIcon, texte: `${formatNote(fiche.note)} (${libelleNombreAvis(fiche.nbAvis)})` },
     duree && { icone: Clock01Icon, texte: duree },
@@ -98,6 +101,10 @@ export function FichePublique({ fiche, avis = null }: { fiche: FicheFormation; /
         </nav>
         <div className="mt-7 flex flex-wrap items-center gap-14">
           <div className={GAUCHE}>
+            {/* Sur téléphone et tablette, la couverture passe au-dessus du titre. */}
+            <div data-couverture-fiche="" className="mb-6 lg:hidden">
+              <Couverture src={couverture} parcours={parcoursPrincipal(fiche)} sizes="100vw" prioritaire className="rounded-[20px]" />
+            </div>
             <div className="flex flex-col gap-5 pb-2">
               {(parcours || badge) && (
                 <div className="flex flex-wrap items-center gap-2">
@@ -143,6 +150,9 @@ export function FichePublique({ fiche, avis = null }: { fiche: FicheFormation; /
             </div>
           </div>
           <div className={DROITE}>
+            <div data-couverture-fiche="" className="mb-5 max-lg:hidden">
+              <Couverture src={couverture} parcours={parcoursPrincipal(fiche)} sizes="420px" prioritaire className="rounded-[20px]" />
+            </div>
             <CarteOffre fiche={fiche} />
           </div>
         </div>

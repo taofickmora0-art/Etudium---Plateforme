@@ -1,6 +1,7 @@
 import { dureeLisible, parcoursPrincipal } from "@/lib/catalogue/regles";
 import type { CarteCatalogue } from "@/lib/catalogue/types";
 import type { CouleurParcours } from "@/lib/contenus/libelles";
+import { urlCouverture } from "@/lib/couvertures/adresse";
 import type { FormationSuivie } from "@/lib/mes-formations/regles";
 import { recommandations } from "@/lib/recherche/regles";
 
@@ -20,6 +21,8 @@ export type Reprise = {
   pourcentage: number;
   temps: string;
   href: string;
+  /** Adresse de l'image de couverture ; null : couverture par défaut du parcours. */
+  couverture: string | null;
 };
 
 /** Une ligne de « À faire » : la leçon suivante d'une autre formation en cours (quiz et exercices au lot 3). */
@@ -60,6 +63,7 @@ function reprise(suivie: FormationSuivie): Reprise | null {
     pourcentage: suivie.progression.pourcentage,
     temps: suivie.temps,
     href: suivie.href,
+    couverture: urlCouverture(fiche.couverture),
   };
 }
 

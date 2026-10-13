@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { tableauDeBord } from "@/lib/accueil/regles";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { formationsSuivies } from "@/lib/mes-formations/regles";
@@ -51,6 +51,15 @@ describe("Tableau de bord", () => {
     expect(reprendre).toHaveAttribute("href", `/formations/maitriser-microsoft-excel/lecons/${id(2)}`);
     expect(reprendre).toHaveAccessibleDescription("Maîtriser Microsoft Excel");
     expect(within(bloc).getByRole("link", { name: "Voir le parcours" })).toHaveAttribute("href", "/parcours?parcours=reussite-academique");
+  });
+
+  it("la carte « Continuer » montre la couverture de la formation", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://projet.supabase.co");
+    const { container } = monter([{ ...EXCEL_OUVERTE, couverture: "11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222.jpg" }, ZOTERO_OUVERTE], DEUX_EN_COURS[1]);
+    const bloc = screen.getByRole("region", { name: "Continuer l’apprentissage" });
+    expect(decodeURIComponent(bloc.querySelector("img")?.getAttribute("src") ?? "")).toContain("https://projet.supabase.co/storage/v1/object/public/couvertures/11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222.jpg");
+    expect(container).toBeTruthy();
+    vi.unstubAllEnvs();
   });
 
   it("« À faire » : la leçon suivante des autres formations en cours", () => {

@@ -177,3 +177,16 @@ describe("Page leçon : programme", () => {
     expect(screen.queryByRole("link", { name: "Leçon suivante" })).toBeNull();
   });
 });
+
+describe("Vignette de la formation dans le programme de la leçon", () => {
+  it("la couverture en haut du programme ; sinon la couverture par défaut", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://projet.supabase.co");
+    const { container, unmount } = render(<ProgrammeLecon fiche={{ ...EXCEL_OUVERTE, couverture: "11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222.jpg" }} leconId={id(1)} connecte terminees={new Set()} />);
+    expect(decodeURIComponent(container.querySelector("img")?.getAttribute("src") ?? "")).toContain("https://projet.supabase.co/storage/v1/object/public/couvertures/11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222.jpg");
+    unmount();
+    const sans = render(<ProgrammeLecon fiche={EXCEL_OUVERTE} leconId={id(1)} connecte terminees={new Set()} />);
+    expect(sans.container.querySelector("[data-parcours='academique']")).not.toBeNull();
+    vi.unstubAllEnvs();
+  });
+});
+

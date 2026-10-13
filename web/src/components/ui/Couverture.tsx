@@ -15,7 +15,8 @@ type CouvertureProps = {
   parcours: Parcours;
   /** Largeur affichée, pour que next/image envoie une image à la bonne taille (données mobiles). */
   sizes: string;
-  priority?: boolean;
+  /** Image en haut de page : chargée en priorité (fetchPriority, recommandé par Next 16 à la place de priority). */
+  prioritaire?: boolean;
   className?: string;
 };
 
@@ -23,11 +24,11 @@ type CouvertureProps = {
  * Image de couverture d'une formation, en 16:9 : l'image est cadrée sans déformation (le centre est gardé). Sans image,
  * la couverture par défaut aux couleurs du parcours, avec son illustration. Décorative : le titre suit toujours.
  */
-export function Couverture({ src, parcours, sizes, priority = false, className }: CouvertureProps) {
+export function Couverture({ src, parcours, sizes, prioritaire = false, className }: CouvertureProps) {
   return (
     <div data-parcours={parcours} className={cn("relative aspect-video w-full overflow-hidden", !src && FONDS[parcours], className)}>
       {src ? (
-        <Image src={src} alt="" fill sizes={sizes} priority={priority} className="object-cover" />
+        <Image src={src} alt="" fill sizes={sizes} fetchPriority={prioritaire ? "high" : undefined} className="object-cover" />
       ) : (
         <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
           <CourseIllustration parcours={parcours} size={64} />
