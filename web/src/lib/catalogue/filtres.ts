@@ -51,7 +51,7 @@ export function ecrireFiltres(filtres: Filtres, base: Filtres = FILTRES_PAR_DEFA
 }
 
 /** Sans accents ni majuscules : « zotéro » trouve « Zotero ». */
-const sansAccents = (texte: string) =>
+export const sansAccents = (texte: string) =>
   texte
     .toLowerCase()
     .normalize("NFD")

@@ -75,26 +75,12 @@ const versLecon = (l: Ligne): LeconFiche & { ordre: number } => ({
   ordre: Number(l.ordre ?? 0),
 });
 
-/**
- * La fiche d'une formation publiée, avec son programme dans l'ordre ; null si l'adresse ne correspond à rien.
- * Lue une seule fois par requête : la page et ses métadonnées (aperçu du lien) la demandent toutes deux.
- */
-export const getFiche = cache(async (slug: string): Promise<FicheFormation | null> => {
-  if (demoModeActive() || !ADRESSE.test(slug)) return null;
-  const supabase = await createClient();
-  const f = verifier(
-    await supabase
-      .from("formations")
-      .select(
-        `${COLONNES_CARTE}, description, seuil_video, objectifs, competences, formateurs(nom, titre, domaine, presentation), ` +
-          "modules(id, titre, ordre, lecons(id, titre, titre_court, duree_secondes, apercu, ordre, accessible))",
-      )
-      .eq("statut", "publiee")
-      .eq("slug", slug)
-      .maybeSingle(),
-  ) as Ligne | null;
-  if (!f) return null;
+const COLONNES_FICHE =
+  `${COLONNES_CARTE}, description, seuil_video, objectifs, competences, formateurs(nom, titre, domaine, presentation), ` +
+  "modules(id, titre, ordre, lecons(id, titre, titre_court, duree_secondes, apercu, ordre, accessible))";
 
+/** Une ligne de formation (avec son programme) → fiche : modules et leçons dans l'ordre. */
+function versFiche(f: Ligne): FicheFormation {
   const modules = liste(f.modules)
     .map((m) => ({ id: String(m.id), titre: texte(m.titre), ordre: Number(m.ordre ?? 0), lecons: liste(m.lecons).map(versLecon).sort(parOrdre) }))
     .sort(parOrdre);
@@ -119,4 +105,28 @@ export const getFiche = cache(async (slug: string): Promise<FicheFormation | nul
       }),
     ),
   };
+}
+
+/**
+ * La fiche d'une formation publiée, avec son programme dans l'ordre ; null si l'adresse ne correspond à rien.
+ * Lue une seule fois par requête : la page et ses métadonnées (aperçu du lien) la demandent toutes deux.
+ */
+export const getFiche = cache(async (slug: string): Promise<FicheFormation | null> => {
+  if (demoModeActive() || !ADRESSE.test(slug)) return null;
+  const supabase = await createClient();
+  const f = verifier(await supabase.from("formations").select(COLONNES_FICHE).eq("statut", "publiee").eq("slug", slug).maybeSingle()) as Ligne | null;
+  return f ? versFiche(f) : null;
 });
+
+export type StatutFiche = "publiee" | "archivee" | "brouillon";
+
+/**
+ * Les fiches de plusieurs formations (Mes formations, Favoris), quel que soit leur statut : les règles de la base
+ * décident (une formation archivée reste visible pour qui l'a commencée, migration 0009).
+ */
+export async function listFiches(ids: string[]): Promise<(FicheFormation & { statut: StatutFiche })[]> {
+  if (demoModeActive() || ids.length === 0) return [];
+  const supabase = await createClient();
+  const lignes = verifier(await supabase.from("formations").select(`${COLONNES_FICHE}, statut`).in("id", ids)) as Ligne[] | null;
+  return liste(lignes).map((f) => ({ ...versFiche(f), statut: (texte(f.statut) || "publiee") as StatutFiche }));
+}
