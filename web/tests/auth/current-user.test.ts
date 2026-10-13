@@ -13,7 +13,8 @@ const from = vi.fn((table: string) => {
   };
   return requete;
 });
-vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth, from }) }));
+const rpc = vi.fn(async (): Promise<{ data: boolean | null; error: unknown }> => ({ data: false, error: null }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth, from, rpc }) }));
 
 let configuree = true;
 vi.mock("@/lib/env", () => ({
@@ -50,6 +51,19 @@ describe("Compte affiché par la coque", () => {
     configuree = true;
     Object.values(auth).forEach((f) => f.mockReset());
     for (const t of Object.keys(tables)) delete tables[t];
+  });
+
+  it("un compte suspendu est envoyé vers /auth/suspendu", async () => {
+    auth.getUser.mockResolvedValue(session({}));
+    rpc.mockResolvedValueOnce({ data: true, error: null });
+    await expect(getShellUser()).rejects.toThrow("NEXT_REDIRECT:/auth/suspendu");
+  });
+
+  it("avant la migration 0013, la page s'affiche normalement", async () => {
+    auth.getUser.mockResolvedValue(session({}));
+    tables.roles = { data: [{ role: "etudiant" }], error: null };
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "PGRST202" } });
+    expect((await getShellUser())?.email).toBe("aicha.k@exemple.com");
   });
 
   it("une session fermée ailleurs ne donne plus de compte", async () => {

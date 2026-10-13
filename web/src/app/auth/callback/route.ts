@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { safeNext } from "@/lib/auth/messages";
+import { estSuspendu } from "@/lib/auth/suspension";
 import { createClient } from "@/lib/supabase/server";
 
 /** Retour de Google : échange le code contre une session, puis va à la page demandée (jamais hors du site). */
@@ -11,7 +12,14 @@ export async function GET(request: NextRequest) {
     try {
       const supabase = await createClient();
       const { error } = await supabase.auth.exchangeCodeForSession(code);
-      if (!error) return NextResponse.redirect(`${origin}${next}`);
+      if (!error) {
+        // Compte suspendu (spec des utilisateurs, §4) : la session tout juste ouverte est aussitôt refermée.
+        if (await estSuspendu(supabase)) {
+          await supabase.auth.signOut();
+          return NextResponse.redirect(`${origin}/connexion?erreur=suspendu`);
+        }
+        return NextResponse.redirect(`${origin}${next}`);
+      }
     } catch {
       // Base injoignable ou non configurée : même issue qu'un échec.
     }

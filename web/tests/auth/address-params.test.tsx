@@ -41,6 +41,12 @@ describe("Adresse des écrans de compte", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("La connexion avec Google n’a pas abouti.");
   });
 
+  it("la suspension du compte est annoncée", () => {
+    adresse = new URLSearchParams("erreur=suspendu");
+    render(<ConnexionPage />);
+    expect(screen.getByRole("alert")).toHaveTextContent("Ce compte est suspendu. Pour en savoir plus, contactez l’équipe Étudium.");
+  });
+
   it("une session expirée est annoncée", () => {
     adresse = new URLSearchParams("session=expiree");
     render(<ConnexionPage />);

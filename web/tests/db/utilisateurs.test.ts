@@ -210,7 +210,7 @@ describe("Migration 0013 : comptes et rôles", () => {
   it("filtres : étudiants, formateurs, équipe, suspendus ; une valeur inconnue vaut « tous »", async () => {
     const etudiants = ids(await liste(A, "", "etudiants"));
     expect(etudiants).toEqual(expect.arrayContaining([E, E2]));
-    expect(etudiants.some((id) => [F, M, A, A2, S, S2].includes(id))).toBe(false);
+    expect(etudiants.some((id) => ([F, M, A, A2, S, S2] as string[]).includes(id))).toBe(false);
     expect(ids(await liste(A, "", "formateurs"))).toEqual([F]);
     expect([...ids(await liste(A, "", "equipe"))].sort()).toEqual([M, A, A2, S, S2].sort());
     expect(ids(await liste(A, "", "suspendus"))).toEqual([A2]);

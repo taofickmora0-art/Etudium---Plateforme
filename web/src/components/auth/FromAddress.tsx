@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Banner } from "@/components/ui/Banner";
 import { safeNext } from "@/lib/auth/messages";
+import { MESSAGE_SUSPENDU } from "@/lib/auth/suspension";
 import { SessionExpiredDialog } from "./SessionExpiredDialog";
 
 // Ce que les écrans de compte lisent dans l'adresse, lu dans le navigateur : les pages restent statiques,
@@ -29,6 +30,7 @@ function AvisDeConnexion() {
     <>
       {adresse.get("session") === "expiree" && <SessionExpiredDialog next={adresse.get("next") ? safeNext(adresse.get("next")) : undefined} />}
       {adresse.get("compte") === "supprime" && <Banner tone="reussite" title="Votre compte a été supprimé." />}
+      {adresse.get("erreur") === "suspendu" && <Banner tone="erreur" title={MESSAGE_SUSPENDU} />}
       {adresse.get("erreur") === "google" && (
         <Banner tone="erreur" title="La connexion avec Google n’a pas abouti.">
           Réessayez ou utilisez votre e-mail.
@@ -38,7 +40,7 @@ function AvisDeConnexion() {
   );
 }
 
-/** Session expirée (NdSessionExpiree) et retour raté de Google, annoncés sur la page de connexion. */
+/** Session expirée (NdSessionExpiree), retour raté de Google et compte suspendu, annoncés sur la page de connexion. */
 export function SignInNotices() {
   return (
     <Suspense fallback={null}>

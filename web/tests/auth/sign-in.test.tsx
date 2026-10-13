@@ -2,10 +2,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ─── Doublures : Supabase, cookies et redirection de Next ──────────────────
-const auth = { signInWithPassword: vi.fn(), resend: vi.fn(), signInWithOAuth: vi.fn() };
+const auth = { signInWithPassword: vi.fn(), resend: vi.fn(), signInWithOAuth: vi.fn(), signOut: vi.fn(), exchangeCodeForSession: vi.fn() };
+const rpc = vi.fn();
 const createClient = vi.fn(async (options?: unknown) => {
   void options;
-  return { auth };
+  return { auth, rpc };
 });
 vi.mock("@/lib/supabase/server", () => ({ createClient: (options?: unknown) => createClient(options) }));
 
@@ -43,6 +44,31 @@ describe("Connexion", () => {
     jar.clear();
     Object.values(auth).forEach((f) => f.mockReset());
     createClient.mockClear();
+    rpc.mockReset();
+    rpc.mockResolvedValue({ data: false, error: null });
+  });
+
+  it("un compte suspendu est refusé et aussitôt déconnecté", async () => {
+    auth.signInWithPassword.mockResolvedValue({ error: null });
+    rpc.mockResolvedValue({ data: true, error: null });
+    const state = await signIn(IDLE, form(BONS));
+    expect(state).toMatchObject({ status: "error", message: "Ce compte est suspendu. Pour en savoir plus, contactez l’équipe Étudium." });
+    expect(auth.signOut).toHaveBeenCalled();
+  });
+
+  it("au retour de Google, un compte suspendu revient à la connexion avec le message", async () => {
+    auth.exchangeCodeForSession.mockResolvedValue({ error: null });
+    rpc.mockResolvedValue({ data: true, error: null });
+    const reponse = await retourGoogle(new Request("http://localhost:3000/auth/callback?code=abc&next=/accueil") as never);
+    expect(auth.signOut).toHaveBeenCalled();
+    expect(reponse.headers.get("location")).toBe("http://localhost:3000/connexion?erreur=suspendu");
+  });
+
+  it("au retour de Google, un compte actif va à la page demandée", async () => {
+    auth.exchangeCodeForSession.mockResolvedValue({ error: null });
+    const reponse = await retourGoogle(new Request("http://localhost:3000/auth/callback?code=abc&next=/certificats") as never);
+    expect(auth.signOut).not.toHaveBeenCalled();
+    expect(reponse.headers.get("location")).toBe("http://localhost:3000/certificats");
   });
 
   it("de bons identifiants mènent à l'accueil", async () => {

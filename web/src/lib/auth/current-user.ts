@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import type { Role } from "@/lib/auth/permissions";
 import { DEMO_USER } from "@/lib/demo-user";
@@ -7,6 +8,7 @@ import { photoPublicUrl } from "@/lib/profile/photo-url";
 import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "./routing";
 import { AuthUnavailableError, isSessionClosed } from "./session-state";
+import { ADRESSE_SUSPENDU, estSuspendu } from "./suspension";
 
 /** Ce que la coque affiche de la personne connectée (en-tête, menu du profil, page « Profil » du téléphone). */
 export type ShellUser = {
@@ -81,10 +83,13 @@ export const getShellUser = cache(async (): Promise<ShellUser | null> => {
   if (!user) return null;
 
   const supabase = await createClient();
-  const [profil, roles] = await Promise.all([
+  const [profil, roles, suspendu] = await Promise.all([
     supabase.from("profils").select("prenom, nom, photo_url").eq("id", user.id).maybeSingle(),
     supabase.from("roles").select("role").eq("profil_id", user.id),
+    estSuspendu(supabase),
   ]);
+  // Compte suspendu : déconnecté par la route dédiée (une page n'écrit pas de cookies), message sur la connexion.
+  if (suspendu) redirect(ADRESSE_SUSPENDU);
 
   const inscription = nomDepuisInscription((user.user_metadata as Metadonnees | undefined) ?? {});
   const prenom = chaine(profil.data?.prenom) || inscription.prenom;
