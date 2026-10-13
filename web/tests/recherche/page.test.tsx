@@ -86,6 +86,11 @@ describe("Page Recherche", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Recommandé pour vous" })).toBeInTheDocument();
   });
 
+  it("une requête longue sans espace (un lien collé) passe à la ligne au lieu d'élargir la page", () => {
+    monter(`https://exemple.org/${"a".repeat(80)}`);
+    expect(screen.getByRole("heading", { name: /^Aucun résultat pour/ })).toHaveClass("wrap-anywhere");
+  });
+
   it("une requête avec du code s'affiche comme du texte", () => {
     const { container } = monter("<script>alert(1)</script>");
     expect(screen.getByRole("heading", { name: "Aucun résultat pour « <script>alert(1)</script> »" })).toBeInTheDocument();

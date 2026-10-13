@@ -27,7 +27,8 @@ export function EmptyState({ icon, illustration, title, description, action, san
               <Icon icon={icon} size={26} />
             </span>
           ))}
-        <h3 className="mt-2.5 mb-0 text-lg leading-[26px] font-semibold text-encre">{title}</h3>
+        {/* Un titre peut reprendre une saisie (recherche) : un mot très long passe à la ligne. */}
+        <h3 className="mt-2.5 mb-0 text-lg leading-[26px] font-semibold text-encre wrap-anywhere">{title}</h3>
         <p className="m-0 max-w-[420px] text-sm leading-[22px] text-pretty text-discret">{description}</p>
         {action && <div className="mt-3.5 flex flex-wrap justify-center gap-2">{action}</div>}
       </div>
