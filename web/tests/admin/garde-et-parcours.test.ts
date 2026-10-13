@@ -38,7 +38,7 @@ describe("Back-office : garde de l'équipe, parcours et formateurs", () => {
     const state = await saveParcours(IDLE, form(PARCOURS));
     expect(state).toMatchObject({ status: "error", message: "Accès réservé à l’équipe." });
     expect(faux.de("parcours", "insert")).toEqual([]);
-    expect(await deplacer("lecons", "x", -1)).toEqual({ ok: false, message: "Accès réservé à l’équipe." });
+    expect(await deplacer("lecons", "x", -1)).toEqual({ ok: false, message: "Accès réservé aux formateurs et à l’équipe." });
     expect(faux.de("rpc")).toEqual([]);
   });
 

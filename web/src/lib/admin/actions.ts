@@ -5,15 +5,17 @@ import { authErrorMessage } from "@/lib/auth/messages";
 import { fieldErrorsFrom, type FormState } from "@/lib/auth/schemas";
 import type { createClient } from "@/lib/supabase/server";
 import { cheminValide } from "@/lib/couvertures/regles";
-import { exigerEquipe } from "./garde";
+import { baseFormations, espaceDe, type EspaceEdition } from "./espace";
+import { ACCES_EQUIPE, exigerEditeur, exigerEquipe } from "./garde";
 import { formatParMime } from "./fichiers";
 import { formateurSchema, formationInfosSchema, leconSchema, lignes, moduleSchema, parcoursSchema, ressourceSchema } from "./schemas";
 import { parseDuree } from "./duree";
 import { slugify } from "./slug";
 import { parseVideoUrl } from "./video";
 
-// Actions serveur du back-office (spec du lot 1, §10). Chacune revérifie l'équipe (exigerEquipe), puis la base
-// revérifie encore (règles d'accès de la 0004).
+// Actions serveur du back-office (spec du lot 1, §10). Chacune revérifie qui demande : l'équipe (exigerEquipe) ou,
+// pour le contenu des formations, l'équipe ou un formateur (exigerEditeur, spec de l'espace formateur) ; puis la base
+// revérifie encore (règles d'accès de la 0004 et de la 0014 : un formateur n'écrit que dans ses formations).
 
 const ECHEC = authErrorMessage(null);
 const ADRESSE_PRISE = "Cette adresse est déjà prise.";
@@ -120,8 +122,10 @@ export type TableOrdonnee = (typeof TABLES_ORDONNEES)[number];
 export async function deplacer(table: TableOrdonnee, id: string, sens: -1 | 1): Promise<{ ok: boolean; message?: string }> {
   if (!TABLES_ORDONNEES.includes(table) || (sens !== -1 && sens !== 1) || !id) return { ok: false, message: DEPLACEMENT_ECHOUE };
   try {
-    const garde = await exigerEquipe();
+    const garde = await exigerEditeur();
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
+    // L'ordre des parcours revient à l'équipe ; celui du programme d'une formation, aussi à son formateur.
+    if (table === "parcours" && !garde.equipe) return { ok: false, message: ACCES_EQUIPE };
     const { error } = await garde.supabase.rpc("deplacer", { p_table: table, p_id: id, p_sens: sens });
     if (error) return { ok: false, message: DEPLACEMENT_ECHOUE };
   } catch {
@@ -133,14 +137,18 @@ export async function deplacer(table: TableOrdonnee, id: string, sens: -1 | 1): 
 
 // ─── Formations ─────────────────────────────────────────────────────────────
 
+/** Essais d'adresse à la création : une adresse peut être prise par un brouillon que le formateur ne voit pas. */
+const ESSAIS_ADRESSE = 10;
+
 /** Nouvelle formation en brouillon ; son adresse vient du titre, avec « -2 », « -3 »… si elle est déjà prise. */
 export async function createFormation(_prev: FormState, fd: FormData): Promise<FormState> {
+  const espace = espaceDe(fd);
   const values = { titre: texte(fd, "titre") };
   const parsed = formationInfosSchema.pick({ titre: true }).safeParse(values);
   if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values };
 
   try {
-    const garde = await exigerEquipe();
+    const garde = await exigerEditeur();
     if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
     const { supabase } = garde;
     const base = slugify(parsed.data.titre) || "formation";
@@ -155,15 +163,22 @@ export async function createFormation(_prev: FormState, fd: FormData): Promise<F
     const utilisees = new Set(((prises as { slug: string }[] | null) ?? []).map((p) => p.slug));
     let n = 1;
     while (utilisees.has(candidate(n))) n++;
-    const { data, error } = await supabase.from("formations").insert({ titre: parsed.data.titre, slug: candidate(n) }).select("id").single();
-    // Une autre formation a pris la même adresse entre-temps : le formulaire n'a qu'un champ, le titre.
-    if (error?.code === "23505") return { status: "error", fieldErrors: { titre: ADRESSE_PRISE_ENTRE_TEMPS }, values };
-    if (error || !data) return erreurEnregistrement(error ?? {}, values);
-    return { status: "success", redirection: `/admin/formations/${(data as { id: string }).id}` };
+    // Adresse déjà prise (par un brouillon invisible pour un formateur, ou créée entre-temps) : la suivante.
+    for (let essai = 0; essai < ESSAIS_ADRESSE; essai++, n++) {
+      const { data, error } = await supabase.from("formations").insert({ titre: parsed.data.titre, slug: candidate(n) }).select("id").single();
+      if (error?.code === "23505") continue;
+      if (error || !data) return erreurEnregistrement(error ?? {}, values);
+      return { status: "success", redirection: `${baseFormations(espace)}/${(data as { id: string }).id}` };
+    }
+    // Le formulaire n'a qu'un champ, le titre.
+    return { status: "error", fieldErrors: { titre: ADRESSE_PRISE_ENTRE_TEMPS }, values };
   } catch {
     return { status: "error", message: ECHEC, values };
   }
 }
+
+/** Ce que le formateur remplit dans l'onglet Informations (spec de l'espace formateur, §1). */
+const CHAMPS_DU_CONTENU = { titre: true, slug: true, resume: true, description: true, objectifs: true, competences: true, niveau: true } as const;
 
 const nombreOuNull = (saisie: string) => (saisie.trim() === "" ? null : Number(saisie.replace(/\s/g, "").replace(",", ".")));
 
@@ -193,13 +208,19 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
     competences: saisie.competences.join("\n"),
     parcours: parcoursCoches.join(","),
   };
-  const parsed = formationInfosSchema.safeParse(saisie);
+  let garde: Awaited<ReturnType<typeof exigerEditeur>>;
+  try {
+    garde = await exigerEditeur();
+  } catch {
+    return { status: "error", message: ECHEC, values };
+  }
+  if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
+  // Un formateur n'enregistre que le contenu : les réglages commerciaux et le formateur attribué reviennent à l'équipe.
+  const parsed = garde.equipe ? formationInfosSchema.safeParse(saisie) : formationInfosSchema.pick(CHAMPS_DU_CONTENU).safeParse(saisie);
   if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values };
   if (!estUuid(id)) return { status: "error", message: ECHEC, values };
 
   try {
-    const garde = await exigerEquipe();
-    if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
     const { supabase } = garde;
     const { error } = await supabase.from("formations").update(parsed.data).eq("id", id);
     if (error) {
@@ -253,10 +274,10 @@ export async function setStatutFormation(id: string, statut: "publiee" | "archiv
 }
 
 /** Supprime un brouillon et ses fichiers. Une formation déjà publiée (même archivée) ne s'efface pas (spec §10). */
-export async function deleteFormation(id: string): Promise<Resultat> {
+export async function deleteFormation(id: string, espace: EspaceEdition = "admin"): Promise<Resultat> {
   if (!estUuid(id)) return { ok: false, message: ECHEC };
   try {
-    const garde = await exigerEquipe();
+    const garde = await exigerEditeur();
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { supabase } = garde;
     const { data: formation } = await supabase.from("formations").select("statut, publiee_le").eq("id", id).maybeSingle();
@@ -272,7 +293,7 @@ export async function deleteFormation(id: string): Promise<Resultat> {
   } catch {
     return { ok: false, message: ECHEC };
   }
-  return { ok: true, redirection: "/admin/formations" };
+  return { ok: true, redirection: baseFormations(espace === "formateur" ? "formateur" : "admin") };
 }
 
 // ─── Programme : modules et leçons ──────────────────────────────────────────
@@ -290,7 +311,7 @@ export async function addModule(_prev: FormState, fd: FormData): Promise<FormSta
   if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values };
   if (!estUuid(formationId)) return { status: "error", message: ECHEC, values };
   try {
-    const garde = await exigerEquipe();
+    const garde = await exigerEditeur();
     if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
     const { supabase } = garde;
     const ordre = await rangSuivant(supabase, "modules", ["formation_id", formationId]);
@@ -310,7 +331,7 @@ export async function renameModule(_prev: FormState, fd: FormData): Promise<Form
   if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values };
   if (!estUuid(id)) return { status: "error", message: ECHEC, values };
   try {
-    const garde = await exigerEquipe();
+    const garde = await exigerEditeur();
     if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
     const { error } = await garde.supabase.from("modules").update({ titre: parsed.data.titre }).eq("id", id);
     if (error) return erreurEnregistrement(error, values);
@@ -325,7 +346,7 @@ export async function renameModule(_prev: FormState, fd: FormData): Promise<Form
 export async function deleteModule(id: string): Promise<Resultat> {
   if (!estUuid(id)) return { ok: false, message: ECHEC };
   try {
-    const garde = await exigerEquipe();
+    const garde = await exigerEditeur();
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { supabase } = garde;
     const { data: fichiers } = await supabase.from("ressources").select("fichier, lecons!inner(module_id)").eq("lecons.module_id", id);
@@ -341,13 +362,14 @@ export async function deleteModule(id: string): Promise<Resultat> {
 
 /** Nouvelle leçon à la fin du module, avec son contenu vide ; on ouvre ensuite sa page. */
 export async function addLecon(_prev: FormState, fd: FormData): Promise<FormState> {
+  const espace = espaceDe(fd);
   const moduleId = texte(fd, "module_id");
   const values = { titre: texte(fd, "titre") };
   const parsed = leconSchema.pick({ titre: true }).safeParse(values);
   if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values };
   if (!estUuid(moduleId)) return { status: "error", message: ECHEC, values };
   try {
-    const garde = await exigerEquipe();
+    const garde = await exigerEditeur();
     if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
     const { supabase } = garde;
     const { data: module } = await supabase.from("modules").select("formation_id").eq("id", moduleId).maybeSingle();
@@ -359,7 +381,7 @@ export async function addLecon(_prev: FormState, fd: FormData): Promise<FormStat
     const leconId = (data as { id: string }).id;
     // Le contenu (vidéo, texte) vit à part : il ne se montre qu'avec l'accès à la leçon. Créé vide ici, complété ensuite.
     await supabase.from("lecons_contenus").insert({ lecon_id: leconId });
-    return { status: "success", redirection: `/admin/formations/${formationId}/lecons/${leconId}` };
+    return { status: "success", redirection: `${baseFormations(espace)}/${formationId}/lecons/${leconId}` };
   } catch {
     return { status: "error", message: ECHEC, values };
   }
@@ -369,7 +391,7 @@ export async function addLecon(_prev: FormState, fd: FormData): Promise<FormStat
 export async function deleteLecon(id: string): Promise<Resultat> {
   if (!estUuid(id)) return { ok: false, message: ECHEC };
   try {
-    const garde = await exigerEquipe();
+    const garde = await exigerEditeur();
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { supabase } = garde;
     const { data: fichiers } = await supabase.from("ressources").select("fichier").eq("lecon_id", id);
@@ -420,7 +442,7 @@ export async function saveLecon(_prev: FormState, fd: FormData): Promise<FormSta
   if (!estUuid(id)) return { status: "error", message: ECHEC, values };
 
   try {
-    const garde = await exigerEquipe();
+    const garde = await exigerEditeur();
     if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
     const { supabase } = garde;
     const { texte: contenuTexte, titre_court, ...lecon } = parsed.data;
@@ -466,7 +488,7 @@ export async function addRessource(entree: NouvelleRessource): Promise<Resultat>
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? ECHEC };
   if (!estUuid(entree.leconId)) return { ok: false, message: ECHEC };
   try {
-    const garde = await exigerEquipe();
+    const garde = await exigerEditeur();
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { supabase } = garde;
     const { data: lecon } = await supabase.from("lecons").select("modules(formation_id)").eq("id", entree.leconId).maybeSingle();
@@ -492,7 +514,7 @@ export async function updateRessource(entree: { id: string; titre: string; telec
   if (titre.length > 120) return { ok: false, message: "120 caractères au maximum." };
   if (!estUuid(entree.id)) return { ok: false, message: ECHEC };
   try {
-    const garde = await exigerEquipe();
+    const garde = await exigerEditeur();
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { supabase } = garde;
     const { data: ressource } = await supabase.from("ressources").select("format").eq("id", entree.id).maybeSingle();
@@ -513,7 +535,7 @@ export async function updateRessource(entree: { id: string; titre: string; telec
 export async function deleteRessource(id: string): Promise<Resultat> {
   if (!estUuid(id)) return { ok: false, message: ECHEC };
   try {
-    const garde = await exigerEquipe();
+    const garde = await exigerEditeur();
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { supabase } = garde;
     const { data: ressource } = await supabase.from("ressources").select("fichier").eq("id", id).maybeSingle();
@@ -552,7 +574,7 @@ export async function enregistrerCouverture(formationId: string, chemin: string)
   if (!estUuid(formationId)) return { ok: false, message: ECHEC };
   if (!cheminValide(formationId, chemin)) return { ok: false, message: HORS_DOSSIER };
   try {
-    const garde = await exigerEquipe();
+    const garde = await exigerEditeur();
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { supabase } = garde;
     const ancienne = await couvertureActuelle(supabase, formationId);
@@ -570,13 +592,48 @@ export async function enregistrerCouverture(formationId: string, chemin: string)
 export async function retirerCouverture(formationId: string): Promise<Resultat> {
   if (!estUuid(formationId)) return { ok: false, message: ECHEC };
   try {
-    const garde = await exigerEquipe();
+    const garde = await exigerEditeur();
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { supabase } = garde;
     const ancienne = await couvertureActuelle(supabase, formationId);
     const { error } = await supabase.from("formations").update({ couverture: null }).eq("id", formationId);
     if (error) return { ok: false, message: ECHEC };
     await supprimerFichier(supabase, ancienne);
+  } catch {
+    return { ok: false, message: ECHEC };
+  }
+  refresh();
+  return { ok: true };
+}
+
+// ─── Relecture (spec de l'espace formateur, §2) ─────────────────────────────
+
+/** Le formateur envoie son brouillon en relecture ; la base vérifie que c'est le sien et qu'il a une leçon. */
+export async function envoyerEnRelecture(id: string): Promise<Resultat> {
+  if (!estUuid(id)) return { ok: false, message: ECHEC };
+  try {
+    const garde = await exigerEditeur();
+    if ("erreur" in garde) return { ok: false, message: garde.erreur };
+    const { error } = await garde.supabase.rpc("envoyer_en_relecture", { p_formation: id });
+    if (error) return { ok: false, message: error.code === "P0001" && error.message ? typographie(error.message) : ECHEC };
+  } catch {
+    return { ok: false, message: ECHEC };
+  }
+  refresh();
+  return { ok: true };
+}
+
+/** L'équipe renvoie une formation en attente à son formateur, avec une remarque (obligatoire, 1 000 caractères au plus). */
+export async function renvoyerAuFormateur(id: string, remarque: string): Promise<Resultat> {
+  if (!estUuid(id)) return { ok: false, message: ECHEC };
+  try {
+    const garde = await exigerEquipe();
+    if ("erreur" in garde) return { ok: false, message: garde.erreur };
+    const { error } = await garde.supabase.rpc("renvoyer_au_formateur", { p_formation: id, p_remarque: (remarque ?? "").trim().slice(0, 1000) });
+    if (error) {
+      if (error.code === "42501") return { ok: false, message: ACCES_EQUIPE };
+      return { ok: false, message: error.code === "P0001" && error.message ? typographie(error.message) : ECHEC };
+    }
   } catch {
     return { ok: false, message: ECHEC };
   }

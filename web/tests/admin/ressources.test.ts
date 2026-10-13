@@ -87,9 +87,9 @@ describe("Back-office : ressources d'une leçon", () => {
     getShellUser.mockResolvedValue({ roles: ["etudiant"] });
     expect(await addRessource({ leconId: L, titre: "X", fichier: FICHIER, format: "application/pdf", tailleOctets: 10 })).toEqual({
       ok: false,
-      message: "Accès réservé à l’équipe.",
+      message: "Accès réservé aux formateurs et à l’équipe.",
     });
-    expect(await deleteRessource(R)).toEqual({ ok: false, message: "Accès réservé à l’équipe." });
+    expect(await deleteRessource(R)).toEqual({ ok: false, message: "Accès réservé aux formateurs et à l’équipe." });
     expect(faux.appels).toEqual([]);
   });
 });

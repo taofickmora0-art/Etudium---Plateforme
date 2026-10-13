@@ -79,9 +79,9 @@ describe("Back-office : programme d'une formation", () => {
 
   it("un étudiant ne supprime rien", async () => {
     getShellUser.mockResolvedValue({ roles: ["etudiant"] });
-    expect(await deleteModule(M)).toEqual({ ok: false, message: "Accès réservé à l’équipe." });
-    expect(await deleteLecon(L)).toEqual({ ok: false, message: "Accès réservé à l’équipe." });
-    expect((await addModule(IDLE, form({ formation_id: F, titre: "Pirate" }))).message).toBe("Accès réservé à l’équipe.");
+    expect(await deleteModule(M)).toEqual({ ok: false, message: "Accès réservé aux formateurs et à l’équipe." });
+    expect(await deleteLecon(L)).toEqual({ ok: false, message: "Accès réservé aux formateurs et à l’équipe." });
+    expect((await addModule(IDLE, form({ formation_id: F, titre: "Pirate" }))).message).toBe("Accès réservé aux formateurs et à l’équipe.");
     expect(faux.appels).toEqual([]);
   });
 });

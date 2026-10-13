@@ -167,7 +167,7 @@ describe("Back-office : formations", () => {
   it("un étudiant ne publie ni n'efface rien", async () => {
     getShellUser.mockResolvedValue({ roles: ["etudiant"] });
     expect(await setStatutFormation(F, "publiee")).toEqual({ ok: false, message: "Accès réservé à l’équipe." });
-    expect(await deleteFormation(F)).toEqual({ ok: false, message: "Accès réservé à l’équipe." });
+    expect(await deleteFormation(F)).toEqual({ ok: false, message: "Accès réservé aux formateurs et à l’équipe." });
     expect(faux.appels).toEqual([]);
   });
 });

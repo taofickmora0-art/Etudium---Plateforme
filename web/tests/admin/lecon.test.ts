@@ -87,7 +87,7 @@ describe("Back-office : une leçon", () => {
 
   it("un étudiant ne modifie pas une leçon", async () => {
     getShellUser.mockResolvedValue({ roles: ["etudiant"] });
-    expect((await saveLecon(IDLE, form(SAISIE))).message).toBe("Accès réservé à l’équipe.");
+    expect((await saveLecon(IDLE, form(SAISIE))).message).toBe("Accès réservé aux formateurs et à l’équipe.");
     expect(faux.appels).toEqual([]);
   });
 });
