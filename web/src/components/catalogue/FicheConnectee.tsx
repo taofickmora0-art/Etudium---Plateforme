@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight01Icon, ArrowRight02Icon, Clock01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
+import { BoutonFavori } from "@/components/favoris/BoutonFavori";
 import { Icon } from "@/components/ui/Icon";
 import { MetaDot, ProgressBar } from "@/components/ui/Progress";
 import { Tag, type TagTone } from "@/components/ui/Tag";
@@ -79,7 +80,7 @@ function Reprise({ fiche, progression }: { fiche: FicheFormation; progression: E
  * Carte d'accès (à droite). Formation commencée (1.7) : la progression, puis « Continuer ». Sinon : commencer une
  * formation ouverte, voir l'aperçu, ou savoir qu'elle est verrouillée. Les favoris arrivent en 1.9, les formules au lot 2.
  */
-function CarteAcces({ fiche, progression }: { fiche: FicheFormation; progression: EtatProgression | null }) {
+function CarteAcces({ fiche, progression, favori }: { fiche: FicheFormation; progression: EtatProgression | null; favori: boolean | null }) {
   const etat = etatAcces(fiche, true);
   const parcours = [...fiche.parcours].sort((a, b) => a.ordre - b.ordre)[0];
   const premiere = premiereLeconOuverte(fiche);
@@ -126,6 +127,12 @@ function CarteAcces({ fiche, progression }: { fiche: FicheFormation; progression
           <p className="m-0 mt-2 text-sm leading-[22px] text-texte">Incluse dans les formules Basique, Standard et Premium.</p>
         </>
       )}
+      {/* Favoris (tâche 1.9) : absent tant que la table n'est pas dans la base (null). */}
+      {favori !== null && (
+        <div className="mt-2 flex">
+          <BoutonFavori formationId={fiche.id} favoriInitial={favori} />
+        </div>
+      )}
       {parcours && <p className="m-0 mt-3.5 text-center text-xs leading-[18px] text-pretty text-discret">Incluse dans le parcours {parcours.nom}.</p>}
     </div>
   );
@@ -135,7 +142,16 @@ function CarteAcces({ fiche, progression }: { fiche: FicheFormation; progression
  * Fiche formation pour un compte connecté (NdFormation) : en-tête, programme avec cadenas, carte d'accès. Avec la
  * progression du compte (1.7) : « Votre progression », « Continuer », leçons terminées et « Vous êtes ici ».
  */
-export function FicheConnectee({ fiche, progression = null }: { fiche: FicheFormation; progression?: EtatProgression | null }) {
+export function FicheConnectee({
+  fiche,
+  progression = null,
+  favori = null,
+}: {
+  fiche: FicheFormation;
+  progression?: EtatProgression | null;
+  /** Formation dans les favoris du compte ; null sans la table des favoris (migration 0009). */
+  favori?: boolean | null;
+}) {
   const parcours = [...fiche.parcours].sort((a, b) => a.ordre - b.ordre)[0];
   const duree = dureeLisible(fiche.dureeSecondes);
   const meta = [duree, libelleNiveau(fiche.niveau), fiche.nbLecons > 0 ? nombreDeLecons(fiche.nbLecons) : "", fiche.formateur?.nom ?? ""].filter(Boolean);
@@ -223,7 +239,7 @@ export function FicheConnectee({ fiche, progression = null }: { fiche: FicheForm
         </div>
         <div className="min-w-0 flex-[1_1_300px]">
           <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(216px,calc((100%-32px)/3))),1fr))] gap-4">
-            <CarteAcces fiche={fiche} progression={progression} />
+            <CarteAcces fiche={fiche} progression={progression} favori={favori} />
             {fiche.formateur && <CarteFormateur formateur={fiche.formateur} variante="connecte" />}
             <div className={CARTE}>
               <h3 className="m-0 text-base leading-6 font-semibold text-encre">Inclus dans la formation</h3>

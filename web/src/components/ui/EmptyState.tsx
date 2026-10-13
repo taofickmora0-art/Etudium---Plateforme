@@ -11,14 +11,16 @@ type EmptyStateProps = {
   description: string;
   /** Un ou deux boutons. */
   action?: ReactNode;
+  /** Sans cadre (page Favoris vide) : ni bordure ni fond, plus d'espace autour. */
+  sansCadre?: boolean;
   className?: string;
 };
 
 /** État vide (planche « Messages », « États vides ») : dit pourquoi c'est vide et quoi faire. */
-export function EmptyState({ icon, illustration, title, description, action, className }: EmptyStateProps) {
+export function EmptyState({ icon, illustration, title, description, action, sansCadre = false, className }: EmptyStateProps) {
   return (
-    <div className={cn("box-border flex min-w-0 flex-col rounded-carte border border-bordure-carte bg-panneau", className)}>
-      <div className="flex flex-col items-center gap-1.5 px-6 py-12 text-center">
+    <div className={cn("box-border flex min-w-0 flex-col", !sansCadre && "rounded-carte border border-bordure-carte bg-panneau", className)}>
+      <div className={cn("flex flex-col items-center gap-1.5 px-6 text-center", sansCadre ? "py-[72px]" : "py-12")}>
         {illustration ??
           (icon && (
             <span className="flex size-14 flex-none items-center justify-center rounded-carte bg-coque text-texte">
