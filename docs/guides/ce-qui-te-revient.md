@@ -309,3 +309,18 @@ Pas de migration pour cette tâche : il faut seulement que la 0003 à la 0009 so
 4. Rond de profil → **Espace étudiant** : le menu habituel revient.
 5. Sur téléphone, la barre du bas suit l’espace où tu te trouves.
 
+## 17. Valider les images de couverture, 10 minutes
+
+1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0012_couvertures.sql` (après la 0011).
+   - Dans **Storage**, un espace **couvertures** apparaît, marqué public.
+2. Relance l’application. Toutes les cartes de formation ont maintenant une couverture en haut, aux couleurs de leur parcours (bleu, violet ou orange) tant qu’aucune image n’est envoyée.
+3. Back-office → **Formations** → une formation → onglet **Informations** → bloc **Image de couverture** :
+   - **Choisir une image** : une photo JPG, PNG ou WebP (idéalement 1280 × 720) ; « Image de couverture enregistrée. » ;
+   - essaie aussi un PDF renommé en `.jpg` (« Choisissez une image JPG, PNG ou WebP. ») et une image de plus de 5 Mo (« L’image dépasse 5 Mo. »).
+4. Vérifie l’image :
+   - sur la carte du catalogue, avec son badge posé dessus ;
+   - sur la fiche (visiteur, en navigation privée, et connecté) ;
+   - sur la carte « Continuer » de l’Accueil et en haut du programme d’une leçon, si tu l’as commencée.
+5. **Remplacer** une image, puis **Retirer** (confirmation) : la couverture par défaut revient. Dans **Storage → couvertures**, l’ancien fichier a disparu.
+6. Le partage WhatsApp de la fiche montrera la couverture : on le vérifiera à la mise en ligne.
+
