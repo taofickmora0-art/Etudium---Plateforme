@@ -190,4 +190,220 @@ revoke execute on function public.reactiver_compte(uuid) from public, anon;
 grant execute on function public.suspendre_compte(uuid, text) to authenticated;
 grant execute on function public.reactiver_compte(uuid) to authenticated;
 
+-- ─── Lire les comptes (équipe du back-office) ───────────────────────────────────────────────────────
+-- L'adresse e-mail et la dernière connexion sont dans l'authentification de Supabase, que l'application ne lit pas :
+-- ces fonctions les lisent pour l'équipe seulement.
+
+-- Minuscules et sans accents, pour chercher « Fifamè » en tapant « fifame ».
+create or replace function public.sans_accents(t text)
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select lower(translate(
+    coalesce(t, ''),
+    'àâäáãåéèêëíìîïóòôöõúùûüçñÿÀÂÄÁÃÅÉÈÊËÍÌÎÏÓÒÔÖÕÚÙÛÜÇÑŸ',
+    'aaaaaaeeeeiiiiooooouuuucnyAAAAAAEEEEIIIIOOOOOUUUUCNY'
+  ));
+$$;
+
+-- Une page de 25 comptes, les plus récents d'abord, et le nombre total. Recherche dans le nom (sans accents ni
+-- majuscules) ou l'adresse e-mail, par simple inclusion (strpos : « % » ou « _ » ne sont jamais des jokers).
+-- Filtres : etudiants (aucun autre rôle), formateurs, equipe, suspendus ; toute autre valeur : tous.
+create or replace function public.comptes_equipe(p_recherche text default '', p_filtre text default 'tous', p_page integer default 1)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_q text := public.sans_accents(btrim(coalesce(p_recherche, '')));
+  v_page integer := greatest(coalesce(p_page, 1), 1);
+  v_resultat jsonb;
+begin
+  if not public.equipe_contenus() then
+    raise exception 'Accès réservé à l’équipe.' using errcode = '42501';
+  end if;
+
+  with comptes as (
+    select
+      p.id, p.prenom, p.nom, coalesce(u.email, '') as email, p.cree_le, u.last_sign_in_at,
+      coalesce((select array_agg(r.role order by r.role) from public.roles r where r.profil_id = p.id), '{}') as roles,
+      exists (select 1 from public.suspensions s where s.profil_id = p.id) as suspendu
+    from public.profils p
+    left join auth.users u on u.id = p.id
+  ),
+  retenus as (
+    select * from comptes c
+    where (v_q = '' or strpos(public.sans_accents(c.prenom || ' ' || c.nom), v_q) > 0 or strpos(lower(c.email), v_q) > 0)
+      and case p_filtre
+        when 'etudiants' then not (c.roles && array['formateur', 'moderateur', 'admin', 'super_admin']::public.role_etudium[])
+        when 'formateurs' then 'formateur' = any (c.roles)
+        when 'equipe' then c.roles && array['moderateur', 'admin', 'super_admin']::public.role_etudium[]
+        when 'suspendus' then c.suspendu
+        else true
+      end
+  ),
+  page as (
+    select * from retenus order by cree_le desc, id limit 25 offset (v_page - 1) * 25
+  )
+  select jsonb_build_object(
+    'total', (select count(*) from retenus),
+    'comptes', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', g.id,
+        'prenom', g.prenom,
+        'nom', g.nom,
+        'email', g.email,
+        'roles', to_jsonb(g.roles::text[]),
+        'inscrit_le', g.cree_le,
+        'derniere_connexion', g.last_sign_in_at,
+        'suspendu', g.suspendu
+      ) order by g.cree_le desc, g.id)
+      from page g
+    ), '[]'::jsonb)
+  ) into v_resultat;
+  return v_resultat;
+end;
+$$;
+
+-- La fiche d'un compte : identité, rôles, suspension, fiche formateur reliée, formations suivies (au moins une
+-- leçon ouverte) et avis laissés. Null si le compte n'existe pas.
+create or replace function public.compte_equipe(p_compte uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_resultat jsonb;
+begin
+  if not public.equipe_contenus() then
+    raise exception 'Accès réservé à l’équipe.' using errcode = '42501';
+  end if;
+
+  select jsonb_build_object(
+    'id', p.id,
+    'prenom', p.prenom,
+    'nom', p.nom,
+    'email', coalesce(u.email, ''),
+    'inscrit_le', p.cree_le,
+    'derniere_connexion', u.last_sign_in_at,
+    'roles', to_jsonb(coalesce((select array_agg(r.role order by r.role) from public.roles r where r.profil_id = p.id), '{}')::text[]),
+    'suspension', (
+      select jsonb_build_object('depuis', s.depuis, 'par_nom', coalesce(btrim(a.prenom || ' ' || a.nom), ''), 'motif', s.motif)
+      from public.suspensions s
+      left join public.profils a on a.id = s.par
+      where s.profil_id = p.id
+    ),
+    'fiche_formateur', (select jsonb_build_object('id', f.id, 'nom', f.nom) from public.formateurs f where f.compte_id = p.id),
+    'formations', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', t.id, 'titre', t.titre, 'slug', t.slug, 'terminees', t.terminees, 'total', t.total, 'derniere_activite', t.derniere_activite
+      ) order by t.derniere_activite desc)
+      from (
+        select
+          fo.id, fo.titre, fo.slug,
+          count(pl.terminee_le) as terminees,
+          (select count(*) from public.lecons l2 join public.modules m2 on m2.id = l2.module_id where m2.formation_id = fo.id) as total,
+          max(greatest(pl.vue_le, pl.terminee_le, pl.dernier_envoi)) as derniere_activite
+        from public.progression_lecons pl
+        join public.lecons l on l.id = pl.lecon_id
+        join public.modules m on m.id = l.module_id
+        join public.formations fo on fo.id = m.formation_id
+        where pl.profil_id = p.id
+        group by fo.id
+      ) t
+    ), '[]'::jsonb),
+    'avis', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', av.id, 'formation_titre', fo.titre, 'note', av.note, 'commentaire', av.commentaire, 'masque', av.masque, 'cree_le', av.cree_le
+      ) order by av.cree_le desc)
+      from public.avis av
+      join public.formations fo on fo.id = av.formation_id
+      where av.profil_id = p.id
+    ), '[]'::jsonb)
+  ) into v_resultat
+  from public.profils p
+  left join auth.users u on u.id = p.id
+  where p.id = p_compte;
+  return v_resultat;
+end;
+$$;
+
+-- ─── Changer les rôles d'un compte (super admin seul) ───────────────────────────────────────────────
+-- Une fiche formateur n'est reliée qu'à un compte.
+create unique index if not exists formateurs_compte_unique on public.formateurs (compte_id) where compte_id is not null;
+
+-- D'un seul coup : les rôles voulus (Étudiant toujours gardé) et, pour Formateur, la fiche reliée (existante libre,
+-- ou créée à son nom). Retirer Formateur détache la fiche, qui reste avec ses formations.
+create or replace function public.changer_roles(
+  p_compte uuid,
+  p_roles public.role_etudium[],
+  p_fiche uuid default null,
+  p_nouvelle_fiche boolean default false
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_prenom text;
+  v_nom text;
+  v_roles public.role_etudium[];
+  v_actuels public.role_etudium[];
+begin
+  if not public.a_role('super_admin') then
+    raise exception 'Seul le super admin change les rôles.' using errcode = '42501';
+  end if;
+  select prenom, nom into v_prenom, v_nom from public.profils where id = p_compte;
+  if not found then
+    raise exception 'Compte introuvable.';
+  end if;
+
+  select coalesce(array_agg(distinct r), '{}') into v_roles from unnest(coalesce(p_roles, '{}') || 'etudiant'::public.role_etudium) r;
+  select coalesce(array_agg(role), '{}') into v_actuels from public.roles where profil_id = p_compte;
+
+  if p_compte = (select auth.uid()) and not ('super_admin' = any (v_roles)) then
+    raise exception 'Vous ne pouvez pas vous retirer le rôle super admin.';
+  end if;
+  if exists (select 1 from public.suspensions where profil_id = p_compte)
+     and not (array_remove(v_roles, 'etudiant') <@ v_actuels) then
+    raise exception 'Réactivez le compte avant de lui donner un rôle.';
+  end if;
+
+  if 'formateur' = any (v_roles) then
+    if not exists (select 1 from public.formateurs where compte_id = p_compte) then
+      if p_nouvelle_fiche then
+        insert into public.formateurs (nom, compte_id)
+        values (left(coalesce(nullif(btrim(v_prenom || ' ' || v_nom), ''), 'Formateur'), 80), p_compte);
+      elsif p_fiche is not null then
+        update public.formateurs set compte_id = p_compte where id = p_fiche and compte_id is null;
+        if not found then
+          raise exception 'Cette fiche formateur n’existe plus ou est déjà reliée à un compte.';
+        end if;
+      else
+        raise exception 'Choisissez la fiche formateur de ce compte.';
+      end if;
+    end if;
+  else
+    update public.formateurs set compte_id = null where compte_id = p_compte;
+  end if;
+
+  delete from public.roles where profil_id = p_compte and not (role = any (v_roles));
+  insert into public.roles (profil_id, role) select p_compte, r from unnest(v_roles) r on conflict do nothing;
+end;
+$$;
+
+revoke execute on function public.comptes_equipe(text, text, integer) from public, anon;
+revoke execute on function public.compte_equipe(uuid) from public, anon;
+revoke execute on function public.changer_roles(uuid, public.role_etudium[], uuid, boolean) from public, anon;
+grant execute on function public.comptes_equipe(text, text, integer) to authenticated;
+grant execute on function public.compte_equipe(uuid) to authenticated;
+grant execute on function public.changer_roles(uuid, public.role_etudium[], uuid, boolean) to authenticated;
+
 commit;
