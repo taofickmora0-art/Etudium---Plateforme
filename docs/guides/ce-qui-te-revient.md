@@ -298,3 +298,14 @@ Pas de migration pour cette tâche : il faut seulement que la 0003 à la 0009 so
    - Avec ton compte, tu le vois encore, marqué « Masqué par l’équipe ».
    - **Réafficher** le remet.
 
+## 16. Le tableau de bord du back-office et les menus par espace, 5 minutes
+
+1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0011_statistiques.sql` (après la 0010).
+2. Rond de profil → **Back-office** :
+   - le menu de gauche devient celui du back-office : Tableau de bord ; Contenus (Parcours, Formateurs, Formations, Avis) ; Plateforme (Utilisateurs, Abonnements et paiements, Modération) ;
+   - le **Tableau de bord** montre les utilisateurs inscrits (et la croissance du mois), les nouveaux inscrits, les formations les plus suivies et la progression moyenne ;
+   - les revenus, les abonnés et le taux de conversion affichent « Disponible au lot 2 », les sessions live « Disponible au lot 5 ».
+3. Rond de profil → **Espace formateur** : son propre menu (Tableau de bord, Mes formations, Apprenants, Corrections, Sessions live, Messages), en « Bientôt disponible » pour l’instant.
+4. Rond de profil → **Espace étudiant** : le menu habituel revient.
+5. Sur téléphone, la barre du bas suit l’espace où tu te trouves.
+

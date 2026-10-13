@@ -1,8 +1,9 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { PageAdmin } from "@/components/admin/PageAdmin";
-import { ResumeBackOffice } from "@/components/admin/ResumeBackOffice";
+import { TableauDeBordAdmin } from "@/components/admin/TableauDeBordAdmin";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { lireStatistiques } from "@/lib/admin/statistiques";
 import { requireSpace } from "@/lib/auth/require-space";
 
 export const metadata: Metadata = { title: "Back-office · Étudium" };
@@ -10,8 +11,8 @@ export const metadata: Metadata = { title: "Back-office · Étudium" };
 async function AccueilAdmin() {
   await requireSpace("admin");
   return (
-    <PageAdmin titre="Back-office" description="Saisissez les parcours, les formateurs et les formations. Les étudiants ne voient que les formations publiées.">
-      <ResumeBackOffice />
+    <PageAdmin titre="Tableau de bord" description="Vue d’ensemble de la plateforme : inscriptions, apprentissage et, à partir du lot 2, revenus.">
+      <TableauDeBordAdmin stats={await lireStatistiques()} />
     </PageAdmin>
   );
 }

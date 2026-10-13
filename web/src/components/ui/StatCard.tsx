@@ -12,10 +12,12 @@ type StatCardProps = {
   /** Couleur de la pastille d'icône : neutre, réussite (certificats), attention (série). */
   tone?: Exclude<IconTileTone, "blanc">;
   className?: string;
+  /** Sous le chiffre (barre de progression…). */
+  children?: ReactNode;
 };
 
 /** Indicateur du tableau de bord (planche « Cartes », « Carte de catalogue et indicateurs »). */
-export function StatCard({ label, value, hint, icon, tone = "neutre", className }: StatCardProps) {
+export function StatCard({ label, value, hint, icon, tone = "neutre", className, children }: StatCardProps) {
   return (
     <div className={cn("box-border flex min-w-0 flex-col rounded-carte border border-bordure-carte bg-panneau px-[19px] pt-[18px] pb-4", className)}>
       <div className="flex items-center gap-3">
@@ -24,6 +26,7 @@ export function StatCard({ label, value, hint, icon, tone = "neutre", className 
       </div>
       <div className="mt-3.5 text-[28px] leading-9 font-medium tracking-[-0.01em] text-titre">{value}</div>
       {hint && <div className="mt-0.5 text-xs leading-[18px] text-discret">{hint}</div>}
+      {children}
     </div>
   );
 }

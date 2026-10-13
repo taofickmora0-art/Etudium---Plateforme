@@ -73,13 +73,3 @@ export type LeconAdmin = {
   ressources: RessourceAdmin[];
 };
 
-export type ResumeContenus = {
-  parcours: number;
-  formateurs: number;
-  publiees: number;
-  brouillons: number;
-  archivees: number;
-  /** Avis des étudiants ; null sans la migration 0010. */
-  avis: number | null;
-  avisMasques: number;
-};

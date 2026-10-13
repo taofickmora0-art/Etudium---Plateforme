@@ -70,8 +70,8 @@ describe("Migration 0011 : statistiques du back-office", () => {
         "insert into public.formations (slug, titre, statut, publiee_le) values ('formation-courte', 'Formation courte', 'publiee', now()) returning id",
       )
     ).rows[0].id;
-    const module = (await banc.db.query<{ id: string }>("insert into public.modules (formation_id, titre, ordre) values ($1, 'Seul module', 1) returning id", [courte])).rows[0].id;
-    await banc.db.query("insert into public.lecons (module_id, titre, duree_secondes, ordre) values ($1, 'Une', 60, 1), ($1, 'Deux', 60, 2)", [module]);
+    const mod = (await banc.db.query<{ id: string }>("insert into public.modules (formation_id, titre, ordre) values ($1, 'Seul module', 1) returning id", [courte])).rows[0].id;
+    await banc.db.query("insert into public.lecons (module_id, titre, duree_secondes, ordre) values ($1, 'Une', 60, 1), ($1, 'Deux', 60, 2)", [mod]);
 
     // Progression : E1 a terminé 6 leçons d'Excel sur 12 (50 %) et la formation courte (100 %) ; E2 a ouvert une leçon
     // d'Excel sans la terminer (0 %). Moyenne : (50 + 100 + 0) / 3 = 50.

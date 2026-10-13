@@ -5,7 +5,7 @@ const faux = fauxSupabase();
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => faux.client }));
 vi.mock("@/lib/auth/current-user", () => ({ demoModeActive: () => false }));
 
-const { getFormationAdmin, getLeconAdmin, compterContenus, listParcours, TablesAbsentesError } = await import("@/lib/admin/data");
+const { getFormationAdmin, getLeconAdmin, listParcours, TablesAbsentesError } = await import("@/lib/admin/data");
 
 describe("Lecture des contenus du back-office", () => {
   beforeEach(() => {
@@ -88,15 +88,5 @@ describe("Lecture des contenus du back-office", () => {
   it("les tables absentes sont signalées", async () => {
     faux.repondre("parcours.select", { error: { code: "PGRST205", message: "Could not find the table" } });
     await expect(listParcours()).rejects.toBeInstanceOf(TablesAbsentesError);
-  });
-
-  it("le résumé du back-office compte les formations par statut", async () => {
-    faux.repondre("parcours.select", { count: 3 });
-    faux.repondre("formateurs.select", { count: 1 });
-    faux.repondre("formations.select", { data: [{ statut: "publiee" }, { statut: "publiee" }, { statut: "brouillon" }] });
-    faux.repondre("rpc.avis_equipe", { data: [{ masque: false }, { masque: true }, { masque: false }] });
-    expect(await compterContenus()).toEqual({ parcours: 3, formateurs: 1, publiees: 2, brouillons: 1, archivees: 0, avis: 3, avisMasques: 1 });
-    faux.repondre("rpc.avis_equipe", { error: { code: "PGRST202" } });
-    expect(await compterContenus()).toMatchObject({ avis: null, avisMasques: 0 });
   });
 });
