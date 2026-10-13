@@ -80,6 +80,15 @@ describe("Page Mes parcours", () => {
     expect(within(liste).getAllByRole("link")).toHaveLength(3);
   });
 
+  it("s'ouvre sur le parcours demandé (« Voir le parcours » du tableau de bord) ; un parcours inconnu ouvre le premier", () => {
+    const { unmount } = render(<MesParcours parcours={PARCOURS} cartes={CARTES_DESIGN} progressions={new Map()} initial="competences-digitales" />);
+    expect(screen.getByRole("tab", { name: "Digital" })).toHaveAttribute("aria-selected", "true");
+    expect(within(screen.getByRole("tabpanel")).getByRole("heading", { name: "Compétences digitales" })).toBeInTheDocument();
+    unmount();
+    render(<MesParcours parcours={PARCOURS} cartes={CARTES_DESIGN} progressions={new Map()} initial="inconnu" />);
+    expect(screen.getByRole("tab", { name: "Académique" })).toHaveAttribute("aria-selected", "true");
+  });
+
   it("sans parcours, la page le dit", () => {
     render(<MesParcours parcours={[]} cartes={[]} progressions={new Map()} />);
     expect(screen.getByText("Aucun parcours pour le moment")).toBeInTheDocument();

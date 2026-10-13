@@ -38,9 +38,9 @@ export function CarteReprise({ reprise }: { reprise: Reprise }) {
             Reprendre la leçon
           </Link>
         </Button>
-        {reprise.etiquette && (
+        {reprise.lienParcours && (
           <Button asChild variant="gris" className="max-sm:hidden">
-            <Link href="/parcours" aria-describedby={titre}>
+            <Link href={reprise.lienParcours} aria-describedby={titre}>
               Voir le parcours
             </Link>
           </Button>

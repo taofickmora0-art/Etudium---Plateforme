@@ -50,7 +50,7 @@ describe("Tableau de bord", () => {
     const reprendre = within(bloc).getByRole("link", { name: "Reprendre la leçon" });
     expect(reprendre).toHaveAttribute("href", `/formations/maitriser-microsoft-excel/lecons/${id(2)}`);
     expect(reprendre).toHaveAccessibleDescription("Maîtriser Microsoft Excel");
-    expect(within(bloc).getByRole("link", { name: "Voir le parcours" })).toHaveAttribute("href", "/parcours");
+    expect(within(bloc).getByRole("link", { name: "Voir le parcours" })).toHaveAttribute("href", "/parcours?parcours=reussite-academique");
   });
 
   it("« À faire » : la leçon suivante des autres formations en cours", () => {

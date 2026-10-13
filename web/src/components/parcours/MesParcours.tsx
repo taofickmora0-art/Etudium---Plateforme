@@ -12,7 +12,9 @@ import { cn } from "@/lib/cn";
 import type { CouleurParcours } from "@/lib/contenus/libelles";
 import { etatFormation, formationsDuParcours, progressionDuParcours, type ProgressionFormation } from "@/lib/parcours/regles";
 
-type Props = { parcours: ParcoursCatalogue[]; cartes: CarteCatalogue[]; progressions: Map<string, ProgressionFormation> };
+type Props = { parcours: ParcoursCatalogue[]; cartes: CarteCatalogue[]; progressions: Map<string, ProgressionFormation>   /** Parcours de l'onglet ouvert au départ (`/parcours?parcours=…`) ; le premier s'il est inconnu. */
+  initial?: string;
+};
 
 /** Tuile de 48 px aux couleurs du parcours (NdParcours). */
 const TUILE: Record<CouleurParcours, string> = {
@@ -119,7 +121,7 @@ function PanneauParcours({ parcours, cartes, progressions }: { parcours: Parcour
 }
 
 /** Mes parcours (NdParcours) : un onglet par parcours, sa progression et ses formations. */
-export function MesParcours({ parcours, cartes, progressions }: Props) {
+export function MesParcours({ parcours, cartes, progressions, initial }: Props) {
   return (
     <div className="flex flex-col">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -139,6 +141,7 @@ export function MesParcours({ parcours, cartes, progressions }: Props) {
         ) : (
           <SegmentedTabs
             label="Choisir un parcours"
+            defaultValue={parcours.some((p) => p.slug === initial) ? initial : undefined}
             items={parcours.map((p) => ({
               value: p.slug,
               label: p.nomCourt,

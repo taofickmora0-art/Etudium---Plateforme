@@ -6,12 +6,12 @@ import { Skeleton } from "@/components/ui/Skeleton";
 
 export const metadata: Metadata = { title: "Mes parcours · Étudium" };
 
-/** Mes parcours (NdParcours) : chaque parcours, son état et ses formations. */
-export default function Page() {
+/** Mes parcours (NdParcours) : chaque parcours, son état et ses formations ; `?parcours=…` choisit l'onglet ouvert. */
+export default function Page({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   return (
     <>
       <Suspense fallback={<Skeleton className="h-96 rounded-panneau" />}>
-        <PageMesParcours />
+        <PageMesParcours searchParams={searchParams} />
       </Suspense>
       <Suspense fallback={null}>
         <SessionGuard />

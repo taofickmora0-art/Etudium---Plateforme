@@ -13,6 +13,8 @@ export type Reprise = {
   parcours: CouleurParcours;
   /** Parcours principal (« Académique »), absent pour une formation hors parcours. */
   etiquette: { tone: CouleurParcours; libelle: string } | null;
+  /** « Voir le parcours » : Mes parcours, ouvert sur ce parcours ; absent hors parcours. */
+  lienParcours: string | null;
   /** « Module 3 · Les tableaux croisés dynamiques · 12 min ». */
   sousTitre: string;
   pourcentage: number;
@@ -53,6 +55,7 @@ function reprise(suivie: FormationSuivie): Reprise | null {
     titre: fiche.titre,
     parcours: parcoursPrincipal(fiche),
     etiquette: principal ? { tone: principal.couleur, libelle: principal.nomCourt } : null,
+    lienParcours: principal ? `/parcours?parcours=${principal.slug}` : null,
     sousTitre: [`Module ${numero}`, lecon.titre, duree].filter(Boolean).join(" · "),
     pourcentage: suivie.progression.pourcentage,
     temps: suivie.temps,

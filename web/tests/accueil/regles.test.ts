@@ -39,6 +39,7 @@ describe("Tableau de bord", () => {
       titre: "Maîtriser Microsoft Excel",
       parcours: "academique",
       etiquette: { tone: "academique", libelle: "Académique" },
+      lienParcours: "/parcours?parcours=reussite-academique",
       sousTitre: "Module 1 · Saisir et mettre en forme des données · 13 min",
       pourcentage: 8,
       temps: suivies.find((s) => s.fiche.id === EXCEL_OUVERTE.id)!.temps,

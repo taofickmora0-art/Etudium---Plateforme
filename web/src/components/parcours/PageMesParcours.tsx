@@ -8,7 +8,9 @@ import { MesParcours } from "./MesParcours";
  * Lit les parcours, les formations publiées et la progression du compte, puis affiche Mes parcours.
  * Sans progression en base (migrations 0007 et 0008 pas encore appliquées), tout est à 0 %.
  */
-export async function PageMesParcours() {
+export async function PageMesParcours({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> } = {}) {
+  const demande = (await searchParams)?.parcours;
+  const initial = Array.isArray(demande) ? demande[0] : demande;
   let donnees;
   try {
     donnees = await Promise.all([listParcoursCatalogue(), listCatalogue(), lireProgression()]);
@@ -16,5 +18,7 @@ export async function PageMesParcours() {
     return siTablesAbsentes(erreur);
   }
   const [parcours, cartes, lignes] = donnees;
-  return <MesParcours parcours={parcours} cartes={cartes} progressions={lignes ? progressionsParFormation(cartes, lignes) : new Map()} />;
+  return (
+    <MesParcours parcours={parcours} cartes={cartes} progressions={lignes ? progressionsParFormation(cartes, lignes) : new Map()} initial={initial} />
+  );
 }
