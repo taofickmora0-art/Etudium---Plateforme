@@ -304,4 +304,60 @@ begin
 end;
 $$;
 
+-- ─── Relecture ──────────────────────────────────────────────────────────────────────────────────────
+-- Le formateur envoie son brouillon (au moins une leçon) ; il peut encore le modifier pendant la relecture.
+create or replace function public.envoyer_en_relecture(p_formation uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.formateur_de(p_formation) then
+    raise exception 'Cette formation n’est pas la vôtre.' using errcode = '42501';
+  end if;
+  if not exists (select 1 from public.formations where id = p_formation and statut = 'brouillon') then
+    raise exception 'Seul un brouillon s’envoie en relecture.';
+  end if;
+  if not exists (
+    select 1 from public.lecons l join public.modules m on m.id = l.module_id where m.formation_id = p_formation
+  ) then
+    raise exception 'Ajoutez au moins une leçon avant d’envoyer la formation en relecture.';
+  end if;
+  update public.formations
+  set envoyee_le = now(), renvoyee_le = null, remarque_relecture = null
+  where id = p_formation;
+end;
+$$;
+
+-- L'équipe renvoie une formation en attente à son formateur, avec une remarque (obligatoire).
+create or replace function public.renvoyer_au_formateur(p_formation uuid, p_remarque text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_remarque text := regexp_replace(coalesce(p_remarque, ''), '^\s+|\s+$', '', 'g');
+begin
+  if not public.equipe_contenus() then
+    raise exception 'Accès réservé à l’équipe.' using errcode = '42501';
+  end if;
+  if char_length(v_remarque) = 0 or char_length(v_remarque) > 1000 then
+    raise exception 'Écrivez une remarque pour le formateur (1 000 caractères au plus).';
+  end if;
+  if not exists (select 1 from public.formations where id = p_formation and statut = 'brouillon' and envoyee_le is not null) then
+    raise exception 'Cette formation n’attend pas de validation.';
+  end if;
+  update public.formations
+  set envoyee_le = null, renvoyee_le = now(), remarque_relecture = v_remarque
+  where id = p_formation;
+end;
+$$;
+
+revoke execute on function public.envoyer_en_relecture(uuid) from public, anon;
+revoke execute on function public.renvoyer_au_formateur(uuid, text) from public, anon;
+grant execute on function public.envoyer_en_relecture(uuid) to authenticated;
+grant execute on function public.renvoyer_au_formateur(uuid, text) to authenticated;
+
 commit;

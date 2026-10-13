@@ -213,3 +213,58 @@ describe("Migration 0014 : droits du formateur", () => {
     expect(await banc.en({ id: F }, "select id from public.formations where id = $1", [MA])).toEqual([{ id: MA }]);
   });
 });
+
+describe("Migration 0014 : relecture", () => {
+  const relecture = async (id: string) =>
+    un<{ envoyee: boolean; renvoyee: boolean; remarque: string | null; statut: string }>(
+      "select envoyee_le is not null as envoyee, renvoyee_le is not null as renvoyee, remarque_relecture as remarque, statut::text from public.formations where id = $1",
+      [id],
+    );
+
+  it("le formateur envoie son brouillon en relecture ; il peut encore le modifier", async () => {
+    await banc.en({ id: F }, "select public.envoyer_en_relecture($1)", [MA]);
+    expect(await relecture(MA)).toEqual({ envoyee: true, renvoyee: false, remarque: null, statut: "brouillon" });
+    await banc.en({ id: F }, "update public.formations set titre = 'Pendant la relecture' where id = $1", [MA]);
+    expect((await relecture(MA)).envoyee).toBe(true);
+  });
+
+  it("pas un brouillon vide, pas la formation d'un autre, pas une formation publiée", async () => {
+    const [vide] = await banc.en<{ id: string }>({ id: F }, "insert into public.formations (titre, slug) values ('Vide', 'vide-formateur') returning id");
+    await expect(banc.en({ id: F }, "select public.envoyer_en_relecture($1)", [vide.id])).rejects.toThrow(/au moins une leçon/);
+    await expect(banc.en({ id: F }, "select public.envoyer_en_relecture($1)", [AUTRE])).rejects.toThrow(/pas la vôtre/);
+    await expect(banc.en({ id: E }, "select public.envoyer_en_relecture($1)", [MA])).rejects.toThrow(/pas la vôtre/);
+    await expect(banc.en({ id: F }, "select public.envoyer_en_relecture($1)", [PUB])).rejects.toThrow(/Seul un brouillon/);
+    await expect(banc.en("anon", "select public.envoyer_en_relecture($1)", [MA])).rejects.toThrow(REFUS);
+  });
+
+  it("l'équipe renvoie avec une remarque ; le formateur la voit, corrige et renvoie", async () => {
+    await banc.en({ id: A }, "select public.renvoyer_au_formateur($1, '  Ajoutez une vidéo d’introduction.  ')", [MA]);
+    expect(await relecture(MA)).toEqual({ envoyee: false, renvoyee: true, remarque: "Ajoutez une vidéo d’introduction.", statut: "brouillon" });
+    expect(await banc.en({ id: F }, "select remarque_relecture from public.formations where id = $1", [MA])).toEqual([{ remarque_relecture: "Ajoutez une vidéo d’introduction." }]);
+    await banc.en({ id: F }, "select public.envoyer_en_relecture($1)", [MA]);
+    expect(await relecture(MA)).toEqual({ envoyee: true, renvoyee: false, remarque: null, statut: "brouillon" });
+  });
+
+  it("renvoyer : pas un formateur, pas une formation qui n'attend pas, pas sans remarque, pas plus de 1 000 caractères", async () => {
+    await expect(banc.en({ id: F }, "select public.renvoyer_au_formateur($1, 'Non')", [MA])).rejects.toThrow(/réservé à l’équipe/);
+    await expect(banc.en({ id: A }, "select public.renvoyer_au_formateur($1, 'Non')", [AUTRE])).rejects.toThrow(/n’attend pas de validation/);
+    await expect(banc.en({ id: A }, "select public.renvoyer_au_formateur($1, '   ')", [MA])).rejects.toThrow(/Écrivez une remarque/);
+    await expect(banc.en({ id: A }, "select public.renvoyer_au_formateur($1, $2)", [MA, "x".repeat(1001)])).rejects.toThrow(/1 000 caractères/);
+    await expect(banc.en("anon", "select public.renvoyer_au_formateur($1, 'Non')", [MA])).rejects.toThrow(REFUS);
+    expect((await relecture(MA)).envoyee).toBe(true);
+  });
+
+  it("publier efface l'envoi, le renvoi et la remarque", async () => {
+    await banc.en({ id: G }, "select public.envoyer_en_relecture($1)", [AUTRE]);
+    await banc.en({ id: A }, "select public.renvoyer_au_formateur($1, 'Une remarque')", [AUTRE]);
+    await banc.en({ id: G }, "select public.envoyer_en_relecture($1)", [AUTRE]);
+    await banc.en({ id: A }, "select public.renvoyer_au_formateur($1, 'Encore une')", [AUTRE]);
+    await banc.en({ id: A }, "update public.formations set statut = 'publiee' where id = $1", [AUTRE]);
+    expect(await relecture(AUTRE)).toEqual({ envoyee: false, renvoyee: false, remarque: null, statut: "publiee" });
+  });
+
+  it("la migration reste rejouable", async () => {
+    await banc.appliquer(MIGRATION);
+    expect((await relecture(MA)).envoyee).toBe(true);
+  });
+});
