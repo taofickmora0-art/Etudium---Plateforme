@@ -322,5 +322,7 @@ Pas de migration pour cette tâche : il faut seulement que la 0003 à la 0009 so
    - sur la fiche (visiteur, en navigation privée, et connecté) ;
    - sur la carte « Continuer » de l’Accueil et en haut du programme d’une leçon, si tu l’as commencée.
 5. **Remplacer** une image, puis **Retirer** (confirmation) : la couverture par défaut revient. Dans **Storage → couvertures**, l’ancien fichier a disparu.
-6. Le partage WhatsApp de la fiche montrera la couverture : on le vérifiera à la mise en ligne.
+6. L’image de partage : sur la fiche d’une formation qui a une couverture, clic droit → **Afficher le code source**, cherche `og:image` et ouvre l’adresse indiquée (comme à la section 14).
+   - C’est la couverture, cadrée en 1200 × 630 ; une photo prise au téléphone, en hauteur ou en largeur, est bien droite.
+   - Le vrai test WhatsApp (coller le lien dans une conversation) se fera à la mise en ligne.
 
