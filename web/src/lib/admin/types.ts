@@ -1,3 +1,4 @@
+import type { EtatFormation } from "@/lib/contenus/etat";
 import type { Badge, CouleurParcours, Niveau, StatutFormation } from "@/lib/contenus/libelles";
 import type { Video } from "./video";
 
@@ -25,6 +26,10 @@ export type FormationResume = {
   nbLecons: number;
   /** Noms courts des parcours (« Académique »). */
   parcours: string[];
+  /** État affiché, relecture comprise (migration 0014) : Brouillon, En attente de validation, À corriger… */
+  etat: EtatFormation;
+  /** Dernière modification par son formateur une fois en ligne (0014), ou null. */
+  modifieeParFormateurLe: string | null;
 };
 
 export type LeconResume = { id: string; titre: string; dureeSecondes: number; apercu: boolean; aVideo: boolean };
@@ -47,6 +52,10 @@ export type FormationAdmin = FormationResume & {
   modules: ModuleAdmin[];
   /** Chemin de l'image de couverture (migration 0012), ou null. */
   couverture: string | null;
+  /** Relecture (migration 0014) : envoyée par le formateur, renvoyée par l'équipe avec sa remarque. */
+  envoyeeLe: string | null;
+  renvoyeeLe: string | null;
+  remarqueRelecture: string | null;
 };
 
 export type RessourceAdmin = {

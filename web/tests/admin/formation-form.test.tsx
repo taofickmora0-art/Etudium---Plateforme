@@ -36,6 +36,11 @@ const FORMATION: FormationAdmin = {
   parcoursIds: ["p1"],
   modules: [],
   couverture: null,
+  etat: "publiee",
+  modifieeParFormateurLe: null,
+  envoyeeLe: null,
+  renvoyeeLe: null,
+  remarqueRelecture: null,
 };
 const PARCOURS = [
   { id: "p1", slug: "reussite-academique", nom: "Réussite académique", nomCourt: "Académique", description: "", couleur: "academique" as const, ordre: 1, actif: true },

@@ -1,4 +1,5 @@
 import { demoModeActive } from "@/lib/auth/current-user";
+import { etatFormation } from "@/lib/contenus/etat";
 import type { Badge, CouleurParcours, Niveau, StatutFormation } from "@/lib/contenus/libelles";
 import { estTablesAbsentes, lireAvecRepli, liste, parOrdre, TablesAbsentesError, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
@@ -100,31 +101,48 @@ export async function getFormateur(id: string): Promise<FormateurAdmin | null> {
   return ligne ? versFormateur(ligne as Ligne) : null;
 }
 
-export async function listFormations(): Promise<FormationResume[]> {
+const dateOuNull = (valeur: unknown) => (typeof valeur === "string" && valeur ? valeur : null);
+
+/** État et relecture d'une ligne (colonnes de la 0014, absentes avant elle). */
+function relecture(f: Ligne) {
+  const statut = f.statut as StatutFormation;
+  const envoyeeLe = dateOuNull(f.envoyee_le);
+  const renvoyeeLe = dateOuNull(f.renvoyee_le);
+  return { statut, etat: etatFormation({ statut, envoyeeLe, renvoyeeLe }), envoyeeLe, renvoyeeLe, modifieeParFormateurLe: dateOuNull(f.modifiee_par_formateur_le) };
+}
+
+/**
+ * Les formations, par titre ; avec un filtre, celles d'une fiche formateur, les plus récemment modifiées d'abord
+ * (espace formateur). Les colonnes de relecture (0014) sont facultatives.
+ */
+export async function listFormations(filtre?: { formateurId: string }): Promise<FormationResume[]> {
   if (demoModeActive()) return [];
   const supabase = await createClient();
-  const lignes = verifier(
-    await supabase
-      .from("formations")
-      .select("id, slug, titre, statut, niveau, formations_parcours(parcours(nom_court)), modules(lecons(id))")
-      .order("titre"),
-  );
-  return (lignes as Ligne[]).map((f) => ({
-    id: String(f.id),
-    slug: texte(f.slug),
-    titre: texte(f.titre),
-    statut: f.statut as StatutFormation,
-    niveau: f.niveau as Niveau,
-    nbLecons: liste(f.modules).reduce((total, m) => total + liste(m.lecons).length, 0),
-    parcours: nomsDesParcours(f),
-  }));
+  const lignes = await lireAvecRepli([", envoyee_le, renvoyee_le, modifiee_par_formateur_le", ""], (colonnes) => {
+    const requete = supabase.from("formations").select(`id, slug, titre, statut, niveau${colonnes}, formations_parcours(parcours(nom_court)), modules(lecons(id))`);
+    return filtre ? requete.eq("formateur_id", filtre.formateurId).order("modifie_le", { ascending: false }) : requete.order("titre");
+  });
+  return liste(lignes).map((f) => {
+    const { statut, etat, modifieeParFormateurLe } = relecture(f);
+    return {
+      id: String(f.id),
+      slug: texte(f.slug),
+      titre: texte(f.titre),
+      statut,
+      niveau: f.niveau as Niveau,
+      nbLecons: liste(f.modules).reduce((total, m) => total + liste(m.lecons).length, 0),
+      parcours: nomsDesParcours(f),
+      etat,
+      modifieeParFormateurLe,
+    };
+  });
 }
 
 export async function getFormationAdmin(id: string): Promise<FormationAdmin | null> {
   if (demoModeActive() || !estUuid(id)) return null;
   const supabase = await createClient();
-  // La couverture (0012) est facultative : sans la migration, le back-office s'ouvre sans elle.
-  const f = (await lireAvecRepli([", couverture", ""], (couverture) =>
+  // La couverture (0012) et la relecture (0014) sont facultatives : sans elles, le back-office s'ouvre quand même.
+  const f = (await lireAvecRepli([", couverture, envoyee_le, renvoyee_le, remarque_relecture, modifiee_par_formateur_le", ", couverture", ""], (couverture) =>
     supabase
       .from("formations")
       .select(
@@ -137,11 +155,17 @@ export async function getFormationAdmin(id: string): Promise<FormationAdmin | nu
   )) as Ligne | null;
   if (!f) return null;
   const modules = liste(f.modules).map(versModule).sort(parOrdre);
+  const { statut, etat, envoyeeLe, renvoyeeLe, modifieeParFormateurLe } = relecture(f);
   return {
     id: String(f.id),
     slug: texte(f.slug),
     titre: texte(f.titre),
-    statut: f.statut as StatutFormation,
+    statut,
+    etat,
+    envoyeeLe,
+    renvoyeeLe,
+    remarqueRelecture: texte(f.remarque_relecture) || null,
+    modifieeParFormateurLe,
     niveau: f.niveau as Niveau,
     nbLecons: modules.reduce((total, m) => total + m.lecons.length, 0),
     parcours: nomsDesParcours(f),
