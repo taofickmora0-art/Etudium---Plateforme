@@ -86,12 +86,14 @@ type CourseCardProps = {
   tag?: CardTag;
   /** Niveau du titre de la carte dans la page. */
   titleAs?: "h2" | "h3";
+  /** Aucune étiquette, pas même « Verrouillée » : un bouton occupe le coin (cœur de la page Favoris). */
+  sansEtiquette?: boolean;
 };
 
 /** Carte de formation : illustration, titre, deux lignes de description, progression. */
-export function CourseCard({ href, title, description, parcours, progress, timeLabel, state, tag, titleAs }: CourseCardProps) {
+export function CourseCard({ href, title, description, parcours, progress, timeLabel, state, tag, titleAs, sansEtiquette = false }: CourseCardProps) {
   const metaId = useId();
-  const shownTag = state === "verrouillee" ? { tone: "verrouillee" as const, label: "Verrouillée" } : tag;
+  const shownTag = sansEtiquette ? undefined : state === "verrouillee" ? { tone: "verrouillee" as const, label: "Verrouillée" } : tag;
   return (
     <CardShell href={href} title={title} description={description} parcours={parcours} tag={shownTag} describedBy={metaId} titleAs={titleAs}>
       <ProgressBar value={progress} label={`Progression de ${title}`} className="mt-[17px] -ml-px" />

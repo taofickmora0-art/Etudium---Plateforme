@@ -1,14 +1,12 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
-import { CarteFormation } from "@/components/catalogue/CarteFormation";
+import { cartesFavorites } from "@/components/favoris/cartes";
 import { PageFavoris, type Favori } from "@/components/favoris/PageFavoris";
 import { SessionGuard } from "@/components/layout/SessionGuard";
-import { CarteSuivie, versVueCarte } from "@/components/mes-formations/CarteSuivie";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { listFiches } from "@/lib/catalogue/data";
 import { lireFavoris } from "@/lib/favoris/data";
-import { formationsSuivies } from "@/lib/mes-formations/regles";
 import { lireProgression } from "@/lib/progression/data";
 
 export const metadata: Metadata = { title: "Favoris · Étudium" };
@@ -18,18 +16,7 @@ async function Contenu() {
   try {
     const [lus, lignes] = await Promise.all([lireFavoris(), lireProgression()]);
     const ids = (lus ?? []).map((f) => f.formationId);
-    const fiches = await listFiches(ids);
-    const suivies = formationsSuivies(fiches, lignes ?? [], new Set(ids));
-    // Dans l'ordre des favoris (le plus récent d'abord). Une formation suivie montre sa progression ; une formation
-    // archivée jamais commencée n'est plus visible (règles de la base) et disparaît de la liste.
-    favoris = ids.flatMap((id): Favori[] => {
-      const fiche = fiches.find((f) => f.id === id);
-      if (!fiche) return [];
-      const suivie = suivies.find((s) => s.fiche.id === id);
-      if (suivie) return [{ id, titre: fiche.titre, carte: <CarteSuivie vue={versVueCarte(suivie)} /> }];
-      if (fiche.statut !== "publiee") return [];
-      return [{ id, titre: fiche.titre, carte: <CarteFormation carte={fiche} variante="connecte" /> }];
-    });
+    favoris = cartesFavorites(ids, await listFiches(ids), lignes ?? []);
   } catch (erreur) {
     return siTablesAbsentes(erreur);
   }

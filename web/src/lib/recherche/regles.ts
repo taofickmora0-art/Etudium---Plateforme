@@ -23,14 +23,19 @@ export function correspond(texte: string, requete: string): boolean {
   return mots.every((mot) => cible.includes(mot));
 }
 
-/** Une leçon se trouve par son titre ou celui de son module (« excel » → les leçons de « Bases d’Excel »). */
+/**
+ * Un parcours se trouve par ses noms et sa description, ou par une formation trouvée qu'il contient (« excel » → Réussite
+ * académique, comme dans la maquette). Une leçon se trouve par son titre ou celui de son module (« Bases d’Excel »).
+ */
 export function rechercher(
   { cartes, parcours, lecons }: { cartes: CarteCatalogue[]; parcours: ParcoursCatalogue[]; lecons: LeconTrouvable[] },
   q: string,
 ): Resultats {
   if (!q.trim()) return { formations: [], parcours: [], lecons: [], total: 0 };
   const formations = cartes.filter((c) => correspond(`${c.titre} ${c.resume}`, q));
-  const trouves = parcours.filter((p) => correspond(`${p.nom} ${p.nomCourt} ${p.description ?? ""}`, q));
+  const trouves = parcours.filter(
+    (p) => correspond(`${p.nom} ${p.nomCourt} ${p.description ?? ""}`, q) || formations.some((c) => c.parcours.some((x) => x.slug === p.slug)),
+  );
   const lecs = lecons.filter((l) => correspond(`${l.titre} ${l.module.titre}`, q));
   return { formations, parcours: trouves, lecons: lecs, total: formations.length + trouves.length + lecs.length };
 }

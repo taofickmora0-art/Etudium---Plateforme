@@ -34,6 +34,10 @@ describe("Recherche", () => {
     expect(r.total).toBe(r.formations.length + r.parcours.length + r.lecons.length);
   });
 
+  it("un parcours se trouve aussi par une formation qu'il contient (« excel » → Réussite académique)", () => {
+    expect(rechercher({ cartes: CARTES_DESIGN, parcours: PARCOURS, lecons: LECONS }, "excel").parcours.map((p) => p.slug)).toEqual(["reussite-academique"]);
+  });
+
   it("un parcours se trouve par sa description ; une leçon par son titre", () => {
     const r = rechercher({ cartes: CARTES_DESIGN, parcours: PARCOURS, lecons: LECONS }, "intelligence artificielle");
     expect(r.parcours.map((p) => p.slug)).toEqual(["competences-digitales"]);

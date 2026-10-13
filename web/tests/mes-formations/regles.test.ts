@@ -42,6 +42,11 @@ describe("Formations suivies", () => {
     expect(fermee.etat).toBe("verrouillee");
   });
 
+  it("verrouillée mais encore publiée (aperçus vus) : la carte mène à la fiche, pas nulle part", () => {
+    const [fermee] = formationsSuivies([publiee(EXCEL)], [ligne(EXCEL.id, 1, true, 20), ligne(EXCEL.id, 2, true, 10)], new Set());
+    expect(fermee).toMatchObject({ etat: "verrouillee", href: "/formations/maitriser-microsoft-excel", temps: "Accès fermé" });
+  });
+
   it("filtres : « En cours » compte les formations à 0 % ; « Favoris » parmi les suivies", () => {
     const suivies = formationsSuivies(
       [publiee(EXCEL_OUVERTE), publiee(ZOTERO_OUVERTE)],

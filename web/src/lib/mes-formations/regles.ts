@@ -15,7 +15,7 @@ export type FormationSuivie = {
   etat: EtatSuivi;
   progression: EtatProgression;
   favori: boolean;
-  /** Leçon où reprendre, sinon la fiche ; null pour une formation verrouillée (une formation archivée n'a plus de fiche). */
+  /** Leçon où reprendre, sinon la fiche (offre d'une formation verrouillée) ; null pour une formation archivée, qui n'a plus de fiche. */
   href: string | null;
   /** « 2 h restantes », « 4 h 10 suivies », « Accès fermé ». */
   temps: string;
@@ -35,7 +35,7 @@ export function formationsSuivies(fiches: FicheSuivie[], lignes: LigneProgressio
     const restant = dureeLisible(progression.restantSecondes);
     const temps = etat === "verrouillee" ? "Accès fermé" : etat === "terminee" ? `${dureeLisible(fiche.dureeSecondes)} suivies` : restant ? `${restant} restantes` : "";
     const href =
-      etat === "verrouillee" ? null : progression.aReprendre ? `/formations/${fiche.slug}/lecons/${progression.aReprendre.id}` : `/formations/${fiche.slug}`;
+      fiche.statut !== "publiee" ? null : progression.aReprendre ? `/formations/${fiche.slug}/lecons/${progression.aReprendre.id}` : `/formations/${fiche.slug}`;
     const visites = lignes.filter((l) => l.formationId === fiche.id).map((l) => l.vueLe);
     const derniereVisite = visites.reduce((max, v) => (Date.parse(v) > Date.parse(max) ? v : max), visites[0]);
     suivies.push({ fiche, etat, progression, favori: favoris.has(fiche.id), href, temps, derniereVisite });

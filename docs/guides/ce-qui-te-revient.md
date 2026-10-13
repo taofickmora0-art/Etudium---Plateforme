@@ -247,7 +247,7 @@ Il faut la section 5 (tables et exemples du lot 1).
 1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0009_favoris.sql`.
 2. **Mes formations** (menu) : les formations dont tu as ouvert au moins une leçon, la plus récente en premier.
    - Filtres **Toutes**, **En cours** (même à 0 %), **Terminées**, **Verrouillées**, **Favoris**.
-   - Chaque carte mène à la leçon où reprendre.
+   - Chaque carte mène à la leçon où reprendre ; s’il ne te reste aucune leçon ouverte (aperçus vus d’une formation payante), à la fiche, avec le badge « Verrouillée ».
    - Au back-office, archive une formation que tu as commencée : elle reste dans Mes formations, avec le badge « Verrouillée », et sa carte n’est plus un lien.
 3. **Favoris** :
    - sur la fiche d’une formation, **Ajouter aux favoris** devient « Dans vos favoris » ;

@@ -4,8 +4,11 @@ import { badgeDeCarte, dureeLisible, parcoursPrincipal } from "@/lib/catalogue/r
 import type { CarteCatalogue } from "@/lib/catalogue/types";
 import { libelleNiveau } from "@/lib/contenus/libelles";
 
-/** Carte d'une formation du catalogue : la variante publique porte aussi la puce du parcours (NdCataloguePublic). */
-export function CarteFormation({ carte, variante }: { carte: CarteCatalogue; variante: "public" | "connecte" }) {
+/**
+ * Carte d'une formation du catalogue : la variante publique porte aussi la puce du parcours (NdCataloguePublic).
+ * `sansEtiquette` : pas de badge, un bouton occupe le coin (cœur de la page Favoris).
+ */
+export function CarteFormation({ carte, variante, sansEtiquette = false }: { carte: CarteCatalogue; variante: "public" | "connecte"; sansEtiquette?: boolean }) {
   const couleur = parcoursPrincipal(carte);
   const parcours = [...carte.parcours].sort((a, b) => a.ordre - b.ordre)[0];
   return (
@@ -16,8 +19,8 @@ export function CarteFormation({ carte, variante }: { carte: CarteCatalogue; var
       parcours={couleur}
       duration={dureeLisible(carte.dureeSecondes) || undefined}
       level={libelleNiveau(carte.niveau)}
-      tag={badgeDeCarte(carte)}
-      parcoursTag={variante === "public" && parcours ? { tone: couleur as TagTone, label: parcours.nomCourt } : undefined}
+      tag={sansEtiquette ? undefined : badgeDeCarte(carte)}
+      parcoursTag={variante === "public" && parcours && !sansEtiquette ? { tone: couleur as TagTone, label: parcours.nomCourt } : undefined}
       titleAs="h2"
     />
   );

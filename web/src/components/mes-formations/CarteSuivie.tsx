@@ -32,9 +32,9 @@ export function versVueCarte(s: FormationSuivie): VueCarteSuivie {
 
 /**
  * Carte d'une formation suivie (NdMesFormations) : progression et temps ; toute la carte mène à la leçon où reprendre.
- * Une formation verrouillée n'est pas un lien et porte le badge « Verrouillée ».
+ * Une formation verrouillée porte le badge « Verrouillée » et mène à sa fiche ; archivée, elle n'est plus un lien.
  */
-export function CarteSuivie({ vue }: { vue: VueCarteSuivie }) {
+export function CarteSuivie({ vue, sansEtiquette = false }: { vue: VueCarteSuivie; sansEtiquette?: boolean }) {
   const state = vue.etat === "verrouillee" ? "verrouillee" : vue.etat === "terminee" ? "terminee" : vue.pourcentage === 0 ? "aCommencer" : "enCours";
   return (
     <CourseCard
@@ -46,6 +46,7 @@ export function CarteSuivie({ vue }: { vue: VueCarteSuivie }) {
       timeLabel={vue.temps}
       state={state}
       titleAs="h2"
+      sansEtiquette={sansEtiquette}
     />
   );
 }
