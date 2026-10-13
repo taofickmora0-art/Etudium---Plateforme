@@ -302,11 +302,58 @@ describe("Lecteur aux couleurs d'Étudium", () => {
     expect(screen.getByText("Temps réellement regardé : 3 %")).toBeInTheDocument();
   });
 
-  it("la vidéo reprend là où on l'avait laissée (au-delà des 5 premières secondes)", async () => {
+  it("la vidéo reprend là où on l'avait laissée, sans démarrer toute seule (au-delà des 5 premières secondes)", async () => {
     const f = fauxLecteur();
     await monter({ creer: f.creer, positionInitiale: 250 });
-    expect(f.adaptateur.aller).toHaveBeenCalledWith(250);
+    // Position affichée tout de suite, mais aucun saut avant « Lire » : sur YouTube, un saut lance la lecture.
     expect(screen.getByText("04:10 / 06:10")).toBeInTheDocument();
+    expect(f.adaptateur.aller).not.toHaveBeenCalled();
+    expect(f.adaptateur.lire).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Lire la vidéo" }));
+    expect(f.adaptateur.aller).toHaveBeenCalledWith(250);
+    expect(f.adaptateur.lire).toHaveBeenCalled();
+    expect(vi.mocked(f.adaptateur.aller).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(f.adaptateur.lire).mock.invocationCallOrder[0]);
+  });
+
+  it("au retour sur une page gardée en mémoire, la vidéo reprend où elle en était (pas à la position du premier affichage)", async () => {
+    const f = fauxLecteur();
+    const props = {
+      video: VIDEO,
+      titre: "Découvrir l’interface",
+      leconId: id(1),
+      suivre: true,
+      passagesInitiaux: [] as [number, number][],
+      reference: 370,
+      seuil: 90,
+      termineeInitiale: false,
+      positionInitiale: 0,
+    };
+    const { rerender } = render(
+      <ToastProvider>
+        <LecteurEtudium {...props} creer={f.creer} />
+      </ToastProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Lire la vidéo" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await lirePendant(f.etat, 240);
+    // Next masque puis réaffiche la page (navigation dans l'application) : le lecteur est recréé.
+    const g = fauxLecteur();
+    rerender(
+      <ToastProvider>
+        <LecteurEtudium {...props} creer={g.creer} />
+      </ToastProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByText("04:00 / 06:10")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Lire la vidéo" }));
+    expect(g.adaptateur.aller).toHaveBeenCalledWith(240);
   });
 
   it("une position de quelques secondes, ou presque à la fin, repart du début", async () => {

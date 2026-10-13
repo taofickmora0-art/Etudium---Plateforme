@@ -106,7 +106,11 @@ export function LecteurEtudium({
   // Passages déjà enregistrés par la base : le pourcentage affiché suit la base, pas seulement le navigateur.
   const serveur = useRef<Intervalle[]>(fusionner(passagesInitiaux));
   const titreRef = useRef(titre);
+  // Où reprendre. Mis à jour quand le lecteur est détruit (Next garde la page en mémoire et la réaffiche : le lecteur
+  // est recréé, et doit repartir de là où on en était, pas de la position du premier affichage).
   const repriseRef = useRef(positionInitiale);
+  // Saut à faire au premier « Lire » : sur YouTube, un saut avant la lecture lancerait la vidéo toute seule.
+  const sautEnAttente = useRef<number | null>(null);
   // Le bouton de fin (page leçon) apprend ainsi que la leçon est validée.
   const etatLecon = useEtatLecon();
   const marquerRef = useRef(etatLecon?.marquerTerminee);
@@ -222,6 +226,10 @@ export function LecteurEtudium({
   };
   const relireDureeRef = useRef(relireDuree);
 
+  useEffect(() => {
+    if (positionInitiale > repriseRef.current) repriseRef.current = positionInitiale;
+  }, [positionInitiale]);
+
   // Création du lecteur officiel.
   useEffect(() => {
     let annule = false;
@@ -277,7 +285,7 @@ export function LecteurEtudium({
             .then((d) => {
               const fin = d > 0 ? d : dureeRef.current;
               if (!annule && (fin <= 0 || reprise < fin - 10)) {
-                a.aller(reprise);
+                sautEnAttente.current = reprise;
                 setPosition(reprise);
               }
             })
@@ -293,7 +301,11 @@ export function LecteurEtudium({
       });
     return () => {
       annule = true;
+      // Dernière position connue : c'est là que reprendra le lecteur recréé.
+      repriseRef.current = Math.floor(suivi.current.position ?? sautEnAttente.current ?? repriseRef.current);
+      sautEnAttente.current = null;
       void envoyerRef.current(true);
+      suivi.current = { ...suivi.current, position: null };
       adaptateur.current?.detruire();
       adaptateur.current = null;
       enLectureRef.current = false;
@@ -353,7 +365,15 @@ export function LecteurEtudium({
     };
   }, []);
 
-  const lire = () => adaptateur.current?.lire();
+  const lire = () => {
+    const a = adaptateur.current;
+    if (!a) return;
+    if (sautEnAttente.current !== null) {
+      a.aller(sautEnAttente.current);
+      sautEnAttente.current = null;
+    }
+    a.lire();
+  };
   const basculer = () => (enLecture ? adaptateur.current?.pause() : lire());
 
   const ligne = suivre && !echec && (
@@ -423,6 +443,7 @@ export function LecteurEtudium({
               value={Math.floor(position)}
               onChange={(e) => {
                 const s = Number(e.target.value);
+                sautEnAttente.current = null;
                 adaptateur.current?.aller(s);
                 setPosition(s);
               }}
