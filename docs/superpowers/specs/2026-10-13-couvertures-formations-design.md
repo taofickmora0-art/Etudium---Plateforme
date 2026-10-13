@@ -18,7 +18,7 @@
 
 - Colonne `formations.couverture text` : chemin du fichier dans l'espace `couvertures`, null sans image. Contrainte : le chemin commence par l'identifiant de la formation (`<formation_id>/<nom>.<jpg|png|webp>`).
 - Espace de stockage `couvertures` **public** (visiteurs et WhatsApp lisent l'image sans compte) : `file_size_limit` 5 Mo, `allowed_mime_types` JPEG, PNG, WebP.
-- Règles : lecture pour tous ; dépôt, remplacement et suppression pour l'équipe (`equipe_contenus()`). Les formateurs, pour leurs formations, à l'étape « création de formation par le formateur ».
+- Règles : lecture pour tous par l'adresse publique des images ; lister l'espace, déposer, remplacer et supprimer : l'équipe (`equipe_contenus()`). Lister l'espace révélerait les images des formations pas encore publiées (relecture finale). Les formateurs, pour leurs formations, à l'étape « création de formation par le formateur ».
 - Rejouable, comme les autres migrations.
 
 ## 3. Envoi au back-office

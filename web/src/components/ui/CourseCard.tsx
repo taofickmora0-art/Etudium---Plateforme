@@ -46,8 +46,9 @@ export function CardShell({
         <Couverture src={couverture} parcours={parcours} sizes="(max-width: 640px) 100vw, 360px" />
         {etiquettes.length > 0 && (
           <span id={`${id}-etiquette`} className="absolute top-3 right-3 left-3 flex flex-wrap justify-end gap-1.5">
+            {/* Anneau blanc : le badge reste lisible sur une photo, ou sur la couverture par défaut de sa couleur. */}
             {etiquettes.map((t) => (
-              <Tag key={t.label} tone={t.tone}>
+              <Tag key={t.label} tone={t.tone} className="ring-2 ring-white">
                 {t.label}
               </Tag>
             ))}

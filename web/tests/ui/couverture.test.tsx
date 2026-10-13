@@ -43,6 +43,11 @@ describe("Cartes avec couverture", () => {
     expect(screen.getByRole("link", { name: /Maîtriser Microsoft Excel/ })).toHaveAttribute("href", "/formations/excel");
   });
 
+  it("sur la couverture, un badge garde son contour (anneau blanc), même sur un fond de sa couleur", () => {
+    render(<CatalogCard {...EXCEL} parcoursTag={{ tone: "academique", label: "Académique" }} />);
+    for (const libelle of ["Académique", "Populaire"]) expect(screen.getByText(libelle)).toHaveClass("ring-2", "ring-white");
+  });
+
   it("sans image : la couverture par défaut du parcours", () => {
     const { container } = render(<CatalogCard {...EXCEL} />);
     const cadre = container.querySelector("[data-couverture]")!;

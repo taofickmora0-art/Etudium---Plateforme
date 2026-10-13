@@ -49,10 +49,13 @@ describe("Migration 0012 : images de couverture", () => {
     await expect(deposer({ id: A }, `${randomUUID()}/${randomUUID()}.jpg`)).rejects.toThrow(REFUS);
   });
 
-  it("tout le monde lit les couvertures ; seule l'équipe supprime", async () => {
+  it("l'espace ne se liste pas hors de l'équipe (les images restent publiques par leur adresse) ; seule l'équipe supprime", async () => {
     const nom = `${zotero}/${randomUUID()}.png`;
     await deposer({ id: A }, nom);
-    expect(await banc.en("anon", "select name from storage.objects where bucket_id = 'couvertures' and name = $1", [nom])).toEqual([{ name: nom }]);
+    // Lister l'espace révélerait les images des formations pas encore publiées.
+    expect(await banc.en("anon", "select name from storage.objects where bucket_id = 'couvertures' and name = $1", [nom])).toEqual([]);
+    expect(await banc.en({ id: E }, "select name from storage.objects where bucket_id = 'couvertures' and name = $1", [nom])).toEqual([]);
+    expect(await banc.en({ id: A }, "select name from storage.objects where bucket_id = 'couvertures' and name = $1", [nom])).toEqual([{ name: nom }]);
     expect(await banc.en({ id: E }, "delete from storage.objects where bucket_id = 'couvertures' and name = $1 returning name", [nom])).toEqual([]);
     expect(await banc.en({ id: A }, "delete from storage.objects where bucket_id = 'couvertures' and name = $1 returning name", [nom])).toEqual([{ name: nom }]);
   });

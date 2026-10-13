@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import sharp from "sharp";
 import { PALETTES, PLAQUES } from "@/components/ui/CourseIllustration";
 import { getFiche } from "@/lib/catalogue/data";
 import { urlCouverture } from "@/lib/couvertures/adresse";
@@ -8,23 +9,29 @@ import { dureeLisible, nombreDeLecons, parcoursPrincipal } from "@/lib/catalogue
 
 export const alt = "Formation Étudium";
 export const size = { width: 1200, height: 630 };
-export const contentType = "image/png";
+// JPEG : bien plus léger qu'un PNG ; WhatsApp n'affiche pas un aperçu trop lourd (environ 300 Ko au plus).
+export const contentType = "image/jpeg";
+
+/** Délai maximal pour lire la couverture : au-delà, l'image bleue la remplace. */
+const DELAI_COUVERTURE_MS = 3000;
 
 /**
- * La couverture en adresse « data: » pour l'image générée ; null si elle ne se charge pas, ou si son format n'est pas
- * lu par le générateur (WebP) : l'image bleue la remplace alors.
+ * La couverture prête à partager : redressée (orientation EXIF des photos de téléphone), cadrée en 1200 × 630 (le centre
+ * est gardé), en JPEG léger. JPEG, PNG et WebP sont lus. Null si elle ne se charge pas : l'image bleue la remplace.
  */
-async function couvertureEnDonnees(url: string | null): Promise<string | null> {
+async function couverturePartagee(url: string | null): Promise<Buffer | null> {
   if (!url) return null;
   try {
-    const reponse = await fetch(url);
-    const type = reponse.headers.get("content-type") ?? "";
-    if (!reponse.ok || !/^image\/(jpeg|png)/.test(type)) return null;
-    return `data:${type};base64,${Buffer.from(await reponse.arrayBuffer()).toString("base64")}`;
+    const reponse = await fetch(url, { signal: AbortSignal.timeout(DELAI_COUVERTURE_MS) });
+    if (!reponse.ok) return null;
+    const source = Buffer.from(await reponse.arrayBuffer());
+    return await sharp(source).rotate().resize(size.width, size.height, { fit: "cover" }).jpeg({ quality: 80, mozjpeg: true }).toBuffer();
   } catch {
     return null;
   }
 }
+
+const enJpeg = (octets: Buffer) => new Response(new Uint8Array(octets), { headers: { "content-type": contentType } });
 
 const HEXAGONE = "15,4 24.5,9.5 24.5,20.5 15,26 5.5,20.5 5.5,9.5";
 
@@ -42,17 +49,12 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const parcours = [...fiche.parcours].sort((a, b) => a.ordre - b.ordre)[0];
   const meta = [dureeLisible(fiche.dureeSecondes), fiche.nbLecons > 0 ? nombreDeLecons(fiche.nbLecons) : "", fiche.gratuite ? "Gratuite" : ""].filter(Boolean).join(" · ");
 
-  // Avec une couverture, l'image partagée est la couverture elle-même, cadrée en 1200 × 630.
-  const couverture = await couvertureEnDonnees(urlCouverture(fiche.couverture));
-  if (couverture) {
-    return new ImageResponse(
-      // eslint-disable-next-line @next/next/no-img-element -- image générée (next/og), pas une page
-      <img src={couverture} alt="" width={size.width} height={size.height} style={{ width: "100%", height: "100%", objectFit: "cover" }} />,
-      { ...size },
-    );
-  }
+  // Avec une couverture, l'image partagée est la couverture elle-même.
+  const couverture = await couverturePartagee(urlCouverture(fiche.couverture));
+  if (couverture) return enJpeg(couverture);
 
-  return new ImageResponse(
+  // Sans couverture : l'image bleue générée, convertie en JPEG comme la couverture (un seul type annoncé).
+  const bleue = new ImageResponse(
     <div
       style={{
         width: "100%",
@@ -114,4 +116,5 @@ export default async function Image({ params }: { params: Promise<{ slug: string
     </div>,
     size,
   );
+  return enJpeg(await sharp(Buffer.from(await bleue.arrayBuffer())).jpeg({ quality: 88, mozjpeg: true }).toBuffer());
 }

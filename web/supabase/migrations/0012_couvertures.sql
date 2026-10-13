@@ -19,10 +19,13 @@ on conflict (id) do update
       file_size_limit = excluded.file_size_limit,
       allowed_mime_types = excluded.allowed_mime_types;
 
+-- Les images se lisent par leur adresse publique (espace public), sans règle. Lister l'espace, en revanche, révélerait
+-- les images des formations pas encore publiées : réservé à l'équipe (qui en a besoin pour remplacer et supprimer).
 drop policy if exists "couvertures : lecture pour tous" on storage.objects;
-create policy "couvertures : lecture pour tous" on storage.objects
-  for select to anon, authenticated
-  using (bucket_id = 'couvertures');
+drop policy if exists "couvertures : l'équipe liste" on storage.objects;
+create policy "couvertures : l'équipe liste" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'couvertures' and (select public.equipe_contenus()));
 
 -- L'équipe dépose, remplace et supprime, toujours dans le dossier d'une formation existante. Les formateurs, pour
 -- leurs propres formations, arriveront avec la création de formation par le formateur.
