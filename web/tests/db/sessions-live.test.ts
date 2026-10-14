@@ -226,10 +226,155 @@ describe("Listes et fiche de l'animateur et de l'équipe", () => {
     await expect(banc.en({ id: E1 }, "insert into public.inscriptions_sessions (session_id, profil_id) values ($1, $2)", [randomUUID(), E1])).rejects.toThrow(REFUS);
   });
 
-  it("la migration est rejouable", async () => {
+  it("la migration est rejouable (tâche 1)", async () => {
     const id = await session("5 days", { titre: "Gardée" });
     await banc.appliquer(MIGRATION);
     await banc.appliquer(MIGRATION);
     expect(await un("select titre from public.sessions_live where id = $1", [id])).toEqual({ titre: "Gardée" });
+  });
+});
+
+describe("Inscriptions, lecture et rappels", () => {
+  type Carte = { id: string; titre: string; lien: string | null; inscriptions: number; inscrit: boolean; statut: string; plateforme: string; animateur: string };
+  const vue = async (qui: string, v: string) => (await banc.en<{ r: Carte[] }>({ id: qui }, "select public.sessions_live($1) as r", [v]))[0].r;
+  const carte = async (qui: string, v: string, id: string) => (await vue(qui, v)).find((c) => c.id === id);
+  const sInscrire = (qui: string, id: string) => banc.en({ id: qui }, "select public.sinscrire_session($1)", [id]);
+  const rappels = async (qui: string) => (await banc.en<{ n: number }>({ id: qui }, "select public.rappels_sessions() as n"))[0].n;
+  const nouveau = async (prenom = "Test", nom = "Compte") => {
+    const id = randomUUID();
+    await banc.creerCompte(id);
+    await banc.db.query("update public.profils set prenom = $2, nom = $3 where id = $1", [id, prenom, nom]);
+    return id;
+  };
+
+  it("le lien : absent à 11 min du début, présent à 9 min et pendant, absent après la fin ; toujours là pour l'animateur et l'équipe", async () => {
+    const E = await nouveau();
+    const [s11, s9, enCours, finie] = [await session("11 minutes"), await session("9 minutes"), await session("-20 minutes"), await session("-2 hours")];
+    expect((await carte(E, "a_venir", s11))?.lien).toBeNull();
+    expect((await carte(E, "a_venir", s9))?.lien).toBe("https://meet.google.com/abc-defg-hij");
+    expect((await carte(E, "a_venir", enCours))?.lien).toBe("https://meet.google.com/abc-defg-hij");
+    expect(await carte(E, "a_venir", finie)).toBeUndefined();
+    for (const qui of [F, A]) expect((await carte(qui, "a_venir", s11))?.lien).toBe("https://meet.google.com/abc-defg-hij");
+    expect((await carte(G, "a_venir", s11))?.lien).toBeNull();
+    expect(await carte(E, "a_venir", s11)).toMatchObject({ plateforme: "Google Meet", animateur: "Mireille Akpo", statut: "programmee", inscrit: false });
+  });
+
+  it("prochaine_session et session_detail ne livrent pas le lien à un étudiant avant la fenêtre", async () => {
+    const E = await nouveau();
+    const id = await session("15 minutes", { lien: "https://zoom.us/j/secret-123" });
+    await sInscrire(E, id);
+    const [{ r }] = await banc.en<{ r: Carte }>({ id: E }, "select public.prochaine_session() as r");
+    expect(r.id).toBe(id);
+    expect(JSON.stringify(r)).not.toContain("secret-123");
+    expect(JSON.stringify(await vue(E, "inscriptions"))).not.toContain("secret-123");
+    expect(await banc.en({ id: E }, "select public.session_detail($1) as r", [id])).toEqual([{ r: null }]);
+  });
+
+  it("vues : à venir (sans les annulées), mes inscriptions (avec « annulee »), passées ; inscriptions et inscrit", async () => {
+    const E = await nouveau();
+    const autre = await nouveau();
+    const [venir, annulee, passee] = [await session("2 days"), await session("3 days", { statut: "annulee" }), await session("-2 days")];
+    for (const id of [venir, annulee, passee]) await inscrire(E, id);
+    await inscrire(autre, venir);
+    expect(await carte(E, "a_venir", venir)).toMatchObject({ inscrit: true, inscriptions: 2 });
+    expect(await carte(E, "a_venir", annulee)).toBeUndefined();
+    expect((await vue(E, "inscriptions")).map((c) => [c.id, c.statut])).toEqual([[venir, "programmee"], [annulee, "annulee"]]);
+    expect((await vue(E, "passees")).map((c) => c.id)).toEqual([passee]);
+    expect(await carte(autre, "passees", passee)).toBeUndefined();
+  });
+
+  it("prochaine_session : la plus proche de mes inscriptions, sinon la prochaine ; 3 initiales", async () => {
+    const E = await nouveau();
+    const [{ r: sans }] = await banc.en<{ r: Carte }>({ id: E }, "select public.prochaine_session() as r");
+    expect(sans.id).toBe((await vue(E, "a_venir"))[0].id);
+    const loin = await session("20 days");
+    const plusLoin = await session("25 days");
+    for (const [prenom, nom] of [["Rodrigue", "Houngbo"], ["Fifamè", "Adjovi"], ["Sèdjro", "Dossou"], ["Awa", "Bio"]]) await inscrire(await nouveau(prenom, nom), loin);
+    await inscrire(E, plusLoin);
+    await inscrire(E, loin);
+    const [{ r }] = await banc.en<{ r: Carte & { initiales: string[] } }>({ id: E }, "select public.prochaine_session() as r");
+    expect(r.id).toBe(loin);
+    expect(r.initiales).toEqual(["RH", "FA", "SD"]);
+  });
+
+  it("s'inscrire deux fois ne compte qu'une ; session annulée ou terminée : « Les inscriptions à cette session sont closes. »", async () => {
+    const E = await nouveau();
+    const id = await session("4 days");
+    await sInscrire(E, id);
+    await sInscrire(E, id);
+    expect(await carte(E, "a_venir", id)).toMatchObject({ inscriptions: 1, inscrit: true });
+    for (const close of [await session("4 days", { statut: "annulee" }), await session("-3 hours")]) {
+      await expect(sInscrire(E, close)).rejects.toThrow("Les inscriptions à cette session sont closes.");
+    }
+  });
+
+  it("se désinscrire avant le début ; après : « La session a commencé. »", async () => {
+    const E = await nouveau();
+    const id = await session("4 days");
+    await sInscrire(E, id);
+    await banc.en({ id: E }, "select public.se_desinscrire_session($1)", [id]);
+    expect(await carte(E, "a_venir", id)).toMatchObject({ inscrit: false, inscriptions: 0 });
+    const commencee = await session("-5 minutes");
+    await inscrire(E, commencee);
+    await expect(banc.en({ id: E }, "select public.se_desinscrire_session($1)", [commencee])).rejects.toThrow("La session a commencé.");
+  });
+
+  it("rappels : la veille (23 h avant) puis 1 h avant (50 min), une seule fois chacun, à l'inscrit seulement", async () => {
+    const E = await nouveau();
+    const voisin = await nouveau();
+    const veille = await session("23 hours", { titre: "Veille" });
+    const heure = await session("50 minutes", { titre: "Heure" });
+    await inscrire(E, veille);
+    await inscrire(E, heure);
+    await inscrire(voisin, veille);
+    expect(await rappels(E)).toBe(2);
+    expect(await rappels(E)).toBe(0);
+    const titres = (await recues(E)).map((n) => [n.titre, n.texte]);
+    expect(titres).toContainEqual(["Session live dans moins d’une heure", expect.stringMatching(/^Heure, à \d{1,2} h \d{2}\. Le lien s’ouvre 10 min avant\.$/)]);
+    expect(titres.find(([t]) => t.startsWith("Session live demain") || t.startsWith("Session live aujourd’hui"))?.[1]).toMatch(/^Veille, à \d{1,2} h \d{2}\.$/);
+    expect(await recues(voisin)).toEqual([]);
+    expect((await recues(E)).every((n) => n.categorie === "sessions_live" && n.lien === "/evenements")).toBe(true);
+  });
+
+  it("rappel « aujourd’hui » ou « demain » selon le jour au Bénin", async () => {
+    const E = await nouveau();
+    const id = await session("23 hours", { titre: "Jour" });
+    await inscrire(E, id);
+    await rappels(E);
+    const { meme } = await un<{ meme: boolean }>(
+      "select ((debut at time zone 'UTC') + interval '1 hour')::date = ((now() at time zone 'UTC') + interval '1 hour')::date as meme from public.sessions_live where id = $1",
+      [id],
+    );
+    expect((await recues(E)).map((n) => n.titre)).toEqual([meme ? "Session live aujourd’hui" : "Session live demain"]);
+  });
+
+  it("s'inscrire 30 min avant : aucun rappel ; 5 h avant : seulement celui d'1 h, plus tard", async () => {
+    const E = await nouveau();
+    const proche = await session("30 minutes");
+    const cinq = await session("5 hours", { titre: "Cinq heures" });
+    await sInscrire(E, proche);
+    await sInscrire(E, cinq);
+    expect(await rappels(E)).toBe(0);
+    await banc.db.query("update public.sessions_live set debut = now() + interval '50 minutes' where id = $1", [cinq]);
+    expect(await rappels(E)).toBe(1);
+    expect((await recues(E)).map((n) => n.titre)).toEqual(["Session live dans moins d’une heure"]);
+  });
+
+  it("compte suspendu : refus ; visiteur : refus", async () => {
+    const E = await nouveau();
+    const id = await session("4 days");
+    await banc.db.query("insert into public.suspensions (profil_id) values ($1)", [E]);
+    await expect(vue(E, "a_venir")).rejects.toThrow("Accès réservé aux comptes connectés.");
+    await expect(sInscrire(E, id)).rejects.toThrow("Accès réservé aux comptes connectés.");
+    await expect(rappels(E)).rejects.toThrow("Accès réservé aux comptes connectés.");
+    for (const sql of ["select public.sessions_live('a_venir')", "select public.prochaine_session()", "select public.rappels_sessions()"]) {
+      await expect(banc.en("anon", sql)).rejects.toThrow(REFUS);
+    }
+  });
+
+  it("sans aucune session à venir : prochaine_session vaut null ; la migration reste rejouable", async () => {
+    await banc.db.query("update public.sessions_live set statut = 'annulee'");
+    expect(await banc.en({ id: E1 }, "select public.prochaine_session() as r")).toEqual([{ r: null }]);
+    await banc.appliquer(MIGRATION);
   });
 });

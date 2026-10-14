@@ -446,7 +446,258 @@ begin
 end;
 $$;
 
+-- ─── Pour tout compte connecté ──────────────────────────────────────────────────────────────────────
+-- Un visiteur n'a aucun droit d'exécution ; un compte suspendu est refusé.
+create or replace function public.exiger_compte_actif()
+returns void
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if (select auth.uid()) is null or public.compte_suspendu() then
+    raise exception 'Accès réservé aux comptes connectés.' using errcode = '42501';
+  end if;
+end;
+$$;
+
+-- « 15 h 00 », à l'heure du Bénin.
+create or replace function public.heure_session(p_debut timestamptz)
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  with b as (select (p_debut at time zone 'UTC') + interval '1 hour' as t)
+  select extract(hour from t)::int || ' h ' || to_char(t, 'MI') from b;
+$$;
+
+-- Une carte de la page Événements. Le lien n'y est que de 10 min avant le début jusqu'à la fin, pour une session
+-- programmée ; l'animateur et l'équipe l'ont toujours.
+create or replace function public.carte_session(s public.sessions_live)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'id', s.id,
+    'titre', s.titre,
+    'description', s.description,
+    'debut', s.debut,
+    'duree_minutes', s.duree_minutes,
+    'plateforme', public.plateforme_session(s.lien),
+    'lien', case
+      when public.droit_session(s.formateur_id)
+        or (s.statut = 'programmee'
+            and now() >= s.debut - interval '10 minutes'
+            and now() < s.debut + make_interval(mins => s.duree_minutes))
+      then s.lien
+    end,
+    'parcours', (select jsonb_build_object('nom_court', p.nom_court, 'couleur', p.couleur) from public.parcours p where p.id = s.parcours_id),
+    'animateur', public.animateur_session(s.formateur_id),
+    'inscriptions', (select count(*)::int from public.inscriptions_sessions i where i.session_id = s.id),
+    'inscrit', exists (select 1 from public.inscriptions_sessions i where i.session_id = s.id and i.profil_id = (select auth.uid())),
+    'statut', s.statut
+  );
+$$;
+
+-- Les trois onglets : à venir (programmées pas terminées), mes inscriptions (pas terminées, annulées comprises),
+-- passées (mes inscriptions terminées et programmées, 50 au plus). Une autre vue vaut « à venir ».
+create or replace function public.sessions_live(p_vue text)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_moi uuid := (select auth.uid());
+begin
+  perform public.exiger_compte_actif();
+  if p_vue = 'inscriptions' then
+    return coalesce((
+      select jsonb_agg(public.carte_session(s) order by s.debut)
+      from public.sessions_live s
+      join public.inscriptions_sessions i on i.session_id = s.id and i.profil_id = v_moi
+      where s.debut + make_interval(mins => s.duree_minutes) > now()
+    ), '[]'::jsonb);
+  elsif p_vue = 'passees' then
+    return coalesce((
+      select jsonb_agg(public.carte_session(x) order by x.debut desc)
+      from (
+        select s.* from public.sessions_live s
+        join public.inscriptions_sessions i on i.session_id = s.id and i.profil_id = v_moi
+        where s.statut = 'programmee' and s.debut + make_interval(mins => s.duree_minutes) <= now()
+        order by s.debut desc
+        limit 50
+      ) x
+    ), '[]'::jsonb);
+  end if;
+  return coalesce((
+    select jsonb_agg(public.carte_session(x) order by x.debut)
+    from (
+      select s.* from public.sessions_live s
+      where s.statut = 'programmee' and s.debut + make_interval(mins => s.duree_minutes) > now()
+      order by s.debut
+      limit 100
+    ) x
+  ), '[]'::jsonb);
+end;
+$$;
+
+-- La carte de l'accueil : la plus proche de mes inscriptions, sinon la prochaine session ; avec les initiales des
+-- 3 premiers inscrits. Null sans session à venir.
+create or replace function public.prochaine_session()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v public.sessions_live%rowtype;
+begin
+  perform public.exiger_compte_actif();
+  select s.* into v
+  from public.sessions_live s
+  join public.inscriptions_sessions i on i.session_id = s.id and i.profil_id = (select auth.uid())
+  where s.statut = 'programmee' and s.debut + make_interval(mins => s.duree_minutes) > now()
+  order by s.debut
+  limit 1;
+  if not found then
+    select * into v from public.sessions_live s
+    where s.statut = 'programmee' and s.debut + make_interval(mins => s.duree_minutes) > now()
+    order by s.debut
+    limit 1;
+  end if;
+  if not found then
+    return null;
+  end if;
+  return public.carte_session(v) || jsonb_build_object('initiales', coalesce((
+    select jsonb_agg(x.initiales order by x.inscrit_le)
+    from (
+      select upper(left(coalesce(nullif(btrim(p.prenom), ''), '?'), 1)) || upper(left(btrim(coalesce(p.nom, '')), 1)) as initiales, i.inscrit_le
+      from public.inscriptions_sessions i
+      join public.profils p on p.id = i.profil_id
+      where i.session_id = v.id
+      order by i.inscrit_le
+      limit 3
+    ) x
+  ), '[]'::jsonb));
+end;
+$$;
+
+-- S'inscrire : un rappel dont le moment est déjà passé est marqué comme envoyé (pas de rappel aussitôt).
+create or replace function public.sinscrire_session(p_session uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v public.sessions_live%rowtype;
+begin
+  perform public.exiger_compte_actif();
+  select * into v from public.sessions_live where id = p_session;
+  if not found or v.statut <> 'programmee' or v.debut + make_interval(mins => v.duree_minutes) <= now() then
+    raise exception 'Les inscriptions à cette session sont closes.';
+  end if;
+  insert into public.inscriptions_sessions (session_id, profil_id, rappel_veille_le, rappel_heure_le)
+  values (
+    p_session,
+    (select auth.uid()),
+    case when now() >= v.debut - interval '24 hours' then now() end,
+    case when now() >= v.debut - interval '1 hour' then now() end
+  )
+  on conflict do nothing;
+end;
+$$;
+
+create or replace function public.se_desinscrire_session(p_session uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform public.exiger_compte_actif();
+  if exists (select 1 from public.sessions_live where id = p_session and debut <= now()) then
+    raise exception 'La session a commencé.';
+  end if;
+  delete from public.inscriptions_sessions where session_id = p_session and profil_id = (select auth.uid());
+end;
+$$;
+
+-- Les rappels dus au compte qui demande (la cloche les demande en se chargeant) : 1 h avant, puis la veille pour
+-- celles qui sont encore à plus d'1 h. Chacun une seule fois ; celui de la veille n'a plus lieu après celui d'1 h.
+create or replace function public.rappels_sessions()
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_moi uuid := (select auth.uid());
+  v_nombre integer := 0;
+  r record;
+begin
+  perform public.exiger_compte_actif();
+
+  for r in
+    select s.id, s.titre, s.debut
+    from public.inscriptions_sessions i
+    join public.sessions_live s on s.id = i.session_id
+    where i.profil_id = v_moi and s.statut = 'programmee' and i.rappel_heure_le is null
+      and s.debut > now() and s.debut <= now() + interval '1 hour'
+  loop
+    v_nombre := v_nombre + public.notifier(
+      array[v_moi], 'sessions_live', 'Session live dans moins d’une heure',
+      r.titre || ', à ' || public.heure_session(r.debut) || '. Le lien s’ouvre 10 min avant.', '/evenements', true
+    );
+    update public.inscriptions_sessions
+    set rappel_heure_le = now(), rappel_veille_le = coalesce(rappel_veille_le, now())
+    where session_id = r.id and profil_id = v_moi;
+  end loop;
+
+  for r in
+    select s.id, s.titre, s.debut
+    from public.inscriptions_sessions i
+    join public.sessions_live s on s.id = i.session_id
+    where i.profil_id = v_moi and s.statut = 'programmee' and i.rappel_veille_le is null and i.rappel_heure_le is null
+      and s.debut > now() + interval '1 hour' and s.debut <= now() + interval '24 hours'
+  loop
+    v_nombre := v_nombre + public.notifier(
+      array[v_moi], 'sessions_live',
+      case
+        when ((r.debut at time zone 'UTC') + interval '1 hour')::date = ((now() at time zone 'UTC') + interval '1 hour')::date
+        then 'Session live aujourd’hui'
+        else 'Session live demain'
+      end,
+      r.titre || ', à ' || public.heure_session(r.debut) || '.', '/evenements', true
+    );
+    update public.inscriptions_sessions set rappel_veille_le = now() where session_id = r.id and profil_id = v_moi;
+  end loop;
+
+  return v_nombre;
+end;
+$$;
+
 -- ─── Droits d'exécution ─────────────────────────────────────────────────────────────────────────────
+revoke execute on function public.exiger_compte_actif() from public, anon, authenticated;
+revoke execute on function public.carte_session(public.sessions_live) from public, anon, authenticated;
+revoke execute on function public.sessions_live(text) from public, anon;
+revoke execute on function public.prochaine_session() from public, anon;
+revoke execute on function public.sinscrire_session(uuid) from public, anon;
+revoke execute on function public.se_desinscrire_session(uuid) from public, anon;
+revoke execute on function public.rappels_sessions() from public, anon;
+grant execute on function public.sessions_live(text) to authenticated;
+grant execute on function public.prochaine_session() to authenticated;
+grant execute on function public.sinscrire_session(uuid) to authenticated;
+grant execute on function public.se_desinscrire_session(uuid) to authenticated;
+grant execute on function public.rappels_sessions() to authenticated;
 revoke execute on function public.notifier(uuid[], text, text, text, text, boolean) from public, anon, authenticated;
 revoke execute on function public.notifier(uuid[], text, text, text, text) from public, anon, authenticated;
 revoke execute on function public.animateur_session(uuid) from public, anon, authenticated;
