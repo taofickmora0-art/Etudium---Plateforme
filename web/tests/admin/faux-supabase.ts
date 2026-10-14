@@ -73,7 +73,7 @@ export function fauxSupabase() {
           appels.push(appel);
           return resoudre(`storage.${espace}.${nom}`, appel);
         };
-      return { upload: methode("upload"), remove: methode("remove"), list: methode("list"), createSignedUrl: methode("createSignedUrl") };
+      return { upload: methode("upload"), remove: methode("remove"), list: methode("list"), createSignedUrl: methode("createSignedUrl"), createSignedUrls: methode("createSignedUrls") };
     },
   };
 
