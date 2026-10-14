@@ -3,7 +3,10 @@ import { useState } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { Editor, type JSONContent } from "@tiptap/react";
 import { EditeurTexte } from "@/components/communaute/EditeurTexte";
+import { extensionsEditeur } from "@/lib/communaute/editeur-schema";
+import { versDocument, versMarkdown } from "@/lib/communaute/mise-en-forme";
 
 // L'éditeur visuel (spec mise en forme et vidéo, §1). jsdom ne sait pas simuler la sélection d'un champ éditable : on
 // sélectionne tout au clavier (Ctrl+A, géré par l'éditeur lui-même), puis on applique la mise en forme par la barre.
@@ -77,5 +80,36 @@ describe("L'éditeur", () => {
     const champ = await editeur();
     await user.click(screen.getByRole("button", { name: "Vider" }));
     await waitFor(() => expect(champ).not.toHaveTextContent("Bonjour"));
+  });
+
+  it("le schéma ne crée que ce que le format range : pas de sous-liste, pas de saut dans un titre, la citation garde des paragraphes (revue finale)", () => {
+    // Ce que montre l'éditeur doit être ce qui est enregistré : le document relu depuis le texte est le même.
+    const fidele = (e: Editor) => {
+      const sansVide = (d: JSONContent) => ({ ...d, content: (d.content ?? []).filter((b) => b.content?.length || b.type !== "paragraph") });
+      expect(sansVide(versDocument(versMarkdown(e.getJSON())))).toEqual(sansVide(e.getJSON()));
+    };
+    const e = new Editor({ extensions: extensionsEditeur(), content: versDocument("- **Lire** le sujet\n- Écrire") });
+    e.commands.setTextSelection(e.state.doc.content.size - 3);
+    // Tab dans une liste ne crée pas de sous-liste (l'éditeur ne traite pas la touche : elle passe au contrôle suivant).
+    const tab = new KeyboardEvent("keydown", { key: "Tab" });
+    expect(e.view.someProp("handleKeyDown", (f) => f(e.view, tab)) ?? false).toBe(false);
+    expect(versMarkdown(e.getJSON())).toBe("- **Lire** le sujet\n- Écrire");
+
+    // Un saut dans un titre (Maj+Entrée) : jamais de saut à l'intérieur du titre ; le résultat reste fidèle.
+    e.commands.setContent(versDocument("## Titre"));
+    e.commands.setTextSelection(3);
+    const avant = e.getJSON();
+    expect(e.view.someProp("handleKeyDown", (f) => f(e.view, new KeyboardEvent("keydown", { key: "Enter", shiftKey: true })))).toBe(true);
+    expect(e.getJSON()).toEqual(avant);
+
+    e.commands.setContent(versDocument("> **Important** : relire"));
+    e.commands.setTextSelection(4);
+    e.commands.toggleBulletList();
+    fidele(e);
+    e.commands.setContent(versDocument("> **Important** : relire"));
+    e.commands.setTextSelection(4);
+    e.commands.toggleHeading({ level: 2 });
+    fidele(e);
+    e.destroy();
   });
 });

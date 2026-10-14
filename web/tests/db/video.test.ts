@@ -8,6 +8,7 @@ const REFUS = "Cette vidéo n’est pas reconnue.";
 
 let banc: Banc;
 const E1 = randomUUID();
+const S = randomUUID();
 
 const verifier = async (video: unknown) => (await banc.db.query<{ v: unknown }>("select public.verifier_video($1::jsonb) as v", [video === undefined ? null : JSON.stringify(video)])).rows[0].v;
 const publier = async (video: unknown) =>
@@ -38,6 +39,7 @@ beforeAll(async () => {
     MIGRATION,
   ]);
   await banc.creerCompte(E1, []);
+  await banc.creerCompte(S, ["super_admin"]);
 });
 
 describe("La vidéo jointe", () => {
@@ -98,5 +100,13 @@ describe("La vidéo jointe", () => {
     await expect(banc.en({ id: E1 }, "select public.verifier_video('{}'::jsonb)")).rejects.toThrow(/permission denied/);
     await banc.appliquer(MIGRATION);
     await banc.appliquer(MIGRATION);
+  });
+
+  it("la file de modération montre la vidéo jointe (revue finale)", async () => {
+    await banc.db.query("update public.reglages_moderation set analyse_active = true");
+    const id = await publier({ plateforme: "youtube", id: "dQw4w9WgXcQ", url: "https://youtu.be/dQw4w9WgXcQ" });
+    const file = (await banc.en<{ r: { publication_id: string; video: unknown }[] }>({ id: S }, "select public.file_moderation('a_examiner') as r"))[0].r;
+    expect(file.find((e) => e.publication_id === id)?.video).toEqual({ plateforme: "youtube", id: "dQw4w9WgXcQ", url: "https://youtu.be/dQw4w9WgXcQ" });
+    await banc.db.query("update public.reglages_moderation set analyse_active = false");
   });
 });

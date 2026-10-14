@@ -21,6 +21,7 @@ const BRUT = {
   titre: "Gagnez vite",
   texte: "Cliquez ici",
   piece_jointe: { chemin: "a1/x.png", nom: "x.png", type: "image/png", taille: 1000 },
+  video: { plateforme: "youtube", id: "dQw4w9WgXcQ", url: "https://youtu.be/dQw4w9WgXcQ" },
   statut: "publiee",
   analyse: { decision: "signaler", categorie: "arnaque", raison: "Lien suspect", le: "2026-10-14T10:00:01Z" },
   extrait: null,
@@ -40,7 +41,7 @@ afterEach(() => vi.unstubAllEnvs());
 describe("Lectures de la modération", () => {
   it("un élément converti, une réponse ; liens temporaires en un seul appel", async () => {
     faux.repondre("rpc.file_moderation", {
-      data: [BRUT, { ...BRUT, type: "reponse", id: "r1", titre: "", texte: "Insulte", piece_jointe: null, analyse: null, extrait: "Normal", signalements: { nombre: 1, motifs: [], details: [] } }],
+      data: [BRUT, { ...BRUT, type: "reponse", id: "r1", titre: "", texte: "Insulte", piece_jointe: null, video: null, analyse: null, extrait: "Normal", signalements: { nombre: 1, motifs: [], details: [] } }],
     });
     faux.repondre("storage.communaute.createSignedUrls", { data: [{ path: "a1/x.png", signedUrl: "https://stockage/x.png?jeton", error: null }] });
     const lecture = await lireFileModeration("a_examiner");
@@ -59,6 +60,7 @@ describe("Lectures de la modération", () => {
           titre: "Gagnez vite",
           texte: "Cliquez ici",
           pieceJointe: { chemin: "a1/x.png", nom: "x.png", type: "image/png", taille: 1000, url: "https://stockage/x.png?jeton" },
+          video: { plateforme: "youtube", id: "dQw4w9WgXcQ", url: "https://youtu.be/dQw4w9WgXcQ" },
           statut: "publiee",
           analyse: { decision: "signaler", categorie: "arnaque", raison: "Lien suspect" },
           extrait: null,
@@ -81,6 +83,7 @@ describe("Lectures de la modération", () => {
           titre: "",
           texte: "Insulte",
           pieceJointe: null,
+          video: null,
           statut: "publiee",
           analyse: null,
           extrait: "Normal",

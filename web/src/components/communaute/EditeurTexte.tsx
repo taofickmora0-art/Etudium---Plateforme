@@ -13,12 +13,11 @@ import {
   TextStrikethroughIcon,
   TextUnderlineIcon,
 } from "@hugeicons/core-free-icons";
-import { Placeholder } from "@tiptap/extensions";
 import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
 import { IconButton } from "@/components/ui/IconButton";
 import type { IconSvgElement } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
+import { extensionsEditeur } from "@/lib/communaute/editeur-schema";
 import { versDocument, versMarkdown } from "@/lib/communaute/mise-en-forme";
 
 type Bouton = { nom: string; icone: IconSvgElement; actif: (e: Editor) => boolean; agir: (e: Editor) => void; groupe: number };
@@ -103,10 +102,7 @@ export function EditeurTexte({
     surChangement.current = onChange;
   });
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3] }, code: false, codeBlock: false, horizontalRule: false, link: false }),
-      Placeholder.configure({ placeholder: placeholder ?? "" }),
-    ],
+    extensions: extensionsEditeur(placeholder),
     content: versDocument(valeur),
     immediatelyRender: false,
     autofocus: autoFocus ? "end" : false,

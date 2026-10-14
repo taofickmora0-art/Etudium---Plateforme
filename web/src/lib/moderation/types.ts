@@ -1,3 +1,5 @@
+import type { Video } from "@/lib/communaute/video";
+
 // Types de la modération (spec du 14 octobre 2026, migration 0020).
 
 /** « echec » : l'analyse n'a pas pu se faire (panne, délai, fichier trop lourd) ; la publication paraît et entre dans la file. */
@@ -42,6 +44,8 @@ export type ElementFile = {
   titre: string;
   texte: string;
   pieceJointe: { chemin: string; nom: string; type: string; taille: number; url: string | null } | null;
+  /** La vidéo jointe d'une publication (migration 0022). */
+  video: Video | null;
   statut: "publiee" | "en_attente" | "bloquee";
   analyse: { decision: Decision; categorie: Categorie; raison: string } | null;
   /** Pour une réponse : le début de la publication. */

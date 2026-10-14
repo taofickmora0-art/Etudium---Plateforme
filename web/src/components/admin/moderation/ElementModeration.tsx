@@ -11,6 +11,7 @@ import { moment, nomEspace } from "@/lib/communaute/regles";
 import { LIBELLES_MOTIFS, libelleCategorie } from "@/lib/moderation/regles";
 import type { ElementFile, OngletFile } from "@/lib/moderation/types";
 import { TexteMisEnForme } from "@/components/communaute/TexteMisEnForme";
+import { VideoIntegree } from "@/components/communaute/VideoIntegree";
 
 const LIEN = "focus-etudium text-sm leading-[22px] font-medium text-bleu no-underline hover:underline";
 
@@ -94,6 +95,8 @@ export function ElementModeration({
           )}
         </div>
       )}
+      {/* La vidéo jointe (0022) : l'équipe la voit avant de garder ou de rétablir. */}
+      {e.video && <VideoIntegree video={e.video} className="max-w-[480px] rounded-[14px]" />}
       <ul className="m-0 flex list-none flex-col gap-1 rounded-[14px] bg-attention-fond p-3.5 text-[13px] leading-5 text-attention-texte">
         {raisons(e).map((r, i) => (
           <li key={i} className={r.detail ? "pl-3 wrap-anywhere" : "font-medium wrap-anywhere"}>

@@ -108,6 +108,32 @@ export function lecteurVideo(v: Video): string | null {
   }
 }
 
+/** La page de la vidéo sur sa plateforme (« Regarder sur … »), construite depuis l'identifiant ; l'adresse collée pour un
+ * fichier ou une autre page (dont le domaine est montré). */
+export function pageVideo(v: Video): string {
+  const id = encodeURIComponent(v.id ?? "");
+  switch (v.plateforme) {
+    case "youtube":
+      return `https://www.youtube.com/watch?v=${id}`;
+    case "vimeo":
+      return `https://vimeo.com/${id}${v.h ? `/${encodeURIComponent(v.h)}` : ""}`;
+    case "dailymotion":
+      return `https://www.dailymotion.com/video/${id}`;
+    case "loom":
+      return `https://www.loom.com/share/${id}`;
+    case "tiktok":
+      return `https://www.tiktok.com/embed/v2/${id}`;
+    case "facebook":
+      return `https://www.facebook.com/watch/?v=${id}`;
+    case "instagram":
+      return `https://www.instagram.com/p/${id}/`;
+    case "drive":
+      return `https://drive.google.com/file/d/${id}/view`;
+    default:
+      return v.url;
+  }
+}
+
 /** L'image d'attente : celle de YouTube ou de Dailymotion, celle de la page d'une autre plateforme ; sinon null. */
 export function miniatureVideo(v: Video): string | null {
   if (v.plateforme === "youtube") return `https://i.ytimg.com/vi/${encodeURIComponent(v.id ?? "")}/hqdefault.jpg`;

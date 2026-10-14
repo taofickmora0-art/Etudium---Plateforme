@@ -3,6 +3,7 @@ import { estFonctionAbsente, liste, texte, un, type Ligne } from "@/lib/contenus
 import { createClient } from "@/lib/supabase/server";
 import type { Lecture } from "@/lib/utilisateurs/types";
 import { CATEGORIES, MOTIFS, type Categorie, type Decision, type ElementFile, type EtatModeration, type MotifSignalement, type OngletFile } from "./types";
+import { videoRangee } from "@/lib/communaute/video";
 
 // Lectures de la modération (migration 0020), pour l'équipe. Les fichiers joints reçoivent un lien temporaire (1 h).
 
@@ -32,6 +33,7 @@ export function versElement(l: Ligne): ElementFile {
     titre: texte(l.titre),
     texte: texte(l.texte),
     pieceJointe: piece && texte(piece.chemin) ? { chemin: texte(piece.chemin), nom: texte(piece.nom), type: texte(piece.type), taille: nombre(piece.taille), url: null } : null,
+    video: videoRangee(l.video),
     statut: statut(l.statut),
     analyse:
       analyse && DECISIONS.includes(analyse.decision as Decision)

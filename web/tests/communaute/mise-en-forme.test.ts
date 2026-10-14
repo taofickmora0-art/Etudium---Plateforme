@@ -124,4 +124,22 @@ describe("L'aller-retour avec l'éditeur", () => {
     expect(versMarkdown(doc)).toBe("a **gras** b");
     expect(versMarkdown({ type: "doc", content: [{ type: "paragraph" }] })).toBe("");
   });
+
+  it("les adresses restent entières : ni échappées à l'enregistrement, ni lues comme des marques (revue finale)", () => {
+    const adresses = [
+      "https://fr.wikipedia.org/wiki/Python_(langage)",
+      "https://en.wikipedia.org/wiki/C++",
+      "https://youtu.be/abcdefghij_",
+      "https://www.youtube.com/watch?v=ab_-cdefghi",
+      "https://exemple.com/_page_",
+    ];
+    const texte = versMarkdown({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: adresses.join(" ") }] }] });
+    for (const a of adresses) expect(texte).toContain(a);
+    expect(analyser(texte)).toEqual([para(t(adresses.join(" ")))]);
+    expect(analyser("voir https://exemple.com/_page_ ici")).toEqual([para(t("voir https://exemple.com/_page_ ici"))]);
+    expect(analyser("**https://exemple.com/a_b** et _https://exemple.com/c_")).toEqual([
+      para(t("https://exemple.com/a_b", "gras"), t(" et "), t("https://exemple.com/c", "italique")),
+    ]);
+    expect(versMarkdown(versDocument(texte))).toBe(texte);
+  });
 });

@@ -34,6 +34,7 @@ const element = (o: Partial<ElementFile> = {}): ElementFile => ({
   titre: "Gagnez vite",
   texte: "Cliquez ici",
   pieceJointe: { chemin: "a1/x.png", nom: "x.png", type: "image/png", taille: 1000, url: "https://stockage/x.png" },
+  video: null,
   statut: "publiee",
   analyse: { decision: "signaler", categorie: "arnaque", raison: "Lien suspect" },
   extrait: null,
@@ -198,5 +199,10 @@ describe("La file", () => {
     afficher(await ContenuModeration());
     expect(screen.getByText("La modération n’est pas encore dans la base.")).toBeInTheDocument();
     expect(screen.getByText("Appliquez la migration 0020 (guide « Ce qui te revient », section 25).")).toBeInTheDocument();
+  });
+
+  it("une publication avec une vidéo : la vidéo est montrée à l'équipe (revue finale)", () => {
+    page([element({ video: { plateforme: "youtube", id: "dQw4w9WgXcQ", url: "https://youtu.be/dQw4w9WgXcQ" } })]);
+    expect(screen.getByRole("button", { name: "Lire la vidéo YouTube" })).toBeInTheDocument();
   });
 });

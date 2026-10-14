@@ -354,5 +354,10 @@ describe("La vidéo jointe", () => {
     expect(within(carte()).getByRole("heading", { level: 5, name: "Le programme" })).toBeInTheDocument();
     expect(within(carte()).getByText("Hooks").tagName).toBe("STRONG");
   });
+
+  it("« Regarder sur Vimeo » mène à la page Vimeo de l'identifiant, même si l'adresse rangée est forgée (revue finale)", () => {
+    page(lot([pub({ video: { plateforme: "vimeo", id: "76979871", url: "https://hameconnage.example" } })]));
+    expect(within(carte()).getByRole("link", { name: "Regarder sur Vimeo" })).toHaveAttribute("href", "https://vimeo.com/76979871");
+  });
 });
 

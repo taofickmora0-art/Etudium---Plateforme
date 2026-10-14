@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lecteurVideo, miniatureVideo, nomPlateforme, reconnaitreVideo, verticale, videoRangee } from "@/lib/communaute/video";
+import { lecteurVideo, miniatureVideo, nomPlateforme, pageVideo, reconnaitreVideo, verticale, videoRangee } from "@/lib/communaute/video";
 
 // La vidéo jointe à une publication (spec mise en forme et vidéo, §3) : reconnue depuis son adresse, lue par un lecteur
 // construit depuis la plateforme et l'identifiant, jamais depuis une adresse fournie.
@@ -87,5 +87,19 @@ describe("Lire une vidéo", () => {
     expect(videoRangee({ plateforme: "fichier", url: "javascript:alert(1)" })).toBeNull();
     expect(videoRangee({ plateforme: "autre", url: "https://exemple.com", image: "javascript:x" })).toEqual({ plateforme: "autre", url: "https://exemple.com", image: null });
     expect(videoRangee(null)).toBeNull();
+  });
+
+  it("la page de la vidéo, construite depuis la plateforme et l'identifiant, jamais depuis l'adresse rangée (revue finale)", () => {
+    const forge = (plateforme: string, id: string, h?: string) => ({ plateforme, id, ...(h ? { h } : {}), url: "https://hameconnage.example" }) as never;
+    expect(pageVideo(forge("youtube", "dQw4w9WgXcQ"))).toBe("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+    expect(pageVideo(forge("vimeo", "76979871"))).toBe("https://vimeo.com/76979871");
+    expect(pageVideo(forge("vimeo", "76979871", "8272103f6e"))).toBe("https://vimeo.com/76979871/8272103f6e");
+    expect(pageVideo(forge("dailymotion", "x8abc12"))).toBe("https://www.dailymotion.com/video/x8abc12");
+    expect(pageVideo(forge("loom", "0123456789abcdef0123456789abcdef"))).toBe("https://www.loom.com/share/0123456789abcdef0123456789abcdef");
+    expect(pageVideo(forge("tiktok", "7300123456789012345"))).toBe("https://www.tiktok.com/embed/v2/7300123456789012345");
+    expect(pageVideo(forge("facebook", "123456789012345"))).toBe("https://www.facebook.com/watch/?v=123456789012345");
+    expect(pageVideo(forge("instagram", "C1a2B3c4D5e"))).toBe("https://www.instagram.com/p/C1a2B3c4D5e/");
+    expect(pageVideo(forge("drive", "1AbCdEfGhIjKlMnOpQrStUvWxYz012345"))).toBe("https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view");
+    expect(pageVideo({ plateforme: "autre", url: "https://www.twitch.tv/x" })).toBe("https://www.twitch.tv/x");
   });
 });

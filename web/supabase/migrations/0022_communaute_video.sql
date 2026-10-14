@@ -188,6 +188,34 @@ as $$
   where pr.id = p.auteur;
 $$;
 
+-- ─── La file de modération : la vidéo en plus (l'équipe la voit avant de garder ou de rétablir) ─────
+create or replace function public.element_publication(p public.publications)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'type', 'publication',
+    'id', p.id,
+    'publication_id', p.id,
+    'espace', jsonb_build_object('id', p.parcours_id, 'nom', public.nom_espace_communaute(p.parcours_id)),
+    'auteur', jsonb_build_object('id', p.auteur, 'prenom', coalesce(pr.prenom, ''), 'nom', coalesce(pr.nom, '')),
+    'cree_le', p.cree_le,
+    'titre', p.titre,
+    'texte', p.texte,
+    'piece_jointe', p.piece_jointe,
+    'video', p.video,
+    'statut', p.statut,
+    'analyse', p.verdict,
+    'extrait', null,
+    'signalements', public.resume_signalements(p.id, null)
+  )
+  from public.profils pr
+  where pr.id = p.auteur;
+$$;
+
 -- ─── Droits d'exécution ─────────────────────────────────────────────────────────────────────────────
 revoke execute on function public.verifier_video(jsonb) from public, anon, authenticated;
 revoke execute on function public.publier(uuid, text, text, jsonb, jsonb, jsonb, jsonb) from public, anon;

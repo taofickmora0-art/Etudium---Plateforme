@@ -25,6 +25,20 @@ const PROFONDEUR_MAX = 8;
 
 const alnum = (c: string | undefined) => c !== undefined && /[\p{L}\p{N}]/u.test(c);
 const espace = (c: string | undefined) => c === undefined || /\s/.test(c);
+const ADRESSE = /https?:\/\/[^\s<>"']+/y;
+
+/** La fin d'une adresse web qui commence en `i` (hors d'un mot), ou -1. `marquesFinales` : les marques collées à la fin
+ * (« **https://…** ») ne font pas partie de l'adresse. Une adresse n'est jamais lue comme des marques ni échappée. */
+function finAdresse(s: string, i: number, marquesFinales: boolean): number {
+  if (s[i] !== "h" || alnum(s[i - 1])) return -1;
+  ADRESSE.lastIndex = i;
+  const m = ADRESSE.exec(s);
+  if (!m) return -1;
+  let fin = i + m[0].length;
+  if (marquesFinales) while (fin > i && "*+~_".includes(s[fin - 1])) fin--;
+  return fin > i ? fin : -1;
+}
+
 const longueurSuite = (s: string, i: number) => {
   let k = 0;
   while (s[i + k] === s[i]) k++;
@@ -45,6 +59,11 @@ function fermeture(s: string, debut: number, symbole: string): number | null {
   for (let j = debut; j < s.length; j++) {
     if (s[j] === "\\" && ECHAPPABLES.has(s[j + 1] ?? "")) {
       j++;
+      continue;
+    }
+    const adresse = finAdresse(s, j, true);
+    if (adresse > 0) {
+      j = adresse - 1;
       continue;
     }
     if (s[j] !== symbole[0]) continue;
@@ -90,6 +109,12 @@ function enLigne(s: string, marques: Marque[], profondeur: number): Segment[] {
       vider();
       out.push({ saut: true });
       i++;
+      continue;
+    }
+    const adresse = finAdresse(s, i, true);
+    if (adresse > 0) {
+      tampon += s.slice(i, adresse);
+      i = adresse;
       continue;
     }
     const marque = profondeur < PROFONDEUR_MAX ? ouverture(s, i) : null;
@@ -215,10 +240,17 @@ export function versDocument(markdown: string): JSONContent {
 
 // ─── Depuis l'éditeur ───────────────────────────────────────────────────────────────────────────────
 
-/** Protège ce qui serait lu comme une marque : `\` devant une marque, `**`, `++`, `~~`, et `_` en bord de mot. */
+/** Protège ce qui serait lu comme une marque : `\` devant une marque, `**`, `++`, `~~`, et `_` en bord de mot. Une
+ * adresse web reste telle quelle : l'aperçu de son lien la retrouve dans le texte enregistré. */
 function echapper(texte: string): string {
   let r = "";
   for (let i = 0; i < texte.length; i++) {
+    const adresse = finAdresse(texte, i, false);
+    if (adresse > 0) {
+      r += texte.slice(i, adresse);
+      i = adresse - 1;
+      continue;
+    }
     const c = texte[i];
     const avant = texte[i - 1];
     const apres = texte[i + 1];

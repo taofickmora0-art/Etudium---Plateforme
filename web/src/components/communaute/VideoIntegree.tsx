@@ -5,7 +5,7 @@ import { LinkSquare02Icon, PlayIcon, YoutubeIcon } from "@hugeicons/core-free-ic
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
 import { domaine } from "@/lib/communaute/liens";
-import { lecteurVideo, miniatureVideo, nomPlateforme, verticale, type Video } from "@/lib/communaute/video";
+import { lecteurVideo, miniatureVideo, nomPlateforme, pageVideo, verticale, type Video } from "@/lib/communaute/video";
 
 const FOND = "absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,#3A3F55_0,#1D1D1F_70%)]";
 
@@ -83,7 +83,6 @@ export function VideoIntegree({
     );
   }
   const miniature = miniatureVideo(video);
-  const externe = video.plateforme === "youtube" ? `https://www.youtube.com/watch?v=${video.id}` : video.url;
   return (
     <div className={cn(cadre, "flex items-center justify-center")}>
       {miniature ? (
@@ -112,7 +111,7 @@ export function VideoIntegree({
       </button>
       {lien && (
         <a
-          href={externe}
+          href={pageVideo(video)}
           target="_blank"
           rel="noopener noreferrer"
           className="focus-etudium absolute right-3.5 bottom-3 flex items-center gap-1.5 rounded-puce text-[13px] leading-5 font-medium text-white no-underline hover:underline"
