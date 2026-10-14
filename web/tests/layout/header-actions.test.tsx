@@ -14,6 +14,8 @@ vi.mock("next/navigation", async (original) => ({
 }));
 vi.mock("@/lib/auth/actions", () => ({ signOut: vi.fn() }));
 vi.mock("@/lib/full-page", () => ({ loadFullPage: vi.fn() }));
+// La cloche se charge par une action du serveur (migration 0016) : sans base ici, elle reste vide.
+vi.mock("@/lib/notifications/actions", () => ({ chargerCloche: async () => null, marquerLues: async () => ({ ok: true }) }));
 
 async function ouvrirDeconnexion() {
   const user = userEvent.setup();

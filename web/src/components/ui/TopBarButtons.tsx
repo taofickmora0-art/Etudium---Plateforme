@@ -89,15 +89,20 @@ export function CounterPill({ icon, value, label, className }: CounterPillProps)
 }
 
 /** Cloche des notifications. */
-export function NotificationButton({ className, type, ...props }: Omit<ButtonProps, "children">) {
+/**
+ * La cloche. `nonLues` pose une pastille bleue : le design n'en dessine pas, mais sans elle rien ne signale une
+ * nouvelle notification à qui ne lit pas l'écran ; le nombre exact est dans le nom du bouton.
+ */
+export function NotificationButton({ className, type, nonLues = false, ...props }: Omit<ButtonProps, "children"> & { nonLues?: boolean }) {
   return (
     <button
       type={type ?? "button"}
       aria-label="Notifications"
-      className={cn(SURFACE, INTERACTIVE, "w-12 justify-center", className)}
+      className={cn(SURFACE, INTERACTIVE, "relative w-12 justify-center", className)}
       {...props}
     >
       <BellIcon />
+      {nonLues && <span data-pastille aria-hidden="true" className="absolute top-3 right-3 size-2 rounded-full bg-bleu ring-2 ring-coque" />}
     </button>
   );
 }

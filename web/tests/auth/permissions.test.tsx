@@ -13,6 +13,8 @@ import { DEMO_USER } from "@/lib/demo-user";
 
 vi.mock("@/lib/auth/current-user", () => ({ getShellUser: vi.fn() }));
 vi.mock("@/lib/auth/actions", () => ({ signOut: vi.fn() }));
+// La cloche se charge par une action du serveur (migration 0016) : sans base ici, elle reste vide.
+vi.mock("@/lib/notifications/actions", () => ({ chargerCloche: async () => null, marquerLues: async () => ({ ok: true }) }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-etudium-chemin": "/admin" }) }));
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => {

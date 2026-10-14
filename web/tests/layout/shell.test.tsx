@@ -7,6 +7,8 @@ import { MobileNav } from "@/components/layout/MobileNav";
 import { DEMO_USER } from "@/lib/demo-user";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/accueil", useRouter: () => ({ push: vi.fn() }) }));
+// La cloche se charge par une action du serveur (migration 0016) : sans base ici, elle reste vide.
+vi.mock("@/lib/notifications/actions", () => ({ chargerCloche: async () => null, marquerLues: async () => ({ ok: true }) }));
 
 describe("Coque", () => {
   it("le lien d'évitement mène au contenu", () => {
