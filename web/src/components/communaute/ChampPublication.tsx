@@ -224,7 +224,14 @@ export function ChampPublication({
       <div className="flex min-w-0 items-start gap-3">
         <Avatar initials={moi.initiales} src={moi.photoUrl} size={44} className="max-sm:hidden" />
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <TextInput aria-label="Titre (facultatif)" placeholder="Titre (facultatif)" value={titre} maxLength={TITRE_MAX} onChange={(e) => setTitre(e.target.value)} />
+          <TextInput
+            aria-label="Titre (facultatif)"
+            placeholder="Titre (facultatif)"
+            value={titre}
+            maxLength={TITRE_MAX}
+            onChange={(e) => setTitre(e.target.value)}
+            className="max-sm:h-11 max-sm:text-sm"
+          />
           <EditeurTexte
             etiquette="Nouvelle publication"
             autoFocus={focusTexte}

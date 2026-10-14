@@ -528,3 +528,21 @@ La communauté prend la forme des captures « izimentor » : l'onglet **Actualit
 7. **La colonne de droite** (grand écran ; sous le fil sinon) : **Publications tendances** (les plus aimées et commentées de la semaine), **Activités récentes** (« Koffi D. a publié « … » », « … a commenté « … » », le moment en bleu), puis **Prochaine session**. Chaque ligne ouvre la publication.
 8. **Sur ton téléphone** (`http://192.168.0.3:3000`) : les onglets défilent du doigt. Le bouton **≡** ouvre le menu, avec le groupe **Espaces de la communauté** (Actualités, Général, les parcours, un cadenas sur ceux qui sont fermés) : chaque entrée ouvre son onglet.
 9. **Hors communauté**, le menu ≡ ne montre pas ce groupe. Sur ordinateur, le bouton à gauche du logo réduit toujours la barre latérale à ses icônes.
+
+## 27. Valider la mise en forme et les vidéos, 15 minutes
+
+Le texte d'une publication se met en forme comme dans un traitement de texte, et une vidéo (YouTube, Vimeo, TikTok, Facebook, Instagram, Dailymotion, Loom, Google Drive ou un fichier .mp4) peut l'accompagner.
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0022_communaute_video.sql` (après la 0021). Si tu rejoues un jour la 0019, la 0020 ou la 0021, rejoue la 0022 juste après.
+2. **La mise en forme.** Avec le compte étudiant : **Communauté** → « Quoi de neuf, … ? ».
+   - Au-dessus du texte, la barre : Titre 1, Titre 2, Titre 3, Gras, Italique, Souligné, Barré, Liste à puces, Liste numérotée, Citation. Le bouton d'un style actif est bleu.
+   - Écris une ligne, sélectionne-la, clique **Titre 1** ; écris une phrase et mets un mot en **gras**, un autre en italique, souligné, barré ; fais une liste. Les raccourcis marchent aussi (Ctrl+B, Ctrl+I, Ctrl+U).
+   - **Publier** : la publication s'affiche exactement comme dans l'éditeur. **⋮ → Modifier** rouvre l'éditeur avec la mise en forme.
+   - Sur téléphone, la barre défile du doigt.
+3. **La vidéo.** Dans le champ ouvert, **Vidéo** (ou l'icône caméra du champ fermé, sur ordinateur) :
+   - colle un lien YouTube : l'aperçu s'affiche aussitôt ; **Publier** : la vidéo se lit dans la publication au clic ;
+   - essaie un lien Vimeo, TikTok, Facebook ou Instagram ;
+   - un lien d'un autre site (Twitch, par exemple) donne une carte « Regarder sur … » ;
+   - un texte qui n'est pas une adresse : « Collez l’adresse complète de la vidéo (https://…). » ; la croix **Retirer la vidéo** l'enlève.
+4. **Avec l'analyse automatique** (section 25) : la vidéo et l'aperçu d'un lien sont vérifiés avec le texte.
+
