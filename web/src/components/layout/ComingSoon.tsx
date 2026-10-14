@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Notification02Icon, Shield01Icon, SparklesIcon, TeachingIcon } from "@hugeicons/core-free-icons";
+import { Notification02Icon, Shield01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { IconSvgElement } from "@/components/ui/Icon";
@@ -12,7 +12,6 @@ import { SessionGuard } from "./SessionGuard";
 // Pages qui ne sont pas dans les menus, mais dans l'en-tête ou le menu du profil.
 const ICONES_HORS_MENU: Partial<Record<PageAVenir, IconSvgElement>> = {
   notifications: Notification02Icon,
-  formateur: TeachingIcon,
   admin: Shield01Icon,
 };
 

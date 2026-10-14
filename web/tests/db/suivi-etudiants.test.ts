@@ -21,7 +21,6 @@ const S = randomUUID(); // super admin
 let FA: string;
 let X: string;
 let Y: string;
-let Z: string;
 let leconsX: string[];
 let leconsY: string[];
 
@@ -73,8 +72,7 @@ beforeAll(async () => {
   const FB = (await un<{ id: string }>("select id from public.formateurs where compte_id = $1", [G])).id;
   [X, leconsX] = await formation("Maîtriser Microsoft Excel", FA, 4);
   [Y, leconsY] = await formation("Word", FA, 2);
-  let leconsZ: string[];
-  [Z, leconsZ] = await formation("Zotero", FB, 1);
+  const [, leconsZ] = await formation("Zotero", FB, 1);
   for (const [i, l] of leconsX.entries()) await progression(E1, l, "1 day", true, i === 0 ? "{[0,90)}" : "{}");
   await progression(E2, leconsX[0], "12 days");
   await progression(F, leconsX[0], "1 hour");
@@ -174,8 +172,8 @@ describe("Migration 0015 : suivi des étudiants", () => {
   });
 
   it("une leçon ajoutée après coup : la formation n'est plus terminée", async () => {
-    const module = (await un<{ module_id: string }>("select module_id from public.lecons where id = $1", [leconsX[0]])).module_id;
-    await banc.db.query("insert into public.lecons (module_id, titre, ordre) values ($1, 'Leçon 5', 5)", [module]);
+    const mod = (await un<{ module_id: string }>("select module_id from public.lecons where id = $1", [leconsX[0]])).module_id;
+    await banc.db.query("insert into public.lecons (module_id, titre, ordre) values ($1, 'Leçon 5', 5)", [mod]);
     const e1 = (await liste(F, "fifame")).lignes[0];
     expect(e1).toMatchObject({ terminees: 4, total: 5, etat: "en_cours" });
   });

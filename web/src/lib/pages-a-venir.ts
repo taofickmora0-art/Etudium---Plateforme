@@ -17,7 +17,6 @@ export const PAGES_A_VENIR = {
   exercices: { titre: "Exercices", quand: "au lot 3, Quiz, exercices et certificats", description: "Vos exercices à rendre et à corriger s’afficheront ici." },
   certificats: { titre: "Certificats", quand: "au lot 3, Quiz, exercices et certificats", description: "Vos certificats et leur QR Code de vérification s’afficheront ici." },
   abonnement: { titre: "Mon abonnement", quand: "au lot 2, Abonnements et paiement", description: "Votre formule, vos paiements et vos reçus s’afficheront ici." },
-  formateur: { titre: "Espace formateur", quand: "au lot 4, Espace formateur", description: "Les formateurs y créeront et suivront leurs formations." },
   admin: { titre: "Back-office", quand: "au lot 1, avec le back-office de saisie", description: "L’équipe Étudium y gérera les formations et les comptes." },
   // Back-office (menu de l'équipe)
   "admin/paiements": { titre: "Abonnements et paiements", quand: "au lot 2, Abonnements et paiement", description: "Les formules, les abonnements et les paiements s’afficheront ici." },

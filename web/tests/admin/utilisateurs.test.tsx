@@ -27,7 +27,13 @@ const getAuthUser = vi.fn();
 vi.mock("@/lib/auth/current-user", () => ({ getAuthUser: () => getAuthUser(), getShellUser: vi.fn(), demoModeActive: () => false }));
 const lireCompte = vi.fn();
 const lireFichesLibres = vi.fn();
-vi.mock("@/lib/utilisateurs/data", () => ({ lireCompte: (...a: unknown[]) => lireCompte(...a), lireFichesLibres: () => lireFichesLibres(), lireComptes: vi.fn() }));
+const lireRemarquesFormateurs = vi.fn(async () => ({ migrationAbsente: false, donnees: [] as unknown[] }));
+vi.mock("@/lib/utilisateurs/data", () => ({
+  lireCompte: (...a: unknown[]) => lireCompte(...a),
+  lireFichesLibres: () => lireFichesLibres(),
+  lireComptes: vi.fn(),
+  lireRemarquesFormateurs: () => lireRemarquesFormateurs(),
+}));
 
 const { ListeComptes } = await import("@/components/admin/utilisateurs/ListeComptes");
 const { RolesCompte } = await import("@/components/admin/utilisateurs/RolesCompte");
@@ -320,6 +326,27 @@ describe("Fiche d'un compte (page)", () => {
     expect(screen.getByText("Seul le super admin change les rôles.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Suspendre le compte" })).toBeInTheDocument();
     expect(lireFichesLibres).not.toHaveBeenCalled();
+  });
+
+  it("les remarques des formateurs, en lecture seule ; aucune ; rien avant la migration 0015", async () => {
+    lireCompte.mockResolvedValue({ migrationAbsente: false, donnees: COMPTE });
+    lireRemarquesFormateurs.mockResolvedValueOnce({
+      migrationAbsente: false,
+      donnees: [{ formateurNom: "Dr Mireille Adjovi", texte: "A du mal avec les formules.", modifieeLe: "2026-10-13T09:00:00Z" }],
+    });
+    const premier = avecToast(await FicheUtilisateur({ params: Promise.resolve({ id: ID }), roles: ADMIN }));
+    const section = screen.getByRole("region", { name: "Remarques des formateurs" });
+    expect(section).toHaveTextContent("Dr Mireille Adjovi");
+    expect(section).toHaveTextContent("13 oct. 2026");
+    expect(section).toHaveTextContent("A du mal avec les formules.");
+    expect(within(section).queryByRole("textbox")).not.toBeInTheDocument();
+    premier.unmount();
+    const second = avecToast(await FicheUtilisateur({ params: Promise.resolve({ id: ID }), roles: ADMIN }));
+    expect(within(screen.getByRole("region", { name: "Remarques des formateurs" })).getByText("Aucune remarque.")).toBeInTheDocument();
+    second.unmount();
+    lireRemarquesFormateurs.mockResolvedValueOnce({ migrationAbsente: true } as never);
+    avecToast(await FicheUtilisateur({ params: Promise.resolve({ id: ID }), roles: ADMIN }));
+    expect(screen.queryByRole("region", { name: "Remarques des formateurs" })).not.toBeInTheDocument();
   });
 
   it("sur son propre compte, pas de bouton de suspension", async () => {

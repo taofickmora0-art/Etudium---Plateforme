@@ -3,11 +3,12 @@ import { PageAdmin } from "@/components/admin/PageAdmin";
 import { Avatar } from "@/components/ui/Avatar";
 import { getAuthUser } from "@/lib/auth/current-user";
 import type { Role } from "@/lib/auth/permissions";
-import { lireCompte, lireFichesLibres } from "@/lib/utilisateurs/data";
+import { lireCompte, lireFichesLibres, lireRemarquesFormateurs } from "@/lib/utilisateurs/data";
 import { dateCourte, droitsSurCompte, initialesCompte, nomAffiche } from "@/lib/utilisateurs/regles";
 import { ActiviteCompte } from "./ActiviteCompte";
 import { EtiquettesRoles } from "./EtiquettesRoles";
 import { MigrationAbsente } from "./MigrationAbsente";
+import { RemarquesFormateurs } from "./RemarquesFormateurs";
 import { RolesCompte } from "./RolesCompte";
 import { Section } from "./Section";
 import { SuspensionCompte } from "./SuspensionCompte";
@@ -33,7 +34,7 @@ export async function FicheUtilisateur({ params, roles }: { params: Promise<{ id
 
   const connecte = await getAuthUser();
   const droits = droitsSurCompte({ id: connecte?.id ?? "", roles }, { id: compte.id, roles: compte.roles, suspendu: compte.suspension !== null });
-  const fichesLibres = droits.changerRoles ? await lireFichesLibres() : [];
+  const [fichesLibres, remarques] = await Promise.all([droits.changerRoles ? lireFichesLibres() : Promise.resolve([]), lireRemarquesFormateurs(compte.id)]);
   const nom = nomAffiche(compte.prenom, compte.nom);
 
   return (
@@ -53,6 +54,7 @@ export async function FicheUtilisateur({ params, roles }: { params: Promise<{ id
         </Section>
         <RolesCompte compte={compte} fichesLibres={fichesLibres} modifiable={droits.changerRoles} />
         <ActiviteCompte compte={compte} />
+        <RemarquesFormateurs remarques={remarques.migrationAbsente ? null : remarques.donnees} />
         <SuspensionCompte compte={compte} droits={{ suspendre: droits.suspendre, reactiver: droits.reactiver }} />
       </div>
     </PageAdmin>

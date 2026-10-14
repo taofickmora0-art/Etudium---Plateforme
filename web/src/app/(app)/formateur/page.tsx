@@ -1,14 +1,21 @@
 import { Suspense } from "react";
-import { comingSoonMetadata } from "@/components/layout/ComingSoon";
-import { ReservedComingSoon } from "@/components/layout/ReservedComingSoon";
+import type { Metadata } from "next";
+import { TableauDeBordFormateur } from "@/components/formateur/TableauDeBordFormateur";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { requireSpace } from "@/lib/auth/require-space";
 
-export const metadata = comingSoonMetadata("formateur");
+export const metadata: Metadata = { title: "Espace formateur · Étudium" };
 
-/** Réservée aux rôles concernés (lib/auth/permissions) : un étudiant est renvoyé vers l'accueil. */
+async function Contenu() {
+  await requireSpace("formateur");
+  return <TableauDeBordFormateur />;
+}
+
+/** Tableau de bord du formateur (design NdFormateur) : réservé aux formateurs, rien n'est rendu avant la vérification. */
 export default function Page() {
   return (
-    <Suspense fallback={null}>
-      <ReservedComingSoon espace="formateur" page="formateur" />
+    <Suspense fallback={<Skeleton className="h-60 max-w-[760px] rounded-carte" />}>
+      <Contenu />
     </Suspense>
   );
 }
