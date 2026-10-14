@@ -11,7 +11,8 @@ import type { Annonce, Espace, LotPublications, MoiCommunaute, Publication } fro
 // leurs aperçus, la vidéo YouTube au clic, le tri, le signet, les initiales des J’aime, le champ fermé.
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ storage: { from: () => ({ upload: vi.fn(), remove: vi.fn() }) } }) }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }), unstable_rethrow: () => undefined }));
+let recherche = "";
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }), useSearchParams: () => new URLSearchParams(recherche), unstable_rethrow: () => undefined }));
 vi.mock("@/lib/communaute/actions", () => ({
   chargerFil: vi.fn(),
   chargerReponses: vi.fn(),
@@ -86,6 +87,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-10-14T15:00:00Z"));
   for (const f of Object.values(actions)) vi.mocked(f).mockReset();
+  recherche = "";
 });
 afterEach(() => vi.useRealTimers());
 
@@ -249,3 +251,40 @@ describe("Le champ de publication", () => {
     expect(screen.getByRole("button", { name: "Quoi de neuf, Koffi ?" })).toBeInTheDocument();
   });
 });
+
+describe("L'adresse et l'onglet", () => {
+  it("l'adresse suit la puce ; un espace choisi dans le menu ≡ ouvre son onglet ; une relecture du serveur garde l'onglet et le fil", async () => {
+    const user = userEvent.setup({ delay: null });
+    const remplacer = vi.spyOn(window.history, "replaceState");
+    const ui = (initial: LotPublications) => (
+      <ToastProvider>
+        <PageCommunaute espaces={ESPACES} initial={initial} moi={MOI} />
+      </ToastProvider>
+    );
+    vi.mocked(actions.chargerFil).mockResolvedValueOnce({ ok: true, lot: lot([pub({ id: "g1", texte: "Dans Général" })]) });
+    const { rerender } = render(ui(lot([pub()])));
+    await user.click(onglet("Général"));
+    expect(await screen.findByText("Dans Général")).toBeInTheDocument();
+    expect(remplacer).toHaveBeenLastCalledWith(null, "", "/communaute?espace=general");
+    // L'adresse écrite par la page elle-même ne relit rien.
+    recherche = "espace=general";
+    rerender(ui(lot([pub()])));
+    expect(actions.chargerFil).toHaveBeenCalledTimes(1);
+
+    // Le menu ≡ → Actualités : une nouvelle adresse, la même page.
+    vi.mocked(actions.chargerFil).mockResolvedValueOnce({ ok: true, lot: lot([pub({ id: "t1", texte: "Tous les espaces" })]) });
+    recherche = "espace=tous";
+    rerender(ui(lot([pub()])));
+    expect(await screen.findByText("Tous les espaces")).toBeInTheDocument();
+    expect(onglet("Actualités")).toHaveAttribute("aria-pressed", "true");
+    expect(actions.chargerFil).toHaveBeenLastCalledWith("tous", "recentes", {});
+    expect(remplacer).toHaveBeenCalledTimes(1);
+
+    // Une relecture du serveur (après un commentaire, une publication) : l'onglet, le tri et le fil restent.
+    rerender(ui(lot([pub({ id: "autre", texte: "Relu par le serveur" })])));
+    expect(screen.getByText("Tous les espaces")).toBeInTheDocument();
+    expect(screen.queryByText("Relu par le serveur")).toBeNull();
+    remplacer.mockRestore();
+  });
+});
+

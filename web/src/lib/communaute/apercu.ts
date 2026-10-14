@@ -1,6 +1,6 @@
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
-import { idYoutube, premiereAdresse, type Apercu } from "./liens";
+import type { Apercu } from "./liens";
 
 // L'aperçu d'un lien, lu par le serveur au moment de publier (spec du fil « Actualités », §3). Serveur seulement :
 // jamais une adresse privée, locale ou réservée (vérifiée sur chaque adresse IP du nom et à chaque redirection),
@@ -156,13 +156,4 @@ export async function lireApercu(adresse: string, outils: Outils = {}): Promise<
   } finally {
     clearTimeout(delai);
   }
-}
-
-/** L'aperçu de la première adresse d'un texte : YouTube sans lecture réseau, un autre site lu par le serveur. */
-export async function apercuDuTexte(texte: string, outils: Outils = {}): Promise<Apercu | null> {
-  const adresse = premiereAdresse(texte);
-  if (!adresse) return null;
-  const id = idYoutube(adresse);
-  if (id) return { type: "youtube", id };
-  return lireApercu(adresse, outils);
 }

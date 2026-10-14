@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { adressePrivee, apercuDuTexte, lireApercu } from "@/lib/communaute/apercu";
+import { adressePrivee, lireApercu } from "@/lib/communaute/apercu";
 
 // La lecture d'une page par le serveur pour l'aperçu d'un lien (spec du fil Actualités, §3) : jamais une adresse privée.
 
@@ -93,15 +93,5 @@ describe("lireApercu", () => {
     const enCours = lireApercu("https://exemple.com/lente", { fetch: lent, resoudre: async () => [PUBLIQUE] });
     await vi.advanceTimersByTimeAsync(4_000);
     expect(await enCours).toBeNull();
-  });
-});
-
-describe("apercuDuTexte", () => {
-  it("YouTube sans lecture réseau ; un autre site lu ; sans adresse : rien", async () => {
-    const o = outils([page("<title>Exemple</title>")]);
-    expect(await apercuDuTexte("Regardez https://youtu.be/dQw4w9WgXcQ !", o)).toEqual({ type: "youtube", id: "dQw4w9WgXcQ" });
-    expect(o.appels).toEqual([]);
-    expect(await apercuDuTexte("Voir https://exemple.com/page.", o)).toMatchObject({ type: "lien", url: "https://exemple.com/page", titre: "Exemple" });
-    expect(await apercuDuTexte("Pas de lien", o)).toBeNull();
   });
 });

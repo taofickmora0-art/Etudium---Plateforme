@@ -9,7 +9,7 @@ import type { Espace, LotPublications, Publication, Reponse } from "@/lib/commun
 // La modération dans la communauté (spec de la modération, §3 et §4) : Signaler, publications en attente, mention du champ.
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ storage: { from: () => ({ upload: vi.fn(), remove: vi.fn() }) } }) }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/lib/communaute/actions", () => ({
   chargerFil: vi.fn(),
   chargerReponses: vi.fn(),

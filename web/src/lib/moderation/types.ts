@@ -15,7 +15,14 @@ export type MotifSignalement = (typeof MOTIFS)[number];
 export type ConfigModeration = { cle: string; jeton: string; modele: string };
 
 /** Ce qui part à l'IA : le titre, le texte, l'espace, et le fichier joint relu depuis le stockage. */
-export type ContenuAnalyse = { titre: string; texte: string; espace: string; fichier: { type: string; octets: Uint8Array } | null };
+export type ContenuAnalyse = {
+  titre: string;
+  texte: string;
+  espace: string;
+  fichier: { type: string; octets: Uint8Array } | null;
+  /** L'aperçu du premier lien, lu sur la page par le serveur (migration 0021) : la carte que les membres verront. */
+  lien?: { url: string; titre: string; description: string };
+};
 
 export type OngletFile = "a_examiner" | "bloquees";
 

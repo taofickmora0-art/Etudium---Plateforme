@@ -248,4 +248,44 @@ describe("L'annonce épinglée", () => {
     expect(await lire(E1)).toBeNull();
     expect(await lit(E1, affiche)).toBe(0);
   });
+
+  it("un autre membre de l'équipe garde l'affiche déjà enregistrée ; une autre image du dossier d'autrui reste refusée", async () => {
+    const affiche = `${A}/${randomUUID()}.png`;
+    await deposer(A, affiche);
+    await ecrire(A, { media: "image", youtube_id: null, image_chemin: affiche });
+    await ecrire(S, { active: false, titre: "Corrigé", media: "image", youtube_id: null, image_chemin: affiche });
+    expect((await banc.en<{ r: Record<string, unknown> }>({ id: A }, "select public.annonce_equipe() as r"))[0].r).toMatchObject({ active: false, titre: "Corrigé", image_chemin: affiche });
+    const autre = `${A}/${randomUUID()}.png`;
+    await deposer(A, autre);
+    await expect(ecrire(S, { media: "image", youtube_id: null, image_chemin: autre })).rejects.toThrow("Choisissez une image JPEG, PNG ou WebP de 10 Mo au plus.");
+  });
+});
+
+describe("La lecture des aperçus (reserver_apercu)", () => {
+  type Reservation = { lire: boolean; actuel: Record<string, unknown> | null };
+  const reserver = async (qui: string, publication: string | null, parcours: string | null, adresse: string) =>
+    (await banc.en<{ r: Reservation }>({ id: qui }, "select public.reserver_apercu($1, $2, $3) as r", [publication, parcours, adresse]))[0].r;
+  const U = "https://exemple.com/page";
+
+  beforeEach(async () => {
+    await banc.db.query("delete from public.lectures_apercu");
+  });
+
+  it("modifier : la sienne seulement ; même lien : l'aperçu actuel, sans lecture ; autre lien : une lecture", async () => {
+    const id = await publier(E1, null, `À lire : ${U}`, { type: "lien", url: U, titre: "Page", description: "", image: null });
+    await expect(reserver(E2, id, null, "https://autre.example/")).rejects.toThrow("Cette publication n’est pas la vôtre.");
+    await expect(reserver(E1, randomUUID(), null, U)).rejects.toThrow("Cette publication n’existe plus.");
+    expect(await reserver(E1, id, null, U)).toEqual({ lire: false, actuel: expect.objectContaining({ type: "lien", url: U }) });
+    expect(await reserver(E1, id, null, "https://autre.example/")).toEqual({ lire: true, actuel: expect.objectContaining({ url: U }) });
+    expect(Number((await un<{ n: number }>("select count(*)::int as n from public.lectures_apercu")).n)).toBe(1);
+  });
+
+  it("publier : un espace ouvert, la limite des publications, puis 20 lectures par 10 minutes ; la table est fermée", async () => {
+    await expect(reserver(E2, null, P, U)).rejects.toThrow("Cet espace ne vous est pas ouvert.");
+    for (let i = 0; i < 20; i++) expect(await reserver(E2, null, null, `${U}?${i}`)).toEqual({ lire: true, actuel: null });
+    expect(await reserver(E2, null, null, U)).toEqual({ lire: false, actuel: null });
+    for (let i = 0; i < 5; i++) await publier(E1, null, `Message ${i}`);
+    await expect(reserver(E1, null, null, U)).rejects.toThrow("Vous publiez beaucoup en peu de temps.");
+    await expect(banc.en({ id: E1 }, "select * from public.lectures_apercu")).rejects.toThrow(REFUS);
+  });
 });

@@ -66,7 +66,7 @@ function versPiece(valeur: unknown): PieceJointe | null {
 }
 
 /** L'aperçu rangé par la base (0021) ; toute autre forme est ignorée. */
-function versApercu(valeur: unknown): Apercu | null {
+export function versApercu(valeur: unknown): Apercu | null {
   const a = un(valeur);
   if (a?.type === "youtube" && texte(a.id)) return { type: "youtube", id: texte(a.id) };
   if (a?.type === "lien" && texte(a.url)) return { type: "lien", url: texte(a.url), titre: texte(a.titre), description: texte(a.description), image: texteOuNull(a.image) };

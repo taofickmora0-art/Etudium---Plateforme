@@ -65,8 +65,8 @@ export async function ContenuCommunaute({ searchParams }: { searchParams?: Promi
   const maintenant = new Date();
   return (
     <PageCommunaute
-      // Un autre espace choisi dans le menu ≡ : la page repart de son onglet.
-      key={onglet}
+      // Pas de `key` : un autre espace choisi dans le menu ≡ change l'adresse, que la page suit (useSearchParams) ; une
+      // relecture du serveur (après un commentaire, une publication) garde l'onglet, le tri et le fil déjà chargés.
       ongletInitial={onglet}
       espaces={espaces.donnees}
       initial={fil.donnees}

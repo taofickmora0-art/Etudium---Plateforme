@@ -338,6 +338,60 @@ begin
 end;
 $$;
 
+-- ─── La lecture des aperçus ─────────────────────────────────────────────────────────────────────────
+-- Chaque page lue par le serveur pour un aperçu est notée : 20 lectures par compte et par 10 minutes au plus. Fermée.
+create table if not exists public.lectures_apercu (
+  profil_id uuid not null references public.profils (id) on delete cascade,
+  cree_le timestamptz not null default now()
+);
+create index if not exists lectures_apercu_profil_idx on public.lectures_apercu (profil_id, cree_le);
+alter table public.lectures_apercu enable row level security;
+revoke all on public.lectures_apercu from anon, authenticated;
+
+-- Avant de lire la page d'un lien : les droits de l'appelant d'abord (sa publication pour modifier ; l'espace ouvert et
+-- la limite des publications pour publier), puis la limite des lectures. Rend l'aperçu actuel de la publication modifiée,
+-- gardé sans lecture si son adresse n'a pas changé, et si une lecture est permise.
+create or replace function public.reserver_apercu(p_publication uuid, p_parcours uuid, p_adresse text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_moi uuid := (select auth.uid());
+  v public.publications%rowtype;
+  v_actuel jsonb;
+  v_nombre integer;
+begin
+  perform public.exiger_compte_actif();
+  if p_publication is not null then
+    select * into v from public.publications where id = p_publication;
+    if not found or not public.peut_lire_espace(v.parcours_id) or v.statut = 'bloquee' then
+      raise exception 'Cette publication n’existe plus.';
+    end if;
+    if v.auteur <> v_moi then
+      raise exception 'Cette publication n’est pas la vôtre.' using errcode = '42501';
+    end if;
+    v_actuel := v.apercu;
+    if v_actuel ->> 'type' = 'lien' and v_actuel ->> 'url' = p_adresse then
+      return jsonb_build_object('lire', false, 'actuel', v_actuel);
+    end if;
+  else
+    if not public.peut_lire_espace(p_parcours) then
+      raise exception 'Cet espace ne vous est pas ouvert.' using errcode = '42501';
+    end if;
+    perform public.limiter_debit(false);
+  end if;
+  select count(*) into v_nombre from public.lectures_apercu where profil_id = v_moi and cree_le > now() - interval '10 minutes';
+  if v_nombre >= 20 then
+    return jsonb_build_object('lire', false, 'actuel', v_actuel);
+  end if;
+  delete from public.lectures_apercu where profil_id = v_moi and cree_le < now() - interval '1 day';
+  insert into public.lectures_apercu (profil_id) values (v_moi);
+  return jsonb_build_object('lire', true, 'actuel', v_actuel);
+end;
+$$;
+
 -- ─── La colonne de droite ───────────────────────────────────────────────────────────────────────────
 -- Les 5 publications des 7 derniers jours les plus aimées et commentées (au moins une fois), dans les espaces ouverts.
 create or replace function public.publications_tendances()
@@ -498,7 +552,8 @@ begin
 end;
 $$;
 
--- Enregistrer l'annonce (équipe). L'affiche est une image déposée par ce compte dans son dossier de l'espace « communaute ».
+-- Enregistrer l'annonce (équipe). Une nouvelle affiche est une image déposée par ce compte dans son dossier de l'espace
+-- « communaute » ; l'affiche déjà enregistrée se garde, quel que soit le membre de l'équipe qui enregistre.
 create or replace function public.enregistrer_annonce(
   p_active boolean, p_titre text, p_texte text, p_media text, p_youtube_id text, p_image_chemin text, p_public text, p_parcours uuid
 )
@@ -512,8 +567,10 @@ declare
   v_texte text := regexp_replace(coalesce(p_texte, ''), '^\s+|\s+$', '', 'g');
   v_media text := case when p_media in ('youtube', 'image') then p_media end;
   v_public text := case when p_public = 'parcours' then 'parcours' else 'tous' end;
+  v_actuelle text;
 begin
   perform public.exiger_equipe_moderation();
+  select image_chemin into v_actuelle from public.annonce_communaute where id;
   if char_length(v_titre) > 120 or (coalesce(p_active, false) and v_titre = '') then
     raise exception 'Écrivez le titre de l’annonce (120 caractères au plus).';
   end if;
@@ -524,14 +581,20 @@ begin
     raise exception 'Cette adresse YouTube n’est pas reconnue.';
   end if;
   if v_media = 'image' and (
-    p_image_chemin is null or p_image_chemin ~ '\.\.'
-    or (storage.foldername(p_image_chemin))[1] is distinct from (select auth.uid())::text
-    or not exists (
-      select 1 from storage.objects o
-      where o.bucket_id = 'communaute' and o.name = p_image_chemin
-        and o.metadata ->> 'mimetype' in ('image/jpeg', 'image/png', 'image/webp')
-        and o.metadata ->> 'size' ~ '^[0-9]{1,9}$'
-        and (o.metadata ->> 'size')::bigint between 1 and 10485760
+    p_image_chemin is null
+    or (
+      p_image_chemin is distinct from v_actuelle
+      and (
+        p_image_chemin ~ '\.\.'
+        or (storage.foldername(p_image_chemin))[1] is distinct from (select auth.uid())::text
+        or not exists (
+          select 1 from storage.objects o
+          where o.bucket_id = 'communaute' and o.name = p_image_chemin
+            and o.metadata ->> 'mimetype' in ('image/jpeg', 'image/png', 'image/webp')
+            and o.metadata ->> 'size' ~ '^[0-9]{1,9}$'
+            and (o.metadata ->> 'size')::bigint between 1 and 10485760
+        )
+      )
     )
   ) then
     raise exception 'Choisissez une image JPEG, PNG ou WebP de 10 Mo au plus.';
@@ -592,12 +655,14 @@ revoke execute on function public.publier(uuid, text, text, jsonb, jsonb, jsonb)
 revoke execute on function public.modifier_publication(uuid, text, text, jsonb, jsonb) from public, anon;
 revoke execute on function public.fil_communaute(text, text, timestamptz, uuid, integer, integer) from public, anon;
 revoke execute on function public.basculer_enregistrement(uuid) from public, anon;
+revoke execute on function public.reserver_apercu(uuid, uuid, text) from public, anon;
 revoke execute on function public.publications_tendances() from public, anon;
 revoke execute on function public.activites_recentes() from public, anon;
 grant execute on function public.publier(uuid, text, text, jsonb, jsonb, jsonb) to authenticated;
 grant execute on function public.modifier_publication(uuid, text, text, jsonb, jsonb) to authenticated;
 grant execute on function public.fil_communaute(text, text, timestamptz, uuid, integer, integer) to authenticated;
 grant execute on function public.basculer_enregistrement(uuid) to authenticated;
+grant execute on function public.reserver_apercu(uuid, uuid, text) to authenticated;
 grant execute on function public.publications_tendances() to authenticated;
 grant execute on function public.activites_recentes() to authenticated;
 revoke execute on function public.annonce_visible(public.annonce_communaute) from public, anon, authenticated;

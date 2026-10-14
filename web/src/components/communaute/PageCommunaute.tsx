@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { Bookmark02Icon, SquareLock02Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { useMaintenant } from "@/components/notifications/horloge";
 import { Banner } from "@/components/ui/Banner";
@@ -66,6 +67,10 @@ export function PageCommunaute({
   const demande = useRef(0);
   const maintenant = useMaintenant(heureServeur);
   const espace = onglet === ACTUALITES ? general : (liste.find((e) => valeur(e) === onglet) ?? general);
+  // L'onglet suit l'adresse : une entrée du menu ≡ (`?espace=`) ouvre le sien, sans recharger la page. L'adresse que la
+  // page écrit elle-même (`replaceState`) est notée d'avance et ne relit rien ; une relecture du serveur garde tout.
+  const demandee = useSearchParams()?.get("espace") ?? ACTUALITES;
+  const adresse = useRef(demandee);
 
   async function lire(cible: string, ordre: TriFil, depuis: SuiteFil) {
     const numero = ++demande.current;
@@ -86,10 +91,13 @@ export function PageCommunaute({
     else setErreur(reponse.message);
   }
 
-  function changerOnglet(cible: string) {
+  function changerOnglet(cible: string, ecrireAdresse = true) {
     setOnglet(cible);
-    // L'adresse suit l'onglet (le menu ≡ le marque, un lien copié le rouvre) ; Next garde son routeur à jour.
-    window.history.replaceState(null, "", cible === ACTUALITES ? "/communaute" : `/communaute?espace=${encodeURIComponent(cible)}`);
+    if (ecrireAdresse) {
+      // L'adresse suit l'onglet (le menu ≡ le marque, un lien copié le rouvre) ; Next garde son routeur à jour.
+      adresse.current = cible;
+      window.history.replaceState(null, "", cible === ACTUALITES ? "/communaute" : `/communaute?espace=${encodeURIComponent(cible)}`);
+    }
     const choisi = cible === ACTUALITES ? general : liste.find((e) => valeur(e) === cible);
     if (!choisi?.ouvert) {
       // Un espace fermé n'a pas de fil : une lecture en cours pour un autre onglet est oubliée.
@@ -101,6 +109,15 @@ export function PageCommunaute({
     }
     void recharger(cible, tri);
   }
+
+  const suivreAdresse = useEffectEvent((cible: string) => {
+    if (cible !== onglet && (cible === ACTUALITES || liste.some((e) => valeur(e) === cible))) changerOnglet(cible, false);
+  });
+  useEffect(() => {
+    if (demandee === adresse.current) return;
+    adresse.current = demandee;
+    suivreAdresse(demandee);
+  }, [demandee]);
 
   function changerTri(ordre: TriFil) {
     setTri(ordre);
@@ -145,7 +162,7 @@ export function PageCommunaute({
           })),
         ]}
         value={onglet}
-        onValueChange={changerOnglet}
+        onValueChange={(cible) => changerOnglet(cible)}
       />
       <div className="mt-5 h-px bg-separateur" />
       <div className="mt-7 flex min-w-0 flex-col gap-6 xl:flex-row xl:items-start">

@@ -9,8 +9,9 @@ import { analyserPublication, configurationModeration } from "@/lib/moderation/a
 import { messageBloquee, refusSignalement } from "@/lib/moderation/regles";
 import { MOTIFS, type ContenuAnalyse, type MotifSignalement, type Verdict } from "@/lib/moderation/types";
 import { createClient } from "@/lib/supabase/server";
-import { apercuDuTexte } from "./apercu";
-import { lireLot, UUID, versEspace, versReponse } from "./data";
+import { lireApercu } from "./apercu";
+import { lireLot, UUID, versApercu, versEspace, versReponse } from "./data";
+import { idYoutube, premiereAdresse } from "./liens";
 import { nomCourt, refusPiece, refusPublication, refusReponse } from "./regles";
 import type { Apercu, Espace, FiltreFil, LotPublications, PieceEnvoyee, Reponse, SuiteFil, TriFil } from "./types";
 
@@ -94,8 +95,32 @@ async function nomDeLEspace(supabase: Client, espaceId: string | null) {
   return String(liste(data).find((e) => e.id === espaceId)?.nom_court ?? "général");
 }
 
-/** L'aperçu de la première adresse du texte (0021), lu pendant l'analyse ; un échec : pas d'aperçu. */
-const lireApercuDuTexte = (texte: string): Promise<Apercu | null> => apercuDuTexte(texte).catch(() => null);
+/**
+ * L'aperçu de la première adresse du texte (0021). YouTube : sans lecture réseau. Un autre site : la base réserve d'abord
+ * la lecture (les droits de l'appelant, la limite des publications, 20 lectures par 10 minutes), qui part ensuite pendant
+ * l'analyse ; une modification qui garde le même lien garde son aperçu sans relire la page. Réservation refusée :
+ * `{ refus }` ; plus de lecture permise, un échec ou avant la 0021 : pas d'aperçu.
+ */
+async function preparerApercu(
+  supabase: Client,
+  texte: string,
+  cible: { publication: string | null; parcours: string | null },
+): Promise<{ apercu: Promise<Apercu | null> } | { refus: string }> {
+  const adresse = premiereAdresse(texte);
+  if (!adresse) return { apercu: Promise.resolve(null) };
+  const video = idYoutube(adresse);
+  if (video) return { apercu: Promise.resolve({ type: "youtube", id: video }) };
+  const { data, error } = await supabase.rpc("reserver_apercu", { p_publication: cible.publication, p_parcours: cible.parcours, p_adresse: adresse });
+  if (error) return estFonctionAbsente(error) ? { apercu: Promise.resolve(null) } : { refus: message(error) };
+  const reservation = un(data);
+  const actuel = versApercu(reservation?.actuel);
+  if (actuel?.type === "lien" && actuel.url === adresse) return { apercu: Promise.resolve(actuel) };
+  if (reservation?.lire !== true) return { apercu: Promise.resolve(null) };
+  return { apercu: lireApercu(adresse).catch(() => null) };
+}
+
+/** Ce que l'IA juge de l'aperçu d'un site : son adresse, son titre et sa description (l'image n'est pas transmise). */
+const lienAnalyse = (apercu: Apercu | null) => (apercu?.type === "lien" ? { lien: { url: apercu.url, titre: apercu.titre, description: apercu.description } } : {});
 
 /**
  * Publier ou modifier avec l'aperçu, transmis seulement s'il y en a un ; avant la 0021 (fonction sans p_apercu),
@@ -133,24 +158,30 @@ export async function publierPublication(
   if (refus) return { ok: false, message: refus };
   const supabase = await createClient();
   const parcours = espaceId && UUID.test(espaceId) ? espaceId : null;
-  const apercu = lireApercuDuTexte(texte.trim());
+  // La page d'un lien n'est lue qu'une fois les droits et les limites vérifiés par la base.
+  const preparation = await preparerApercu(supabase, texte.trim(), { publication: null, parcours });
+  if ("refus" in preparation) {
+    if (piece) await supabase.storage.from("communaute").remove([piece.chemin]);
+    return { ok: false, message: preparation.refus };
+  }
+  const apercu = preparation.apercu;
   const reglage = await moderation(supabase);
   const pieceEnvoyee = piece ? { chemin: piece.chemin, nom: piece.nom, type: piece.type, taille: piece.taille } : null;
   let analyse: Record<string, unknown> | null = null;
   if (reglage?.config) {
     // Avant l'IA : tout ce que la base refuserait, la limite des analyses, et l'identifiant du fichier analysé.
-    const preparation = await supabase.rpc("preparer_analyse", {
+    const examen = await supabase.rpc("preparer_analyse", {
       p_publication: null,
       p_parcours: parcours,
       p_titre: titre.trim(),
       p_texte: texte.trim(),
       p_piece: pieceEnvoyee,
     });
-    if (preparation.error) {
+    if (examen.error) {
       if (piece) await supabase.storage.from("communaute").remove([piece.chemin]);
-      return { ok: false, message: message(preparation.error) };
+      return { ok: false, message: message(examen.error) };
     }
-    const objet = texteOuNull(un(preparation.data)?.objet);
+    const objet = texteOuNull(un(examen.data)?.objet);
     let fichier: ContenuAnalyse["fichier"] = null;
     let verdict: Verdict | null = null;
     if (piece) {
@@ -162,7 +193,10 @@ export async function publierPublication(
       if (relu === "illisible") verdict = analyseImpossible("fichier illisible");
       else fichier = relu;
     }
-    verdict ??= await analyserPublication({ titre: titre.trim(), texte: texte.trim(), espace: await nomDeLEspace(supabase, parcours), fichier }, reglage.config);
+    verdict ??= await analyserPublication(
+      { titre: titre.trim(), texte: texte.trim(), espace: await nomDeLEspace(supabase, parcours), fichier, ...lienAnalyse(await apercu) },
+      reglage.config,
+    );
     // Sans verdict (clé refusée, refus de l'IA), la base met la publication en attente de l'équipe.
     analyse = verdict ? { jeton: reglage.config.jeton, ...verdict, objet } : null;
   }
@@ -189,16 +223,19 @@ export async function modifierPublication(id: string, titre: string, texte: stri
   const refus = refusPublication(titre, texte);
   if (refus) return { ok: false, message: refus };
   const supabase = await createClient();
-  const apercu = lireApercuDuTexte(texte.trim());
+  // La sienne d'abord : la page d'un nouveau lien n'est lue qu'ensuite ; le même lien garde son aperçu.
+  const preparation = await preparerApercu(supabase, texte.trim(), { publication: id, parcours: null });
+  if ("refus" in preparation) return { ok: false, message: preparation.refus };
+  const apercu = preparation.apercu;
   const reglage = await moderation(supabase);
   let analyse: Record<string, unknown> | null = null;
   if (reglage?.config) {
     // Avant l'IA : la publication de l'appelant, non bloquée, et la limite des analyses.
-    const preparation = await supabase.rpc("preparer_analyse", { p_publication: id, p_parcours: null, p_titre: titre.trim(), p_texte: texte.trim(), p_piece: null });
-    if (preparation.error) return { ok: false, message: message(preparation.error) };
+    const examen = await supabase.rpc("preparer_analyse", { p_publication: id, p_parcours: null, p_titre: titre.trim(), p_texte: texte.trim(), p_piece: null });
+    if (examen.error) return { ok: false, message: message(examen.error) };
     const { data } = await supabase.rpc("publication_communaute", { p_id: id });
     const espace = String(un(un(data)?.espace)?.nom ?? "général");
-    const verdict = await analyserPublication({ titre: titre.trim(), texte: texte.trim(), espace, fichier: null }, reglage.config);
+    const verdict = await analyserPublication({ titre: titre.trim(), texte: texte.trim(), espace, fichier: null, ...lienAnalyse(await apercu) }, reglage.config);
     analyse = verdict ? { jeton: reglage.config.jeton, ...verdict, objet: null } : null;
   }
   const { data, error, apercu: apercuEnregistre } = await avecApercu(

@@ -13,8 +13,8 @@ vi.mock("next/cache", () => ({ refresh: () => refresh() }));
 const configuration = vi.fn();
 const analyserPublication = vi.fn();
 vi.mock("@/lib/moderation/analyse", () => ({ configurationModeration: () => configuration(), analyserPublication: (...a: unknown[]) => analyserPublication(...a) }));
-const apercuDuTexte = vi.fn();
-vi.mock("@/lib/communaute/apercu", () => ({ apercuDuTexte: (...a: unknown[]) => apercuDuTexte(...a) }));
+const lireApercu = vi.fn();
+vi.mock("@/lib/communaute/apercu", () => ({ lireApercu: (...a: unknown[]) => lireApercu(...a) }));
 
 const { aimer, basculerEnregistrement, chargerEspaces, chargerFil, chargerReponses, modifierPublication, publierPublication, repondre, signaler, supprimerPublication, supprimerReponse } = await import(
   "@/lib/communaute/actions"
@@ -33,7 +33,7 @@ beforeEach(() => {
   getShellUser.mockResolvedValue({ id: "moi", prenom: "Koffi", nom: "Dossou", roles: ["etudiant"] });
   configuration.mockReset().mockReturnValue(null);
   analyserPublication.mockReset();
-  apercuDuTexte.mockReset().mockResolvedValue(null);
+  lireApercu.mockReset().mockResolvedValue(null);
 });
 
 describe("Publier", () => {
@@ -244,12 +244,15 @@ describe("Avec la modération (migration 0020)", () => {
 describe("Le fil Actualités (0021)", () => {
   const VIDEO = { type: "youtube", id: "dQw4w9WgXcQ" };
 
-  it("publier et modifier : l'aperçu du texte transmis ; avant la 0021, sans aperçu", async () => {
-    apercuDuTexte.mockResolvedValue(VIDEO);
+  const U = "https://exemple.com/page";
+  const SITE = { type: "lien", url: U, titre: "Une page", description: "Sa description", image: null };
+
+  it("YouTube : l'aperçu sans lecture réseau ni réservation ; avant la 0021, publié sans aperçu", async () => {
     faux.repondre("rpc.publier", { data: { id: ID, statut: "publiee", categorie: null } });
     expect(await publierPublication(null, "", "Regardez https://youtu.be/dQw4w9WgXcQ", null)).toEqual({ ok: true, id: ID, statut: "publiee", apercu: VIDEO });
-    expect(apercuDuTexte).toHaveBeenCalledWith("Regardez https://youtu.be/dQw4w9WgXcQ");
     expect(faux.de("rpc", "publier")[0].valeurs).toMatchObject({ p_apercu: VIDEO });
+    expect(faux.de("rpc", "reserver_apercu")).toEqual([]);
+    expect(lireApercu).not.toHaveBeenCalled();
     faux.vider();
     let appel = 0;
     faux.repondre("rpc.publier", () => (++appel === 1 ? { error: { code: "PGRST202" } } : { data: ID }));
@@ -259,6 +262,60 @@ describe("Le fil Actualités (0021)", () => {
     faux.repondre("rpc.modifier_publication", { data: { statut: "publiee", categorie: null } });
     expect(await modifierPublication(ID, "", "https://youtu.be/dQw4w9WgXcQ")).toEqual({ ok: true, statut: "publiee", apercu: VIDEO });
     expect(faux.de("rpc", "modifier_publication")[0].valeurs).toMatchObject({ p_apercu: VIDEO });
+  });
+
+  it("un site : la page n'est lue qu'après la réservation (droits, limites) ; refusée : rien n'est lu ni publié", async () => {
+    lireApercu.mockResolvedValue(SITE);
+    faux.repondre("rpc.reserver_apercu", { data: { lire: true, actuel: null } });
+    faux.repondre("rpc.publier", { data: { id: ID, statut: "publiee", categorie: null } });
+    expect(await publierPublication(P, "", `À lire : ${U}`, null)).toEqual({ ok: true, id: ID, statut: "publiee", apercu: SITE });
+    expect(faux.de("rpc", "reserver_apercu")[0].valeurs).toEqual({ p_publication: null, p_parcours: P, p_adresse: U });
+    expect(lireApercu).toHaveBeenCalledWith(U);
+    expect(faux.de("rpc", "publier")[0].valeurs).toMatchObject({ p_apercu: SITE });
+    faux.vider();
+    lireApercu.mockClear();
+    faux.repondre("rpc.reserver_apercu", { error: { code: "P0001", message: "Vous publiez beaucoup en peu de temps. Réessayez dans quelques minutes." } });
+    expect(await publierPublication(null, "", `À lire : ${U}`, PIECE)).toEqual({ ok: false, message: "Vous publiez beaucoup en peu de temps. Réessayez dans quelques minutes." });
+    expect(lireApercu).not.toHaveBeenCalled();
+    expect(faux.de("rpc", "publier")).toEqual([]);
+    expect(faux.de("storage.communaute", "remove")[0].valeurs).toEqual([[PIECE.chemin]]);
+    faux.vider();
+    // Plus de lectures permises (ou avant la 0021) : publiée sans aperçu.
+    faux.repondre("rpc.reserver_apercu", { data: { lire: false, actuel: null } });
+    faux.repondre("rpc.publier", { data: { id: ID, statut: "publiee", categorie: null } });
+    expect(await publierPublication(null, "", `À lire : ${U}`, null)).toEqual({ ok: true, id: ID, statut: "publiee", apercu: null });
+    faux.repondre("rpc.reserver_apercu", { error: { code: "PGRST202" } });
+    expect(await publierPublication(null, "", `À lire : ${U}`, null)).toEqual({ ok: true, id: ID, statut: "publiee", apercu: null });
+    expect(lireApercu).not.toHaveBeenCalled();
+  });
+
+  it("modifier : la sienne d'abord ; même lien : l'aperçu gardé sans lecture ; refusée : rien n'est lu", async () => {
+    faux.repondre("rpc.reserver_apercu", { data: { lire: false, actuel: SITE } });
+    faux.repondre("rpc.modifier_publication", { data: { statut: "publiee", categorie: null } });
+    expect(await modifierPublication(ID, "", `Corrigé : ${U}`)).toEqual({ ok: true, statut: "publiee", apercu: SITE });
+    expect(faux.de("rpc", "reserver_apercu")[0].valeurs).toEqual({ p_publication: ID, p_parcours: null, p_adresse: U });
+    expect(lireApercu).not.toHaveBeenCalled();
+    expect(faux.de("rpc", "modifier_publication")[0].valeurs).toMatchObject({ p_apercu: SITE });
+    faux.vider();
+    faux.repondre("rpc.reserver_apercu", { error: { code: "42501", message: "Cette publication n’est pas la vôtre." } });
+    expect(await modifierPublication(ID, "", `Corrigé : ${U}`)).toEqual({ ok: false, message: "Cette publication n’est pas la vôtre." });
+    expect(lireApercu).not.toHaveBeenCalled();
+    expect(faux.de("rpc", "modifier_publication")).toEqual([]);
+  });
+
+  it("analyse active : l'aperçu du lien (adresse, titre, description) est jugé avec la publication", async () => {
+    configuration.mockReturnValue({ cle: "K", jeton: "J", modele: "m" });
+    faux.repondre("rpc.moderation_active", { data: true });
+    faux.repondre("rpc.preparer_analyse", { data: { objet: null } });
+    faux.repondre("rpc.reserver_apercu", { data: { lire: true, actuel: null } });
+    lireApercu.mockResolvedValue(SITE);
+    analyserPublication.mockResolvedValue({ decision: "autoriser", categorie: "aucune", raison: "Rien." });
+    faux.repondre("rpc.publier", { data: { id: ID, statut: "publiee", categorie: null } });
+    await publierPublication(null, "", `À lire : ${U}`, null);
+    expect(analyserPublication).toHaveBeenCalledWith(
+      { titre: "", texte: `À lire : ${U}`, espace: "général", fichier: null, lien: { url: U, titre: "Une page", description: "Sa description" } },
+      { cle: "K", jeton: "J", modele: "m" },
+    );
   });
 
   it("le signet : bascule ; refus de la base affiché", async () => {

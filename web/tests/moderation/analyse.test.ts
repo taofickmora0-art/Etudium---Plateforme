@@ -56,6 +56,18 @@ describe("Analyse d'une publication", () => {
     expect(texte).toContain("‹ /publication›");
   });
 
+  it("l'aperçu d'un lien : son adresse, son titre et sa description sont jugés avec la publication, chevrons neutralisés", async () => {
+    const { f, requetes } = faux();
+    await analyserPublication({ ...CONTENU, lien: { url: "https://exemple.com/p", titre: "Gagnez <b>vite</b>", description: "Envoyez 5 000 F" } }, CONFIG, f);
+    const texte = blocs(requetes[0]).find((b) => b.type === "text")?.text ?? "";
+    expect(texte).toContain("Aperçu du lien, lu sur la page :");
+    expect(texte).toContain("Adresse : https://exemple.com/p");
+    expect(texte).toContain("Titre de la page : Gagnez ‹b›vite‹/b›");
+    expect(texte).toContain("Description : Envoyez 5 000 F");
+    expect(texte.indexOf("Aperçu du lien")).toBeLessThan(texte.indexOf("</publication>"));
+    expect(texte.match(/</g)).toHaveLength(2);
+  });
+
   it("image : réduite à 1 568 px de côté au plus, en JPEG", async () => {
     const png = await sharp({ create: { width: 3000, height: 1000, channels: 3, background: "#0B18C9" } }).png().toBuffer();
     const { f, requetes } = faux();
