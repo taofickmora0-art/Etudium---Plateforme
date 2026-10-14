@@ -11,7 +11,7 @@ vi.mock("@/lib/auth/current-user", () => ({ getShellUser: () => getShellUser(), 
 const refresh = vi.fn();
 vi.mock("next/cache", () => ({ refresh: () => refresh() }));
 
-const { aimer, chargerFil, modifierPublication, publierPublication, repondre, supprimerPublication, supprimerReponse } = await import("@/lib/communaute/actions");
+const { aimer, chargerFil, chargerReponses, modifierPublication, publierPublication, repondre, supprimerPublication, supprimerReponse } = await import("@/lib/communaute/actions");
 
 const ID = "11111111-1111-4111-8111-111111111111";
 const P = "22222222-2222-4222-8222-222222222222";
@@ -81,5 +81,18 @@ describe("Modifier, supprimer, répondre, aimer", () => {
     expect(faux.de("rpc", "supprimer_commentaire")[0].valeurs).toEqual({ p_id: R });
     faux.repondre("rpc.fil_communaute", { data: { publications: [], suite: false } });
     expect(await chargerFil(P, null)).toEqual({ ok: true, lot: { publications: [], suite: false } });
+  });
+
+  it("chargerReponses : toutes les réponses d'une publication ; disparue : le message", async () => {
+    faux.repondre("rpc.publication_communaute", {
+      data: { id: ID, toutes_reponses: [{ id: R, auteur: { prenom: "Awa", nom_court: "Awa K." }, est_moi: false, texte: "Oui", cree_le: "2026-10-14T10:00:00Z", peut_supprimer: false }] },
+    });
+    expect(await chargerReponses(ID)).toEqual({
+      ok: true,
+      reponses: [{ id: R, auteur: { prenom: "Awa", nomCourt: "Awa K." }, estMoi: false, texte: "Oui", creeLe: "2026-10-14T10:00:00Z", peutSupprimer: false }],
+    });
+    expect(faux.de("rpc", "publication_communaute")[0].valeurs).toEqual({ p_id: ID });
+    faux.repondre("rpc.publication_communaute", { data: null });
+    expect(await chargerReponses(ID)).toEqual({ ok: false, message: "Cette publication n’existe plus." });
   });
 });

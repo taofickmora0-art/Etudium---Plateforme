@@ -1,3 +1,4 @@
+import { dateCourte } from "@/lib/utilisateurs/regles";
 import type { Curseur } from "./types";
 
 // Règles de la communauté, recopiées de la migration 0019 : le navigateur refuse tôt, la base revérifie tout.
@@ -54,4 +55,21 @@ export function nomEspace(espace: { id: string | null; nom: string }): string {
 /** Où reprendre le fil : après la dernière publication affichée. */
 export function curseur(derniere: { id: string; creeLe: string }): Curseur {
   return { avant: derniere.creeLe, avantId: derniere.id };
+}
+
+// Le jour au Bénin (UTC+1 toute l'année), pour compter les jours écoulés.
+const JOUR_BENIN = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Porto-Novo", year: "numeric", month: "2-digit", day: "2-digit" });
+const jourBenin = (date: Date) => Date.parse(`${JOUR_BENIN.format(date)}T00:00:00Z`) / 86_400_000;
+
+/** « à l’instant », « il y a 5 min », « il y a 2 h », « hier », « il y a 3 jours » (une semaine), puis la date. */
+export function moment(iso: string, maintenant: Date): string {
+  const date = new Date(iso);
+  const minutes = Math.floor((maintenant.getTime() - date.getTime()) / 60_000);
+  if (minutes < 1) return "à l’instant";
+  if (minutes < 60) return `il y a ${minutes} min`;
+  if (minutes < 24 * 60) return `il y a ${Math.floor(minutes / 60)} h`;
+  const jours = jourBenin(maintenant) - jourBenin(date);
+  if (jours <= 1) return "hier";
+  if (jours < 7) return `il y a ${jours} jours`;
+  return dateCourte(iso);
 }

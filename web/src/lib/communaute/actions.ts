@@ -3,9 +3,9 @@
 import { refresh } from "next/cache";
 import { SESSION_EXPIREE } from "@/lib/admin/garde";
 import { getShellUser } from "@/lib/auth/current-user";
-import { estFonctionAbsente, un } from "@/lib/contenus/lecture";
+import { estFonctionAbsente, liste, un } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
-import { lireLot, UUID } from "./data";
+import { lireLot, UUID, versReponse } from "./data";
 import { nomCourt, refusPiece, refusPublication, refusReponse } from "./regles";
 import type { Curseur, FiltreFil, LotPublications, PieceEnvoyee, Reponse } from "./types";
 
@@ -33,6 +33,18 @@ export async function chargerFil(espace: FiltreFil, suite: Curseur | null): Prom
     return { ok: false, message: resultat.error && estFonctionAbsente(resultat.error) ? MIGRATION : "Les publications n’ont pas pu être chargées. Réessayez." };
   }
   return { ok: true, lot: resultat.lot };
+}
+
+/** « Voir les N réponses » : toutes les réponses d'une publication. */
+export async function chargerReponses(publicationId: string): Promise<{ ok: true; reponses: Reponse[] } | Refus> {
+  if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
+  if (!UUID.test(publicationId)) return { ok: false, message: ECHEC };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("publication_communaute", { p_id: publicationId });
+  if (error) return { ok: false, message: message(error) };
+  const publication = un(data);
+  if (!publication) return { ok: false, message: "Cette publication n’existe plus." };
+  return { ok: true, reponses: liste(publication.toutes_reponses).map(versReponse) };
 }
 
 /**

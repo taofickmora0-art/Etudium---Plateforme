@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { dateCourte } from "@/lib/utilisateurs/regles";
 import {
   curseur,
+  moment,
   NOMBRE_FIL,
   nomCourt,
   nomEspace,
@@ -38,5 +40,17 @@ describe("Règles de la communauté", () => {
     expect(nomEspace({ id: null, nom: "général" })).toBe("Espace général");
     expect(nomEspace({ id: "p", nom: "Académique" })).toBe("Espace Académique");
     expect(curseur({ id: "a", creeLe: "2026-10-14T10:00:00Z" })).toEqual({ avant: "2026-10-14T10:00:00Z", avantId: "a" });
+  });
+
+  it("moment : à l’instant, il y a 5 min, il y a 2 h, hier, il y a 2 jours, puis la date (jour du Bénin)", () => {
+    const maintenant = new Date("2026-10-14T15:00:00Z");
+    expect(moment("2026-10-14T14:59:40Z", maintenant)).toBe("à l’instant");
+    expect(moment("2026-10-14T14:55:00Z", maintenant)).toBe("il y a 5 min");
+    expect(moment("2026-10-14T13:00:00Z", maintenant)).toBe("il y a 2 h");
+    expect(moment("2026-10-13T16:00:00Z", maintenant)).toBe("il y a 23 h");
+    expect(moment("2026-10-13T10:00:00Z", maintenant)).toBe("hier");
+    expect(moment("2026-10-12T10:00:00Z", maintenant)).toBe("il y a 2 jours");
+    expect(moment("2026-10-08T10:00:00Z", maintenant)).toBe("il y a 6 jours");
+    expect(moment("2026-10-01T10:00:00Z", maintenant)).toBe(dateCourte("2026-10-01T10:00:00Z"));
   });
 });
