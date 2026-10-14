@@ -1,0 +1,328 @@
+import type { JSONContent } from "@tiptap/react";
+
+// Le texte mis en forme d'une publication (spec mise en forme et vidéo, §2). Il reste dans `publications.texte`, en
+// Markdown restreint : `# `, `## `, `### ` (titres), `**gras**`, `_italique_`, `++souligné++`, `~~barré~~`, `- ` et `1. `
+// (listes), `> ` (citation) ; une ligne vide sépare les paragraphes, `\` protège une marque. Une marque différente par
+// style : aucune ambiguïté de lecture. Ce module ne produit jamais de HTML : l'affichage construit lui-même ses éléments.
+
+export type Marque = "gras" | "italique" | "souligne" | "barre";
+export type Segment = { texte: string; marques: Marque[] } | { saut: true };
+export type Bloc =
+  | { type: "paragraphe"; segments: Segment[] }
+  | { type: "titre"; niveau: 1 | 2 | 3; segments: Segment[] }
+  | { type: "puces"; elements: Segment[][] }
+  | { type: "numeros"; debut: number; elements: Segment[][] }
+  | { type: "citation"; segments: Segment[] };
+
+const ECHAPPABLES = new Set(["\\", "*", "_", "+", "~", "#", ">", "-", "."]);
+const DOUBLES: Record<string, Marque> = { "*": "gras", "+": "souligne", "~": "barre" };
+const SYMBOLE: Record<Marque, string> = { gras: "**", italique: "_", souligne: "++", barre: "~~" };
+const ORDRE: Marque[] = ["gras", "italique", "souligne", "barre"];
+const TIPTAP: Record<Marque, string> = { gras: "bold", italique: "italic", souligne: "underline", barre: "strike" };
+const DEPUIS_TIPTAP: Record<string, Marque> = { bold: "gras", italic: "italique", underline: "souligne", strike: "barre" };
+// Au-delà, les marques restent du texte : un texte forgé ne fait pas exploser la lecture.
+const PROFONDEUR_MAX = 8;
+
+const alnum = (c: string | undefined) => c !== undefined && /[\p{L}\p{N}]/u.test(c);
+const espace = (c: string | undefined) => c === undefined || /\s/.test(c);
+const longueurSuite = (s: string, i: number) => {
+  let k = 0;
+  while (s[i + k] === s[i]) k++;
+  return k;
+};
+
+/** La marque qui s'ouvre en `i`, ou null. Gras, souligné, barré : deux caractères suivis d'un non-espace ; italique : `_`
+ * hors d'un mot, suivi d'un non-espace. */
+function ouverture(s: string, i: number): { nom: Marque; symbole: string } | null {
+  const c = s[i];
+  if (DOUBLES[c] && s[i + 1] === c && !espace(s[i + 2])) return { nom: DOUBLES[c], symbole: c + c };
+  if (c === "_" && !alnum(s[i - 1]) && !espace(s[i + 1])) return { nom: "italique", symbole: "_" };
+  return null;
+}
+
+/** La position de la fermeture, ou null : précédée d'un non-espace, après un contenu non vide. */
+function fermeture(s: string, debut: number, symbole: string): number | null {
+  for (let j = debut; j < s.length; j++) {
+    if (s[j] === "\\" && ECHAPPABLES.has(s[j + 1] ?? "")) {
+      j++;
+      continue;
+    }
+    if (s[j] !== symbole[0]) continue;
+    if (symbole.length === 2) {
+      const k = longueurSuite(s, j);
+      // Une suite plus longue (« a*** ») : la fermeture en prend les deux derniers.
+      const p = j + k - 2;
+      if (k >= 2 && p > debut && !espace(s[p - 1])) return p;
+      j += k - 1;
+    } else if (j > debut && !espace(s[j - 1]) && !alnum(s[j + 1])) {
+      return j;
+    }
+  }
+  return null;
+}
+
+function fusionner(segments: Segment[]): Segment[] {
+  const out: Segment[] = [];
+  for (const s of segments) {
+    const avant = out.at(-1);
+    if (avant && "texte" in avant && "texte" in s && avant.marques.join() === s.marques.join()) avant.texte += s.texte;
+    else out.push("texte" in s ? { texte: s.texte, marques: [...s.marques] } : s);
+  }
+  return out;
+}
+
+function enLigne(s: string, marques: Marque[], profondeur: number): Segment[] {
+  const out: Segment[] = [];
+  let tampon = "";
+  const vider = () => {
+    if (tampon) out.push({ texte: tampon, marques });
+    tampon = "";
+  };
+  let i = 0;
+  while (i < s.length) {
+    const c = s[i];
+    if (c === "\\" && ECHAPPABLES.has(s[i + 1] ?? "")) {
+      tampon += s[i + 1];
+      i += 2;
+      continue;
+    }
+    if (c === "\n") {
+      vider();
+      out.push({ saut: true });
+      i++;
+      continue;
+    }
+    const marque = profondeur < PROFONDEUR_MAX ? ouverture(s, i) : null;
+    const fin = marque ? fermeture(s, i + marque.symbole.length, marque.symbole) : null;
+    if (marque && fin !== null) {
+      vider();
+      out.push(...enLigne(s.slice(i + marque.symbole.length, fin), [...marques, marque.nom], profondeur + 1));
+      i = fin + marque.symbole.length;
+      continue;
+    }
+    tampon += c;
+    i++;
+  }
+  vider();
+  return out;
+}
+
+const segments = (texte: string) => fusionner(enLigne(texte, [], 0));
+
+type EnCours =
+  | { type: "paragraphe"; lignes: string[] }
+  | { type: "citation"; lignes: string[] }
+  | { type: "puces"; debut: number; elements: string[] }
+  | { type: "numeros"; debut: number; elements: string[] };
+
+/** Les blocs d'un texte ; une marque sans fermeture, ou un texte d'avant la mise en forme, reste du texte. */
+export function analyser(markdown: string): Bloc[] {
+  const blocs: Bloc[] = [];
+  let courant: EnCours | null = null;
+  const fermer = () => {
+    if (!courant) return;
+    if (courant.type === "paragraphe" || courant.type === "citation") {
+      const s = segments(courant.lignes.join("\n"));
+      if (s.length) blocs.push({ type: courant.type, segments: s });
+    } else if (courant.type === "puces") {
+      blocs.push({ type: "puces", elements: courant.elements.map(segments) });
+    } else {
+      blocs.push({ type: "numeros", debut: courant.debut, elements: courant.elements.map(segments) });
+    }
+    courant = null;
+  };
+  for (const ligne of markdown.replace(/\r\n?/g, "\n").split("\n")) {
+    let m: RegExpMatchArray | null;
+    if (!ligne.trim()) {
+      fermer();
+    } else if ((m = ligne.match(/^(#{1,3}) (.*)$/))) {
+      fermer();
+      const s = segments(m[2]);
+      if (s.length) blocs.push({ type: "titre", niveau: m[1].length as 1 | 2 | 3, segments: s });
+    } else if ((m = ligne.match(/^- (.*)$/))) {
+      if (courant?.type !== "puces") {
+        fermer();
+        courant = { type: "puces", debut: 1, elements: [] };
+      }
+      courant.elements.push(m[1]);
+    } else if ((m = ligne.match(/^(\d{1,9})\. (.*)$/))) {
+      if (courant?.type !== "numeros") {
+        fermer();
+        courant = { type: "numeros", debut: Number(m[1]), elements: [] };
+      }
+      courant.elements.push(m[2]);
+    } else if ((m = ligne.match(/^> ?(.*)$/))) {
+      if (courant?.type !== "citation") {
+        fermer();
+        courant = { type: "citation", lignes: [] };
+      }
+      courant.lignes.push(m[1]);
+    } else {
+      if (courant?.type !== "paragraphe") {
+        fermer();
+        courant = { type: "paragraphe", lignes: [] };
+      }
+      courant.lignes.push(ligne);
+    }
+  }
+  fermer();
+  return blocs;
+}
+
+const texteDe = (s: Segment[]) => s.map((x) => ("saut" in x ? "\n" : x.texte)).join("");
+
+/** Le texte sans marques : pour les extraits et la recherche du premier lien. */
+export function texteBrut(markdown: string): string {
+  return analyser(markdown)
+    .map((b) => (b.type === "puces" || b.type === "numeros" ? b.elements.map(texteDe).join("\n") : texteDe(b.segments)))
+    .join("\n");
+}
+
+// ─── Vers l'éditeur ─────────────────────────────────────────────────────────────────────────────────
+
+function noeuds(s: Segment[]): JSONContent[] {
+  return s.map((x) =>
+    "saut" in x
+      ? { type: "hardBreak" }
+      : { type: "text", text: x.texte, ...(x.marques.length ? { marks: x.marques.map((m) => ({ type: TIPTAP[m] })) } : {}) },
+  );
+}
+
+const avecContenu = (type: string, s: Segment[], attrs?: Record<string, unknown>): JSONContent => {
+  const contenu = noeuds(s);
+  return { type, ...(attrs ? { attrs } : {}), ...(contenu.length ? { content: contenu } : {}) };
+};
+const element = (s: Segment[]): JSONContent => ({ type: "listItem", content: [avecContenu("paragraph", s)] });
+
+/** Le document de l'éditeur (Tiptap) d'un texte. */
+export function versDocument(markdown: string): JSONContent {
+  const contenu = analyser(markdown).map((b): JSONContent => {
+    switch (b.type) {
+      case "paragraphe":
+        return avecContenu("paragraph", b.segments);
+      case "titre":
+        return avecContenu("heading", b.segments, { level: b.niveau });
+      case "puces":
+        return { type: "bulletList", content: b.elements.map(element) };
+      case "numeros":
+        return { type: "orderedList", attrs: { start: b.debut }, content: b.elements.map(element) };
+      case "citation":
+        return { type: "blockquote", content: [avecContenu("paragraph", b.segments)] };
+    }
+  });
+  return { type: "doc", content: contenu.length ? contenu : [{ type: "paragraph" }] };
+}
+
+// ─── Depuis l'éditeur ───────────────────────────────────────────────────────────────────────────────
+
+/** Protège ce qui serait lu comme une marque : `\` devant une marque, `**`, `++`, `~~`, et `_` en bord de mot. */
+function echapper(texte: string): string {
+  let r = "";
+  for (let i = 0; i < texte.length; i++) {
+    const c = texte[i];
+    const avant = texte[i - 1];
+    const apres = texte[i + 1];
+    if (c === "\\") r += apres === undefined || ECHAPPABLES.has(apres) ? "\\\\" : "\\";
+    else if ((c === "*" || c === "+" || c === "~") && (avant === c || apres === c)) r += `\\${c}`;
+    else if (c === "_" && (!alnum(avant) || !alnum(apres))) r += "\\_";
+    else r += c;
+  }
+  return r;
+}
+
+/** Le texte en ligne d'un bloc : les marques s'ouvrent dans un ordre fixe et restent ouvertes tant qu'elles servent ; les
+ * espaces en bord de marque restent dehors. `sautEnEspace` : dans un titre ou une liste, un retour à la ligne devient un espace. */
+function enLigneMd(contenu: JSONContent[] = [], sautEnEspace = false): string {
+  let sortie = "";
+  let enAttente = "";
+  const ouvertes: Marque[] = [];
+  const fermerJusqua = (n: number) => {
+    while (ouvertes.length > n) sortie += SYMBOLE[ouvertes.pop()!];
+  };
+  for (const n of contenu) {
+    if (n.type === "hardBreak") {
+      fermerJusqua(0);
+      sortie += enAttente + (sautEnEspace ? " " : "\n");
+      enAttente = "";
+      continue;
+    }
+    const texte = n.type === "text" ? (n.text ?? "") : texteNoeud(n);
+    if (!texte) continue;
+    const marques = n.type === "text" ? ORDRE.filter((m) => (n.marks ?? []).some((x) => DEPUIS_TIPTAP[x.type] === m)) : [];
+    const tete = texte.match(/^\s*/)?.[0] ?? "";
+    const queue = texte.slice(tete.length).match(/\s*$/)?.[0] ?? "";
+    const coeur = texte.slice(tete.length, texte.length - queue.length);
+    if (!coeur) {
+      enAttente += texte;
+      continue;
+    }
+    let commun = 0;
+    while (commun < ouvertes.length && ouvertes[commun] === marques[commun]) commun++;
+    fermerJusqua(commun);
+    sortie += enAttente + tete;
+    enAttente = "";
+    for (const m of marques.slice(commun)) {
+      sortie += SYMBOLE[m];
+      ouvertes.push(m);
+    }
+    sortie += echapper(sautEnEspace ? coeur.replace(/\n/g, " ") : coeur);
+    enAttente = queue;
+  }
+  fermerJusqua(0);
+  return sortie + enAttente;
+}
+
+/** Le texte d'un nœud quelconque (liste imbriquée, nœud inconnu). */
+function texteNoeud(n: JSONContent): string {
+  if (n.type === "text") return n.text ?? "";
+  if (n.type === "hardBreak") return " ";
+  return (n.content ?? []).map(texteNoeud).join(n.type === "paragraph" ? "" : " ");
+}
+
+/** Une ligne de paragraphe qui serait lue comme un titre, une liste ou une citation est protégée. */
+const protegerDebut = (ligne: string) =>
+  /^#{1,3} /.test(ligne) || /^- /.test(ligne) || /^>/.test(ligne) ? `\\${ligne}` : ligne.replace(/^(\d{1,9})\. /, "$1\\. ");
+
+/** Le texte en ligne d'un élément de liste : ses paragraphes (et listes imbriquées) mis bout à bout. */
+function elementMd(item: JSONContent): string {
+  return (item.content ?? [])
+    .map((b) => (b.type === "paragraph" || b.type === "heading" ? enLigneMd(b.content, true) : echapper(texteNoeud(b))))
+    .filter(Boolean)
+    .join(" ");
+}
+
+function blocMd(b: JSONContent): string {
+  switch (b.type) {
+    case "paragraph":
+      return enLigneMd(b.content).split("\n").map(protegerDebut).join("\n");
+    case "heading": {
+      const niveau = Math.min(Math.max(Number(b.attrs?.level) || 1, 1), 3);
+      const texte = enLigneMd(b.content, true).trim();
+      return texte ? `${"#".repeat(niveau)} ${texte}` : "";
+    }
+    case "bulletList":
+      return (b.content ?? []).map(elementMd).filter(Boolean).map((t) => `- ${t}`).join("\n");
+    case "orderedList": {
+      const debut = Math.max(Number(b.attrs?.start) || 1, 0);
+      return (b.content ?? []).map(elementMd).filter(Boolean).map((t, i) => `${debut + i}. ${t}`).join("\n");
+    }
+    case "blockquote":
+      return (b.content ?? [])
+        .map((p) => (p.type === "paragraph" ? enLigneMd(p.content) : echapper(texteNoeud(p))))
+        .filter(Boolean)
+        .join("\n")
+        .split("\n")
+        .map((l) => `> ${l}`)
+        .join("\n");
+    default:
+      return echapper(texteNoeud(b));
+  }
+}
+
+/** Le texte enregistré d'un document de l'éditeur ; les paragraphes vides disparaissent. */
+export function versMarkdown(doc: JSONContent): string {
+  return (doc.content ?? [])
+    .map(blocMd)
+    .filter((b) => b.trim())
+    .join("\n\n");
+}
