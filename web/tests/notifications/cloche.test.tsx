@@ -54,6 +54,14 @@ describe("La cloche", () => {
     expect(within(screen.getByRole("dialog", { name: "Notifications" })).getAllByRole("listitem")).toHaveLength(8);
   });
 
+  it("plus haut que l'écran (téléphone, textes longs), le panneau défile : « Voir toutes les notifications » reste accessible", async () => {
+    vi.mocked(chargerCloche).mockResolvedValue(lot([notif()], 1));
+    await ouvrir("Notifications, 1 non lue");
+    const panneau = screen.getByRole("dialog", { name: "Notifications" });
+    expect(panneau).toHaveClass("overflow-y-auto");
+    expect(panneau.className).toContain("max-h-(--radix-popover-content-available-height)");
+  });
+
   it("ouvrir la cloche : titres, textes, « Il y a 5 min », point Non lue ; « Voir toutes les notifications » mène à /notifications", async () => {
     vi.mocked(chargerCloche).mockResolvedValue(lot([notif(), notif({ id: "6", categorie: "service", titre: "Vous êtes formateur", texte: "", lien: "/formateur", lue: true, creeLe: ilYa(60 * 26) })], 1));
     await ouvrir("Notifications, 1 non lue");

@@ -393,3 +393,24 @@ Pas de migration pour cette tâche : il faut seulement que la 0003 à la 0009 so
    - Écris une **remarque privée**, **Enregistrer** : « Remarque enregistrée ». Recharge : elle est là, avec sa date.
 7. Avec ton compte : Back-office → **Utilisateurs** → le troisième compte : la section « Remarques des formateurs » montre la remarque, avec le nom de la fiche formateur.
 8. Avec le troisième compte : rien de cette remarque n’apparaît nulle part.
+
+## 21. Valider les notifications et les annonces, 20 minutes
+
+1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0016_notifications.sql` (après la 0015).
+2. **Nouvelle formation.** Le troisième compte (section 20) suit la formation du compte de test : il en a ouvert une leçon.
+   - Avec ton compte, au back-office : crée une autre formation dans **le même parcours**, ajoute-lui une leçon, puis publie-la.
+   - Avec le troisième compte : la cloche porte un point bleu. Ouvre-la : « Nouvelle formation : … », « Dans le parcours … ». Clique : la fiche de la formation s’ouvre et le point disparaît.
+3. **Nouvelle leçon.** Ajoute une leçon à la formation que suit le troisième compte (avec ton compte ou celui du formateur). Le troisième compte reçoit « Nouvelle leçon dans … » ; le clic ouvre la leçon.
+4. **Relecture.** Avec le compte de test (formateur), envoie un brouillon en relecture.
+   - Ton compte reçoit « Formation à valider » ; le clic ouvre l’onglet Publication de la formation au back-office.
+   - Renvoie-la au formateur avec une remarque : le compte de test reçoit « Votre formation est à corriger », avec le début de ta remarque.
+5. **Annonce.** Back-office → **Annonces** : un titre, un texte, le lien `/formations`, **Envoyer l’annonce**, puis confirme.
+   - « Annonce envoyée à N comptes. » : tous les comptes sauf le tien. Elle apparaît dans la liste « Annonces envoyées ».
+   - Le troisième compte et le compte de test la reçoivent ; ton compte non.
+6. **Préférences.** Avec le troisième compte : cloche → **Voir toutes les notifications**.
+   - La page : les filtres « Toutes » et « Non lues », les groupes « Aujourd’hui », **Tout marquer comme lu**.
+   - **Préférences** ouvre l’onglet Notifications du profil : coupe « Annonces ». Envoie une deuxième annonce avec ton compte : le troisième compte ne la reçoit pas.
+7. **Avis masqué.** Avec le troisième compte, laisse un avis sur la formation du compte de test (il en a terminé la moitié, section 20). Le compte de test reçoit « Nouvel avis sur … ».
+   - Avec ton compte : Back-office → **Avis** → **Masquer** cet avis. Personne ne reçoit de notification.
+   - Avec le troisième compte : la fiche de la formation montre toujours son avis, avec « Votre avis » et aucune autre mention.
+   - Dans une fenêtre privée, sans compte : l’avis n’apparaît pas.

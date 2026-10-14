@@ -109,8 +109,14 @@ export function NotificationsPanel({ notifications, onMarkAllRead, unreadCount, 
         <NotificationButton nonLues={unread > 0} aria-label={unread ? `Notifications, ${unread} non lue${unread > 1 ? "s" : ""}` : "Notifications"} />
       </Popover.Trigger>
       <Popover.Portal>
-        {/* Jamais plus large que l'écran : 16 px de marge de chaque côté sur un téléphone. */}
-        <Popover.Content aria-label="Notifications" align="end" sideOffset={8} collisionPadding={16} className={cn(menuSurfaceClasses, "w-[min(380px,calc(100vw-32px))]")}>
+        {/* Jamais plus large que l'écran (16 px de marge sur un téléphone), ni plus haut : au-delà, le panneau défile. */}
+        <Popover.Content
+          aria-label="Notifications"
+          align="end"
+          sideOffset={8}
+          collisionPadding={16}
+          className={cn(menuSurfaceClasses, "max-h-(--radix-popover-content-available-height) w-[min(380px,calc(100vw-32px))] overflow-y-auto")}
+        >
           <div className="flex items-center justify-between gap-3 py-2 pr-2 pl-3">
             <h2 className="m-0 text-base leading-6 font-semibold text-encre">Notifications</h2>
             {unread > 0 && (

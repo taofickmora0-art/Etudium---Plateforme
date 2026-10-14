@@ -16,7 +16,8 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: 
 const LIEN_REFUSE = "Le lien doit être une adresse du site, commençant par « / ».";
 
 async function remplir(titre: string, texte: string, lien = "") {
-  const user = userEvent.setup();
+  // Sans délai entre les touches : la frappe lettre par lettre dépassait 5 s sous la charge de la suite complète.
+  const user = userEvent.setup({ delay: null });
   render(<FormulaireAnnonce />);
   if (titre) await user.type(screen.getByLabelText("Titre"), titre);
   if (texte) await user.type(screen.getByLabelText("Texte"), texte);
