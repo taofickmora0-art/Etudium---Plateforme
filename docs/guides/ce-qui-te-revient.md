@@ -537,12 +537,12 @@ Le texte d'une publication se met en forme comme dans un traitement de texte, et
 2. **La mise en forme.** Avec le compte étudiant : **Communauté** → « Quoi de neuf, … ? ».
    - Au-dessus du texte, la barre : Titre 1, Titre 2, Titre 3, Gras, Italique, Souligné, Barré, Liste à puces, Liste numérotée, Citation. Le bouton d'un style actif est bleu.
    - Écris une ligne, sélectionne-la, clique **Titre 1** ; écris une phrase et mets un mot en **gras**, un autre en italique, souligné, barré ; fais une liste. Les raccourcis marchent aussi (Ctrl+B, Ctrl+I, Ctrl+U).
-   - **Publier** : la publication s'affiche exactement comme dans l'éditeur. **⋮ → Modifier** rouvre l'éditeur avec la mise en forme.
+   - **Publier** : la publication s'affiche comme dans l'éditeur. **⋮ → Modifier** rouvre l'éditeur avec la mise en forme. Les listes restent sur un seul niveau (Tab ne crée pas de sous-liste) et un titre tient sur une ligne.
    - Sur téléphone, la barre défile du doigt.
 3. **La vidéo.** Dans le champ ouvert, **Vidéo** (ou l'icône caméra du champ fermé, sur ordinateur) :
    - colle un lien YouTube : l'aperçu s'affiche aussitôt ; **Publier** : la vidéo se lit dans la publication au clic ;
    - essaie un lien Vimeo, TikTok, Facebook ou Instagram ;
    - un lien d'un autre site (Twitch, par exemple) donne une carte « Regarder sur … » ;
    - un texte qui n'est pas une adresse : « Collez l’adresse complète de la vidéo (https://…). » ; la croix **Retirer la vidéo** l'enlève.
-4. **Avec l'analyse automatique** (section 25) : la vidéo et l'aperçu d'un lien sont vérifiés avec le texte.
+4. **Avec l'analyse automatique** (section 25) : l'adresse de la vidéo et l'aperçu d'un lien (titre, description) sont jugés avec le texte ; l'image de la vidéo n'est pas analysée.
 
