@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { tableauDeBord } from "@/lib/accueil/regles";
 import type { FicheFormation } from "@/lib/catalogue/types";
@@ -7,6 +8,10 @@ import { formationsSuivies } from "@/lib/mes-formations/regles";
 import type { LigneProgression } from "@/lib/progression/types";
 import { CARTES_DESIGN } from "../catalogue/cartes-design";
 import { EXCEL_OUVERTE, id, ZOTERO } from "../lecon/donnees";
+
+// La carte « Prochaine session live » (sessions live, migration 0018) inscrit par une action du serveur.
+const sinscrire = vi.fn(async () => ({ ok: true }));
+vi.mock("@/lib/sessions/actions", () => ({ sinscrire: () => sinscrire(), seDesinscrire: vi.fn() }));
 
 const { TableauDeBord } = await import("@/components/accueil/TableauDeBord");
 
@@ -108,5 +113,42 @@ describe("Tableau de bord", () => {
     expect(within(bloc).queryByText("Académique")).toBeNull();
     expect(within(bloc).queryByRole("link", { name: "Voir le parcours" })).toBeNull();
     expect(within(bloc).getByRole("link", { name: "Reprendre la leçon" })).toBeInTheDocument();
+  });
+});
+
+describe("Prochaine session live (sessions live, migration 0018)", () => {
+  const SESSION = {
+    id: "11111111-1111-4111-8111-111111111111",
+    titre: "Excel avancé : analyse de données",
+    description: "",
+    debut: "2099-10-24T14:00:00Z",
+    dureeMinutes: 60,
+    plateforme: "Google Meet",
+    lien: null,
+    parcours: { nomCourt: "Académique", couleur: "academique" },
+    animateur: "Dr Mireille Adjovi",
+    inscriptions: 128,
+    inscrit: false,
+    statut: "programmee" as const,
+    initiales: ["RH", "FA", "SD"],
+  };
+  const donnees = (fiches: FicheFormation[], lignes: LigneProgression[]) => tableauDeBord(formationsSuivies(fiches.map((f) => ({ ...f, statut: "publiee" as const })), lignes, new Set()), CARTES_DESIGN);
+
+  it("la carte du design : lien Événements, initiales, 128 inscriptions, Je m’inscris à la session", async () => {
+    render(<TableauDeBord donnees={donnees(...DEUX_EN_COURS)} session={SESSION} />);
+    const bloc = screen.getByRole("region", { name: "Prochaine session live" });
+    expect(within(bloc).getByRole("link", { name: "Événements" })).toHaveAttribute("href", "/evenements");
+    for (const texte of ["Excel avancé : analyse de données", "Google Meet", "Dr Mireille Adjovi", "RH", "FA", "SD", "128 inscriptions"]) expect(within(bloc).getByText(texte)).toBeInTheDocument();
+    await userEvent.setup().click(within(bloc).getByRole("button", { name: "Je m’inscris à la session" }));
+    expect(sinscrire).toHaveBeenCalled();
+    expect(await within(bloc).findByText("Inscription confirmée")).toBeInTheDocument();
+  });
+
+  it("aussi pour qui n'a rien commencé ; sans session, pas de carte", () => {
+    const { unmount } = render(<TableauDeBord donnees={donnees([], [])} session={SESSION} />);
+    expect(screen.getByRole("region", { name: "Prochaine session live" })).toBeInTheDocument();
+    unmount();
+    render(<TableauDeBord donnees={donnees(...DEUX_EN_COURS)} session={null} />);
+    expect(screen.queryByRole("region", { name: "Prochaine session live" })).toBeNull();
   });
 });

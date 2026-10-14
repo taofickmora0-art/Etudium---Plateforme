@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CourseIcon, GiftIcon, Target02Icon } from "@hugeicons/core-free-icons";
 import { CarteFormation } from "@/components/catalogue/CarteFormation";
+import { CarteProchaineSession } from "@/components/sessions/CarteProchaineSession";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GRILLE_CARTES, GRILLE_DEUX } from "@/components/ui/grilles";
@@ -9,6 +10,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import type { TableauDeBord as Donnees } from "@/lib/accueil/regles";
 import type { CarteCatalogue } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
+import type { ProchaineSession } from "@/lib/sessions/types";
 import { CarteReprise } from "./CarteReprise";
 import { ListeAFaire } from "./ListeAFaire";
 
@@ -26,7 +28,16 @@ function Cartes({ cartes }: { cartes: CarteCatalogue[] }) {
  * Tableau de bord, version de base (spec du lot 1, §8 ; NdAccueil, NdMobAccueil) : la zone sous l'en-tête. Seuls les
  * blocs qui ont de vraies données au lot 1 ; un compte qui n'a rien commencé est orienté vers les formations gratuites.
  */
-export function TableauDeBord({ donnees }: { donnees: Donnees }) {
+/** La carte « Prochaine session live » (NdAccueil) : la plus proche des inscriptions, sinon la prochaine session. */
+function ProchaineSessionLive({ session }: { session: ProchaineSession }) {
+  return (
+    <Groupe titre="Prochaine session live" lien={{ href: "/evenements", libelle: "Événements" }}>
+      <CarteProchaineSession session={session} />
+    </Groupe>
+  );
+}
+
+export function TableauDeBord({ donnees, session = null }: { donnees: Donnees; session?: ProchaineSession | null }) {
   const { commencees, enCours, progressionGlobale, reprise, aFaire, recommandees, gratuites } = donnees;
 
   if (commencees === 0) {
@@ -42,6 +53,7 @@ export function TableauDeBord({ donnees }: { donnees: Donnees }) {
             </Button>
           }
         />
+        {session && <ProchaineSessionLive session={session} />}
         {gratuites.length > 0 && (
           <Groupe titre="Formations gratuites" lien={{ href: "/formations-gratuites", libelle: "Tout voir" }}>
             <Cartes cartes={gratuites} />
@@ -71,15 +83,20 @@ export function TableauDeBord({ donnees }: { donnees: Donnees }) {
               <CarteReprise reprise={reprise} />
             </Groupe>
           </div>
-          {aFaire.length > 0 && (
-            <div className="min-w-0 flex-[1_1_360px]">
-              <Groupe titre="À faire" etiquette={aFaire.length > 1 ? `${aFaire.length} éléments` : "1 élément"}>
-                <ListeAFaire elements={aFaire} />
-              </Groupe>
+          {(aFaire.length > 0 || session) && (
+            <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-8 max-sm:gap-6">
+              {aFaire.length > 0 && (
+                <Groupe titre="À faire" etiquette={aFaire.length > 1 ? `${aFaire.length} éléments` : "1 élément"}>
+                  <ListeAFaire elements={aFaire} />
+                </Groupe>
+              )}
+              {/* NdAccueil : la prochaine session live, sous « À faire ». */}
+              {session && <ProchaineSessionLive session={session} />}
             </div>
           )}
         </div>
       )}
+      {!reprise && session && <ProchaineSessionLive session={session} />}
       {recommandees.length > 0 && (
         <Groupe titre="Recommandé pour vous" lien={{ href: "/formations", libelle: "Tout voir" }}>
           <Cartes cartes={recommandees} />

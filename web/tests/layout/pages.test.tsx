@@ -30,8 +30,8 @@ describe("Pages de l'espace connecté", () => {
   });
 
   it("la page à venir dit quand elle arrive", () => {
-    render(<ComingSoonView page="evenements" />);
-    expect(screen.getByRole("heading", { level: 1, name: "Événements" })).toBeInTheDocument();
+    render(<ComingSoonView page="communaute" />);
+    expect(screen.getByRole("heading", { level: 1, name: "Communauté" })).toBeInTheDocument();
     expect(screen.getByText(/au lot 5/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Retour à l’accueil" })).toHaveAttribute("href", "/accueil");
   });

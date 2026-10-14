@@ -12,6 +12,7 @@ import { getShellUser } from "@/lib/auth/current-user";
 import { listCatalogue, listFiches } from "@/lib/catalogue/data";
 import { formationsSuivies } from "@/lib/mes-formations/regles";
 import { lireProgression } from "@/lib/progression/data";
+import { lireProchaineSession } from "@/lib/sessions/data";
 
 export const metadata: Metadata = { title: "Accueil · Étudium" };
 
@@ -27,8 +28,20 @@ async function Salutation() {
   );
 }
 
+/** La prochaine session live (0018) ; null avant la migration, ou si la lecture échoue : l'accueil ne casse jamais. */
+async function prochaineSession() {
+  try {
+    const lecture = await lireProchaineSession();
+    return lecture.migrationAbsente ? null : lecture.donnees;
+  } catch (erreur) {
+    console.error("Lecture de la prochaine session impossible :", erreur instanceof Error ? erreur.message : erreur);
+    return null;
+  }
+}
+
 async function Contenu() {
   let donnees;
+  const session = prochaineSession();
   try {
     // Sans les tables de progression (0007, 0008), aucune formation n'est encore commencée.
     const [lignes, cartes] = await Promise.all([lireProgression(), listCatalogue()]);
@@ -37,7 +50,7 @@ async function Contenu() {
   } catch (erreur) {
     return siTablesAbsentes(erreur);
   }
-  return <TableauDeBord donnees={donnees} />;
+  return <TableauDeBord donnees={donnees} session={await session} />;
 }
 
 /** Accueil de l'espace connecté (NdAccueil, NdMobAccueil) : tableau de bord, version de base (spec du lot 1, §8). */

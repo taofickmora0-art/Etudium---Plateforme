@@ -9,7 +9,6 @@ const LOT_4 = "au lot 4, Espace formateur";
  * d'après la feuille de route (docs/superpowers/specs/2026-10-09-feuille-de-route-design.md).
  */
 export const PAGES_A_VENIR = {
-  evenements: { titre: "Événements", quand: LOT_5, description: "Les sessions live et les événements de vos parcours s’afficheront ici." },
   communaute: { titre: "Communauté", quand: LOT_5, description: "Vous pourrez échanger avec les autres étudiants de vos parcours." },
   messages: { titre: "Messages", quand: LOT_5, description: "Vous pourrez écrire à vos formateurs." },
   aide: { titre: "Aide", quand: LOT_1, description: "Les réponses aux questions fréquentes s’afficheront ici." },
