@@ -50,6 +50,19 @@ describe("Actions de modération", () => {
     expect(await retablirPublication(ID)).toEqual({ ok: false, message: "Ce contenu n’existe plus." });
   });
 
+  it("supprimer une publication avec un sondage à images : ses images quittent aussi le stockage (revue finale, I1)", async () => {
+    faux.repondre("rpc.images_sondage", { data: ["a1/rouge.png", "a1/bleu.png"] });
+    faux.repondre("rpc.supprimer_contenu", { data: null });
+    expect(await supprimerContenu({ publicationId: ID })).toEqual({ ok: true });
+    expect(faux.de("rpc", "images_sondage")[0].valeurs).toEqual({ p_publication: ID });
+    expect(faux.de("storage.communaute", "remove").map((a) => a.valeurs)).toEqual([[["a1/rouge.png", "a1/bleu.png"]]]);
+    // Un commentaire n'a pas de sondage : aucune lecture.
+    faux.vider();
+    faux.repondre("rpc.supprimer_contenu", { data: null });
+    expect(await supprimerContenu({ reponseId: R })).toEqual({ ok: true });
+    expect(faux.de("rpc", "images_sondage")).toEqual([]);
+  });
+
   it("régler l'analyse : le jeton du serveur ; sans configuration, le guide", async () => {
     vi.stubEnv("ANTHROPIC_API_KEY", "");
     vi.stubEnv("MODERATION_JETON", "J");

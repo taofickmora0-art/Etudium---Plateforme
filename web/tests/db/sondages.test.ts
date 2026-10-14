@@ -101,6 +101,14 @@ describe("Publications programmées", () => {
     await expect(publier(A, { publieLe: await dans("4 months") })).rejects.toThrow("Choisissez une date dans les 3 mois qui viennent.");
   });
 
+  it("la limite de débit compte une programmée quand on l'écrit, pas jusqu'à sa parution (revue finale, C1)", async () => {
+    for (let jour = 1; jour <= 5; jour++) await publier(A, { publieLe: await dans(`${jour} days`) });
+    await expect(publier(A)).rejects.toThrow("Vous publiez beaucoup en peu de temps.");
+    // Onze minutes plus tard (simulé) : l'auteur publie de nouveau, sans attendre la parution des programmées.
+    await banc.db.query("update public.publications set ecrite_le = now() - interval '11 minutes'");
+    expect(await publier(A)).toBeTruthy();
+  });
+
   it("absentes des tendances et des activités récentes", async () => {
     const id = await publier(A, { publieLe: await dans("1 hour") });
     await banc.db.query("insert into public.reactions_publications (publication_id, profil_id) values ($1, $2)", [id, M]);

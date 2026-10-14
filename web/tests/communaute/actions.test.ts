@@ -42,8 +42,11 @@ describe("Publier", () => {
     expect(await publierPublication(null, "", "Bonjour", null)).toEqual({ ok: false, message: SESSION_EXPIREE });
     getShellUser.mockResolvedValue({ id: "moi", prenom: "Koffi", nom: "Dossou", roles: ["etudiant"] });
     expect(await publierPublication(null, "", "  ", null)).toEqual({ ok: false, message: "Écrivez votre publication (3 000 caractères au plus)." });
-    expect(await publierPublication(null, "", "ok", { ...PIECE, type: "application/zip" })).toMatchObject({ ok: false });
     expect(faux.appels).toEqual([]);
+    // Le fichier refusé est retiré du stockage (revue finale, I3) ; aucun autre appel.
+    expect(await publierPublication(null, "", "ok", { ...PIECE, type: "application/zip" })).toMatchObject({ ok: false });
+    expect(faux.de("storage.communaute", "remove").map((a) => a.valeurs)).toEqual([[[PIECE.chemin]]]);
+    expect(faux.appels).toHaveLength(1);
   });
 
   it("publie : paramètres transmis, la page relue", async () => {
@@ -500,6 +503,45 @@ describe("Sondages, quiz et programmation (0026)", () => {
     faux.repondre("rpc.fil_communaute", { data: { publications: [], suite: false } });
     await chargerFil("tous", "programmees");
     expect(faux.de("rpc", "fil_communaute")[0].valeurs).toMatchObject({ p_tri: "programmees" });
+  });
+
+  const IMAGES = {
+    type: "images" as const,
+    choixMultiples: false,
+    dureeJours: 7 as const,
+    explication: "",
+    options: [
+      { texte: "Rouge", image: { chemin: "moi/rouge.png", nom: "rouge.png", type: "image/png", taille: 10 } },
+      { texte: "", image: { chemin: "moi/bleu.png", nom: "bleu.png", type: "image/png", taille: 10 } },
+    ],
+  };
+
+  it("analyse active : un sondage avec images part en vérification de l'équipe, sans appel à l'IA (revue finale, I2)", async () => {
+    faux.repondre("rpc.moderation_active", { data: true });
+    faux.repondre("rpc.preparer_analyse", { data: { objet: null } });
+    configuration.mockReturnValue({ cle: "k", jeton: "J", modele: "claude-haiku-5-5" });
+    analyserPublication.mockResolvedValue({ decision: "autoriser", categorie: "aucune", raison: "RAS" });
+    faux.repondre("rpc.publier", { data: { id: ID, statut: "en_attente", categorie: null } });
+    expect(await publierPublication(null, "", "Laquelle ?", null, null, { sondage: IMAGES })).toMatchObject({ ok: true, statut: "en_attente" });
+    expect(analyserPublication).not.toHaveBeenCalled();
+    expect(faux.de("rpc", "publier")[0].valeurs).toMatchObject({ p_analyse: { jeton: "J", decision: "echec", raison: expect.stringContaining("Sondage avec images") } });
+  });
+
+  it("un refus après le dépôt retire les images déposées ; 9 minutes de tolérance comme la base (revue finale, I3)", async () => {
+    const proche = new Date(Date.now() + 5 * 60_000).toISOString();
+    expect(await publierPublication(null, "", "x", null, null, { sondage: IMAGES, publieLe: proche })).toEqual({
+      ok: false,
+      message: "Choisissez une heure au moins 10 minutes plus tard.",
+    });
+    expect(faux.de("storage.communaute", "remove")[0].valeurs).toEqual([["moi/rouge.png", "moi/bleu.png"]]);
+    faux.vider();
+    expect(await publierPublication(null, "", "", null, null, { sondage: IMAGES })).toMatchObject({ ok: false });
+    expect(faux.de("storage.communaute", "remove")[0].valeurs).toEqual([["moi/rouge.png", "moi/bleu.png"]]);
+    // Choisie à 10 minutes, envoyée une minute après : acceptée (la base tolère 9 minutes).
+    faux.vider();
+    faux.repondre("rpc.publier", { data: { id: ID, statut: "publiee", categorie: null } });
+    const neufEtDemi = new Date(Date.now() + 9.5 * 60_000).toISOString();
+    expect(await publierPublication(null, "", "Bientôt", null, null, { publieLe: neufEtDemi })).toMatchObject({ ok: true });
   });
 
   it("supprimer une publication à sondage d'images : ses images quittent le stockage", async () => {

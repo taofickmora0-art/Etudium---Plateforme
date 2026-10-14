@@ -56,10 +56,13 @@ export function versBase(s: SondageEnvoye) {
 }
 
 /** Une heure de parution : de 10 minutes à 3 mois après maintenant. */
-export function refusProgrammation(iso: string, maintenant: Date): string | null {
+/** Au moment d'envoyer, la base tolère 9 minutes : l'heure choisie à 10 minutes reste valable une minute de plus. */
+export const TOLERANCE_PROGRAMMATION = 9;
+
+export function refusProgrammation(iso: string, maintenant: Date, minutes = 10): string | null {
   const moment = Date.parse(iso);
   if (Number.isNaN(moment)) return "Choisissez la date et l’heure.";
-  if (moment < maintenant.getTime() + 10 * 60_000) return "Choisissez une heure au moins 10 minutes plus tard.";
+  if (moment < maintenant.getTime() + minutes * 60_000) return "Choisissez une heure au moins 10 minutes plus tard.";
   const limite = new Date(maintenant);
   limite.setMonth(limite.getMonth() + 3);
   if (moment > limite.getTime()) return "Choisissez une date dans les 3 mois qui viennent.";

@@ -49,6 +49,36 @@ revoke all on public.sondages from anon, authenticated;
 revoke all on public.options_sondage from anon, authenticated;
 revoke all on public.votes_sondage from anon, authenticated;
 
+-- ─── L'heure d'écriture : la limite de débit compte une programmée quand on l'écrit ────────────────
+-- (une programmée a son cree_le dans le futur : comptée sur cree_le, elle bloquerait l'auteur jusqu'à sa parution).
+alter table public.publications add column if not exists ecrite_le timestamptz not null default now();
+update public.publications set ecrite_le = cree_le where ecrite_le > cree_le;
+
+create or replace function public.limiter_debit(p_reponses boolean)
+returns void
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_nombre integer;
+  v_limite integer := 5;
+begin
+  if p_reponses then
+    v_limite := 30;
+    select count(*) into v_nombre from public.commentaires_publications
+    where auteur = (select auth.uid()) and cree_le > now() - interval '10 minutes';
+  else
+    select count(*) into v_nombre from public.publications
+    where auteur = (select auth.uid()) and ecrite_le > now() - interval '10 minutes';
+  end if;
+  if v_nombre >= v_limite then
+    raise exception 'Vous publiez beaucoup en peu de temps. Réessayez dans quelques minutes.';
+  end if;
+end;
+$$;
+
 -- ─── Visible : parue (ou la sienne, programmée ou en attente) ───────────────────────────────────────
 create or replace function public.publication_visible(p public.publications)
 returns boolean
@@ -736,6 +766,7 @@ end;
 $$;
 
 -- ─── Droits d'exécution ─────────────────────────────────────────────────────────────────────────────
+revoke execute on function public.limiter_debit(boolean) from public, anon, authenticated;
 revoke execute on function public.verifier_parution(timestamptz) from public, anon, authenticated;
 revoke execute on function public.verifier_sondage(jsonb) from public, anon, authenticated;
 revoke execute on function public.bloc_sondage(uuid) from public, anon, authenticated;

@@ -56,9 +56,17 @@ export async function supprimerContenu(cible: CibleModeration): Promise<Resultat
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   const parametres = cibler(cible);
   if (!parametres) return { ok: false, message: ECHEC };
+  // Les images d'un sondage (0026), lues avant la suppression ; rien pour un commentaire, ni avant la 0026.
+  const images = parametres.p_publication
+    ? await garde.supabase.rpc("images_sondage", { p_publication: parametres.p_publication }).then(
+        (r) => (Array.isArray(r.data) ? r.data.filter((c): c is string => typeof c === "string" && c !== "") : []),
+        () => [] as string[],
+      )
+    : [];
   const { data, error } = await garde.supabase.rpc("supprimer_contenu", parametres);
   if (error) return { ok: false, message: message(error) };
   if (typeof data === "string" && data) await garde.supabase.storage.from("communaute").remove([data]);
+  if (images.length > 0) await garde.supabase.storage.from("communaute").remove(images).catch(() => undefined);
   refresh();
   return { ok: true };
 }

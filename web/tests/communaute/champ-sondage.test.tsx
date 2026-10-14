@@ -102,6 +102,30 @@ describe("Le champ de publication : options, sondages, quiz", () => {
     expect(options[0].image.chemin).toMatch(new RegExp(`^${MOI.compteId}/`));
   });
 
+  it("une heure devenue trop proche est refusée avant tout dépôt d'image (revue finale, I3)", async () => {
+    const { user } = await ouvrir();
+    await user.click(screen.getByRole("button", { name: "Sondage avec images" }));
+    await user.upload(screen.getByLabelText("Image de l’option 1"), new File([PNG], "rouge.png", { type: "image/png" }));
+    await user.upload(screen.getByLabelText("Image de l’option 2"), new File([PNG], "bleu.png", { type: "image/png" }));
+    await user.click(screen.getByRole("button", { name: "Plus d’options de publication" }));
+    await user.click(screen.getByRole("menuitem", { name: "Programmer…" }));
+    const fenetre = screen.getByRole("dialog", { name: "Programmer la publication" });
+    const jour = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Porto-Novo" }).format(new Date(Date.now() + 2 * 86_400_000));
+    fireEvent.change(within(fenetre).getByLabelText("Date"), { target: { value: jour } });
+    fireEvent.change(within(fenetre).getByLabelText("Heure"), { target: { value: "15:00" } });
+    await user.click(within(fenetre).getByRole("button", { name: "Programmer" }));
+    // Le temps a passé : il ne reste que 5 minutes avant l'heure choisie.
+    vi.useFakeTimers({ toFake: ["Date"], now: Date.parse(`${jour}T15:00:00+01:00`) - 5 * 60_000 });
+    try {
+      await user.click(screen.getByRole("button", { name: "Programmer" }));
+      expect(await screen.findByText("Choisissez une heure au moins 10 minutes plus tard.")).toBeInTheDocument();
+      expect(upload).not.toHaveBeenCalled();
+      expect(publierPublication).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("un seul ajout : choisir une image remplace le sondage, après confirmation", async () => {
     const { user } = await ouvrir();
     await user.click(screen.getByRole("button", { name: "Sondage avec texte" }));

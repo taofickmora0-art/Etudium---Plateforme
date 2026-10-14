@@ -23,7 +23,7 @@ import { useToast } from "@/components/ui/Toast";
 import { formatDe, formatParMime } from "@/lib/admin/fichiers";
 import { publierPublication } from "@/lib/communaute/actions";
 import { REFUS_PIECE, refusPiece, refusPublication, tailleLisible, TITRE_MAX } from "@/lib/communaute/regles";
-import { refusSondage, type SondageEnvoye, type TypeSondage } from "@/lib/communaute/sondage";
+import { refusProgrammation, refusSondage, TOLERANCE_PROGRAMMATION, type SondageEnvoye, type TypeSondage } from "@/lib/communaute/sondage";
 import type { Espace, MoiCommunaute, PieceEnvoyee, Publication } from "@/lib/communaute/types";
 import { reconnaitreVideo } from "@/lib/communaute/video";
 import { phraseSession } from "@/lib/sessions/regles";
@@ -210,7 +210,11 @@ export function ChampPublication({
     // Avant le dépôt, une image choisie tient lieu d'image déposée pour vérifier le sondage.
     const essai = sondage ? sondageEnvoye(sondage, sondage.options.map((o) => (o.fichier ? { chemin: "", nom: o.fichier.name, type: o.type ?? "", taille: o.fichier.size } : null))) : null;
     const refus =
-      refusPublication(titre, texte) ?? (video?.trim() && !reconnaitreVideo(video) ? ADRESSE_VIDEO : null) ?? (essai ? refusSondage(essai) : null);
+      refusPublication(titre, texte) ??
+      (video?.trim() && !reconnaitreVideo(video) ? ADRESSE_VIDEO : null) ??
+      (essai ? refusSondage(essai) : null) ??
+      // L'heure choisie a pu devenir trop proche : refusée avant de déposer les images.
+      (publieLe ? refusProgrammation(publieLe, new Date(), TOLERANCE_PROGRAMMATION) : null);
     if (refus) {
       setErreur(refus);
       return;
