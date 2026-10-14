@@ -33,22 +33,27 @@ export type NavEntry = {
   icon: IconSvgElement;
   /** Marquée seulement sur sa propre page, pas sur ses sous-pages (tableau de bord d'un espace). */
   exact?: boolean;
+  /** D'autres pages où l'entrée est marquée aussi (« Mes formations » sous l'onglet Formations). */
+  aussi?: string[];
 };
 
+// Un seul onglet pour le catalogue et les formations suivies (spec Formations et Événements, §1).
+const FORMATIONS: NavEntry = { href: "/formations", label: "Formations", icon: CourseIcon, aussi: ["/mes-formations"] };
+
+// Communauté reste jusqu'au nouvel Accueil (communauté v3, étape 4), qui la remplacera.
 export const NAV_PRINCIPALE: NavEntry[] = [
   { href: "/accueil", label: "Accueil", icon: Home03Icon },
-  { href: "/evenements", label: "Événements", icon: Calendar03Icon },
+  FORMATIONS,
   { href: "/communaute", label: "Communauté", icon: UserGroupIcon },
   { href: "/messages", label: "Messages", icon: BubbleChatIcon },
+  { href: "/evenements", label: "Événements", icon: Calendar03Icon },
 ];
 
 /** Groupe « Mon espace » de la barre latérale. */
 export const NAV_MON_ESPACE: NavEntry[] = [
-  { href: "/mes-formations", label: "Mes formations", icon: CourseIcon },
   { href: "/exercices", label: "Exercices", icon: AssignmentsIcon },
   { href: "/parcours", label: "Mes parcours", icon: Route01Icon },
   { href: "/certificats", label: "Certificats", icon: Certificate01Icon },
-  { href: "/formations", label: "Toutes les formations", icon: BookOpen01Icon },
   { href: "/formations-gratuites", label: "Formations gratuites", icon: GiftIcon },
   { href: "/favoris", label: "Favoris", icon: FavouriteIcon },
   { href: "/abonnement", label: "Mon abonnement", icon: CreditCardIcon },
@@ -58,7 +63,7 @@ export const NAV_MON_ESPACE: NavEntry[] = [
 /** Barre du bas du téléphone. « Profil » ouvre la page de menu du téléphone. */
 export const NAV_BAS: NavEntry[] = [
   { href: "/accueil", label: "Accueil", icon: Home03Icon },
-  { href: "/mes-formations", label: "Formations", icon: CourseIcon },
+  FORMATIONS,
   { href: "/communaute", label: "Communauté", icon: UserGroupIcon },
   { href: "/certificats", label: "Certificats", icon: Certificate01Icon },
   { href: "/menu", label: "Profil", icon: UserIcon },
@@ -66,7 +71,7 @@ export const NAV_BAS: NavEntry[] = [
 
 /**
  * Liste de la page « Profil » du téléphone (NdMobMenu), complétée des entrées de la barre latérale
- * que la barre du bas n'a pas (Exercices, catalogue, formations gratuites) : sur téléphone, tout reste accessible.
+ * que la barre du bas n'a pas (Exercices, formations gratuites…) : sur téléphone, tout reste accessible.
  */
 export const NAV_MENU_TELEPHONE: NavEntry[] = [
   { href: "/profil", label: "Mon profil", icon: UserIcon },
@@ -74,7 +79,6 @@ export const NAV_MENU_TELEPHONE: NavEntry[] = [
   { href: "/parcours", label: "Mes parcours", icon: Route01Icon },
   { href: "/exercices", label: "Exercices", icon: AssignmentsIcon },
   { href: "/certificats", label: "Certificats", icon: Certificate01Icon },
-  { href: "/formations", label: "Toutes les formations", icon: BookOpen01Icon },
   { href: "/formations-gratuites", label: "Formations gratuites", icon: GiftIcon },
   { href: "/favoris", label: "Favoris", icon: FavouriteIcon },
   { href: "/evenements", label: "Événements", icon: Calendar03Icon },
@@ -167,4 +171,9 @@ export { PAGES_A_VENIR, type PageAVenir } from "./pages-a-venir";
 /** Une entrée est active sur sa propre page et sur ses sous-pages (« /mes-formations/excel ») ; `exact` : sa page seule. */
 export function isActive(pathname: string, href: string, exact = false): boolean {
   return pathname === href || (!exact && pathname.startsWith(`${href}/`));
+}
+
+/** L'entrée d'un menu est marquée sur sa page, ses sous-pages, et les pages de `aussi` (et leurs sous-pages). */
+export function entreeActive(pathname: string, e: NavEntry): boolean {
+  return isActive(pathname, e.href, e.exact) || (e.aussi ?? []).some((autre) => isActive(pathname, autre));
 }

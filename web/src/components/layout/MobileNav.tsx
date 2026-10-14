@@ -4,14 +4,14 @@ import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { BottomBar } from "@/components/ui/BottomBar";
 import { spaceOf, type Espace } from "@/lib/auth/permissions";
-import { NAV_BAS_PAR_ESPACE, isActive } from "@/lib/navigation";
+import { NAV_BAS_PAR_ESPACE, entreeActive } from "@/lib/navigation";
 
 /** Les onglets de la barre du bas, ceux de l'espace courant ; `pathname` absent (rendu préalable) = aucun onglet actif. */
 export function BottomNavLinks({ pathname, espace }: { pathname: string | null; espace?: Espace }) {
   const actuel = pathname !== null ? spaceOf(pathname) : espace;
   const onglets = actuel ? NAV_BAS_PAR_ESPACE[actuel] : [];
   return (
-    <BottomBar items={onglets.map((e) => ({ ...e, active: pathname !== null && isActive(pathname, e.href, e.exact) }))} className="rounded-t-none" />
+    <BottomBar items={onglets.map((e) => ({ ...e, active: pathname !== null && entreeActive(pathname, e) }))} className="rounded-t-none" />
   );
 }
 

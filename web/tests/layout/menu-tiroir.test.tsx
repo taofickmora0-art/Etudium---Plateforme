@@ -33,7 +33,7 @@ describe("Le menu du téléphone", () => {
     await user.click(bouton);
     const tiroir = screen.getByRole("dialog", { name: "Menu" });
     const liens = within(tiroir).getAllByRole("link").map((l) => l.textContent);
-    expect(liens).toEqual(expect.arrayContaining(["Accueil", "Événements", "Communauté", "Messages", "Mes formations", "Toutes les formations", "Aide"]));
+    expect(liens).toEqual(expect.arrayContaining(["Accueil", "Formations", "Communauté", "Messages", "Événements", "Formations gratuites", "Aide"]));
     expect(within(tiroir).getByRole("link", { name: "Accueil" })).toHaveAttribute("aria-current", "page");
     await user.click(within(tiroir).getByRole("link", { name: "Communauté" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());

@@ -56,11 +56,32 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
     expect(within(nav).getByRole("link", { name: "Étudiants" })).toHaveAttribute("aria-current", "page");
   });
 
-  it("espace étudiant : le menu ne change pas", () => {
+  it("espace étudiant : un seul onglet Formations après Accueil, Événements après Messages", () => {
     render(<SidebarNavLinks pathname="/mes-formations" />);
     const nav = screen.getByRole("navigation", { name: "Navigation principale" });
-    expect(within(nav).getByRole("group", { name: "Mon espace" })).toBeInTheDocument();
-    expect(within(nav).getByRole("link", { name: "Mes formations" })).toHaveAttribute("href", "/mes-formations");
+    const groupe = within(nav).getByRole("group", { name: "Mon espace" });
+    const principaux = within(nav)
+      .getAllByRole("link")
+      .filter((l) => !groupe.contains(l))
+      .map((l) => [l.textContent, l.getAttribute("href")]);
+    expect(principaux).toEqual([
+      ["Accueil", "/accueil"],
+      ["Formations", "/formations"],
+      ["Communauté", "/communaute"],
+      ["Messages", "/messages"],
+      ["Événements", "/evenements"],
+    ]);
+    expect(within(groupe).getAllByRole("link").map((l) => l.textContent)).toEqual([
+      "Exercices",
+      "Mes parcours",
+      "Certificats",
+      "Formations gratuites",
+      "Favoris",
+      "Mon abonnement",
+      "Aide",
+    ]);
+    // « Mes formations » (la liste complète) reste marquée sous l'onglet Formations.
+    expect(within(nav).getByRole("link", { name: "Formations" })).toHaveAttribute("aria-current", "page");
     expect(within(nav).queryByRole("link", { name: "Tableau de bord" })).toBeNull();
   });
 
@@ -70,7 +91,7 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
     unmount();
     // Le catalogue connecté sait qu'il est dans l'espace étudiant.
     render(<SidebarNavLinks pathname={null} espace="etudiant" />);
-    expect(screen.getByRole("link", { name: "Mes formations" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Formations" })).toBeInTheDocument();
   });
 
   it("la barre du bas du téléphone suit l'espace", () => {
@@ -81,8 +102,12 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
     const formateur = render(<BottomNavLinks pathname="/formateur" />);
     expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual(["Tableau de bord", "Formations", "Étudiants", "Sessions live", "Profil"]);
     formateur.unmount();
-    render(<BottomNavLinks pathname="/accueil" />);
+    const etudiant = render(<BottomNavLinks pathname="/accueil" />);
     expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual(["Accueil", "Formations", "Communauté", "Certificats", "Profil"]);
+    expect(screen.getByRole("link", { name: "Formations" })).toHaveAttribute("href", "/formations");
+    etudiant.unmount();
+    render(<BottomNavLinks pathname="/mes-formations" />);
+    expect(screen.getByRole("link", { name: "Formations" })).toHaveAttribute("aria-current", "page");
   });
 
   it("« Ajouter une formation » : le formulaire au back-office, les formations du formateur dans son espace, le catalogue ailleurs", () => {

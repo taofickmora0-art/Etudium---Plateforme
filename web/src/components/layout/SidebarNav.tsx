@@ -6,7 +6,7 @@ import { SidebarGroup } from "@/components/ui/SidebarGroup";
 import { SidebarItem } from "@/components/ui/SidebarItem";
 import { spaceOf, type Espace } from "@/lib/auth/permissions";
 import { cn } from "@/lib/cn";
-import { MENUS, isActive, type NavEntry } from "@/lib/navigation";
+import { MENUS, entreeActive, type NavEntry } from "@/lib/navigation";
 
 // La barre garde toujours 337 px de contenu : réduite, sa place n'en montre que la colonne d'icônes (84 px), et elle se
 // déplie par-dessus la page au survol ou au clavier (règles « menu-lateral » de globals.css).
@@ -35,7 +35,7 @@ export function SidebarNavLinks({
   const actuel = pathname !== null ? spaceOf(pathname) : espace;
   const menu = actuel ? MENUS[actuel] : null;
   const entree = (e: NavEntry) => (
-    <SidebarItem key={e.href} href={e.href} icon={e.icon} label={e.label} active={pathname !== null && isActive(pathname, e.href, e.exact)} />
+    <SidebarItem key={e.href} href={e.href} icon={e.icon} label={e.label} active={pathname !== null && entreeActive(pathname, e)} />
   );
   const groupes = menu?.groupes.map((groupe, index) => (
     <Fragment key={groupe.titre ?? index}>
