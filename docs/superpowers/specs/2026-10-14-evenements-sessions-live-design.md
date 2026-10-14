@@ -114,9 +114,9 @@ Les règles des rappels :
 - **Le formulaire** (`/formateur/sessions/nouvelle`) : titre, description, date, heure, durée, lien, parcours. **Programmer la session**.
 - **La fiche d'une session** (`/formateur/sessions/<id>`) :
   - ses informations et le lien ;
-  - la liste des inscrits : prénom et nom, **jamais l'adresse e-mail** ;
+  - la liste « Inscriptions » : prénom et nom, **jamais l'adresse e-mail** ;
   - **Modifier** (même formulaire, sauf si elle est terminée) ;
-  - **Annuler la session**, avec la confirmation « Annuler cette session ? » · « Ses <N> inscrits seront prévenus. Elle ne pourra pas être reprogrammée. ».
+  - **Annuler la session**, avec la confirmation « Annuler cette session ? » · « Les <N> personnes inscrites seront prévenues. Elle ne pourra pas être reprogrammée. ».
 - **Tableau de bord du formateur** (design `NdFormateur`) : la carte « Prochaine session live » remplace « Disponible au lot 5 ». Elle montre :
   - « Aujourd’hui », « Demain » ou « Dans 2 jours » ;
   - le titre, la date, la plateforme ;
