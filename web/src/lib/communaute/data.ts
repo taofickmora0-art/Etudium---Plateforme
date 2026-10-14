@@ -213,8 +213,11 @@ export async function lireLot(supabase: Client, espace: FiltreFil, tri: TriFil =
   }
   if (error) return { error };
   const brut = un(data);
-  const publications = await avecLiens(supabase, liste(brut?.publications).map(versPublication));
-  return { lot: { publications, suite: brut?.suite === true } satisfies LotPublications };
+  const lues = liste(brut?.publications).map(versPublication);
+  // « Programmées » : une base sans la 0026 ignore ce tri et rendrait le fil ordinaire ; seules les programmées restent.
+  const gardees = tri === "programmees" ? lues.filter((p) => p.programmee === true) : lues;
+  const publications = await avecLiens(supabase, gardees);
+  return { lot: { publications, suite: brut?.suite === true && gardees.length === lues.length } satisfies LotPublications };
 }
 
 /** Le fil d'un espace, dans l'ordre du tri. */

@@ -392,7 +392,8 @@ describe("La vidéo jointe", () => {
 
   it("sur ordinateur, le fil a une largeur fixe (720 px au plus)", () => {
     page(lot([pub()]));
-    expect(carte().parentElement).toHaveClass("max-w-[720px]");
+    // La colonne du fil (sous les onglets « Publiées » / « Programmées »).
+    expect(carte().closest('[class~="max-w-[720px]"]')).not.toBeNull();
   });
 });
 

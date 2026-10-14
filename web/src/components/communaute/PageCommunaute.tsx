@@ -2,13 +2,14 @@
 
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
-import { Bookmark02Icon, SquareLock02Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { Bookmark02Icon, CalendarClockIcon, SquareLock02Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { useMaintenant } from "@/components/notifications/horloge";
 import { BoutonSessionsProgrammees } from "@/components/sessions/BoutonSessionsProgrammees";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterChips } from "@/components/ui/FilterChips";
+import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Heading, Lead } from "@/components/ui/Text";
 import { chargerFil } from "@/lib/communaute/actions";
@@ -26,6 +27,8 @@ const VIDE: LotPublications = { publications: [], suite: false };
 /** Le fil « Actualités » : tous les espaces ouverts au compte. */
 const ACTUALITES = "tous";
 const valeur = (e: Espace) => e.id ?? "general";
+/** Sous le champ : le fil des publications parues, ou les siennes programmées (spec sondages, quiz et programmation, §5). */
+type Vue = "publiees" | "programmees";
 
 /**
  * La page Communauté (design NdCommunaute ; spec du fil « Actualités », §1 à §4) : les onglets (Actualités = le fil de
@@ -61,6 +64,11 @@ export function PageCommunaute({
   const general = liste.find((e) => e.id === null) ?? GENERAL;
   const [onglet, setOnglet] = useState(() => (liste.some((e) => valeur(e) === ongletInitial) ? ongletInitial : ACTUALITES));
   const [tri, setTri] = useState<TriFil>("recentes");
+  const [vue, setVue] = useState<Vue>("publiees");
+  // Radix annonce le même onglet à l'appui puis au focus, avant le rendu : la vue courante, tenue à jour sans attendre.
+  const vueCourante = useRef<Vue>("publiees");
+  // Ce que lit le fil : le tri choisi, ou les programmées du compte.
+  const ordre: TriFil = vue === "programmees" ? "programmees" : tri;
   const [lot, setLot] = useState(initial);
   // Les pages déjà lues, pour « Voir plus » des tris par page (populaires, enregistrées).
   const [page, setPage] = useState(0);
@@ -111,7 +119,7 @@ export function PageCommunaute({
       setSuite(false);
       return;
     }
-    void recharger(cible, tri);
+    void recharger(cible, ordre);
   }
 
   const suivreAdresse = useEffectEvent((cible: string) => {
@@ -123,17 +131,26 @@ export function PageCommunaute({
     suivreAdresse(demandee);
   }, [demandee]);
 
-  function changerTri(ordre: TriFil) {
-    setTri(ordre);
-    void recharger(onglet, ordre);
+  function changerTri(nouveau: TriFil) {
+    setTri(nouveau);
+    void recharger(onglet, nouveau);
   }
+
+  function changerVue(nouvelle: Vue) {
+    if (nouvelle === vueCourante.current) return;
+    vueCourante.current = nouvelle;
+    setVue(nouvelle);
+    void recharger(onglet, nouvelle === "programmees" ? "programmees" : tri);
+  }
+
+  const retirer = (id: string) => setLot((actuel) => ({ ...actuel, publications: actuel.publications.filter((x) => x.id !== id) }));
 
   async function voirPlus() {
     const derniere = lot.publications.at(-1);
     if (!derniere) return;
     const suivante = page + 1;
     setSuite(true);
-    const reponse = await lire(onglet, tri, tri === "recentes" ? { curseur: curseur(derniere) } : { page: suivante });
+    const reponse = await lire(onglet, ordre, ordre === "recentes" ? { curseur: curseur(derniere) } : { page: suivante });
     if (!reponse) return;
     setSuite(false);
     if (!reponse.ok) {
@@ -147,6 +164,48 @@ export function PageCommunaute({
       suite: reponse.lot.suite,
     }));
   }
+
+  // Le fil : le même sous les deux onglets, lu selon `ordre`.
+  const filAffiche = (
+    <div className="flex min-w-0 flex-col gap-4">
+      {erreur && <Banner tone="erreur" title={erreur} />}
+      {chargement ? (
+        <>
+          <Skeleton className="h-40 rounded-2xl" />
+          <Skeleton className="h-40 rounded-2xl" />
+        </>
+      ) : lot.publications.length === 0 ? (
+        !erreur &&
+        (vue === "programmees" ? (
+          <EmptyState
+            icon={CalendarClockIcon}
+            title="Aucune publication programmée"
+            description="Avec la flèche à côté de « Publier », choisissez le jour et l’heure où une publication paraîtra."
+          />
+        ) : tri === "enregistrees" ? (
+          <EmptyState icon={Bookmark02Icon} title="Aucune publication enregistrée" description="Touchez le signet d’une publication pour la retrouver ici." />
+        ) : (
+          <EmptyState icon={UserGroupIcon} title="Aucune publication pour l’instant" description="Lancez la conversation : posez une question ou partagez une réussite." />
+        ))
+      ) : (
+        lot.publications.map((p) => (
+          <CartePublication
+            key={`${onglet}-${ordre}-${p.id}`}
+            publication={p}
+            moi={moi}
+            maintenant={maintenant}
+            onSupprimee={retirer}
+            onParue={vue === "programmees" ? retirer : undefined}
+          />
+        ))
+      )}
+      {!chargement && lot.suite && (
+        <Button variant="contour" className="self-center" loading={suite} onClick={() => void voirPlus()}>
+          Voir plus
+        </Button>
+      )}
+    </div>
+  );
 
   return (
     // Le fil (720 px) et sa colonne (320 px) restent au milieu de l'écran, l'en-tête aligné sur eux.
@@ -190,41 +249,25 @@ export function PageCommunaute({
                 analyseActive={analyseActive}
                 // Une nouvelle publication s'ajoute au fil affiché s'il la contient (pas « Mes enregistrements », ni un autre espace).
                 onPubliee={(p) => {
-                  if (tri === "enregistrees" || (onglet !== ACTUALITES && (p.espace.id ?? "general") !== onglet)) return false;
+                  if (vue === "programmees" || tri === "enregistrees" || (onglet !== ACTUALITES && (p.espace.id ?? "general") !== onglet)) return false;
                   setLot((actuel) => ({ ...actuel, publications: [p, ...actuel.publications] }));
                   return true;
                 }}
+                onProgrammee={() => {
+                  if (vue === "programmees") void recharger(onglet, "programmees");
+                }}
               />
-              <MenuTri valeur={tri} onChange={changerTri} />
-              {erreur && <Banner tone="erreur" title={erreur} />}
-              {chargement ? (
-                <>
-                  <Skeleton className="h-40 rounded-2xl" />
-                  <Skeleton className="h-40 rounded-2xl" />
-                </>
-              ) : lot.publications.length === 0 ? (
-                !erreur &&
-                (tri === "enregistrees" ? (
-                  <EmptyState icon={Bookmark02Icon} title="Aucune publication enregistrée" description="Touchez le signet d’une publication pour la retrouver ici." />
-                ) : (
-                  <EmptyState icon={UserGroupIcon} title="Aucune publication pour l’instant" description="Lancez la conversation : posez une question ou partagez une réussite." />
-                ))
-              ) : (
-                lot.publications.map((p) => (
-                  <CartePublication
-                    key={`${onglet}-${tri}-${p.id}`}
-                    publication={p}
-                    moi={moi}
-                    maintenant={maintenant}
-                    onSupprimee={(id) => setLot((actuel) => ({ ...actuel, publications: actuel.publications.filter((x) => x.id !== id) }))}
-                  />
-                ))
-              )}
-              {!chargement && lot.suite && (
-                <Button variant="contour" className="self-center" loading={suite} onClick={() => void voirPlus()}>
-                  Voir plus
-                </Button>
-              )}
+              <SegmentedTabs
+                label="Afficher les publications"
+                value={vue}
+                onValueChange={(v) => changerVue(v as Vue)}
+                className="gap-4 border-t border-bordure-carte pt-3"
+                aCote={vue === "publiees" ? <MenuTri valeur={tri} onChange={changerTri} /> : null}
+                items={[
+                  { value: "publiees", label: "Publiées", content: filAffiche },
+                  { value: "programmees", label: "Programmées", content: filAffiche },
+                ]}
+              />
             </>
           )}
         </div>

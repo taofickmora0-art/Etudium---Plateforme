@@ -201,4 +201,10 @@ describe("Le sondage d'une publication (0026)", () => {
     const [lue] = await avecLiens(faux.client as never, [p]);
     expect(lue.sondage?.options[0].image?.url).toBe("https://stockage/r.png?jeton");
   });
+
+  it("« Programmées » : seules les publications programmées (une base sans la 0026 rendrait le fil ordinaire)", async () => {
+    faux.repondre("rpc.fil_communaute", { data: { publications: [{ ...BRUTE, id: "a", piece_jointe: null }, { ...BRUTE, id: "b", piece_jointe: null, programmee: true }], suite: true } });
+    const lecture = await lireFil("tous", "programmees");
+    expect(lecture.migrationAbsente ? null : lecture.donnees).toMatchObject({ publications: [{ id: "b", programmee: true }], suite: false });
+  });
 });

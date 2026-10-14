@@ -75,6 +75,7 @@ export function ChampPublication({
   moi,
   analyseActive = false,
   onPubliee,
+  onProgrammee,
 }: {
   /** L'espace proposé d'abord : celui de l'onglet (le général pour Actualités). */
   espace: Espace;
@@ -85,6 +86,8 @@ export function ChampPublication({
   analyseActive?: boolean;
   /** Rend vrai si la publication entre dans le fil affiché (sinon, le message dit dans quel espace la trouver). */
   onPubliee: (publication: Publication) => boolean;
+  /** Une publication programmée : l'onglet « Programmées », s'il est ouvert, se relit. */
+  onProgrammee?: () => void;
 }) {
   const { toast } = useToast();
   const idEspace = useId();
@@ -255,6 +258,7 @@ export function ChampPublication({
       if (publieLe) {
         fermer();
         toast({ tone: "reussite", title: "Publication programmée", description: `Elle paraîtra le ${phraseSession(publieLe)}. Retrouvez-la dans l’onglet « Programmées ».` });
+        onProgrammee?.();
         return;
       }
       const dansLeFil = onPubliee({

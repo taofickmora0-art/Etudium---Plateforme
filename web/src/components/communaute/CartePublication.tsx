@@ -127,12 +127,15 @@ export function CartePublication({
   maintenant,
   toutesReponses,
   onSupprimee,
+  onParue,
 }: {
   publication: Publication;
   moi: MoiCommunaute;
   maintenant: Date;
   toutesReponses?: Reponse[];
   onSupprimee: (id: string) => void;
+  /** Une programmée publiée tout de suite (« Publier maintenant ») : l'onglet « Programmées » la retire. */
+  onParue?: (id: string) => void;
 }) {
   // Sur sa propre page (tous les commentaires), la publication supprimée n'est pas relue : on revient à la Communauté.
   const relire = !toutesReponses;
@@ -259,6 +262,7 @@ export function CartePublication({
     setErreur(null);
     setP((actuelle) => ({ ...reparaitre(actuelle, new Date().toISOString()), programmee: false }));
     toast({ tone: "reussite", title: "Publication parue", description: "Elle est maintenant en haut du fil." });
+    onParue?.(p.id);
   }
 
   async function nouvelleDate(iso: string): Promise<string | null> {

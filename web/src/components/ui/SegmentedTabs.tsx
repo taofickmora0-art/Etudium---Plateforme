@@ -22,13 +22,36 @@ type SegmentedTabsProps = {
   keepMounted?: boolean;
   /** Onglets qui se partagent toute la largeur, en 44 px (téléphone, NdMobLecon). */
   pleineLargeur?: boolean;
+  /** Un élément sur la ligne des onglets, à droite (« Trier par : » de la communauté). */
+  aCote?: ReactNode;
   className?: string;
 };
 
 /** Onglets : piste grise, pastille blanche et texte bleu (planche « Boutons », « Filtres et onglets »). */
-export function SegmentedTabs({ label, items, defaultValue, value, onValueChange, keepMounted = false, pleineLargeur = false, className }: SegmentedTabsProps) {
+export function SegmentedTabs({ label, items, defaultValue, value, onValueChange, keepMounted = false, pleineLargeur = false, aCote, className }: SegmentedTabsProps) {
   const [interne, setInterne] = useState(defaultValue ?? items[0]?.value);
   const actif = value ?? interne;
+  const liste = (
+    <Tabs.List
+      aria-label={label}
+      className={cn("gap-1 rounded-bouton bg-coque p-1", pleineLargeur ? "flex flex-nowrap self-stretch" : "inline-flex flex-wrap self-start")}
+    >
+      {items.map((item) => (
+        <Tabs.Trigger
+          key={item.value}
+          value={item.value}
+          className={cn(
+            "focus-etudium cible-tactile relative flex cursor-pointer items-center rounded-puce text-sm font-medium text-texte transition-colors hover:text-bleu data-[state=active]:bg-panneau data-[state=active]:text-bleu data-[state=active]:shadow-pastille",
+            pleineLargeur ? "h-11 min-w-0 flex-1 justify-center px-1.5" : "h-10 px-4",
+          )}
+        >
+          {/* Masquée sur téléphone : les onglets tiennent sur une ligne (l'icône est décorative). */}
+          {item.icon && <Icon icon={item.icon} size={16} className="mr-1.5 max-sm:hidden" />}
+          {item.label}
+        </Tabs.Trigger>
+      ))}
+    </Tabs.List>
+  );
   return (
     <Tabs.Root
       value={actif}
@@ -38,25 +61,14 @@ export function SegmentedTabs({ label, items, defaultValue, value, onValueChange
       }}
       className={cn("flex flex-col gap-6", className)}
     >
-      <Tabs.List
-        aria-label={label}
-        className={cn("gap-1 rounded-bouton bg-coque p-1", pleineLargeur ? "flex flex-nowrap self-stretch" : "inline-flex flex-wrap self-start")}
-      >
-        {items.map((item) => (
-          <Tabs.Trigger
-            key={item.value}
-            value={item.value}
-            className={cn(
-              "focus-etudium cible-tactile relative flex cursor-pointer items-center rounded-puce text-sm font-medium text-texte transition-colors hover:text-bleu data-[state=active]:bg-panneau data-[state=active]:text-bleu data-[state=active]:shadow-pastille",
-              pleineLargeur ? "h-11 min-w-0 flex-1 justify-center px-1.5" : "h-10 px-4",
-            )}
-          >
-            {/* Masquée sur téléphone : les onglets tiennent sur une ligne (l'icône est décorative). */}
-            {item.icon && <Icon icon={item.icon} size={16} className="mr-1.5 max-sm:hidden" />}
-            {item.label}
-          </Tabs.Trigger>
-        ))}
-      </Tabs.List>
+      {aCote ? (
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          {liste}
+          {aCote}
+        </div>
+      ) : (
+        liste
+      )}
       {items.map((item) => (
         <Tabs.Content
           key={item.value}

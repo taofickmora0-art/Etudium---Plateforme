@@ -12,7 +12,7 @@ const TRIS: TriFil[] = ["recentes", "populaires", "enregistrees"];
 /** « Trier par : » (design NdCommunaute ; spec du fil « Actualités », §4). */
 export function MenuTri({ valeur, onChange }: { valeur: TriFil; onChange: (tri: TriFil) => void }) {
   return (
-    <div className="flex items-center justify-end gap-2 border-t border-bordure-carte pt-1">
+    <div className="ml-auto flex items-center justify-end gap-2">
       <span className="text-sm leading-5 text-discret max-sm:text-[13px]">Trier par :</span>
       <Menu
         label="Trier les publications"
