@@ -10,7 +10,7 @@ type BottomBarProps = {
 /**
  * Barre du bas du téléphone (NdMobAccueil) : cinq entrées, l'active en pastille blanche, texte et icône bleus. Chaque
  * entrée prend la largeur de son libellé, plus une part égale du reste : « Communauté » tient sans déborder de sa
- * pastille, même quand le téléphone grossit le texte (jusqu'à 115 % à 360 px).
+ * pastille, même quand le téléphone grossit le texte (jusqu'à 130 % à 360 px). Libellés de 10 px, icônes de 19 px.
  */
 export function BottomBar({ items, className }: BottomBarProps) {
   return (
@@ -21,11 +21,11 @@ export function BottomBar({ items, className }: BottomBarProps) {
           href={item.href}
           aria-current={item.active ? "page" : undefined}
           className={cn(
-            "focus-etudium flex h-[50px] min-w-0 flex-auto flex-col items-center justify-center gap-[3px] rounded-carte px-1 text-[10.5px] leading-[13px] font-medium tracking-[-0.01em] text-texte no-underline transition-colors",
+            "focus-etudium flex h-12 min-w-0 flex-auto flex-col items-center justify-center gap-[3px] rounded-carte px-1 text-[10px] leading-3 font-medium tracking-[-0.01em] text-texte no-underline transition-colors",
             item.active ? "bg-panneau text-bleu shadow-pastille" : "hover:bg-white/55",
           )}
         >
-          <Icon icon={item.icon} size={20} />
+          <Icon icon={item.icon} size={19} />
           <span className="max-w-full truncate">{item.label}</span>
         </Link>
       ))}
