@@ -8,6 +8,9 @@ assertNoSecretKey(process.env);
 const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
+  // Tests sur téléphone, sur le même Wi-Fi (http://192.168.x.x:3000) : sans cela, Next bloque ses fichiers de
+  // développement pour toute autre adresse que localhost, et la page reste sans réaction. Sans effet en production.
+  allowedDevOrigins: ["192.168.*.*"],
   // Couvertures des formations (espace public « couvertures ») : redimensionnées et compressées par next/image.
   images: { remotePatterns: motifsImages(process.env.NEXT_PUBLIC_SUPABASE_URL) },
   partialPrefetching: true,
