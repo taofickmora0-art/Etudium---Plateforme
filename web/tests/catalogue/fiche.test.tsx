@@ -135,6 +135,18 @@ describe("Note de la formation dans le bandeau (tâche 1.11)", () => {
     render(<FichePublique fiche={EXCEL} />);
     expect(screen.queryByText(/\(\d+ avis\)/)).toBeNull();
   });
+
+  it("fiche connectée : la note du bandeau vient des avis lus pour ce compte (son avis masqué y compte, pour lui seul)", async () => {
+    const { ToastProvider } = await import("@/components/ui/Toast");
+    const { resumeDepuis } = await import("@/lib/avis/regles");
+    const sien = { id: "a1", note: 5 as const, commentaire: "", auteur: "Aïcha", initiales: "A", creeLe: "2026-10-12T10:00:00Z", modifieLe: "2026-10-12T10:00:00Z", estMoi: true };
+    render(
+      <ToastProvider>
+        <FicheConnectee fiche={{ ...EXCEL, note: null, nbAvis: 0 }} avis={{ avis: [sien], resume: resumeDepuis({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 1 }) }} />
+      </ToastProvider>,
+    );
+    expect(screen.getByText("5,0 (1 avis)")).toBeInTheDocument();
+  });
 });
 
 describe("Image de couverture de la fiche", () => {

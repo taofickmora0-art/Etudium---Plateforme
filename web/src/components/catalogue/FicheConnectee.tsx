@@ -162,8 +162,12 @@ export function FicheConnectee({
 }) {
   const parcours = [...fiche.parcours].sort((a, b) => a.ordre - b.ordre)[0];
   const duree = dureeLisible(fiche.dureeSecondes);
+  // La note vient des avis lus pour ce compte quand ils sont là : son avis masqué y compte pour lui seul, il ne doit
+  // pas le voir disparaître de la note (spec des notifications, §5). Sinon, la note de la formation.
+  const note = avis ? avis.resume.moyenne : fiche.note;
+  const nbAvis = avis ? avis.resume.total : fiche.nbAvis;
   const meta = [
-    fiche.nbAvis > 0 && fiche.note !== null && { icone: StarIcon, marge: "-mx-px", texte: `${formatNote(fiche.note)} (${libelleNombreAvis(fiche.nbAvis)})` },
+    nbAvis > 0 && note !== null && { icone: StarIcon, marge: "-mx-px", texte: `${formatNote(note)} (${libelleNombreAvis(nbAvis)})` },
     duree && { icone: Clock01Icon, marge: "-mx-[1.5px]", texte: duree },
     { texte: libelleNiveau(fiche.niveau) },
     fiche.nbLecons > 0 && { texte: nombreDeLecons(fiche.nbLecons) },

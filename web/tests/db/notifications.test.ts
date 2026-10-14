@@ -424,6 +424,12 @@ describe("Avis masqué : son auteur ne le sait pas", () => {
     expect(await banc.en({ id: E1 }, "select id, note, commentaire from public.avis where formation_id = $1", [Z])).toEqual([{ id: avis, note: 2, commentaire: "Bof" }]);
   });
 
+  it("la répartition de la fiche compte son avis masqué pour lui seul : sa note et le nombre d'avis ne bougent pas", async () => {
+    expect(await banc.en({ id: E1 }, "select note, nombre from public.repartition_avis($1)", [Z])).toEqual([{ note: 2, nombre: 1 }]);
+    expect(await banc.en({ id: E2 }, "select note, nombre from public.repartition_avis($1)", [Z])).toEqual([]);
+    expect(await banc.en("anon", "select note, nombre from public.repartition_avis($1)", [Z])).toEqual([]);
+  });
+
   it("l'équipe voit toujours qu'il est masqué", async () => {
     expect(await banc.en({ id: S }, "select masque from public.avis_equipe() where id = $1", [avis])).toEqual([{ masque: true }]);
   });

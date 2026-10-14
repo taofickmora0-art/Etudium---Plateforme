@@ -497,6 +497,26 @@ $$;
 revoke execute on function public.avis_formation(uuid, integer) from public;
 grant execute on function public.avis_formation(uuid, integer) to anon, authenticated;
 
+-- La synthèse de la fiche (moyenne, nombre, répartition) compte aussi son avis masqué, pour lui seul : sa note et le
+-- nombre d'avis ne baissent pas sous ses yeux. Pour tous les autres, et dans la note de la formation, il ne compte pas.
+create or replace function public.repartition_avis(p_formation uuid)
+returns table (note smallint, nombre integer)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select a.note, count(*)::integer
+  from public.avis a
+  join public.formations f on f.id = a.formation_id
+  where a.formation_id = p_formation
+    and f.statut = 'publiee'
+    and (not a.masque or a.profil_id = (select auth.uid()))
+  group by a.note;
+$$;
+revoke execute on function public.repartition_avis(uuid) from public;
+grant execute on function public.repartition_avis(uuid) to anon, authenticated;
+
 -- Ses propres avis restent lisibles, sauf la colonne « masque », que seule l'équipe connaît (avis_equipe, compte_equipe).
 revoke select on public.avis from authenticated;
 grant select (id, profil_id, formation_id, note, commentaire, cree_le, modifie_le) on public.avis to authenticated;
