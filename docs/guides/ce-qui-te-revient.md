@@ -565,3 +565,19 @@ Un seul onglet **Formations** (juste après Accueil), « Ajouter à mon agenda �
    - Vers 10 min avant : l'étudiant reçoit « Session live dans 10 minutes » (cloche). La cloche se met à jour seule toutes les minutes ; un message apparaît aussi en bas de l'écran.
    - À l'heure du début : **tous les comptes** (étudiant non inscrit, formateur, admin) reçoivent « C’est l’heure du live : … ».
    - Un compte qui a coupé « Sessions live » dans ses préférences de notification ne reçoit rien.
+
+## 29. Valider la promotion des sessions live, 15 minutes
+
+Une session programmée paraît dans la communauté, avec son affiche ou sa vidéo, et un bouton « Sessions live programmées » signale les nouvelles sessions par une pastille rouge.
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0024_sessions_promotion.sql` (après la 0023). Si tu rejoues un jour la 0018, la 0022 ou la 0023, rejoue la 0024 juste après.
+2. **Le formulaire.** Au back-office : **Sessions live** → **Nouvelle session**.
+   - Remplis le titre, la description, la date et le lien Google Meet.
+   - Rubrique **Visuel de promotion** : **Ajouter une affiche** (une image) ou **Ajouter une vidéo** (un lien YouTube). La croix retire le visuel.
+   - À droite (en dessous sur téléphone), **Aperçu dans la communauté** montre la publication telle qu'elle paraîtra, avec « Google Meet » bien visible.
+3. **La publication.** **Programmer la session**, puis ouvre **Communauté** : la publication est en haut du fil (dans l'espace du parcours choisi, ou Général), avec le bloc de la session et **Voir la session**. Le lien du live n'y figure jamais.
+   - **Modifier** la session met la publication à jour ; l'**annuler** affiche « Annulée » dans le bloc.
+4. **La pastille.** Avec le compte étudiant, après une nouvelle session :
+   - dans **Communauté**, le bouton **Sessions live programmées** porte une pastille rouge « 1 » ;
+   - l'entrée **Événements** du menu porte la même pastille ;
+   - ouvre **Événements** : les pastilles disparaissent.
