@@ -67,7 +67,6 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
     expect(principaux).toEqual([
       ["Accueil", "/accueil"],
       ["Formations", "/formations"],
-      ["Communauté", "/communaute"],
       ["Messages", "/messages"],
       ["Événements", "/evenements"],
     ]);
@@ -103,11 +102,15 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
     expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual(["Tableau de bord", "Formations", "Étudiants", "Sessions live", "Profil"]);
     formateur.unmount();
     const etudiant = render(<BottomNavLinks pathname="/accueil" />);
-    expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual(["Accueil", "Formations", "Communauté", "Certificats", "Profil"]);
+    expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual(["Accueil", "Formations", "Événements", "Certificats", "Profil"]);
     expect(screen.getByRole("link", { name: "Formations" })).toHaveAttribute("href", "/formations");
     etudiant.unmount();
-    render(<BottomNavLinks pathname="/mes-formations" />);
+    const suivies = render(<BottomNavLinks pathname="/mes-formations" />);
     expect(screen.getByRole("link", { name: "Formations" })).toHaveAttribute("aria-current", "page");
+    suivies.unmount();
+    // La page d'une publication de la communauté garde l'Accueil marqué (spec du nouvel Accueil, §4).
+    render(<BottomNavLinks pathname="/communaute/publications/abc" />);
+    expect(screen.getByRole("link", { name: "Accueil" })).toHaveAttribute("aria-current", "page");
   });
 
   it("« Ajouter une formation » : le formulaire au back-office, les formations du formateur dans son espace, le catalogue ailleurs", () => {

@@ -11,14 +11,14 @@ import { SidebarNavLinks } from "./SidebarNav";
 
 function EntreesActives() {
   const pathname = usePathname();
-  // Sur les pages de la communauté, ses espaces (spec du fil « Actualités », §1).
-  const communaute = pathname === "/communaute" || pathname.startsWith("/communaute/");
+  // Sur l'Accueil (la communauté) et la page d'une publication, ses espaces (spec du nouvel Accueil, §4).
+  const communaute = pathname === "/accueil" || pathname.startsWith("/communaute/");
   return <SidebarNavLinks pathname={pathname} repliable={false} apresPremierGroupe={communaute ? <EspacesCommunaute pathname={pathname} /> : null} />;
 }
 
 /**
  * Le menu ≡ du téléphone (demande du 14 octobre 2026) : les mêmes entrées que la barre latérale de l'ordinateur, dans un
- * tiroir qui glisse depuis la gauche ; sur la Communauté, ses espaces en plus. Choisir une entrée le referme.
+ * tiroir qui glisse depuis la gauche ; sur l'Accueil, les espaces de la communauté en plus. Choisir une entrée le referme.
  */
 export function MenuTiroir({ className }: { className?: string }) {
   const [ouvert, setOuvert] = useState(false);

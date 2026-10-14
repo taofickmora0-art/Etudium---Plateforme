@@ -44,11 +44,11 @@ describe("Corrections de la relecture de la coque", () => {
     expect(screen.getByRole("link", { name: "Back-office" })).toHaveAttribute("href", "/admin");
   });
 
-  it("chaque onglet de la barre du bas prend la largeur de son libellé : « Communauté » ne déborde plus de sa pastille", () => {
+  it("chaque onglet de la barre du bas prend la largeur de son libellé : « Événements » ne déborde pas de sa pastille", () => {
     render(<BottomNavLinks pathname="/accueil" />);
-    const onglet = screen.getByRole("link", { name: "Communauté" });
+    const onglet = screen.getByRole("link", { name: "Événements" });
     expect(onglet).toHaveClass("flex-auto", "px-1");
     expect(onglet).not.toHaveClass("flex-1");
-    expect(within(onglet).getByText("Communauté")).toHaveClass("max-w-full", "truncate");
+    expect(within(onglet).getByText("Événements")).toHaveClass("max-w-full", "truncate");
   });
 });

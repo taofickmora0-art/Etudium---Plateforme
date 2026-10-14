@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppShell } from "@/components/layout/AppShell";
+import type { Espace } from "@/lib/communaute/types";
 
 // Le menu ≡ du téléphone (demande du 14 octobre 2026) : comme la barre latérale de l'ordinateur, toutes les entrées de
 // l'espace, sans passer par le profil.
@@ -11,7 +12,9 @@ let chemin = "/accueil";
 let recherche = "";
 vi.mock("next/navigation", () => ({ usePathname: () => chemin, useSearchParams: () => new URLSearchParams(recherche), useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/lib/notifications/actions", () => ({ chargerCloche: async () => null, marquerLues: async () => ({ ok: true }) }));
-const chargerEspaces = vi.fn();
+// Sur l'Accueil, le tiroir lit les espaces de la communauté ; sans espaces, pas de groupe.
+const sansEspaces = async (): Promise<{ ok: true; espaces: Espace[] }> => ({ ok: true, espaces: [] });
+const chargerEspaces = vi.fn(sansEspaces);
 vi.mock("@/lib/communaute/actions", () => ({ chargerEspaces: () => chargerEspaces() }));
 
 const P = "22222222-2222-4222-8222-222222222222";
@@ -21,7 +24,7 @@ afterEach(() => {
   delete document.documentElement.dataset.menu;
   chemin = "/accueil";
   recherche = "";
-  chargerEspaces.mockReset();
+  chargerEspaces.mockReset().mockImplementation(sansEspaces);
 });
 
 describe("Le menu du téléphone", () => {
@@ -33,9 +36,10 @@ describe("Le menu du téléphone", () => {
     await user.click(bouton);
     const tiroir = screen.getByRole("dialog", { name: "Menu" });
     const liens = within(tiroir).getAllByRole("link").map((l) => l.textContent);
-    expect(liens).toEqual(expect.arrayContaining(["Accueil", "Formations", "Communauté", "Messages", "Événements", "Formations gratuites", "Aide"]));
+    expect(liens).toEqual(expect.arrayContaining(["Accueil", "Formations", "Messages", "Événements", "Formations gratuites", "Aide"]));
+    expect(liens).not.toContain("Communauté");
     expect(within(tiroir).getByRole("link", { name: "Accueil" })).toHaveAttribute("aria-current", "page");
-    await user.click(within(tiroir).getByRole("link", { name: "Communauté" }));
+    await user.click(within(tiroir).getByRole("link", { name: "Événements" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
     await user.click(bouton);
@@ -53,9 +57,9 @@ describe("Le menu du téléphone", () => {
     expect(document.querySelectorAll("#menu-lateral")).toHaveLength(1);
   });
 
-  it("sur la Communauté : le groupe « Espaces de la communauté » après le premier groupe, l'espace ouvert marqué, un cadenas sur les fermés", async () => {
+  it("sur l'Accueil : le groupe « Espaces de la communauté » après le premier groupe, l'espace ouvert marqué, un cadenas sur les fermés", async () => {
     const user = userEvent.setup();
-    chemin = "/communaute";
+    chemin = "/accueil";
     recherche = "espace=general";
     chargerEspaces.mockResolvedValue({
       ok: true,
@@ -71,10 +75,10 @@ describe("Le menu du téléphone", () => {
     const groupe = await within(tiroir).findByRole("group", { name: "Espaces de la communauté" });
     const liens = within(groupe).getAllByRole("link");
     expect(liens.map((l) => [l.textContent, l.getAttribute("href")])).toEqual([
-      ["Actualités", "/communaute?espace=tous"],
-      ["Général", "/communaute?espace=general"],
-      ["Académique", `/communaute?espace=${P}`],
-      ["Business, espace verrouillé", `/communaute?espace=${B}`],
+      ["Actualités", "/accueil?espace=tous"],
+      ["Général", "/accueil?espace=general"],
+      ["Académique", `/accueil?espace=${P}`],
+      ["Business, espace verrouillé", `/accueil?espace=${B}`],
     ]);
     expect(within(groupe).getByRole("link", { name: "Général" })).toHaveAttribute("aria-current", "page");
     expect(within(groupe).getByRole("link", { name: "Actualités" })).not.toHaveAttribute("aria-current");
@@ -85,6 +89,7 @@ describe("Le menu du téléphone", () => {
 
   it("ailleurs : pas de groupe des espaces, aucune lecture", async () => {
     const user = userEvent.setup();
+    chemin = "/formations";
     render(<AppShell espace="etudiant">Contenu</AppShell>);
     await user.click(within(screen.getByRole("banner")).getByRole("button", { name: "Menu" }));
     expect(within(screen.getByRole("dialog", { name: "Menu" })).queryByRole("group", { name: "Espaces de la communauté" })).toBeNull();

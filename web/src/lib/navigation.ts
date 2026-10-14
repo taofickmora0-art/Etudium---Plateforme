@@ -40,11 +40,13 @@ export type NavEntry = {
 // Un seul onglet pour le catalogue et les formations suivies (spec Formations et Événements, §1).
 const FORMATIONS: NavEntry = { href: "/formations", label: "Formations", icon: CourseIcon, aussi: ["/mes-formations"] };
 
-// Communauté reste jusqu'au nouvel Accueil (communauté v3, étape 4), qui la remplacera.
+// L'Accueil est la communauté (spec du nouvel Accueil, §4) : une page de publication (`/communaute/publications/…`) le
+// garde marqué.
+const ACCUEIL: NavEntry = { href: "/accueil", label: "Accueil", icon: Home03Icon, aussi: ["/communaute"] };
+
 export const NAV_PRINCIPALE: NavEntry[] = [
-  { href: "/accueil", label: "Accueil", icon: Home03Icon },
+  ACCUEIL,
   FORMATIONS,
-  { href: "/communaute", label: "Communauté", icon: UserGroupIcon },
   { href: "/messages", label: "Messages", icon: BubbleChatIcon },
   { href: "/evenements", label: "Événements", icon: Calendar03Icon },
 ];
@@ -62,9 +64,9 @@ export const NAV_MON_ESPACE: NavEntry[] = [
 
 /** Barre du bas du téléphone. « Profil » ouvre la page de menu du téléphone. */
 export const NAV_BAS: NavEntry[] = [
-  { href: "/accueil", label: "Accueil", icon: Home03Icon },
+  ACCUEIL,
   FORMATIONS,
-  { href: "/communaute", label: "Communauté", icon: UserGroupIcon },
+  { href: "/evenements", label: "Événements", icon: Calendar03Icon },
   { href: "/certificats", label: "Certificats", icon: Certificate01Icon },
   { href: "/menu", label: "Profil", icon: UserIcon },
 ];
