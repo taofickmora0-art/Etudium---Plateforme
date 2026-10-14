@@ -4,6 +4,7 @@ import { useId, useRef, useState, type FormEvent } from "react";
 import dynamic from "next/dynamic";
 import {
   Bookmark02Icon,
+  CalendarClockIcon,
   Comment01Icon,
   Delete02Icon,
   Download04Icon,
@@ -13,6 +14,7 @@ import {
   MoreHorizontalIcon,
   PencilEdit02Icon,
   Pdf01Icon,
+  SentIcon,
 } from "@hugeicons/core-free-icons";
 import { Avatar, AvatarGroup } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
@@ -25,10 +27,14 @@ import { Tag } from "@/components/ui/Tag";
 import { TextInput } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
-import { aimer, basculerEnregistrement, modifierPublication, supprimerPublication } from "@/lib/communaute/actions";
+import { aimer, basculerEnregistrement, modifierPublication, reprogrammer, supprimerPublication } from "@/lib/communaute/actions";
 import { moment, refusPublication, tailleLisible, TITRE_MAX } from "@/lib/communaute/regles";
 import type { MoiCommunaute, PieceJointe, Publication, Reponse } from "@/lib/communaute/types";
+import { phraseSession } from "@/lib/sessions/regles";
 import { ApercuLien } from "./ApercuLien";
+import { CarteQuiz } from "./CarteQuiz";
+import { CarteSondage } from "./CarteSondage";
+import { FenetreProgrammation } from "./FenetreProgrammation";
 import { FenetreSignalement } from "./FenetreSignalement";
 import { initiales, lienPublication, tonAvatar } from "./outils";
 import { Reponses, type EtatReponses } from "./Reponses";
@@ -57,8 +63,12 @@ function Etiquette({ publication }: { publication: Publication }) {
   return null;
 }
 
-/** Une publication pas encore en ligne (migration 0020) : en attente de l'équipe, ou bloquée (vue de l'équipe seule). */
+/**
+ * Une publication pas encore en ligne : programmée (0026, vue de son auteur et de l'équipe), en attente de l'équipe, ou
+ * bloquée (vue de l'équipe seule ; 0020).
+ */
 function EtiquetteStatut({ publication }: { publication: Publication }) {
+  if (publication.programmee) return <Tag tone="nouveau" icon={CalendarClockIcon} className="whitespace-normal">{`Programmée pour le ${phraseSession(publication.creeLe)}`}</Tag>;
   if (publication.statut === "en_attente") return <Tag tone="aCorriger">En attente de vérification</Tag>;
   if (publication.statut === "bloquee") return <Tag tone="echoue">Bloquée</Tag>;
   return null;
@@ -89,6 +99,13 @@ function Piece({ piece }: { piece: PieceJointe }) {
       )}
     </div>
   );
+}
+
+/** Une nouvelle heure de parution : la fin du sondage garde son écart avec elle (comme `reprogrammer` en base). */
+function reparaitre(p: Publication, iso: string): Publication {
+  const ecart = Date.parse(iso) - Date.parse(p.creeLe);
+  const fin = p.sondage?.finLe;
+  return { ...p, creeLe: iso, ...(p.sondage && fin ? { sondage: { ...p.sondage, finLe: new Date(Date.parse(fin) + ecart).toISOString() } } : {}) };
 }
 
 /** Mes initiales en tête des derniers qui aiment, ou retirées. */
@@ -135,13 +152,15 @@ export function CartePublication({
   const [erreur, setErreur] = useState<string | null>(null);
   const [suppression, setSuppression] = useState(false);
   const [signalement, setSignalement] = useState(false);
+  const [programmation, setProgrammation] = useState(false);
   const [erreurSuppression, setErreurSuppression] = useState<string>();
   // Modifier et Supprimer ouvrent un champ ou une fenêtre : le menu ne reprend pas le focus en se fermant.
   const fenetreDemandee = useRef(false);
 
   const nom = `${p.auteur.prenom} ${p.auteur.nom}`.trim() || "Membre d’Étudium";
-  const enLigne = p.statut === "publiee";
-  const meta = `${moment(p.creeLe, maintenant)} · Publié dans ${p.espace.id ? p.espace.nom : "Général"}${p.modifiee ? " · modifiée" : ""}`;
+  // Programmée : pas encore parue (ni J’aime, ni commentaires, ni vote).
+  const enLigne = p.statut === "publiee" && !p.programmee;
+  const meta = `${p.programmee ? "À paraître" : moment(p.creeLe, maintenant)} · Publié dans ${p.espace.id ? p.espace.nom : "Général"}${p.modifiee ? " · modifiée" : ""}`;
   const compte = [p.reactions > 0 ? `${p.reactions.toLocaleString("fr-FR")} J’aime` : null, reponses.total > 0 ? pluriel(reponses.total, "commentaire") : null]
     .filter(Boolean)
     .join(" · ");
@@ -167,6 +186,20 @@ export function CartePublication({
               setEdition({ titre: p.titre, texte: p.texte });
             },
           },
+        ]
+      : []),
+    // Une publication programmée : son auteur (ou l'équipe) change l'heure, ou la publie tout de suite.
+    ...(p.programmee && p.peutSupprimer
+      ? [
+          {
+            label: "Modifier la date",
+            icon: CalendarClockIcon,
+            onSelect: () => {
+              fenetreDemandee.current = true;
+              setProgrammation(true);
+            },
+          },
+          { label: "Publier maintenant", icon: SentIcon, onSelect: () => void publierMaintenant() },
         ]
       : []),
     { label: "Copier le lien", icon: Link01Icon, onSelect: () => void copier() },
@@ -215,6 +248,25 @@ export function CartePublication({
     }
     setP((actuelle) => ({ ...actuelle, titre: edition.titre.trim(), texte: edition.texte.trim(), modifiee: true, statut: reponse.statut, apercu: reponse.apercu }));
     setEdition(null);
+  }
+
+  async function publierMaintenant() {
+    const reponse = await reprogrammer(p.id, null).catch(() => ({ ok: false as const, message: ECHEC }));
+    if (!reponse.ok) {
+      setErreur(reponse.message);
+      return;
+    }
+    setErreur(null);
+    setP((actuelle) => ({ ...reparaitre(actuelle, new Date().toISOString()), programmee: false }));
+    toast({ tone: "reussite", title: "Publication parue", description: "Elle est maintenant en haut du fil." });
+  }
+
+  async function nouvelleDate(iso: string): Promise<string | null> {
+    const reponse = await reprogrammer(p.id, iso).catch(() => ({ ok: false as const, message: ECHEC }));
+    if (!reponse.ok) return reponse.message;
+    setP((actuelle) => reparaitre(actuelle, iso));
+    toast({ tone: "reussite", title: "Date modifiée", description: `Elle paraîtra le ${phraseSession(iso)}.` });
+    return null;
   }
 
   async function basculerJaime() {
@@ -330,6 +382,13 @@ export function CartePublication({
           />
         </>
       )}
+      {/* Le sondage ou le quiz : la question est le texte de la publication. */}
+      {p.sondage &&
+        (p.sondage.type === "quiz" ? (
+          <CarteQuiz publicationId={p.id} sondage={p.sondage} ouvert={enLigne} onChange={(sondage) => setP((actuelle) => ({ ...actuelle, sondage }))} />
+        ) : (
+          <CarteSondage publicationId={p.id} sondage={p.sondage} ouvert={enLigne} onChange={(sondage) => setP((actuelle) => ({ ...actuelle, sondage }))} />
+        ))}
       {p.pieceJointe && <Piece piece={p.pieceJointe} />}
       {p.video && <VideoIntegree video={p.video} className="mt-3.5 rounded-[14px]" />}
       {/* L'aperçu du premier lien, sauf s'il montre la vidéo jointe. */}
@@ -383,6 +442,17 @@ export function CartePublication({
         errorMessage={erreurSuppression}
         onConfirm={supprimer}
       />
+      {p.programmee && (
+        <FenetreProgrammation
+          open={programmation}
+          onOpenChange={setProgrammation}
+          titre="Modifier la date"
+          description="Heure du Bénin. Elle paraîtra en haut du fil à cette heure-là."
+          valider="Enregistrer"
+          initiale={p.creeLe}
+          onValider={nouvelleDate}
+        />
+      )}
       {p.peutSignaler && <FenetreSignalement cible={{ publicationId: p.id }} open={signalement} onOpenChange={setSignalement} />}
     </article>
   );
