@@ -412,5 +412,5 @@ Pas de migration pour cette tâche : il faut seulement que la 0003 à la 0009 so
    - **Préférences** ouvre l’onglet Notifications du profil : coupe « Annonces ». Envoie une deuxième annonce avec ton compte : le troisième compte ne la reçoit pas.
 7. **Avis masqué.** Avec le troisième compte, laisse un avis sur la formation du compte de test (il en a terminé la moitié, section 20). Le compte de test reçoit « Nouvel avis sur … ».
    - Avec ton compte : Back-office → **Avis** → **Masquer** cet avis. Personne ne reçoit de notification.
-   - Avec le troisième compte : la fiche de la formation montre toujours son avis, avec « Votre avis » et aucune autre mention.
+   - Avec le troisième compte : la fiche de la formation montre toujours son avis, avec « Votre avis » et aucune autre mention ; la note et le nombre d’avis de la fiche ne changent pas pour lui.
    - Dans une fenêtre privée, sans compte : l’avis n’apparaît pas.
