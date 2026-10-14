@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDown01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/Button";
@@ -26,6 +26,8 @@ type CatalogueProps = {
   chemin: "/formations" | "/formations-gratuites";
   /** Filtres fixés par la page (« Formations gratuites ») : « Effacer les filtres » y revient. */
   imposer?: Partial<Filtres>;
+  /** Page Formations du compte connecté : la rangée « Mes formations », sous le titre. */
+  rangee?: ReactNode;
 };
 
 const TRIS: { value: Tri; label: string }[] = [
@@ -44,7 +46,8 @@ const ACCES: { value: Acces; label: string }[] = [
 const compteur = (n: number) => `${n} ${n > 1 ? "formations" : "formation"}`;
 
 const GRILLE_PUBLIQUE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(250px,calc((100%-60px)/4))),1fr))] gap-5";
-const GRILLE_CONNECTEE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(232px,calc((100%-40px)/3))),1fr))] gap-5";
+// Connecté : 5 colonnes au plus, cartes de 220 px au moins (4 vers 1280 px, 5 vers 1440 px ; spec Formations et Événements, §2).
+const GRILLE_CONNECTEE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(220px,calc((100%-80px)/5))),1fr))] gap-5";
 
 /**
  * Catalogue des formations (NdCataloguePublic pour un visiteur, NdCatalogue et NdMobCatalogue pour un compte connecté).
@@ -57,7 +60,7 @@ const GRILLE_CONNECTEE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(2
 const pourVariante = (f: Filtres, variante: CatalogueProps["variante"]): Filtres =>
   variante === "connecte" ? { ...f, niveau: "tous", acces: f.acces === "incluses" ? "tout" : f.acces } : f;
 
-export function Catalogue({ cartes, parcours, filtresInitiaux, variante, chemin, imposer }: CatalogueProps) {
+export function Catalogue({ cartes, parcours, filtresInitiaux, variante, chemin, imposer, rangee }: CatalogueProps) {
   const router = useRouter();
   const base: Filtres = { ...FILTRES_PAR_DEFAUT, ...imposer };
   const [filtres, setFiltres] = useState(() => pourVariante(filtresInitiaux, variante));
@@ -169,15 +172,23 @@ export function Catalogue({ cartes, parcours, filtresInitiaux, variante, chemin,
   };
   const triChoisi = TRIS.find((t) => t.value === filtres.tri) ?? TRIS[0];
 
+  // La page Formations : « Mes formations », puis « Toutes les formations » en section ; « Formations gratuites » garde son titre.
+  const pageFormations = chemin === "/formations";
   return (
     <div className="flex flex-col">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0 flex-[1_1_320px]">
-          <Heading level="page">{chemin === "/formations-gratuites" ? "Formations gratuites" : "Toutes les formations"}</Heading>
+          <Heading level="page">{pageFormations ? "Formations" : "Formations gratuites"}</Heading>
           <Lead className="mt-2.5">{SOUS_TITRE_CATALOGUE}</Lead>
         </div>
       </div>
-      <div className="mt-[21px] flex min-w-0 flex-col gap-3.5">
+      {rangee && <div className="mt-7 min-w-0">{rangee}</div>}
+      {pageFormations && (
+        <Heading level="section" className={rangee ? "mt-9" : "mt-7"}>
+          Toutes les formations
+        </Heading>
+      )}
+      <div className={cn("flex min-w-0 flex-col gap-3.5", pageFormations ? "mt-4" : "mt-[21px]")}>
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-0 flex-[1_1_280px]">
             <SearchInput aria-label="Rechercher une formation" placeholder="Rechercher une formation…" value={filtres.q} onChange={(e) => changer({ q: e.target.value })} />

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { listCatalogue, listParcoursCatalogue } from "@/lib/catalogue/data";
 import { ecrireFiltres, lireFiltres, type Filtres } from "@/lib/catalogue/filtres";
@@ -14,11 +15,14 @@ export async function PageCatalogue({
   variante,
   chemin,
   imposer,
+  rangee,
 }: {
   params: Params;
   variante: "public" | "connecte";
   chemin: "/formations" | "/formations-gratuites";
   imposer?: Partial<Filtres>;
+  /** La rangée « Mes formations » de la page Formations (compte connecté). */
+  rangee?: ReactNode;
 }) {
   let donnees;
   try {
@@ -39,6 +43,7 @@ export async function PageCatalogue({
       variante={variante}
       chemin={chemin}
       imposer={imposer}
+      rangee={rangee}
     />
   );
 }
