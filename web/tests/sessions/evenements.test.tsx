@@ -143,6 +143,71 @@ describe("La page Événements", () => {
     expect(screen.getByRole("link", { name: "Rejoindre" })).toHaveAttribute("href", "https://meet.google.com/abc-defg-hij");
   });
 
+  it("page ouverte 2 h avant : Rejoindre finit par apparaître à l'ouverture du lien", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    vi.setSystemTime(MAINTENANT);
+    const tard = { ...S, debut: "2026-10-14T17:00:00Z" };
+    vi.mocked(chargerSessions).mockResolvedValue({ ok: true, sessions: [{ ...tard, lien: "https://meet.google.com/abc-defg-hij" }] });
+    render(<PageEvenements initial={[tard]} />);
+    await act(async () => {
+      vi.advanceTimersByTime(60 * 60_000);
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(50 * 60_000 + 2_000);
+    });
+    await act(async () => {});
+    expect(chargerSessions).toHaveBeenCalledWith("a_venir");
+    expect(screen.getByRole("link", { name: "Rejoindre" })).toBeInTheDocument();
+  });
+
+  it("horloge en avance : la base n'a pas encore ouvert le lien, la page relit 20 s plus tard", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    vi.setSystemTime(MAINTENANT);
+    const bientot = { ...S, debut: "2026-10-14T15:15:00Z" };
+    vi.mocked(chargerSessions)
+      .mockResolvedValueOnce({ ok: true, sessions: [bientot] })
+      .mockResolvedValue({ ok: true, sessions: [{ ...bientot, lien: "https://meet.google.com/abc-defg-hij" }] });
+    render(<PageEvenements initial={[bientot]} />);
+    await act(async () => {
+      vi.advanceTimersByTime(5 * 60_000 + 2_000);
+    });
+    await act(async () => {});
+    expect(chargerSessions).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("link", { name: "Rejoindre" })).toBeNull();
+    await act(async () => {
+      vi.advanceTimersByTime(20_000);
+    });
+    await act(async () => {});
+    expect(chargerSessions).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("link", { name: "Rejoindre" })).toBeInTheDocument();
+  });
+
+  it("retour sur l'onglet : la page relit l'onglet affiché", async () => {
+    render(<PageEvenements initial={[S]} />);
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(chargerSessions).toHaveBeenCalledWith("a_venir");
+  });
+
+  it("les cartes suivent le temps : En cours au début, plus de Se désinscrire ; plus de Rejoindre après la fin", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    vi.setSystemTime(MAINTENANT);
+    const imminente = { ...S, debut: "2026-10-14T15:01:00Z", dureeMinutes: 30, lien: "https://meet.google.com/abc-defg-hij", inscrit: true };
+    render(<PageEvenements initial={[imminente]} />);
+    expect(screen.getByRole("button", { name: "Se désinscrire" })).toBeInTheDocument();
+    expect(screen.queryByText("En cours")).toBeNull();
+    await act(async () => {
+      vi.advanceTimersByTime(60_000 + 2_000);
+    });
+    expect(screen.getByText("En cours")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Se désinscrire" })).toBeNull();
+    await act(async () => {
+      vi.advanceTimersByTime(30 * 60_000);
+    });
+    expect(screen.queryByRole("link", { name: "Rejoindre" })).toBeNull();
+  });
+
   it("avant la 0018 : le bandeau", async () => {
     vi.mocked(lireSessions).mockResolvedValue({ migrationAbsente: true });
     render(await ContenuEvenements());

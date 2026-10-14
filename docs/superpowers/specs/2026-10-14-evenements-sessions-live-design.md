@@ -148,19 +148,20 @@ Les règles des rappels :
   - Colonnes : `session_id`, `profil_id`, `inscrit_le`, `rappel_veille_le`, `rappel_heure_le`.
   - Clé : `(session_id, profil_id)`, en cascade.
 - **Fonctions des comptes connectés.** Un compte suspendu n'obtient rien et ne peut rien faire.
-  - `sessions_live(p_vue, p_maintenant)`, où `p_vue` vaut `a_venir`, `inscriptions` ou `passees` :
+  - `sessions_live(p_vue)`, où `p_vue` vaut `a_venir`, `inscriptions` ou `passees` :
     - rend les cartes du §4 : id, titre, description, début, durée, plateforme, parcours (nom court et couleur), animateur, nombre d'inscriptions, `inscrit`, `statut` ;
     - le `lien` seulement dans la fenêtre du §1, ou pour l'animateur et l'équipe.
-  - `prochaine_session(p_maintenant)` : la carte de l'accueil.
+  - `prochaine_session()` : la carte de l'accueil.
   - `sinscrire_session(p_session)` : session programmée, pas terminée ; une seconde inscription ne change rien.
   - `se_desinscrire_session(p_session)` : avant le début.
-  - `rappels_sessions(p_maintenant)` : crée les rappels dus au compte qui demande (§3) et rend leur nombre.
+  - `rappels_sessions()` : crée les rappels dus au compte qui demande (§3) et rend leur nombre.
+  - Aucune fonction n'accepte l'heure du client : elles suivent toutes `now()`, sinon un compte pourrait avancer son heure pour obtenir le lien plus tôt.
 - **Fonctions de l'animateur et de l'équipe.** Un formateur n'agit que sur les sessions de sa fiche ; l'équipe sur toutes.
   - `creer_session(...)` : le formateur est toujours l'animateur, et la valeur reçue pour `formateur_id` est ignorée ; l'équipe la choisit.
   - `modifier_session(p_session, ...)` : refusé pour une session terminée ou annulée.
   - `annuler_session(p_session)`.
-  - `sessions_animees(p_maintenant)` : celles du formateur.
-  - `sessions_equipe(p_maintenant)` : toutes, pour l'équipe.
+  - `sessions_animees()` : celles du formateur.
+  - `sessions_equipe()` : toutes, pour l'équipe.
   - `session_detail(p_session)` : les informations, le lien et les inscrits (prénom et nom).
 - **Notifications** du §3 par `notifier`. L'option « inclure le destinataire même s'il est l'auteur » sert aux rappels seulement.
 - **Messages de refus** (affichés tels quels) :

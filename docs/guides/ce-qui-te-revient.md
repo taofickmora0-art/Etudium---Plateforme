@@ -442,7 +442,10 @@ Un compte a l’espace étudiant, plus soit l’espace formateur, soit le back-o
    - **Je m’inscris** sur celle de demain : la fenêtre « Inscription confirmée » ; **Ajouter à mon agenda** télécharge un fichier à ouvrir dans ton agenda.
    - L’**Accueil** montre la carte « Prochaine session live ».
 4. **Rejoindre.** Reste sur la page Événements : 10 minutes avant le début de la première session, **Rejoindre** apparaît sans recharger la page, même pour un compte qui ne s’est pas inscrit. Le bouton ouvre Google Meet.
-5. **Le rappel.** Inscris le compte étudiant à la première session, avant qu’elle commence : le rappel arrive dans la cloche s’il reste moins d’1 h. Pour celle de demain, le rappel de la veille arrive quand le compte ouvre l’application, à moins de 24 h du début.
+5. **Le rappel.** Une inscription faite trop près du début ne déclenche pas de rappel : le moment est déjà passé.
+   - Avec le formateur, programme une troisième session qui commence **dans 1 h 10** ; avec le compte étudiant, inscris-toi tout de suite.
+   - Une dizaine de minutes plus tard, change de page (ou recharge) : la cloche montre « Session live dans moins d’une heure ».
+   - Le rappel de la veille suit la même règle : il faut s’être inscrit plus de 24 h avant, puis ouvrir l’application à moins de 24 h du début. Il ne se vérifie donc pas en 20 minutes.
 6. **Modifier et annuler.** Avec le formateur : ouvre la session de demain (Sessions live → son titre).
    - La liste « Inscriptions » montre le compte étudiant (prénom et nom, sans adresse e-mail).
    - **Modifier** : change l’heure, **Enregistrer** ; l’étudiant reçoit « Session live modifiée ».
