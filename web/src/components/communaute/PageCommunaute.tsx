@@ -1,25 +1,50 @@
 "use client";
 
-import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useSearchParams } from "next/navigation";
-import { Bookmark02Icon, SquareLock02Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import {
+  Bookmark02Icon,
+  SquareLock02Icon,
+  UserGroupIcon,
+} from "@hugeicons/core-free-icons";
 import { useMaintenant } from "@/components/notifications/horloge";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { BoutonSessionsProgrammees } from "@/components/sessions/BoutonSessionsProgrammees";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Heading, Lead } from "@/components/ui/Text";
 import { chargerFil } from "@/lib/communaute/actions";
 import { curseur } from "@/lib/communaute/regles";
-import type { Annonce, Espace, LotPublications, MoiCommunaute, SuiteFil, TriFil } from "@/lib/communaute/types";
+import type {
+  Annonce,
+  Espace,
+  LotPublications,
+  MoiCommunaute,
+  SuiteFil,
+  TriFil,
+} from "@/lib/communaute/types";
 import { CarteAnnonce } from "./CarteAnnonce";
 import { CartePublication } from "./CartePublication";
 import { ChampPublication } from "./ChampPublication";
 import { EspaceVerrouille } from "./EspaceVerrouille";
 import { MenuTri } from "./MenuTri";
 
-const GENERAL: Espace = { id: null, nom: "Général", nomCourt: "Général", couleur: null, slug: null, ouvert: true };
+const GENERAL: Espace = {
+  id: null,
+  nom: "Général",
+  nomCourt: "Général",
+  couleur: null,
+  slug: null,
+  ouvert: true,
+};
 const ECHEC = "Les publications n’ont pas pu être chargées. Réessayez.";
 const VIDE: LotPublications = { publications: [], suite: false };
 /** Le fil « Actualités » : tous les espaces ouverts au compte. */
@@ -40,6 +65,7 @@ export function PageCommunaute({
   annonce = null,
   analyseActive = false,
   maintenant: heureServeur,
+  sessionsAVenir = false,
 }: {
   espaces: Espace[];
   initial: LotPublications;
@@ -52,10 +78,14 @@ export function PageCommunaute({
   /** Migration 0020 : la mention du champ de publication. */
   analyseActive?: boolean;
   maintenant?: string;
+  /** Une session live est à venir : le bouton « Sessions live programmées » (spec promotion des sessions live, §3). */
+  sessionsAVenir?: boolean;
 }) {
   const liste = espaces.length > 0 ? espaces : [GENERAL];
   const general = liste.find((e) => e.id === null) ?? GENERAL;
-  const [onglet, setOnglet] = useState(() => (liste.some((e) => valeur(e) === ongletInitial) ? ongletInitial : ACTUALITES));
+  const [onglet, setOnglet] = useState(() =>
+    liste.some((e) => valeur(e) === ongletInitial) ? ongletInitial : ACTUALITES,
+  );
   const [tri, setTri] = useState<TriFil>("recentes");
   const [lot, setLot] = useState(initial);
   // Les pages déjà lues, pour « Voir plus » des tris par page (populaires, enregistrées).
@@ -66,7 +96,10 @@ export function PageCommunaute({
   // Seule la dernière lecture compte : un onglet ou un tri changé deux fois de suite ne mélange pas les réponses.
   const demande = useRef(0);
   const maintenant = useMaintenant(heureServeur);
-  const espace = onglet === ACTUALITES ? general : (liste.find((e) => valeur(e) === onglet) ?? general);
+  const espace =
+    onglet === ACTUALITES
+      ? general
+      : (liste.find((e) => valeur(e) === onglet) ?? general);
   // L'onglet suit l'adresse : une entrée du menu ≡ (`?espace=`) ouvre le sien, sans recharger la page. L'adresse que la
   // page écrit elle-même (`replaceState`) est notée d'avance et ne relit rien ; une relecture du serveur garde tout.
   const demandee = useSearchParams()?.get("espace") ?? ACTUALITES;
@@ -74,7 +107,10 @@ export function PageCommunaute({
 
   async function lire(cible: string, ordre: TriFil, depuis: SuiteFil) {
     const numero = ++demande.current;
-    const reponse = await chargerFil(cible, ordre, depuis).catch(() => ({ ok: false as const, message: ECHEC }));
+    const reponse = await chargerFil(cible, ordre, depuis).catch(() => ({
+      ok: false as const,
+      message: ECHEC,
+    }));
     return numero === demande.current ? reponse : null;
   }
 
@@ -96,9 +132,16 @@ export function PageCommunaute({
     if (ecrireAdresse) {
       // L'adresse suit l'onglet (le menu ≡ le marque, un lien copié le rouvre) ; Next garde son routeur à jour.
       adresse.current = cible;
-      window.history.replaceState(null, "", cible === ACTUALITES ? "/communaute" : `/communaute?espace=${encodeURIComponent(cible)}`);
+      window.history.replaceState(
+        null,
+        "",
+        cible === ACTUALITES
+          ? "/communaute"
+          : `/communaute?espace=${encodeURIComponent(cible)}`,
+      );
     }
-    const choisi = cible === ACTUALITES ? general : liste.find((e) => valeur(e) === cible);
+    const choisi =
+      cible === ACTUALITES ? general : liste.find((e) => valeur(e) === cible);
     if (!choisi?.ouvert) {
       // Un espace fermé n'a pas de fil : une lecture en cours pour un autre onglet est oubliée.
       demande.current += 1;
@@ -111,7 +154,11 @@ export function PageCommunaute({
   }
 
   const suivreAdresse = useEffectEvent((cible: string) => {
-    if (cible !== onglet && (cible === ACTUALITES || liste.some((e) => valeur(e) === cible))) changerOnglet(cible, false);
+    if (
+      cible !== onglet &&
+      (cible === ACTUALITES || liste.some((e) => valeur(e) === cible))
+    )
+      changerOnglet(cible, false);
   });
   useEffect(() => {
     if (demandee === adresse.current) return;
@@ -129,7 +176,11 @@ export function PageCommunaute({
     if (!derniere) return;
     const suivante = page + 1;
     setSuite(true);
-    const reponse = await lire(onglet, tri, tri === "recentes" ? { curseur: curseur(derniere) } : { page: suivante });
+    const reponse = await lire(
+      onglet,
+      tri,
+      tri === "recentes" ? { curseur: curseur(derniere) } : { page: suivante },
+    );
     if (!reponse) return;
     setSuite(false);
     if (!reponse.ok) {
@@ -139,7 +190,12 @@ export function PageCommunaute({
     setErreur(null);
     setPage(suivante);
     setLot((actuel) => ({
-      publications: [...actuel.publications, ...reponse.lot.publications.filter((p) => !actuel.publications.some((a) => a.id === p.id))],
+      publications: [
+        ...actuel.publications,
+        ...reponse.lot.publications.filter(
+          (p) => !actuel.publications.some((a) => a.id === p.id),
+        ),
+      ],
       suite: reponse.lot.suite,
     }));
   }
@@ -148,23 +204,30 @@ export function PageCommunaute({
     // Le fil (720 px) et sa colonne (320 px) restent au milieu de l'écran, l'en-tête aligné sur eux.
     <div className="mx-auto flex w-full max-w-[720px] min-w-0 flex-col xl:max-w-[1064px]">
       <Heading level="page">Communauté</Heading>
-      <Lead className="mt-2.5">Posez vos questions, partagez vos réussites, entraidez-vous.</Lead>
-      <FilterChips
-        // Sur téléphone, les onglets défilent en largeur (spec du fil « Actualités », §1).
-        className="mt-[21px] max-sm:mt-4 max-sm:-mb-1 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:px-0.5 max-sm:py-1 max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden"
-        label="Choisir un espace"
-        options={[
-          { value: ACTUALITES, label: "Actualités" },
-          ...liste.map((e) => ({
-            value: valeur(e),
-            label: e.nomCourt,
-            icon: e.ouvert ? undefined : SquareLock02Icon,
-            ariaLabel: e.ouvert ? undefined : `${e.nomCourt}, espace verrouillé`,
-          })),
-        ]}
-        value={onglet}
-        onValueChange={(cible) => changerOnglet(cible)}
-      />
+      <Lead className="mt-2.5">
+        Posez vos questions, partagez vos réussites, entraidez-vous.
+      </Lead>
+      <div className="mt-[21px] flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-3 max-sm:mt-4">
+        <FilterChips
+          // Sur téléphone, les onglets défilent en largeur (spec du fil « Actualités », §1).
+          className="min-w-0 max-sm:-mb-1 max-sm:w-full max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:px-0.5 max-sm:py-1 max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden"
+          label="Choisir un espace"
+          options={[
+            { value: ACTUALITES, label: "Actualités" },
+            ...liste.map((e) => ({
+              value: valeur(e),
+              label: e.nomCourt,
+              icon: e.ouvert ? undefined : SquareLock02Icon,
+              ariaLabel: e.ouvert
+                ? undefined
+                : `${e.nomCourt}, espace verrouillé`,
+            })),
+          ]}
+          value={onglet}
+          onValueChange={(cible) => changerOnglet(cible)}
+        />
+        {sessionsAVenir && <BoutonSessionsProgrammees />}
+      </div>
       <div className="mt-5 h-px bg-separateur" />
       <div className="mt-7 flex min-w-0 flex-col gap-6 xl:flex-row xl:items-start">
         {/* Sur ordinateur, une largeur fixe : les vidéos et les images ne grandissent pas avec l'écran. */}
@@ -173,7 +236,9 @@ export function PageCommunaute({
             <EspaceVerrouille espace={espace} />
           ) : (
             <>
-              {onglet === ACTUALITES && annonce && <CarteAnnonce annonce={annonce} equipe={moi.equipe === true} />}
+              {onglet === ACTUALITES && annonce && (
+                <CarteAnnonce annonce={annonce} equipe={moi.equipe === true} />
+              )}
               <ChampPublication
                 key={onglet}
                 espace={espace}
@@ -182,8 +247,16 @@ export function PageCommunaute({
                 analyseActive={analyseActive}
                 // Une nouvelle publication s'ajoute au fil affiché s'il la contient (pas « Mes enregistrements », ni un autre espace).
                 onPubliee={(p) => {
-                  if (tri === "enregistrees" || (onglet !== ACTUALITES && (p.espace.id ?? "general") !== onglet)) return false;
-                  setLot((actuel) => ({ ...actuel, publications: [p, ...actuel.publications] }));
+                  if (
+                    tri === "enregistrees" ||
+                    (onglet !== ACTUALITES &&
+                      (p.espace.id ?? "general") !== onglet)
+                  )
+                    return false;
+                  setLot((actuel) => ({
+                    ...actuel,
+                    publications: [p, ...actuel.publications],
+                  }));
                   return true;
                 }}
               />
@@ -197,9 +270,17 @@ export function PageCommunaute({
               ) : lot.publications.length === 0 ? (
                 !erreur &&
                 (tri === "enregistrees" ? (
-                  <EmptyState icon={Bookmark02Icon} title="Aucune publication enregistrée" description="Touchez le signet d’une publication pour la retrouver ici." />
+                  <EmptyState
+                    icon={Bookmark02Icon}
+                    title="Aucune publication enregistrée"
+                    description="Touchez le signet d’une publication pour la retrouver ici."
+                  />
                 ) : (
-                  <EmptyState icon={UserGroupIcon} title="Aucune publication pour l’instant" description="Lancez la conversation : posez une question ou partagez une réussite." />
+                  <EmptyState
+                    icon={UserGroupIcon}
+                    title="Aucune publication pour l’instant"
+                    description="Lancez la conversation : posez une question ou partagez une réussite."
+                  />
                 ))
               ) : (
                 lot.publications.map((p) => (
@@ -208,19 +289,33 @@ export function PageCommunaute({
                     publication={p}
                     moi={moi}
                     maintenant={maintenant}
-                    onSupprimee={(id) => setLot((actuel) => ({ ...actuel, publications: actuel.publications.filter((x) => x.id !== id) }))}
+                    onSupprimee={(id) =>
+                      setLot((actuel) => ({
+                        ...actuel,
+                        publications: actuel.publications.filter(
+                          (x) => x.id !== id,
+                        ),
+                      }))
+                    }
                   />
                 ))
               )}
               {!chargement && lot.suite && (
-                <Button variant="contour" className="self-center" loading={suite} onClick={() => void voirPlus()}>
+                <Button
+                  variant="contour"
+                  className="self-center"
+                  loading={suite}
+                  onClick={() => void voirPlus()}
+                >
                   Voir plus
                 </Button>
               )}
             </>
           )}
         </div>
-        {colonne && <div className="min-w-0 xl:w-[320px] xl:flex-none">{colonne}</div>}
+        {colonne && (
+          <div className="min-w-0 xl:w-[320px] xl:flex-none">{colonne}</div>
+        )}
       </div>
     </div>
   );

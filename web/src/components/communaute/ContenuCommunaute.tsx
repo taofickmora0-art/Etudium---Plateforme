@@ -74,6 +74,7 @@ export async function ContenuCommunaute({ searchParams }: { searchParams?: Promi
       annonce={annonce}
       analyseActive={analyseActive}
       maintenant={maintenant.toISOString()}
+      sessionsAVenir={session !== null}
       colonne={<ColonneCommunaute session={session} tendances={tendances} activites={activites} maintenant={maintenant} />}
     />
   );

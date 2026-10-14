@@ -3,6 +3,7 @@
 import { Fragment, Suspense, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { SidebarGroup } from "@/components/ui/SidebarGroup";
+import { useNouvellesSessions } from "@/components/sessions/useNouvellesSessions";
 import { SidebarItem } from "@/components/ui/SidebarItem";
 import { spaceOf, type Espace } from "@/lib/auth/permissions";
 import { cn } from "@/lib/cn";
@@ -34,8 +35,17 @@ export function SidebarNavLinks({
 }) {
   const actuel = pathname !== null ? spaceOf(pathname) : espace;
   const menu = actuel ? MENUS[actuel] : null;
+  // La pastille rouge des nouvelles sessions live, sur l'entrée Événements de l'espace étudiant.
+  const nouvelles = useNouvellesSessions(pathname, actuel === "etudiant");
   const entree = (e: NavEntry) => (
-    <SidebarItem key={e.href} href={e.href} icon={e.icon} label={e.label} active={pathname !== null && entreeActive(pathname, e)} />
+    <SidebarItem
+      key={e.href}
+      href={e.href}
+      icon={e.icon}
+      label={e.label}
+      active={pathname !== null && entreeActive(pathname, e)}
+      pastille={e.href === "/evenements" && nouvelles > 0 ? { nombre: nouvelles, libelle: `${nouvelles} nouvelle${nouvelles > 1 ? "s" : ""} session${nouvelles > 1 ? "s" : ""}` } : undefined}
+    />
   );
   const groupes = menu?.groupes.map((groupe, index) => (
     <Fragment key={groupe.titre ?? index}>

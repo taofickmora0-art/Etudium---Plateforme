@@ -411,3 +411,13 @@ describe("La publication d'une session live", () => {
     expect(within(carte()).queryByRole("group", { name: /^Session live du / })).toBeNull();
   });
 });
+
+describe("Sessions live programmées", () => {
+  it("le bouton à côté des espaces quand une session est à venir ; sinon, pas de bouton (spec promotion des sessions live, §3)", () => {
+    const { unmount } = afficher(<PageCommunaute espaces={ESPACES} initial={lot([])} moi={MOI} annonce={null} sessionsAVenir />);
+    expect(screen.getByRole("link", { name: /^Sessions live programmées/ })).toHaveAttribute("href", "/evenements");
+    unmount();
+    afficher(<PageCommunaute espaces={ESPACES} initial={lot([])} moi={MOI} annonce={null} />);
+    expect(screen.queryByRole("link", { name: /^Sessions live programmées/ })).toBeNull();
+  });
+});

@@ -8,10 +8,12 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { Heading, Lead } from "@/components/ui/Text";
 import { chargerSessions, seDesinscrire, sinscrire } from "@/lib/sessions/actions";
+import { marquerEvenementsVus } from "@/lib/sessions/nouvelles";
 import { FENETRE_LIEN_MIN } from "@/lib/sessions/regles";
 import type { SessionCarte, VueSessions } from "@/lib/sessions/types";
 import { CarteSession } from "./CarteSession";
 import { FenetreInscription } from "./FenetreInscription";
+import { viderNouvellesSessions } from "./useNouvellesSessions";
 
 const VUES: { value: VueSessions; label: string }[] = [
   { value: "a_venir", label: "À venir" },
@@ -109,6 +111,12 @@ export function PageEvenements({ initial }: { initial: SessionCarte[] }) {
     return () => clearTimeout(minuterie);
     // tic : après chaque redessin, la minuterie se réarme sur le moment suivant.
   }, [sessions, vue, charger, tic]);
+
+  // La page ouverte : les sessions programmées jusqu'ici ne sont plus nouvelles (pastilles rouges remises à zéro).
+  useEffect(() => {
+    viderNouvellesSessions();
+    void marquerEvenementsVus().catch(() => undefined);
+  }, []);
 
   // Retour sur l'onglet (appareil sorti de veille, autre onglet) : la page relit l'onglet affiché.
   useEffect(() => {
