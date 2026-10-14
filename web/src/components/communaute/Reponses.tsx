@@ -113,14 +113,14 @@ export function Reponses({
     <div className="mt-3 flex min-w-0 flex-col gap-3">
       {etat.reponses.map((r) => (
         <div key={r.id} className="flex min-w-0 items-start gap-2.5">
-          <Avatar initials={initialesReponse(r.auteur.nomCourt)} size={32} tone={tonAvatar(r.auteur.nomCourt)} src={r.estMoi ? moi.photoUrl : null} />
+          <Avatar initials={initialesReponse(r.auteur.nomCourt)} size={32} tone={tonAvatar(r.auteur.nomCourt)} src={r.estMoi ? moi.photoUrl : null} className="max-sm:size-7 max-sm:text-[11px]" />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <div className="min-w-0 self-start rounded-[14px] bg-page px-3 py-2.5">
               <div className="flex flex-wrap items-baseline gap-x-1.5">
-                <span className="text-sm leading-5 font-semibold text-encre">{r.auteur.nomCourt}</span>
+                <span className="text-sm leading-5 font-semibold text-encre max-sm:text-[13px]">{r.auteur.nomCourt}</span>
                 <span className="text-xs leading-[18px] text-discret">{moment(r.creeLe, maintenant)}</span>
               </div>
-              <TexteAvecLiens texte={r.texte} className="mt-0.5 text-sm leading-[21px] text-texte" />
+              <TexteAvecLiens texte={r.texte} className="mt-0.5 text-sm leading-[21px] text-texte max-sm:text-[13px] max-sm:leading-5" />
             </div>
             {(r.peutSignaler || r.peutSupprimer) && (
               <div className="flex items-center gap-3.5 pl-3">
@@ -162,7 +162,7 @@ export function Reponses({
         </p>
       )}
       <form className="flex min-w-0 items-center gap-2.5" onSubmit={(e) => void envoyer(e)}>
-        <Avatar initials={moi.initiales} src={moi.photoUrl} size={32} />
+        <Avatar initials={moi.initiales} src={moi.photoUrl} size={32} className="max-sm:size-7 max-sm:text-[11px]" />
         <TextInput
           id={idChamp}
           aria-label="Écrire un commentaire"
@@ -170,7 +170,7 @@ export function Reponses({
           value={texte}
           maxLength={REPONSE_MAX}
           onChange={(e) => setTexte(e.target.value)}
-          className="h-[42px] min-w-0 flex-1 rounded-full border-page bg-page text-sm"
+          className="h-[42px] min-w-0 flex-1 rounded-full border-page bg-page text-sm max-sm:h-10 max-sm:text-[13px]"
         />
         <IconButton type="submit" icon={SentIcon} label="Envoyer le commentaire" variant="discret" disabled={envoi} aria-busy={envoi || undefined} />
       </form>

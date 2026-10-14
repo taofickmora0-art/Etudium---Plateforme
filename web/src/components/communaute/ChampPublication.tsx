@@ -171,13 +171,13 @@ export function ChampPublication({
 
   if (!ouvert) {
     return (
-      <div className={`${CADRE} items-center gap-3 px-4 py-3.5 max-sm:gap-2 max-sm:px-3`}>
-        <Avatar initials={moi.initiales} src={moi.photoUrl} size={44} />
+      <div className={`${CADRE} items-center gap-3 px-4 py-3.5 max-sm:gap-2.5 max-sm:px-3 max-sm:py-3`}>
+        <Avatar initials={moi.initiales} src={moi.photoUrl} size={44} className="max-sm:size-10 max-sm:text-sm" />
         <button
           ref={invite}
           type="button"
           onClick={() => setOuvert(true)}
-          className="focus-etudium h-12 min-w-0 flex-1 cursor-text truncate rounded-champ bg-page px-4 text-left text-[15px] text-indice transition-colors hover:bg-coque"
+          className="focus-etudium h-12 min-w-0 flex-1 cursor-text truncate rounded-champ bg-page px-4 text-left text-[15px] text-indice transition-colors hover:bg-coque max-sm:h-10 max-sm:px-3.5 max-sm:text-sm"
         >
           {moi.prenom ? `Quoi de neuf, ${moi.prenom} ?` : "Quoi de neuf ?"}
         </button>

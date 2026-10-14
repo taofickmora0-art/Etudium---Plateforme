@@ -7,7 +7,9 @@ import { Icon } from "./Icon";
 import { BellIcon, PointsIcon, StreakIcon, UserSilhouetteIcon } from "./TopBarIcons";
 
 // Planche « Boutons », « Boutons de la barre du haut » : pastilles de 49 px sur fond #E9EFFB.
-const SURFACE = "flex h-[49px] flex-none items-center rounded-bouton bg-coque text-base font-medium text-texte whitespace-nowrap";
+// Sur téléphone (moins de 640 px), 40 px : l'en-tête laisse plus de place à la page.
+const SURFACE =
+  "flex h-[49px] flex-none items-center rounded-bouton bg-coque text-base font-medium text-texte whitespace-nowrap max-sm:h-10 max-sm:rounded-champ max-sm:text-[15px]";
 const INTERACTIVE = "focus-etudium cursor-pointer transition-colors hover:bg-coque-survol";
 
 type ButtonProps = ComponentPropsWithoutRef<"button">;
@@ -17,7 +19,7 @@ type LinkableProps = ButtonProps & { href?: string };
 /** Symbole Étudium qui ramène à l'accueil. */
 export function LogoButton({ href = "/", className }: { href?: string; className?: string }) {
   return (
-    <Link href={href} aria-label="Étudium, accueil" className={cn(SURFACE, "focus-etudium w-12 justify-center", className)}>
+    <Link href={href} aria-label="Étudium, accueil" className={cn(SURFACE, "focus-etudium w-12 justify-center max-sm:w-10 max-sm:[&_svg]:size-[26px]", className)}>
       <LogoMark />
     </Link>
   );
@@ -98,11 +100,11 @@ export function NotificationButton({ className, type, nonLues = false, ...props 
     <button
       type={type ?? "button"}
       aria-label="Notifications"
-      className={cn(SURFACE, INTERACTIVE, "relative w-12 justify-center", className)}
+      className={cn(SURFACE, INTERACTIVE, "relative w-12 justify-center max-sm:w-10", className)}
       {...props}
     >
       <BellIcon />
-      {nonLues && <span data-pastille aria-hidden="true" className="absolute top-3 right-3 size-2 rounded-full bg-bleu ring-2 ring-coque" />}
+      {nonLues && <span data-pastille aria-hidden="true" className="absolute top-3 right-3 size-2 rounded-full bg-bleu ring-2 ring-coque max-sm:top-2.5 max-sm:right-2.5" />}
     </button>
   );
 }

@@ -31,7 +31,7 @@ export function MenuTiroir({ className }: { className?: string }) {
   return (
     <Dialog.Root open={ouvert} onOpenChange={setOuvert}>
       <Dialog.Trigger asChild>
-        <IconButton icon={Menu01Icon} label="Menu" variant="plein" className={cn("size-12 rounded-bouton", className)} />
+        <IconButton icon={Menu01Icon} label="Menu" variant="plein" className={cn("size-12 rounded-bouton max-sm:size-10 max-sm:rounded-champ max-sm:[&_svg]:size-[18px]", className)} />
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-encre/40 motion-safe:animate-apparition" />

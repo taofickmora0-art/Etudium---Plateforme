@@ -150,7 +150,7 @@ export function PageCommunaute({
       <Lead className="mt-2.5">Posez vos questions, partagez vos réussites, entraidez-vous.</Lead>
       <FilterChips
         // Sur téléphone, les onglets défilent en largeur (spec du fil « Actualités », §1).
-        className="mt-[21px] max-sm:-my-1 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:px-0.5 max-sm:py-1 max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden"
+        className="mt-[21px] max-sm:mt-4 max-sm:-mb-1 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:px-0.5 max-sm:py-1 max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden"
         label="Choisir un espace"
         options={[
           { value: ACTUALITES, label: "Actualités" },

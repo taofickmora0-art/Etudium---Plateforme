@@ -38,7 +38,7 @@ import { VideoYoutube } from "./VideoYoutube";
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 const pluriel = (n: number, mot: string) => `${n.toLocaleString("fr-FR")} ${mot}${n > 1 ? "s" : ""}`;
 // Les boutons J’aime et Commenter du pied de carte (40 × 36 dans le design) ; pressé, l'icône se remplit.
-const BOUTON_PIED = "h-9 w-10 rounded-puce";
+const BOUTON_PIED = "h-9 w-10 rounded-puce max-sm:w-9";
 const REMPLI = "text-bleu [&_path]:fill-current";
 
 function Etiquette({ publication }: { publication: Publication }) {
@@ -250,14 +250,14 @@ export function CartePublication({
   return (
     <article aria-label={`Publication de ${nom}`} className="box-border flex min-w-0 flex-col rounded-2xl border border-bordure-carte bg-panneau px-5 pt-[18px] pb-3.5 max-sm:px-4">
       <div className="flex min-w-0 items-start gap-3">
-        <Avatar initials={initiales(p.auteur.prenom, p.auteur.nom)} size={44} tone={tonAvatar(nom)} src={p.estMoi ? moi.photoUrl : null} />
+        <Avatar initials={initiales(p.auteur.prenom, p.auteur.nom)} size={44} tone={tonAvatar(nom)} src={p.estMoi ? moi.photoUrl : null} className="max-sm:size-10 max-sm:text-sm" />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
-            <span className="text-[15px] leading-[22px] font-semibold wrap-anywhere text-encre">{nom}</span>
+            <span className="text-[15px] leading-[22px] font-semibold wrap-anywhere text-encre max-sm:text-sm max-sm:leading-5">{nom}</span>
             <Etiquette publication={p} />
             <EtiquetteStatut publication={p} />
           </div>
-          <span className="text-[13px] leading-5 text-discret">{meta}</span>
+          <span className="text-[13px] leading-5 text-discret max-sm:text-xs max-sm:leading-[18px]">{meta}</span>
         </div>
         <div className="-mt-1 -mr-1.5 flex">
           {enLigne && (
@@ -318,8 +318,11 @@ export function CartePublication({
         </form>
       ) : (
         <>
-          {p.titre && <h3 className="m-0 mt-3.5 text-[17px] leading-[25px] font-semibold wrap-anywhere text-encre">{p.titre}</h3>}
-          <TexteAvecLiens texte={p.texte} className={cn("text-[15px] leading-6 text-texte", p.titre ? "mt-1.5" : "mt-3.5")} />
+          {p.titre && <h3 className="m-0 mt-3.5 text-[17px] leading-[25px] font-semibold wrap-anywhere text-encre max-sm:mt-3 max-sm:text-base max-sm:leading-6">{p.titre}</h3>}
+          <TexteAvecLiens
+            texte={p.texte}
+            className={cn("text-[15px] leading-6 text-texte max-sm:text-sm max-sm:leading-[22px]", p.titre ? "mt-1.5" : "mt-3.5 max-sm:mt-3")}
+          />
         </>
       )}
       {p.pieceJointe && <Piece piece={p.pieceJointe} />}
@@ -340,8 +343,9 @@ export function CartePublication({
           />
           <IconButton icon={Comment01Icon} label="Commenter" variant="discret" className={BOUTON_PIED} onClick={() => document.getElementById(idChamp)?.focus()} />
           <span className="flex-1" />
+          {/* Sous 360 px, les initiales laissent la place au compte. */}
           {p.aimeePar.length > 0 && (
-            <span aria-hidden>
+            <span aria-hidden className="max-[359px]:hidden">
               <AvatarGroup>
                 {p.aimeePar.map((i, n) => (
                   <Avatar key={`${i}-${n}`} initials={i} size={22} tone={tonAvatar(i)} />
@@ -349,7 +353,7 @@ export function CartePublication({
               </AvatarGroup>
             </span>
           )}
-          {compte && <span className="pr-2 pl-1 text-[13px] leading-5 text-discret">{compte}</span>}
+          {compte && <span className="min-w-0 truncate pr-2 pl-1 text-[13px] leading-5 text-discret max-sm:text-xs">{compte}</span>}
         </div>
       )}
       {erreur && (

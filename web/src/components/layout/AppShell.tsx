@@ -27,7 +27,7 @@ export function AppShell({ account, espace, children }: { account?: ReactNode; /
         <main
           id="contenu"
           tabIndex={-1}
-          className="mx-2 min-w-0 flex-1 rounded-t-panneau bg-panneau px-4 py-5 outline-none lg:mt-[15px] lg:mr-5 lg:mb-5 lg:ml-0 lg:rounded-panneau lg:p-8"
+          className="mx-2 min-w-0 flex-1 rounded-t-panneau bg-panneau px-4 py-5 outline-none max-sm:px-3.5 max-sm:pt-4 lg:mt-[15px] lg:mr-5 lg:mb-5 lg:ml-0 lg:rounded-panneau lg:p-8"
         >
           {children}
         </main>

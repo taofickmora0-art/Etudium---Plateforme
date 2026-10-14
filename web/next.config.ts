@@ -11,6 +11,9 @@ const nextConfig: NextConfig = {
   // Tests sur téléphone, sur le même Wi-Fi (http://192.168.x.x:3000) : sans cela, Next bloque ses fichiers de
   // développement pour toute autre adresse que localhost, et la page reste sans réaction. Sans effet en production.
   allowedDevOrigins: ["192.168.*.*"],
+  // Le rond « N » de Next en bas de l'écran recouvrait la barre du bas sur téléphone : masqué (développement seulement ;
+  // une erreur s'affiche toujours en plein écran).
+  devIndicators: false,
   // Couvertures des formations (espace public « couvertures ») : redimensionnées et compressées par next/image.
   images: { remotePatterns: motifsImages(process.env.NEXT_PUBLIC_SUPABASE_URL) },
   partialPrefetching: true,

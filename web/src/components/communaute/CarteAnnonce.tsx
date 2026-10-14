@@ -19,7 +19,7 @@ export function CarteAnnonce({ annonce, equipe = false }: { annonce: Annonce; eq
         // eslint-disable-next-line @next/next/no-img-element
         <img src={annonce.image} alt={`Affiche : ${annonce.titre}`} className="block max-h-[440px] w-full bg-coque object-cover" />
       )}
-      <div className="flex min-w-0 flex-col gap-2 px-5 pt-4 pb-[18px]">
+      <div className="flex min-w-0 flex-col gap-2 px-5 pt-4 pb-[18px] max-sm:px-4 max-sm:pt-3 max-sm:pb-4">
         <div className="flex min-h-[34px] items-center justify-between gap-2">
           <Tag tone="nouveau" icon={PinIcon}>
             Annonce épinglée
@@ -30,8 +30,8 @@ export function CarteAnnonce({ annonce, equipe = false }: { annonce: Annonce; eq
             </Link>
           )}
         </div>
-        {annonce.titre && <h2 className="m-0 text-2xl leading-8 font-semibold tracking-[-0.01em] text-balance wrap-anywhere text-encre">{annonce.titre}</h2>}
-        {annonce.texte && <p className="m-0 text-sm leading-[22px] whitespace-pre-line text-pretty wrap-anywhere text-discret">{annonce.texte}</p>}
+        {annonce.titre && <h2 className="m-0 text-2xl leading-8 font-semibold tracking-[-0.01em] text-balance wrap-anywhere text-encre max-sm:text-lg max-sm:leading-[26px]">{annonce.titre}</h2>}
+        {annonce.texte && <p className="m-0 text-sm leading-[22px] whitespace-pre-line text-pretty wrap-anywhere text-discret max-sm:text-[13px] max-sm:leading-5">{annonce.texte}</p>}
       </div>
     </article>
   );

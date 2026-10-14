@@ -15,8 +15,8 @@ const LISTE = "m-0 flex list-none flex-col p-0 [&>li+li]:border-t [&>li+li]:bord
 
 function Bloc({ titre, children }: { titre: string; children: ReactNode }) {
   return (
-    <section className="box-border flex min-w-0 flex-col rounded-2xl border border-bordure-carte bg-panneau px-5 pt-5 pb-2.5">
-      <h2 className="m-0 text-base leading-6 font-semibold text-encre">{titre}</h2>
+    <section className="box-border flex min-w-0 flex-col rounded-2xl border border-bordure-carte bg-panneau px-5 pt-5 pb-2.5 max-sm:px-4 max-sm:pt-4">
+      <h2 className="m-0 text-base leading-6 font-semibold text-encre max-sm:text-[15px]">{titre}</h2>
       <div className="mt-1.5">{children}</div>
     </section>
   );
@@ -91,8 +91,8 @@ export function ColonneCommunaute({
             <div className="flex min-h-12 items-center gap-3.5 px-1 py-3.5">
               <IconTile icon={Video01Icon} tone="information" />
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="text-[15px] leading-[22px] font-medium wrap-anywhere text-encre">{session.titre}</span>
-                <span className="text-[13px] leading-5 text-discret">{dateSession(session.debut)}</span>
+                <span className="text-[15px] leading-[22px] font-medium wrap-anywhere text-encre max-sm:text-sm max-sm:leading-5">{session.titre}</span>
+                <span className="text-[13px] leading-5 text-discret max-sm:text-xs">{dateSession(session.debut)}</span>
               </span>
             </div>
             <div className="pb-3 pl-1">

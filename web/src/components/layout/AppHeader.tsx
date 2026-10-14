@@ -16,7 +16,7 @@ import { HeaderActions } from "./HeaderActions";
  */
 export function AppHeader({ account }: { account?: ReactNode }) {
   return (
-    <header className="relative z-30 flex flex-none items-center justify-between gap-2 px-4 py-3 max-lg:sticky max-lg:top-0 max-lg:bg-page lg:flex-wrap lg:gap-3 lg:py-5 lg:pr-6 lg:pl-0">
+    <header className="relative z-30 flex flex-none items-center justify-between gap-2 px-4 py-3 max-sm:gap-1.5 max-sm:px-3 max-sm:py-2.5 max-lg:sticky max-lg:top-0 max-lg:bg-page lg:flex-wrap lg:gap-3 lg:py-5 lg:pr-6 lg:pl-0">
       <div className="flex min-w-0 flex-wrap items-center gap-2 lg:gap-3">
         {/* Grand écran : réduire la barre latérale à ses icônes, ou la rouvrir. */}
         <BoutonMenuLateral className="hidden lg:inline-flex" />
@@ -32,7 +32,7 @@ export function AppHeader({ account }: { account?: ReactNode }) {
             key={e.href}
             href={e.href}
             aria-label={e.label}
-            className="focus-etudium flex size-12 flex-none items-center justify-center rounded-bouton bg-coque text-texte no-underline transition-colors hover:bg-coque-survol lg:hidden"
+            className="focus-etudium flex size-12 flex-none items-center justify-center rounded-bouton bg-coque text-texte no-underline transition-colors hover:bg-coque-survol max-sm:size-10 max-sm:rounded-champ max-sm:[&_svg]:size-[18px] lg:hidden"
           >
             <Icon icon={e.icon} size={20} />
           </Link>
@@ -47,7 +47,7 @@ export function AppHeader({ account }: { account?: ReactNode }) {
 export function HeaderAccount({ user }: { user: ShellUser }) {
   return (
     <>
-      <CounterPill icon="serie" value={user.serie} label="Série d’apprentissage" className="max-lg:h-12 max-lg:gap-[7px] max-lg:px-3.5" />
+      <CounterPill icon="serie" value={user.serie} label="Série d’apprentissage" className="max-lg:h-12 max-lg:gap-[7px] max-lg:px-3.5 max-sm:h-10 max-sm:gap-1.5 max-sm:px-3" />
       <CounterPill icon="points" value={user.points} label="Points" className="hidden lg:flex" />
       <HeaderActions user={user} />
     </>

@@ -44,9 +44,11 @@ describe("Corrections de la relecture de la coque", () => {
     expect(screen.getByRole("link", { name: "Back-office" })).toHaveAttribute("href", "/admin");
   });
 
-  it("les libellés de la barre du bas ont 4 px de marge de chaque côté (« Communauté » à 360 px)", () => {
+  it("chaque onglet de la barre du bas prend la largeur de son libellé : « Communauté » ne déborde plus de sa pastille", () => {
     render(<BottomNavLinks pathname="/accueil" />);
-    const libelle = within(screen.getByRole("link", { name: "Communauté" })).getByText("Communauté");
-    expect(libelle).toHaveClass("max-w-[calc(100%+8px)]");
+    const onglet = screen.getByRole("link", { name: "Communauté" });
+    expect(onglet).toHaveClass("flex-auto", "px-1");
+    expect(onglet).not.toHaveClass("flex-1");
+    expect(within(onglet).getByText("Communauté")).toHaveClass("max-w-full", "truncate");
   });
 });
