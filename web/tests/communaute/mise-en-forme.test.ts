@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analyser, texteBrut, versDocument, versMarkdown, type Bloc } from "@/lib/communaute/mise-en-forme";
+import { analyser, premiereAdresseDuTexte, texteBrut, versDocument, versMarkdown, type Bloc } from "@/lib/communaute/mise-en-forme";
 
 // Le texte mis en forme d'une publication (spec mise en forme et vidéo, §2) : un Markdown restreint, lu sans jamais
 // produire de HTML, et l'aller-retour avec l'éditeur.
@@ -192,5 +192,20 @@ describe("Les liens [texte](https://…)", () => {
       type: "doc",
       content: [{ type: "paragraph", content: [{ type: "text", text: "a", marks: [{ type: "bold" }, l("https://x.com")] }] }],
     });
+  });
+});
+
+describe("La première adresse du texte (aperçu et analyse ; revue de l'étape 1)", () => {
+  it("l'adresse d'un lien [texte](…), pas son texte", () => {
+    expect(premiereAdresseDuTexte("Voir [le programme](https://etudium.bj/programme).")).toBe("https://etudium.bj/programme");
+    // Un texte qui imite une autre adresse : c'est la vraie destination qui compte.
+    expect(premiereAdresseDuTexte("[https://etudium.bj/connexion](https://etudium-bj.example/login)")).toBe("https://etudium-bj.example/login");
+  });
+
+  it("dans l'ordre du texte : lien ou adresse écrite telle quelle, marques et listes comprises", () => {
+    expect(premiereAdresseDuTexte("https://a.com puis [b](https://b.com)")).toBe("https://a.com");
+    expect(premiereAdresseDuTexte("[b](https://b.com) puis https://a.com")).toBe("https://b.com");
+    expect(premiereAdresseDuTexte("# Titre\n\n- un\n- **https://c.com/x**")).toBe("https://c.com/x");
+    expect(premiereAdresseDuTexte("Aucune adresse ici [1].")).toBeNull();
   });
 });

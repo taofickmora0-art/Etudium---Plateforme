@@ -11,8 +11,8 @@ import { MOTIFS, type ContenuAnalyse, type MotifSignalement, type Verdict } from
 import { createClient } from "@/lib/supabase/server";
 import { lireApercu } from "./apercu";
 import { lireLot, UUID, versApercu, versEspace, versReponse } from "./data";
-import { idYoutube, premiereAdresse } from "./liens";
-import { texteBrut } from "./mise-en-forme";
+import { idYoutube } from "./liens";
+import { premiereAdresseDuTexte } from "./mise-en-forme";
 import { reconnaitreVideo, type Video } from "./video";
 import { nomCourt, refusPiece, refusPublication, refusReponse } from "./regles";
 import type { Apercu, Espace, FiltreFil, LotPublications, PieceEnvoyee, Reponse, SuiteFil, TriFil } from "./types";
@@ -110,8 +110,9 @@ async function preparerApercu(
   texte: string,
   cible: { publication: string | null; parcours: string | null },
 ): Promise<{ apercu: Promise<Apercu | null> } | { refus: string }> {
-  // Le texte mis en forme : le lien se cherche sans les marques (« **https://…** »).
-  const adresse = premiereAdresse(texteBrut(texte));
+  // Le texte mis en forme : le lien se cherche sans les marques (« **https://…** ») ; un lien [texte](…) compte pour
+  // sa vraie adresse, pas pour son texte (qui pourrait imiter une autre adresse).
+  const adresse = premiereAdresseDuTexte(texte);
   if (!adresse) return { apercu: Promise.resolve(null) };
   const video = idYoutube(adresse);
   if (video) return { apercu: Promise.resolve({ type: "youtube", id: video }) };

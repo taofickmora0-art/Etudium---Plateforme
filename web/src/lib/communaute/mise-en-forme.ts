@@ -1,4 +1,5 @@
 import type { JSONContent } from "@tiptap/react";
+import { premiereAdresse } from "./liens";
 
 // Le texte mis en forme d'une publication (spec mise en forme et vidéo, §2). Il reste dans `publications.texte`, en
 // Markdown restreint : `# `, `## `, `### ` (titres), `**gras**`, `_italique_`, `++souligné++`, `~~barré~~`, `- ` et `1. `
@@ -251,6 +252,26 @@ export function texteBrut(markdown: string): string {
   return analyser(markdown)
     .map((b) => (b.type === "puces" || b.type === "numeros" ? b.elements.map(texteDe).join("\n") : texteDe(b.segments)))
     .join("\n");
+}
+
+/**
+ * La première adresse du texte, dans l'ordre de lecture : celle d'un lien `[texte](…)` (sa vraie destination, jamais son
+ * texte affiché), ou une adresse écrite telle quelle. Sert à l'aperçu, que l'analyse lit aussi.
+ */
+export function premiereAdresseDuTexte(markdown: string): string | null {
+  for (const b of analyser(markdown)) {
+    for (const segments of b.type === "puces" || b.type === "numeros" ? b.elements : [b.segments]) {
+      // Le texte lu jusqu'ici dans le bloc : une adresse peut y courir sur plusieurs segments (marques).
+      let texte = "";
+      for (const s of segments) {
+        if (!("saut" in s) && s.lien) return premiereAdresse(texte) ?? s.lien;
+        texte += "saut" in s ? "\n" : s.texte;
+      }
+      const adresse = premiereAdresse(texte);
+      if (adresse) return adresse;
+    }
+  }
+  return null;
 }
 
 // ─── Vers l'éditeur ─────────────────────────────────────────────────────────────────────────────────

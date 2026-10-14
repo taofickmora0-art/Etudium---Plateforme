@@ -45,6 +45,7 @@ const BOUTONS: Bouton[] = [
 const CONTENU = cn(
   "tiptap min-h-[104px] max-h-[420px] overflow-y-auto px-3.5 py-3 text-[15px] leading-[22px] text-texte outline-none wrap-anywhere max-sm:text-sm",
   "[&>*+*]:mt-2.5 [&_p]:m-0 [&_strong]:font-semibold [&_u]:underline-offset-2",
+  "[&_a]:text-bleu [&_a]:underline [&_a]:underline-offset-2",
   "[&_h1]:m-0 [&_h1]:text-xl [&_h1]:leading-7 [&_h1]:font-semibold [&_h1]:text-encre",
   "[&_h2]:m-0 [&_h2]:text-lg [&_h2]:leading-[26px] [&_h2]:font-semibold [&_h2]:text-encre",
   "[&_h3]:m-0 [&_h3]:text-base [&_h3]:leading-6 [&_h3]:font-semibold [&_h3]:text-encre",

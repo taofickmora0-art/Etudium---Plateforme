@@ -1,5 +1,6 @@
 import { Blockquote } from "@tiptap/extension-blockquote";
 import { Heading } from "@tiptap/extension-heading";
+import { Link } from "@tiptap/extension-link";
 import { ListItem } from "@tiptap/extension-list";
 import { Placeholder } from "@tiptap/extensions";
 import StarterKit from "@tiptap/starter-kit";
@@ -25,6 +26,15 @@ const Titre = Heading.extend({
     return { ...this.parent?.(), "Shift-Enter": dansUnTitre, "Mod-Enter": dansUnTitre };
   },
 }).configure({ levels: [1, 2, 3] });
+// Un texte rendu cliquable : http ou https seulement, ouvert dans un nouvel onglet ; seul le bouton « Lien » en crée un.
+// Une adresse collée reste du texte (Tiptap la changerait en lien même sans `linkOnPaste`, d'où les règles retirées).
+const Lien = Link.extend({ addPasteRules: () => [] }).configure({
+  openOnClick: false,
+  autolink: false,
+  linkOnPaste: false,
+  isAllowedUri: (adresse) => adresseDeLien(adresse),
+  HTMLAttributes: { target: "_blank", rel: "noopener nofollow ugc" },
+});
 
 /** Les extensions de l'éditeur ; `placeholder` : le texte indicatif quand il est vide. */
 export function extensionsEditeur(placeholder = "") {
@@ -36,18 +46,12 @@ export function extensionsEditeur(placeholder = "") {
       code: false,
       codeBlock: false,
       horizontalRule: false,
-      // Un texte rendu cliquable : http ou https seulement, ouvert dans un nouvel onglet ; pas de lien automatique.
-      link: {
-        openOnClick: false,
-        autolink: false,
-        linkOnPaste: false,
-        isAllowedUri: (adresse) => adresseDeLien(adresse),
-        HTMLAttributes: { target: "_blank", rel: "noopener nofollow ugc" },
-      },
+      link: false,
       // Un paragraphe vide ajouté en fin de document n'est pas enregistré : rien à ajouter.
       trailingNode: false,
     }),
     Titre,
+    Lien,
     Citation,
     ElementDeListe,
     Placeholder.configure({ placeholder }),

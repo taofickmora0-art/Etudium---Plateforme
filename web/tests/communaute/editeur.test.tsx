@@ -157,3 +157,44 @@ describe("L'éditeur", () => {
     e.destroy();
   });
 });
+
+describe("Le collage", () => {
+  it("une adresse collée reste du texte : seul le bouton Lien crée un lien (revue de l'étape 1)", () => {
+    // jsdom n'a ni ClipboardEvent ni DataTransfer, dont les règles de collage de Tiptap ont besoin.
+    if (typeof globalThis.DataTransfer === "undefined") {
+      globalThis.DataTransfer = class {
+        private donnees = new Map<string, string>();
+        setData(type: string, valeur: string) {
+          this.donnees.set(type, valeur);
+        }
+        getData(type: string) {
+          return this.donnees.get(type) ?? "";
+        }
+      } as unknown as typeof DataTransfer;
+    }
+    if (typeof globalThis.ClipboardEvent === "undefined") {
+      globalThis.ClipboardEvent = class extends Event {
+        clipboardData: DataTransfer | null;
+        constructor(type: string, init?: ClipboardEventInit) {
+          super(type, init);
+          this.clipboardData = init?.clipboardData ?? null;
+        }
+      } as unknown as typeof ClipboardEvent;
+    }
+    const editor = new Editor({ extensions: extensionsEditeur() });
+    editor.commands.insertContent("Voir https://exemple.com/page. ok", { applyPasteRules: true });
+    expect(versMarkdown(editor.getJSON())).toBe("Voir https://exemple.com/page. ok");
+    editor.destroy();
+  });
+});
+
+describe("Les liens dans l'éditeur", () => {
+  it("un lien se voit comme sur la carte : bleu et souligné (revue de l'étape 1)", async () => {
+    render(<Essai initial="Voir [le programme](https://exemple.com)" surChangement={vi.fn()} />);
+    const champ = await editeur();
+    const lien = await within(champ).findByText("le programme");
+    expect(lien.closest("a")).toHaveAttribute("href", "https://exemple.com");
+    expect(champ.className).toContain("[&_a]:text-bleu");
+    expect(champ.className).toContain("[&_a]:underline");
+  });
+});

@@ -386,6 +386,8 @@ describe("La vidéo jointe", () => {
     await waitFor(() => expect(actions.publierPublication).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.getAllByText("Publication en ligne")).toHaveLength(2));
     expect(screen.queryByRole("article", { name: "Publication de Koffi Dossou" })).toBeNull();
+    // Elle n'est pas dans le fil affiché : le message dit où la trouver (revue de l'étape 1).
+    expect(screen.getByText("Elle apparaît dans l’espace Académique.")).toBeInTheDocument();
   });
 
   it("sur ordinateur, le fil a une largeur fixe (720 px au plus)", () => {

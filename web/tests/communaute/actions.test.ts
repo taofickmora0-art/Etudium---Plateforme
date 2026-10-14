@@ -264,6 +264,15 @@ describe("Le fil Actualités (0021)", () => {
     expect(faux.de("rpc", "modifier_publication")[0].valeurs).toMatchObject({ p_apercu: VIDEO });
   });
 
+  it("un lien [texte](…) : l'aperçu suit sa vraie adresse, pas le texte affiché (revue de l'étape 1)", async () => {
+    lireApercu.mockResolvedValue(SITE);
+    faux.repondre("rpc.reserver_apercu", { data: { lire: true, actuel: null } });
+    faux.repondre("rpc.publier", { data: { id: ID, statut: "publiee", categorie: null } });
+    await publierPublication(P, "", `[https://etudium.bj/connexion](${U})`, null);
+    expect(faux.de("rpc", "reserver_apercu")[0].valeurs).toEqual({ p_publication: null, p_parcours: P, p_adresse: U });
+    expect(lireApercu).toHaveBeenCalledWith(U);
+  });
+
   it("un site : la page n'est lue qu'après la réservation (droits, limites) ; refusée : rien n'est lu ni publié", async () => {
     lireApercu.mockResolvedValue(SITE);
     faux.repondre("rpc.reserver_apercu", { data: { lire: true, actuel: null } });

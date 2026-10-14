@@ -182,8 +182,9 @@ export function PageCommunaute({
                 analyseActive={analyseActive}
                 // Une nouvelle publication s'ajoute au fil affiché s'il la contient (pas « Mes enregistrements », ni un autre espace).
                 onPubliee={(p) => {
-                  if (tri === "enregistrees" || (onglet !== ACTUALITES && (p.espace.id ?? "general") !== onglet)) return;
+                  if (tri === "enregistrees" || (onglet !== ACTUALITES && (p.espace.id ?? "general") !== onglet)) return false;
                   setLot((actuel) => ({ ...actuel, publications: [p, ...actuel.publications] }));
+                  return true;
                 }}
               />
               <MenuTri valeur={tri} onChange={changerTri} />

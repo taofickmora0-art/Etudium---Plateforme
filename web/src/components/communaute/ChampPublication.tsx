@@ -57,7 +57,8 @@ export function ChampPublication({
   moi: MoiCommunaute;
   /** Migration 0020 : les publications sont analysées par l'IA. */
   analyseActive?: boolean;
-  onPubliee: (publication: Publication) => void;
+  /** Rend vrai si la publication entre dans le fil affiché (sinon, le message dit dans quel espace la trouver). */
+  onPubliee: (publication: Publication) => boolean;
 }) {
   const { toast } = useToast();
   const idEspace = useId();
@@ -158,7 +159,7 @@ export function ChampPublication({
         setErreur(resultat.message);
         return;
       }
-      onPubliee({
+      const dansLeFil = onPubliee({
         id: resultat.id,
         auteur: { prenom: moi.prenom, nom: moi.nom, role: null },
         estMoi: true,
@@ -184,7 +185,11 @@ export function ChampPublication({
       toast(
         resultat.statut === "en_attente"
           ? { tone: "information", title: "Publication envoyée", description: "Elle paraîtra après vérification par l’équipe Étudium." }
-          : { tone: "reussite", title: "Publication en ligne", description: "Elle apparaît en haut du fil." },
+          : {
+              tone: "reussite",
+              title: "Publication en ligne",
+              description: dansLeFil ? "Elle apparaît en haut du fil." : `Elle apparaît dans l’espace ${cible.id ? cible.nomCourt : "Général"}.`,
+            },
       );
     } finally {
       setEnvoi(false);
