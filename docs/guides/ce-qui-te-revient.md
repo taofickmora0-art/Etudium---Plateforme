@@ -340,8 +340,8 @@ Pas de migration pour cette tâche : il faut seulement que la 0003 à la 0009 so
    - **Rôle** : **Changer le rôle** → **Formateur** → **Changer le rôle**, puis « Rôle changé ». Sa fiche formateur est créée à son nom (depuis la migration 0017 ; avant, il fallait choisir une fiche) ;
    - la fiche formateur apparaît avec son lien ; Back-office → **Formateurs** : elle y est ;
    - dans la fenêtre privée, rond de profil : **Espace formateur** apparaît ;
-   - décoche **Formateur** et enregistre : la fiche reste dans Formateurs, sans compte relié.
-5. Sur ta propre fiche : pas de bouton **Suspendre**. Décoche **Super admin** et enregistre : la base refuse avec « Vous ne pouvez pas vous retirer le rôle super admin. ».
+   - **Changer le rôle** → **Étudiant** : la fiche reste dans Formateurs, sans compte relié ; redonne-lui ensuite **Formateur**, il la retrouve.
+5. Sur ta propre fiche : pas de bouton **Suspendre**. **Changer le rôle** → **Admin** : la base refuse avec « Vous ne pouvez pas vous retirer le rôle super admin. ».
 6. Sur le compte de test, **Suspendre le compte** (depuis sa fiche, ou le menu **⋮** de sa ligne), avec le motif « Test » :
    - la fenêtre dit « Suspendre ce compte ? » ; le message « Compte suspendu » s’affiche, et sa ligne passe à **Suspendu** ;
    - la fiche affiche « Suspendu depuis le … , par » ton nom, et le motif ;

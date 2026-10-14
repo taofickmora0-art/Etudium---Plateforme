@@ -6,7 +6,10 @@ import { Banner } from "@/components/ui/Banner";
 export const RACINE_FORMATEUR = { label: "Espace formateur", href: "/formateur" };
 export const MES_FORMATIONS = { label: "Mes formations", href: "/formateur/formations" };
 
-/** Compte formateur sans fiche reliée par le super admin (page Utilisateurs) : il ne peut rien créer. */
+/**
+ * Compte formateur sans fiche : il ne peut rien créer. Depuis la migration 0017, donner le rôle Formateur crée sa fiche ;
+ * ce bandeau ne reste possible qu'avant elle, ou si une fiche a été supprimée.
+ */
 export function SansFiche() {
   return <Banner tone="attention" title="Votre compte n’est pas encore relié à une fiche formateur. Contactez l’équipe Étudium." />;
 }

@@ -161,9 +161,13 @@ Relance l’application si elle tournait déjà (**Ctrl+C**, puis `npm --prefix 
 
 ### Devenir super-administrateur (tâche 0.6)
 
-Ton compte doit avoir été créé (étape 8). Ensuite : **SQL Editor → New query**, remplace l’adresse par la tienne (majuscules ou minuscules, peu importe), puis **Run** :
+Ton compte doit avoir été créé (étape 8). Ensuite : **SQL Editor → New query**, remplace l’adresse par la tienne (aux deux endroits ; majuscules ou minuscules, peu importe), puis **Run**. Un compte n’a qu’un rôle en plus d’étudiant (migration 0017) : la première instruction retire celui qu’il aurait déjà.
 
 ```sql
+delete from public.roles
+where role <> 'etudiant'
+  and profil_id = (select id from auth.users where lower(email) = lower('ton.adresse@exemple.com'));
+
 insert into public.roles (profil_id, role)
 select id, 'super_admin'::public.role_etudium
 from auth.users
@@ -183,15 +187,15 @@ join auth.users u on u.id = r.profil_id
 order by 1;
 ```
 
-Recharge ensuite la page de l’application : le menu du profil montre **« Espace formateur »** et **« Back-office »**.
+Recharge ensuite la page de l’application : le menu du profil montre **« Back-office »**. Pas d’« Espace formateur » : un compte de l’équipe n’a jamais cet espace, il gère toutes les formations depuis le back-office (migration 0017).
 
-Jusqu’au back-office (lot 6), les rôles se donnent ici, dans l’éditeur SQL. Depuis l’application, la base refuse à quiconque n’est pas super-administrateur d’attribuer ou de retirer un rôle.
+Les autres rôles se donnent ensuite dans l’application : Back-office → **Utilisateurs** → menu **⋮** d’un compte → **Changer le rôle**. La base refuse à quiconque n’est pas super-administrateur d’attribuer ou de retirer un rôle.
 
 **Valider la tâche 0.6 :**
 
 1. Déconnecte-toi (ou ouvre une fenêtre de navigation privée), puis crée un second compte, étudiant, avec une autre adresse (une adresse de ton équipe Supabase tant que Resend n’est pas branché).
 2. Avec ce compte, tape http://localhost:3000/admin : après un court instant, tu reviens sur l’accueil, et le menu du profil ne montre ni « Espace formateur » ni « Back-office ».
-3. Avec ton compte : `/admin` et `/formateur` s’ouvrent, et le menu du profil coche l’espace où tu te trouves.
+3. Avec ton compte : `/admin` s’ouvre, et le menu du profil coche l’espace où tu te trouves. `/formateur` te ramène à l’accueil : c’est l’espace des comptes formateurs.
 
 ---
 

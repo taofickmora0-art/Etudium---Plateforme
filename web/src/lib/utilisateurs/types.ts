@@ -30,8 +30,7 @@ export type CompteDetail = Omit<CompteResume, "suspendu"> & {
 /** Une lecture qui dépend de la migration 0013 : sans elle, la page le dit au lieu d'échouer. */
 export type Lecture<T> = { migrationAbsente: true } | { migrationAbsente: false; donnees: T };
 
-/** La fiche formateur à relier en donnant le rôle Formateur : une fiche libre, ou une nouvelle à son nom. */
-
+/** Le résultat d'une action : son refus est affiché tel quel. */
 export type Resultat = { ok: boolean; message?: string };
 
 /** Une remarque d'un formateur sur ce compte (migration 0015), lue par l'équipe. */

@@ -78,6 +78,17 @@ describe("Un seul rôle en plus d'étudiant", () => {
     await expect(banc.db.query("insert into public.roles (profil_id, role) values ($1, 'formateur')", [D])).rejects.toThrow(UN_SEUL);
   });
 
+  it("même sans le déclencheur (deux demandes simultanées), un index unique garantit un seul rôle", async () => {
+    const C = randomUUID();
+    await banc.creerCompte(C, ["formateur"]);
+    await banc.db.exec("alter table public.roles disable trigger roles_un_seul");
+    try {
+      await expect(banc.db.query("insert into public.roles (profil_id, role) values ($1, 'admin')", [C])).rejects.toThrow(/roles_un_seul_role/);
+    } finally {
+      await banc.db.exec("alter table public.roles enable trigger roles_un_seul");
+    }
+  });
+
   it("changer_role Formateur : sa fiche est créée à son nom, il crée une formation tout de suite ; « Vous êtes formateur »", async () => {
     const C = randomUUID();
     await banc.creerCompte(C);

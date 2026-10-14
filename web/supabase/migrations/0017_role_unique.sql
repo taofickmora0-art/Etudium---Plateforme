@@ -10,8 +10,9 @@ begin;
 
 -- ─── La fiche garde le compte qui l'a eue ───────────────────────────────────────────────────────────
 -- Un compte qui perd le rôle Formateur est détaché de sa fiche (ses formations y restent) ; s'il redevient formateur,
--- il la retrouve. Aucun droit pour les comptes sur cette colonne (0013 n'accorde que nom, titre, domaine…).
+-- il la retrouve. Les comptes ne l'écrivent pas (0013 n'accorde que nom, titre, domaine…) ; elle se lit comme compte_id.
 alter table public.formateurs add column if not exists compte_precedent uuid references public.profils (id) on delete set null;
+create index if not exists formateurs_compte_precedent_idx on public.formateurs (compte_precedent);
 
 -- ─── Remise en ordre des comptes existants ──────────────────────────────────────────────────────────
 -- Un compte qui a plusieurs rôles en plus d'étudiant garde le plus élevé (ordre du type : formateur, modérateur, admin,
@@ -33,7 +34,10 @@ join public.profils p on p.id = r.profil_id
 where r.role = 'formateur' and not exists (select 1 from public.formateurs f where f.compte_id = p.id);
 
 -- ─── Un seul rôle en plus d'étudiant, vérifié par la base ───────────────────────────────────────────
--- Même une insertion directe (éditeur SQL) est refusée.
+-- L'index unique le garantit en toutes circonstances, même pour deux demandes simultanées ; le déclencheur, avant lui,
+-- donne un message lisible. Même une insertion directe (éditeur SQL) est refusée.
+create unique index if not exists roles_un_seul_role on public.roles (profil_id) where role <> 'etudiant';
+
 create or replace function public.roles_un_seul()
 returns trigger
 language plpgsql

@@ -87,7 +87,6 @@ describe("Lecture des comptes", () => {
     expect(faux.appels).toEqual([]);
   });
 
-
   it("les remarques des formateurs sur un compte (migration 0015)", async () => {
     faux.repondre("rpc.remarques_compte", { data: [{ formateur_nom: "Dr Mireille Adjovi", texte: "Progresse bien.", modifiee_le: "2026-10-13T09:00:00+00:00" }] });
     expect(await lireRemarquesFormateurs(ID)).toEqual({
