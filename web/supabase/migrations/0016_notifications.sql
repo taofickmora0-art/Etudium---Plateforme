@@ -363,6 +363,103 @@ create trigger notifications_reactivation
   after delete on public.suspensions
   for each row execute function public.notifications_reactivation();
 
+-- ─── Annonces de l'équipe ───────────────────────────────────────────────────────────────────────────
+-- Une rubrique du back-office : l'annonce va à tous les comptes (catégorie « Annonces » du profil). Ni lecture ni
+-- écriture directes : tout passe par les deux fonctions ci-dessous, réservées à l'équipe.
+create table if not exists public.annonces (
+  id uuid primary key default gen_random_uuid(),
+  titre text not null,
+  texte text not null,
+  lien text,
+  auteur uuid references public.profils (id) on delete set null,
+  cree_le timestamptz not null default now(),
+  destinataires integer not null default 0,
+  constraint annonces_titre_longueur check (char_length(titre) between 1 and 80),
+  constraint annonces_texte_longueur check (char_length(texte) between 1 and 300),
+  -- Une adresse du site : « / » d'abord, jamais « // » (autre site), ni espace ni barre oblique inversée.
+  constraint annonces_lien check (
+    lien is null or (lien ~ '^/' and lien !~ '^//' and lien !~ '[[:space:]\\]' and char_length(lien) <= 300)
+  )
+);
+alter table public.annonces enable row level security;
+revoke all on public.annonces from anon, authenticated;
+
+-- Rend le nombre de comptes qui la reçoivent (tous, sauf son auteur et ceux qui ont coupé les annonces).
+create or replace function public.publier_annonce(p_titre text, p_texte text, p_lien text default null)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_titre text := regexp_replace(coalesce(p_titre, ''), '^\s+|\s+$', '', 'g');
+  v_texte text := regexp_replace(coalesce(p_texte, ''), '^\s+|\s+$', '', 'g');
+  v_lien text := nullif(regexp_replace(coalesce(p_lien, ''), '^\s+|\s+$', '', 'g'), '');
+  v_annonce uuid;
+  v_nombre integer;
+begin
+  if not public.equipe_contenus() then
+    raise exception 'Accès réservé à l’équipe.' using errcode = '42501';
+  end if;
+  if char_length(v_titre) not between 1 and 80 then
+    raise exception 'Écrivez un titre (80 caractères au plus).';
+  end if;
+  if char_length(v_texte) not between 1 and 300 then
+    raise exception 'Écrivez le texte de l’annonce (300 caractères au plus).';
+  end if;
+  if v_lien is not null
+     and not (v_lien ~ '^/' and v_lien !~ '^//' and v_lien !~ '[[:space:]\\]' and char_length(v_lien) <= 300) then
+    raise exception 'Le lien doit être une adresse du site, commençant par « / ».';
+  end if;
+
+  insert into public.annonces (titre, texte, lien, auteur)
+  values (v_titre, v_texte, v_lien, (select auth.uid()))
+  returning id into v_annonce;
+  v_nombre := public.notifier(array(select id from public.profils), 'annonces', v_titre, v_texte, v_lien);
+  update public.annonces set destinataires = v_nombre where id = v_annonce;
+  return v_nombre;
+end;
+$$;
+
+-- Les 100 dernières, des plus récentes aux plus anciennes, avec le nom de leur auteur.
+create or replace function public.annonces_equipe()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.equipe_contenus() then
+    raise exception 'Accès réservé à l’équipe.' using errcode = '42501';
+  end if;
+  return coalesce((
+    select jsonb_agg(
+      jsonb_build_object(
+        'id', a.id,
+        'titre', a.titre,
+        'texte', a.texte,
+        'lien', a.lien,
+        'auteur', case
+          when p.id is null then 'Compte supprimé'
+          else coalesce(nullif(btrim(coalesce(p.prenom, '') || ' ' || coalesce(p.nom, '')), ''), 'Membre de l’équipe')
+        end,
+        'cree_le', a.cree_le,
+        'destinataires', a.destinataires
+      )
+      order by a.cree_le desc, a.id
+    )
+    from (select * from public.annonces order by cree_le desc, id limit 100) a
+    left join public.profils p on p.id = a.auteur
+  ), '[]'::jsonb);
+end;
+$$;
+
+revoke execute on function public.publier_annonce(text, text, text) from public, anon;
+revoke execute on function public.annonces_equipe() from public, anon;
+grant execute on function public.publier_annonce(text, text, text) to authenticated;
+grant execute on function public.annonces_equipe() to authenticated;
+
 revoke execute on function public.notifier(uuid[], text, text, text, text) from public, anon, authenticated;
 revoke execute on function public.suiveurs_formation(uuid) from public, anon, authenticated;
 revoke execute on function public.membres_equipe() from public, anon, authenticated;

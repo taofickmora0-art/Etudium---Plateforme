@@ -340,3 +340,58 @@ describe("Les événements qui notifient", () => {
     expect((await banc.db.query("select id from public.profils where id = $1", [R5])).rows).toEqual([]);
   });
 });
+
+describe("Les annonces", () => {
+  type AnnonceLue = { id: string; titre: string; texte: string; lien: string | null; auteur: string; cree_le: string; destinataires: number };
+  const publier = (qui: string, titre: string, texte: string, lien: string | null = null) =>
+    banc.en<{ n: number }>({ id: qui }, "select public.publier_annonce($1, $2, $3) as n", [titre, texte, lien]);
+  const LIEN_REFUSE = /Le lien doit être une adresse du site, commençant par « \/ »\./;
+
+  beforeAll(async () => {
+    await banc.db.query("update public.profils set prenom = 'Aïcha', nom = 'Kpadé' where id = $1", [A]);
+  });
+
+  it("une annonce : tous les comptes sauf son auteur et ceux qui ont coupé les annonces ; nombre rendu et gardé", async () => {
+    await preferences(E1, { annonces: false });
+    const comptes = Number((await banc.db.query<{ n: number }>("select count(*)::int as n from public.profils")).rows[0].n);
+    const [{ n }] = await publier(A, "  Nouveautés d’octobre  ", "La page Notifications est en ligne.", "/notifications");
+    expect(n).toBe(comptes - 2);
+    expect(await recues(E2)).toEqual([{ categorie: "annonces", titre: "Nouveautés d’octobre", texte: "La page Notifications est en ligne.", lien: "/notifications" }]);
+    expect(await recues(E1)).toEqual([]);
+    expect(await recues(A)).toEqual([]);
+    const [gardee] = (await banc.db.query<{ titre: string; destinataires: number; auteur: string }>("select titre, destinataires, auteur from public.annonces order by cree_le desc limit 1")).rows;
+    expect(gardee).toEqual({ titre: "Nouveautés d’octobre", destinataires: comptes - 2, auteur: A });
+  });
+
+  it("refusée à un étudiant et à un formateur", async () => {
+    const FO = randomUUID();
+    await banc.creerCompte(FO, ["formateur"]);
+    for (const qui of [E1, FO]) await expect(publier(qui, "Titre", "Texte")).rejects.toThrow("Accès réservé à l’équipe.");
+  });
+
+  it("titre, texte et lien vérifiés ; https://…, //site.com, javascript:… refusés ; / et /formations/excel acceptés", async () => {
+    for (const titre of ["   ", "t".repeat(81)]) await expect(publier(A, titre, "Texte")).rejects.toThrow("Écrivez un titre (80 caractères au plus).");
+    for (const texte of ["", "x".repeat(301)]) await expect(publier(A, "Titre", texte)).rejects.toThrow("Écrivez le texte de l’annonce (300 caractères au plus).");
+    for (const lien of ["https://site.com", "//site.com", "javascript:alert(1)", "/a b", "/\\site.com", "formations"]) {
+      await expect(publier(A, "Titre", "Texte", lien)).rejects.toThrow(LIEN_REFUSE);
+    }
+    for (const lien of ["/", "/formations/excel"]) await publier(A, "Titre", "Texte", lien);
+    await publier(A, "Sans lien", "Texte", "   ");
+    const liens = (await banc.db.query<{ lien: string | null }>("select lien from public.annonces where titre in ('Titre', 'Sans lien') order by cree_le")).rows.map((r) => r.lien);
+    expect(liens).toEqual(["/", "/formations/excel", null]);
+  });
+
+  it("annonces_equipe : la liste avec l'auteur ; refusée à un étudiant ; la table n'est pas lisible directement", async () => {
+    const T = randomUUID();
+    await banc.creerCompte(T, ["admin"]);
+    await publier(T, "D’un compte supprimé", "Texte");
+    await banc.db.query("delete from auth.users where id = $1", [T]);
+    await publier(A, "La plus récente", "Texte", "/accueil");
+    const [{ r }] = await banc.en<{ r: AnnonceLue[] }>({ id: S }, "select public.annonces_equipe() as r");
+    expect(Object.keys(r[0]).sort()).toEqual(["auteur", "cree_le", "destinataires", "id", "lien", "texte", "titre"]);
+    expect(r[0]).toMatchObject({ titre: "La plus récente", auteur: "Aïcha Kpadé", lien: "/accueil" });
+    expect(r[1]).toMatchObject({ titre: "D’un compte supprimé", auteur: "Compte supprimé" });
+    await expect(banc.en({ id: E1 }, "select public.annonces_equipe()")).rejects.toThrow("Accès réservé à l’équipe.");
+    await expect(banc.en({ id: A }, "select * from public.annonces")).rejects.toThrow(REFUS);
+  });
+});
