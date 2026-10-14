@@ -23,6 +23,7 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
       ["Formations", "/admin/formations"],
       ["Avis", "/admin/avis"],
       ["Utilisateurs", "/admin/utilisateurs"],
+      ["Annonces", "/admin/annonces"],
       ["Abonnements et paiements", "/admin/paiements"],
       ["Modération", "/admin/moderation"],
     ]);

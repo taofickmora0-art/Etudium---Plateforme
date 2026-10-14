@@ -11,6 +11,7 @@ import {
   GiftIcon,
   HelpCircleIcon,
   Home03Icon,
+  Megaphone01Icon,
   Route01Icon,
   Search01Icon,
   Shield01Icon,
@@ -115,6 +116,7 @@ export const MENUS: Record<Espace, { libelle: string; groupes: GroupeNav[] }> = 
         titre: "Plateforme",
         entrees: [
           { href: "/admin/utilisateurs", label: "Utilisateurs", icon: UserMultipleIcon },
+          { href: "/admin/annonces", label: "Annonces", icon: Megaphone01Icon },
           { href: "/admin/paiements", label: "Abonnements et paiements", icon: CreditCardIcon },
           { href: "/admin/moderation", label: "Modération", icon: Shield01Icon },
         ],
