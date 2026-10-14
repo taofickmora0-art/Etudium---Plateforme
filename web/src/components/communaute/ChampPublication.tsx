@@ -126,6 +126,9 @@ export function ChampPublication({
         dernieresReponses: [],
         peutSupprimer: true,
         peutSignaler: false,
+        apercu: null,
+        enregistree: false,
+        aimeePar: [],
       });
       setTitre("");
       setTexte("");

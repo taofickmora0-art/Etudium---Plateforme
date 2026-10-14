@@ -72,6 +72,9 @@ const pub = (o: Partial<Publication> = {}): Publication => ({
   peutSupprimer: false,
   statut: "publiee",
   peutSignaler: false,
+  apercu: null,
+  enregistree: false,
+  aimeePar: [],
   ...o,
 });
 const rep = (id: string, texte: string, o: Partial<Reponse> = {}): Reponse => ({
@@ -139,14 +142,14 @@ describe("La page Communauté", () => {
     vi.mocked(actions.chargerFil).mockResolvedValueOnce({ ok: true, lot: lot([pub({ id: "p3", texte: "La plus ancienne", creeLe: "2026-10-10T08:00:00Z" })]) });
     page(lot([pub(), pub({ id: "p2", texte: "Deuxième", creeLe: "2026-10-14T12:00:00Z" })], true));
     await user.click(screen.getByRole("button", { name: "Voir plus" }));
-    expect(actions.chargerFil).toHaveBeenLastCalledWith("tous", { avant: "2026-10-14T12:00:00Z", avantId: "p2" });
+    expect(actions.chargerFil).toHaveBeenLastCalledWith("tous", "recentes", { curseur: { avant: "2026-10-14T12:00:00Z", avantId: "p2" } });
     expect(await screen.findByText("La plus ancienne")).toBeInTheDocument();
     expect(screen.getByText("Deuxième")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Voir plus" })).toBeNull();
 
     vi.mocked(actions.chargerFil).mockResolvedValueOnce({ ok: true, lot: lot([pub({ id: "p9", texte: "Dans Académique" })]) });
     await user.click(onglet("Académique"));
-    expect(actions.chargerFil).toHaveBeenLastCalledWith(P, null);
+    expect(actions.chargerFil).toHaveBeenLastCalledWith(P, "recentes", { curseur: null });
     expect(await screen.findByText("Dans Académique")).toBeInTheDocument();
     expect(screen.queryByText("La plus ancienne")).toBeNull();
     expect(onglet("Académique")).toHaveAttribute("aria-pressed", "true");

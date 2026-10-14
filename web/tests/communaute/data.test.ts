@@ -7,7 +7,7 @@ const faux = fauxSupabase();
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => faux.client }));
 vi.mock("@/lib/auth/current-user", () => ({ demoModeActive: () => false }));
 
-const { lireAnalyseActive, lireEspaces, lireFil, lireMembresActifs, lirePublication } = await import("@/lib/communaute/data");
+const { lireActivites, lireAnalyseActive, lireEspaces, lireFil, lireMembresActifs, lirePublication, lireTendances } = await import("@/lib/communaute/data");
 
 const ID = "11111111-1111-4111-8111-111111111111";
 const P = "22222222-2222-4222-8222-222222222222";
@@ -47,6 +47,9 @@ const CONVERTIE = {
   ],
   peutSupprimer: false,
   peutSignaler: false,
+  apercu: null,
+  enregistree: false,
+  aimeePar: [],
 };
 
 beforeEach(() => faux.vider());
@@ -71,11 +74,11 @@ describe("Lectures de la communauté", () => {
   it("le fil : conversion, curseur transmis, un seul appel de liens temporaires pour les fichiers", async () => {
     faux.repondre("rpc.fil_communaute", { data: { publications: [BRUTE, { ...BRUTE, id: "b", piece_jointe: null }], suite: true } });
     faux.repondre("storage.communaute.createSignedUrls", { data: [{ path: CHEMIN, signedUrl: "https://stockage/affiche.png?jeton", error: null }] });
-    expect(await lireFil("tous", { avant: "2026-10-14T09:00:00Z", avantId: ID })).toEqual({
+    expect(await lireFil("tous", "recentes", { curseur: { avant: "2026-10-14T09:00:00Z", avantId: ID } })).toEqual({
       migrationAbsente: false,
       donnees: { publications: [CONVERTIE, { ...CONVERTIE, id: "b", pieceJointe: null }], suite: true },
     });
-    expect(faux.de("rpc", "fil_communaute")[0].valeurs).toEqual({ p_espace: "tous", p_avant: "2026-10-14T09:00:00Z", p_avant_id: ID, p_nombre: 20 });
+    expect(faux.de("rpc", "fil_communaute")[0].valeurs).toEqual({ p_espace: "tous", p_tri: "recentes", p_avant: "2026-10-14T09:00:00Z", p_avant_id: ID, p_page: 0, p_nombre: 20 });
     expect(faux.de("storage.communaute", "createSignedUrls")).toHaveLength(1);
     expect(faux.de("storage.communaute", "createSignedUrls")[0].valeurs).toEqual([[CHEMIN], 3600]);
   });
@@ -114,5 +117,45 @@ describe("Lectures de la communauté", () => {
     expect(await lireEspaces()).toEqual({ migrationAbsente: true });
     faux.repondre("rpc.fil_communaute", { error: { code: "500", message: "panne" } });
     await expect(lireFil("tous")).rejects.toThrow();
+  });
+
+  it("fil Actualités (0021) : aperçu, signet, initiales ; tri et page transmis ; avant la 0021, l'ancien fil", async () => {
+    faux.repondre("rpc.fil_communaute", {
+      data: {
+        publications: [
+          { ...BRUTE, piece_jointe: null, apercu: { type: "youtube", id: "dQw4w9WgXcQ" }, enregistree: true, aimee_par: ["KD", "MA"] },
+          { ...BRUTE, id: "b", piece_jointe: null, apercu: { type: "lien", url: "https://meet.google.com/x", titre: "Google Meet", description: "Vidéo", image: null } },
+          { ...BRUTE, id: "c", piece_jointe: null, apercu: { type: "autre" } },
+        ],
+        suite: false,
+      },
+    });
+    const lecture = await lireFil(P, "populaires", { page: 2 });
+    const publications = lecture.migrationAbsente ? [] : lecture.donnees.publications;
+    expect(publications.map((p) => [p.apercu, p.enregistree, p.aimeePar])).toEqual([
+      [{ type: "youtube", id: "dQw4w9WgXcQ" }, true, ["KD", "MA"]],
+      [{ type: "lien", url: "https://meet.google.com/x", titre: "Google Meet", description: "Vidéo", image: null }, false, []],
+      [null, false, []],
+    ]);
+    expect(faux.de("rpc", "fil_communaute")[0].valeurs).toEqual({ p_espace: P, p_tri: "populaires", p_avant: null, p_avant_id: null, p_page: 2, p_nombre: 20 });
+    faux.vider();
+    let appel = 0;
+    faux.repondre("rpc.fil_communaute", () => (++appel === 1 ? { error: { code: "PGRST202" } } : { data: { publications: [], suite: false } }));
+    expect(await lireFil("general")).toEqual({ migrationAbsente: false, donnees: { publications: [], suite: false } });
+    expect(faux.de("rpc", "fil_communaute")[1].valeurs).toEqual({ p_espace: "tous", p_avant: null, p_avant_id: null, p_nombre: 20 });
+  });
+
+  it("tendances et activités : converties ; avant la 0021 : migrationAbsente", async () => {
+    faux.repondre("rpc.publications_tendances", { data: [{ id: ID, extrait: "Mon mémoire est validé !", auteur: { nom_court: "Fifamè A.", initiales: "FA", equipe: false } }] });
+    expect(await lireTendances()).toEqual({ migrationAbsente: false, donnees: [{ id: ID, extrait: "Mon mémoire est validé !", auteur: { nomCourt: "Fifamè A.", initiales: "FA", equipe: false } }] });
+    faux.repondre("rpc.activites_recentes", {
+      data: [{ type: "commentaire", publication_id: ID, auteur: { nom_court: "Koffi D.", initiales: "KD" }, extrait: "Bonjour", cree_le: "2026-10-14T10:00:00Z" }],
+    });
+    expect(await lireActivites()).toEqual({
+      migrationAbsente: false,
+      donnees: [{ type: "commentaire", publicationId: ID, auteur: { nomCourt: "Koffi D.", initiales: "KD" }, extrait: "Bonjour", creeLe: "2026-10-14T10:00:00Z" }],
+    });
+    faux.repondre("rpc.publications_tendances", { error: { code: "PGRST202" } });
+    expect(await lireTendances()).toEqual({ migrationAbsente: true });
   });
 });

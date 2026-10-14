@@ -13,8 +13,10 @@ vi.mock("next/cache", () => ({ refresh: () => refresh() }));
 const configuration = vi.fn();
 const analyserPublication = vi.fn();
 vi.mock("@/lib/moderation/analyse", () => ({ configurationModeration: () => configuration(), analyserPublication: (...a: unknown[]) => analyserPublication(...a) }));
+const apercuDuTexte = vi.fn();
+vi.mock("@/lib/communaute/apercu", () => ({ apercuDuTexte: (...a: unknown[]) => apercuDuTexte(...a) }));
 
-const { aimer, chargerFil, chargerReponses, modifierPublication, publierPublication, repondre, signaler, supprimerPublication, supprimerReponse } = await import(
+const { aimer, basculerEnregistrement, chargerFil, chargerReponses, modifierPublication, publierPublication, repondre, signaler, supprimerPublication, supprimerReponse } = await import(
   "@/lib/communaute/actions"
 );
 const { messageBloquee } = await import("@/lib/moderation/regles");
@@ -31,6 +33,7 @@ beforeEach(() => {
   getShellUser.mockResolvedValue({ id: "moi", prenom: "Koffi", nom: "Dossou", roles: ["etudiant"] });
   configuration.mockReset().mockReturnValue(null);
   analyserPublication.mockReset();
+  apercuDuTexte.mockReset().mockResolvedValue(null);
 });
 
 describe("Publier", () => {
@@ -95,7 +98,8 @@ describe("Modifier, supprimer, répondre, aimer", () => {
     expect(await supprimerReponse(R)).toEqual({ ok: true });
     expect(faux.de("rpc", "supprimer_commentaire")[0].valeurs).toEqual({ p_id: R });
     faux.repondre("rpc.fil_communaute", { data: { publications: [], suite: false } });
-    expect(await chargerFil(P, null)).toEqual({ ok: true, lot: { publications: [], suite: false } });
+    expect(await chargerFil(P, "populaires", { page: 1 })).toEqual({ ok: true, lot: { publications: [], suite: false } });
+    expect(faux.de("rpc", "fil_communaute")[0].valeurs).toMatchObject({ p_espace: P, p_tri: "populaires", p_page: 1 });
   });
 
   it("chargerReponses : toutes les réponses d'une publication ; disparue : le message", async () => {
@@ -234,5 +238,34 @@ describe("Avec la modération (migration 0020)", () => {
     expect(faux.de("rpc", "signaler")[0].valeurs).toEqual({ p_publication: null, p_commentaire: R, p_motif: "harcelement", p_precisions: "" });
     getShellUser.mockResolvedValue(null);
     expect(await signaler({ publicationId: ID }, "spam", "")).toEqual({ ok: false, message: SESSION_EXPIREE });
+  });
+});
+
+describe("Le fil Actualités (0021)", () => {
+  const VIDEO = { type: "youtube", id: "dQw4w9WgXcQ" };
+
+  it("publier et modifier : l'aperçu du texte transmis ; avant la 0021, sans aperçu", async () => {
+    apercuDuTexte.mockResolvedValue(VIDEO);
+    faux.repondre("rpc.publier", { data: { id: ID, statut: "publiee", categorie: null } });
+    expect(await publierPublication(null, "", "Regardez https://youtu.be/dQw4w9WgXcQ", null)).toEqual({ ok: true, id: ID, statut: "publiee" });
+    expect(apercuDuTexte).toHaveBeenCalledWith("Regardez https://youtu.be/dQw4w9WgXcQ");
+    expect(faux.de("rpc", "publier")[0].valeurs).toMatchObject({ p_apercu: VIDEO });
+    faux.vider();
+    let appel = 0;
+    faux.repondre("rpc.publier", () => (++appel === 1 ? { error: { code: "PGRST202" } } : { data: ID }));
+    expect(await publierPublication(null, "", "Regardez https://youtu.be/dQw4w9WgXcQ", null)).toEqual({ ok: true, id: ID, statut: "publiee" });
+    expect(faux.de("rpc", "publier")[1].valeurs).not.toHaveProperty("p_apercu");
+    faux.vider();
+    faux.repondre("rpc.modifier_publication", { data: { statut: "publiee", categorie: null } });
+    expect(await modifierPublication(ID, "", "https://youtu.be/dQw4w9WgXcQ")).toEqual({ ok: true, statut: "publiee" });
+    expect(faux.de("rpc", "modifier_publication")[0].valeurs).toMatchObject({ p_apercu: VIDEO });
+  });
+
+  it("le signet : bascule ; refus de la base affiché", async () => {
+    faux.repondre("rpc.basculer_enregistrement", { data: true });
+    expect(await basculerEnregistrement(ID)).toEqual({ ok: true, enregistree: true });
+    expect(faux.de("rpc", "basculer_enregistrement")[0].valeurs).toEqual({ p_publication: ID });
+    faux.repondre("rpc.basculer_enregistrement", { error: { code: "P0001", message: "Cette publication n’existe plus." } });
+    expect(await basculerEnregistrement(ID)).toEqual({ ok: false, message: "Cette publication n’existe plus." });
   });
 });

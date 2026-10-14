@@ -9,14 +9,16 @@ import { analyserPublication, configurationModeration } from "@/lib/moderation/a
 import { messageBloquee, refusSignalement } from "@/lib/moderation/regles";
 import { MOTIFS, type ContenuAnalyse, type MotifSignalement, type Verdict } from "@/lib/moderation/types";
 import { createClient } from "@/lib/supabase/server";
+import { apercuDuTexte } from "./apercu";
 import { lireLot, UUID, versReponse } from "./data";
 import { nomCourt, refusPiece, refusPublication, refusReponse } from "./regles";
-import type { Curseur, FiltreFil, LotPublications, PieceEnvoyee, Reponse } from "./types";
+import type { Apercu, FiltreFil, LotPublications, PieceEnvoyee, Reponse, SuiteFil, TriFil } from "./types";
 
 // Actions de la communauté (spec, §2 à §4). La base revérifie tout (migration 0019) et ses messages (P0001, 42501)
 // sont faits pour être affichés tels quels.
 
 const MIGRATION = "Appliquez la migration 0019 (guide « Ce qui te revient », section 24).";
+const MIGRATION_ACTUALITES = "Appliquez la migration 0021 (guide « Ce qui te revient », section 26).";
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 type Erreur = { code?: string; message?: string };
 type Refus = { ok: false; message: string };
@@ -34,10 +36,10 @@ function message(error: Erreur): string {
   return ECHEC;
 }
 
-/** « Voir plus », ou un changement d'onglet. */
-export async function chargerFil(espace: FiltreFil, suite: Curseur | null): Promise<{ ok: true; lot: LotPublications } | Refus> {
+/** « Voir plus », un changement d'espace ou de tri. */
+export async function chargerFil(espace: FiltreFil, tri: TriFil = "recentes", suite: SuiteFil = {}): Promise<{ ok: true; lot: LotPublications } | Refus> {
   if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
-  const resultat = await lireLot(await createClient(), espace, suite);
+  const resultat = await lireLot(await createClient(), espace, tri, suite);
   if ("error" in resultat) {
     return { ok: false, message: resultat.error && estFonctionAbsente(resultat.error) ? MIGRATION : "Les publications n’ont pas pu être chargées. Réessayez." };
   }
@@ -83,6 +85,19 @@ async function nomDeLEspace(supabase: Client, espaceId: string | null) {
   return String(liste(data).find((e) => e.id === espaceId)?.nom_court ?? "général");
 }
 
+/** L'aperçu de la première adresse du texte (0021), lu pendant l'analyse ; un échec : pas d'aperçu. */
+const lireApercuDuTexte = (texte: string): Promise<Apercu | null> => apercuDuTexte(texte).catch(() => null);
+
+/**
+ * Publier ou modifier avec l'aperçu, transmis seulement s'il y en a un ; avant la 0021 (fonction sans p_apercu),
+ * le même appel sans lui.
+ */
+async function avecApercu(supabase: Client, fonction: string, parametres: Record<string, unknown>, apercu: Apercu | null) {
+  if (!apercu) return supabase.rpc(fonction, parametres);
+  const reponse = await supabase.rpc(fonction, { ...parametres, p_apercu: apercu });
+  return reponse.error && estFonctionAbsente(reponse.error) ? supabase.rpc(fonction, parametres) : reponse;
+}
+
 /** Le résultat de publier ou modifier : l'id (absent pour modifier), le statut, la catégorie d'un blocage. */
 function lireResultat(data: unknown): { id: string; statut: string; categorie: string | null } {
   // Avant la 0020, publier rend l'id seul.
@@ -108,6 +123,7 @@ export async function publierPublication(
   if (refus) return { ok: false, message: refus };
   const supabase = await createClient();
   const parcours = espaceId && UUID.test(espaceId) ? espaceId : null;
+  const apercu = lireApercuDuTexte(texte.trim());
   const reglage = await moderation(supabase);
   const pieceEnvoyee = piece ? { chemin: piece.chemin, nom: piece.nom, type: piece.type, taille: piece.taille } : null;
   let analyse: Record<string, unknown> | null = null;
@@ -140,13 +156,12 @@ export async function publierPublication(
     // Sans verdict (clé refusée, refus de l'IA), la base met la publication en attente de l'équipe.
     analyse = verdict ? { jeton: reglage.config.jeton, ...verdict, objet } : null;
   }
-  const { data, error } = await supabase.rpc("publier", {
-    p_parcours: parcours,
-    p_titre: titre.trim(),
-    p_texte: texte.trim(),
-    p_piece: pieceEnvoyee,
-    ...(reglage ? { p_analyse: analyse } : {}),
-  });
+  const { data, error } = await avecApercu(
+    supabase,
+    "publier",
+    { p_parcours: parcours, p_titre: titre.trim(), p_texte: texte.trim(), p_piece: pieceEnvoyee, ...(reglage ? { p_analyse: analyse } : {}) },
+    await apercu,
+  );
   if (error) {
     if (piece) await supabase.storage.from("communaute").remove([piece.chemin]);
     return { ok: false, message: message(error) };
@@ -164,6 +179,7 @@ export async function modifierPublication(id: string, titre: string, texte: stri
   const refus = refusPublication(titre, texte);
   if (refus) return { ok: false, message: refus };
   const supabase = await createClient();
+  const apercu = lireApercuDuTexte(texte.trim());
   const reglage = await moderation(supabase);
   let analyse: Record<string, unknown> | null = null;
   if (reglage?.config) {
@@ -175,12 +191,12 @@ export async function modifierPublication(id: string, titre: string, texte: stri
     const verdict = await analyserPublication({ titre: titre.trim(), texte: texte.trim(), espace, fichier: null }, reglage.config);
     analyse = verdict ? { jeton: reglage.config.jeton, ...verdict, objet: null } : null;
   }
-  const { data, error } = await supabase.rpc("modifier_publication", {
-    p_id: id,
-    p_titre: titre.trim(),
-    p_texte: texte.trim(),
-    ...(reglage ? { p_analyse: analyse } : {}),
-  });
+  const { data, error } = await avecApercu(
+    supabase,
+    "modifier_publication",
+    { p_id: id, p_titre: titre.trim(), p_texte: texte.trim(), ...(reglage ? { p_analyse: analyse } : {}) },
+    await apercu,
+  );
   if (error) return { ok: false, message: message(error) };
   const resultat = lireResultat(data);
   if (resultat.statut === "bloquee") return { ok: false, message: messageBloquee(resultat.categorie) };
@@ -266,4 +282,14 @@ export async function aimer(publicationId: string): Promise<{ ok: true; jAime: b
   if (error) return { ok: false, message: message(error) };
   const etat = un(data);
   return { ok: true, jAime: etat?.j_aime === true, reactions: Number(etat?.reactions) || 0 };
+}
+
+/** Le signet (0021) : ajoute ou retire la publication des « Enregistrées » du compte. */
+export async function basculerEnregistrement(publicationId: string): Promise<{ ok: true; enregistree: boolean } | Refus> {
+  if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
+  if (!UUID.test(publicationId)) return { ok: false, message: ECHEC };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("basculer_enregistrement", { p_publication: publicationId });
+  if (error) return { ok: false, message: estFonctionAbsente(error) ? MIGRATION_ACTUALITES : message(error) };
+  return { ok: true, enregistree: data === true };
 }

@@ -1,12 +1,29 @@
 import { demoModeActive } from "@/lib/auth/current-user";
-import { estFonctionAbsente, liste, texte, un, type Ligne } from "@/lib/contenus/lecture";
+import { estFonctionAbsente, liste, texte, textes, un, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import type { Lecture } from "@/lib/utilisateurs/types";
 import { NOMBRE_FIL } from "./regles";
-import type { Curseur, Espace, FiltreFil, LotPublications, MembreActif, PieceJointe, Publication, PublicationDetail, Reponse, RoleAuteur, StatutPublication } from "./types";
+import type {
+  Activite,
+  Apercu,
+  Espace,
+  FiltreFil,
+  LotPublications,
+  MembreActif,
+  PieceJointe,
+  Publication,
+  PublicationDetail,
+  Reponse,
+  RoleAuteur,
+  StatutPublication,
+  SuiteFil,
+  Tendance,
+  TriFil,
+} from "./types";
 
-// Lectures de la communauté (migration 0019). La base ne rend que les espaces ouverts au compte, et jamais d'adresse
-// e-mail ; les fichiers joints reçoivent ici un lien temporaire (1 h), demandé en une fois pour tout le lot.
+// Lectures de la communauté (migration 0019 ; fil « Actualités », 0021). La base ne rend que les espaces ouverts au
+// compte, et jamais d'adresse e-mail ; les fichiers joints reçoivent ici un lien temporaire (1 h), demandé en une fois
+// pour tout le lot.
 
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DUREE_LIEN = 3600;
@@ -49,6 +66,14 @@ function versPiece(valeur: unknown): PieceJointe | null {
   return { chemin: texte(p.chemin), nom: texte(p.nom), type: texte(p.type), taille: nombre(p.taille), url: null };
 }
 
+/** L'aperçu rangé par la base (0021) ; toute autre forme est ignorée. */
+function versApercu(valeur: unknown): Apercu | null {
+  const a = un(valeur);
+  if (a?.type === "youtube" && texte(a.id)) return { type: "youtube", id: texte(a.id) };
+  if (a?.type === "lien" && texte(a.url)) return { type: "lien", url: texte(a.url), titre: texte(a.titre), description: texte(a.description), image: texteOuNull(a.image) };
+  return null;
+}
+
 export function versPublication(l: Ligne): Publication {
   const auteur = un(l.auteur);
   const espace = un(l.espace);
@@ -69,6 +94,9 @@ export function versPublication(l: Ligne): Publication {
     dernieresReponses: liste(l.dernieres_reponses).map(versReponse),
     peutSupprimer: l.peut_supprimer === true,
     peutSignaler: l.peut_signaler === true,
+    apercu: versApercu(l.apercu),
+    enregistree: l.enregistree === true,
+    aimeePar: textes(l.aimee_par),
   };
 }
 
@@ -99,24 +127,40 @@ export async function lireEspaces(): Promise<Lecture<Espace[]>> {
   return verifier("des espaces", error) ?? { migrationAbsente: false, donnees: liste(data).map(versEspace) };
 }
 
-/** Lit un lot du fil ; sert aussi à l'action « Voir plus ». */
-export async function lireLot(supabase: Client, espace: FiltreFil, suite?: Curseur | null) {
-  const { data, error } = await supabase.rpc("fil_communaute", {
-    p_espace: espace === "tous" || UUID.test(espace) ? espace : "tous",
-    p_avant: suite?.avant ?? null,
-    p_avant_id: suite && UUID.test(suite.avantId) ? suite.avantId : null,
+const TRIS: TriFil[] = ["recentes", "populaires", "enregistrees"];
+
+/** Lit un lot du fil ; sert aussi à l'action « Voir plus ». Avant la 0021, l'ancien fil (le plus récent d'abord). */
+export async function lireLot(supabase: Client, espace: FiltreFil, tri: TriFil = "recentes", suite: SuiteFil = {}) {
+  const filtre = espace === "tous" || espace === "general" || UUID.test(espace) ? espace : "tous";
+  const curseur = suite.curseur ?? null;
+  const avant = curseur?.avant ?? null;
+  const avantId = curseur && UUID.test(curseur.avantId) ? curseur.avantId : null;
+  let { data, error } = await supabase.rpc("fil_communaute", {
+    p_espace: filtre,
+    p_tri: TRIS.includes(tri) ? tri : "recentes",
+    p_avant: avant,
+    p_avant_id: avantId,
+    p_page: Number.isInteger(suite.page) && (suite.page ?? 0) > 0 ? suite.page : 0,
     p_nombre: NOMBRE_FIL,
   });
+  if (error && estFonctionAbsente(error)) {
+    ({ data, error } = await supabase.rpc("fil_communaute", {
+      p_espace: filtre === "general" ? "tous" : filtre,
+      p_avant: avant,
+      p_avant_id: avantId,
+      p_nombre: NOMBRE_FIL,
+    }));
+  }
   if (error) return { error };
   const brut = un(data);
   const publications = await avecLiens(supabase, liste(brut?.publications).map(versPublication));
   return { lot: { publications, suite: brut?.suite === true } satisfies LotPublications };
 }
 
-/** Le fil d'un onglet, le plus récent d'abord. */
-export async function lireFil(espace: FiltreFil, suite?: Curseur | null): Promise<Lecture<LotPublications>> {
+/** Le fil d'un espace, dans l'ordre du tri. */
+export async function lireFil(espace: FiltreFil, tri: TriFil = "recentes", suite: SuiteFil = {}): Promise<Lecture<LotPublications>> {
   if (demoModeActive()) return { migrationAbsente: false, donnees: { publications: [], suite: false } };
-  const resultat = await lireLot(await createClient(), espace, suite);
+  const resultat = await lireLot(await createClient(), espace, tri, suite);
   if ("error" in resultat) return verifier("du fil", resultat.error ?? null) ?? { migrationAbsente: false, donnees: { publications: [], suite: false } };
   return { migrationAbsente: false, donnees: resultat.lot };
 }
@@ -151,6 +195,44 @@ export async function lireMembresActifs(): Promise<Lecture<MembreActif[]>> {
     verifier("des membres actifs", error) ?? {
       migrationAbsente: false,
       donnees: liste(data).map((m) => ({ prenom: texte(m.prenom), nomCourt: texte(m.nom_court), initiales: texte(m.initiales), espace: texte(m.espace) })),
+    }
+  );
+}
+
+/** Les publications tendances de la colonne de droite (0021). */
+export async function lireTendances(): Promise<Lecture<Tendance[]>> {
+  if (demoModeActive()) return { migrationAbsente: false, donnees: [] };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("publications_tendances");
+  return (
+    verifier("des tendances", error) ?? {
+      migrationAbsente: false,
+      donnees: liste(data).map((l) => {
+        const auteur = un(l.auteur);
+        return { id: texte(l.id), extrait: texte(l.extrait), auteur: { nomCourt: texte(auteur?.nom_court), initiales: texte(auteur?.initiales), equipe: auteur?.equipe === true } };
+      }),
+    }
+  );
+}
+
+/** Les activités récentes de la colonne de droite (0021). */
+export async function lireActivites(): Promise<Lecture<Activite[]>> {
+  if (demoModeActive()) return { migrationAbsente: false, donnees: [] };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("activites_recentes");
+  return (
+    verifier("des activités", error) ?? {
+      migrationAbsente: false,
+      donnees: liste(data).map((l) => {
+        const auteur = un(l.auteur);
+        return {
+          type: l.type === "commentaire" ? "commentaire" : "publication",
+          publicationId: texte(l.publication_id),
+          auteur: { nomCourt: texte(auteur?.nom_court), initiales: texte(auteur?.initiales) },
+          extrait: texte(l.extrait),
+          creeLe: texte(l.cree_le),
+        };
+      }),
     }
   );
 }

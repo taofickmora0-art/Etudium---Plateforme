@@ -54,7 +54,7 @@ export function PageCommunaute({
 
   async function lire(cible: string, depuis: Curseur | null) {
     const numero = ++demande.current;
-    const reponse = await chargerFil(cible, depuis).catch(() => ({ ok: false as const, message: ECHEC }));
+    const reponse = await chargerFil(cible, "recentes", { curseur: depuis }).catch(() => ({ ok: false as const, message: ECHEC }));
     if (numero !== demande.current) return null;
     if (!reponse.ok) {
       setErreur(reponse.message);

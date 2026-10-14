@@ -45,6 +45,9 @@ const pub = (o: Partial<Publication> = {}): Publication => ({
   dernieresReponses: [],
   peutSupprimer: false,
   peutSignaler: true,
+  apercu: null,
+  enregistree: false,
+  aimeePar: [],
   ...o,
 });
 const rep = (o: Partial<Reponse> = {}): Reponse => ({
