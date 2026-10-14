@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Certificate01Icon, CourseIcon, Target02Icon, UserMultipleIcon } from "@hugeicons/core-free-icons";
 import { PageAdmin } from "@/components/admin/PageAdmin";
 import { AVENIR, Carte, GRILLE_CHIFFRES, RANGEE, Tuile } from "@/components/tableau/Blocs";
+import { CarteSessionFormateur } from "@/components/sessions/CarteSessionFormateur";
 import { Avatar } from "@/components/ui/Avatar";
 import { CELLULE_TABLEAU, TableauListe } from "@/components/ui/TableauListe";
 import { Tag } from "@/components/ui/Tag";
@@ -9,6 +10,8 @@ import { ETATS, TON_ETAT } from "@/lib/contenus/etat";
 import { lireMaFiche } from "@/lib/formateur/data";
 import { inactivite } from "@/lib/formateur/regles-suivi";
 import { lireTableauDeBordFormateur } from "@/lib/formateur/suivi";
+import { lireSessionDetail, lireSessionsAnimees } from "@/lib/sessions/data";
+import type { LigneSessionEdition } from "@/lib/sessions/types";
 import { initialesCompte, nomAffiche } from "@/lib/utilisateurs/regles";
 import { MigrationFormateurAbsente, MigrationSuiviAbsente, SansFiche } from "./cadre";
 
@@ -18,8 +21,26 @@ const pourcent = (n: number | null) => (n === null ? "—" : `${n} %`);
 const note = (n: number | null) => (n === null ? "—" : n.toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
 
 /**
+ * La prochaine session programmée du formateur et ses inscrits ; undefined avant la migration 0018 (ou si la lecture
+ * échoue) : la carte reste celle d'avant, le tableau de bord ne casse jamais.
+ */
+async function prochaineSession(): Promise<{ ligne: LigneSessionEdition | null; inscrits: { prenom: string; nom: string }[] } | undefined> {
+  try {
+    const sessions = await lireSessionsAnimees();
+    if (sessions.migrationAbsente) return undefined;
+    const ligne = sessions.donnees.aVenir.find((s) => s.statut === "programmee") ?? null;
+    if (!ligne) return { ligne: null, inscrits: [] };
+    const detail = await lireSessionDetail(ligne.id);
+    return { ligne, inscrits: detail.migrationAbsente || !detail.donnees ? [] : detail.donnees.inscrits };
+  } catch (erreur) {
+    console.error("Lecture des sessions du formateur impossible :", erreur instanceof Error ? erreur.message : erreur);
+    return undefined;
+  }
+}
+
+/**
  * Tableau de bord du formateur (design NdFormateur ; spec « Étudiants » et tableau de bord, §4) : ses chiffres, ses
- * étudiants à risque, ses formations. Exercices, sessions live et questions arrivent aux lots 3 et 5.
+ * étudiants à risque, sa prochaine session live (0018), ses formations. Exercices et questions arrivent aux lots 3 et 5.
  * La page vérifie le rôle avant (requireSpace).
  */
 export async function TableauDeBordFormateur() {
@@ -48,6 +69,7 @@ export async function TableauDeBordFormateur() {
     );
   }
   const t = lecture.donnees;
+  const session = await prochaineSession();
 
   return (
     <PageAdmin {...cadre} description={`Bonjour ${t.prenom || "à vous"}. Voici ce qui demande votre attention aujourd’hui.`}>
@@ -94,9 +116,15 @@ export async function TableauDeBordFormateur() {
         </div>
 
         <div className={RANGEE}>
-          <Carte titre="Prochaine session live" lot={5} className="flex-[1_1_320px]">
-            <div className={AVENIR}>Vos sessions live et leurs inscrits apparaîtront ici.</div>
-          </Carte>
+          {session === undefined ? (
+            <Carte titre="Prochaine session live" lot={5} className="flex-[1_1_320px]">
+              <div className={AVENIR}>Vos sessions live et leurs inscrits apparaîtront ici.</div>
+            </Carte>
+          ) : (
+            <Carte titre="Prochaine session live" className="flex-[1_1_320px]">
+              <CarteSessionFormateur session={session.ligne} inscrits={session.inscrits} />
+            </Carte>
+          )}
           <Carte titre="Question récente" lot={5} className="flex-[1_1_320px]">
             <div className={AVENIR}>Les questions de vos étudiants apparaîtront ici.</div>
           </Carte>

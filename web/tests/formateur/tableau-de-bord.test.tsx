@@ -10,6 +10,11 @@ vi.mock("@/lib/formateur/data", () => ({ lireMaFiche: () => lireMaFiche(), estMa
 const lireTableauDeBordFormateur = vi.fn();
 vi.mock("@/lib/formateur/suivi", () => ({ lireTableauDeBordFormateur: () => lireTableauDeBordFormateur(), lireSuivi: vi.fn(), lireSuiviEtudiant: vi.fn() }));
 
+// La carte « Prochaine session live » lit les sessions du formateur (migration 0018).
+const lireSessionsAnimees = vi.fn();
+const lireSessionDetail = vi.fn();
+vi.mock("@/lib/sessions/data", () => ({ lireSessionsAnimees: () => lireSessionsAnimees(), lireSessionDetail: (...a: unknown[]) => lireSessionDetail(...a) }));
+
 const { TableauDeBordFormateur } = await import("@/components/formateur/TableauDeBordFormateur");
 
 const DONNEES: Donnees = {
@@ -29,6 +34,8 @@ beforeEach(() => {
   lireTableauDeBordFormateur.mockReset();
   lireMaFiche.mockResolvedValue({ migrationAbsente: false, fiche: "fa" });
   lireTableauDeBordFormateur.mockResolvedValue({ migrationAbsente: false, donnees: DONNEES });
+  lireSessionsAnimees.mockReset().mockResolvedValue({ migrationAbsente: true });
+  lireSessionDetail.mockReset();
 });
 
 describe("Tableau de bord du formateur", () => {
@@ -86,6 +93,31 @@ describe("Tableau de bord du formateur", () => {
     expect(screen.getByRole("region", { name: "Exercices à corriger" })).toHaveTextContent("Disponible au lot 3");
     expect(screen.getByRole("region", { name: "Prochaine session live" })).toHaveTextContent("Disponible au lot 5");
     expect(screen.getByRole("region", { name: "Question récente" })).toHaveTextContent("Disponible au lot 5");
+  });
+
+  it("prochaine session live : Dans 2 jours, titre, date, plateforme, initiales, Voir la session", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-22T09:00:00Z"));
+    const session = { id: "s1", titre: "Excel avancé : analyse de données", debut: "2026-10-24T14:00:00Z", dureeMinutes: 60, plateforme: "Google Meet", statut: "programmee", inscriptions: 7, parcours: null, animateur: "Mireille Akpo" };
+    lireSessionsAnimees.mockResolvedValue({ migrationAbsente: false, donnees: { aVenir: [{ ...session, id: "s0", statut: "annulee" }, session], passees: [] } });
+    lireSessionDetail.mockResolvedValue({
+      migrationAbsente: false,
+      donnees: { ...session, description: "", lien: "https://meet.google.com/x", formateurId: "fa", annuleeLe: null, inscrits: [{ prenom: "Rodrigue", nom: "Houngbo" }, { prenom: "Fifamè", nom: "Adjovi" }] },
+    });
+    render(await TableauDeBordFormateur());
+    const carte = screen.getByRole("region", { name: "Prochaine session live" });
+    for (const texte of ["Dans 2 jours", "Excel avancé : analyse de données", "Samedi 24 octobre · 15 h 00", "Google Meet", "RH", "FA"]) expect(within(carte).getByText(texte)).toBeInTheDocument();
+    expect(within(carte).getByRole("link", { name: "Voir la session" })).toHaveAttribute("href", "/formateur/sessions/s1");
+    expect(lireSessionDetail).toHaveBeenCalledWith("s1");
+    vi.useRealTimers();
+  });
+
+  it("aucune session programmée : le message et Nouvelle session", async () => {
+    lireSessionsAnimees.mockResolvedValue({ migrationAbsente: false, donnees: { aVenir: [], passees: [] } });
+    render(await TableauDeBordFormateur());
+    const carte = screen.getByRole("region", { name: "Prochaine session live" });
+    expect(within(carte).getByText("Aucune session programmée.")).toBeInTheDocument();
+    expect(within(carte).getByRole("link", { name: "Nouvelle session" })).toHaveAttribute("href", "/formateur/sessions/nouvelle");
   });
 
   it("sans fiche, avant la 0014 ou la 0015 : les bandeaux", async () => {

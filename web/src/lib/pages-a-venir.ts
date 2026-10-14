@@ -21,7 +21,6 @@ export const PAGES_A_VENIR = {
   "admin/moderation": { titre: "Modération", quand: LOT_5, description: "Les publications et les signalements à examiner s’afficheront ici." },
   // Espace formateur (son propre menu)
   "formateur/corrections": { titre: "Corrections", quand: LOT_4, description: "Les exercices à corriger s’afficheront ici." },
-  "formateur/sessions": { titre: "Sessions live", quand: LOT_5, description: "Vous pourrez organiser vos sessions live et voir les inscrits." },
   "formateur/messages": { titre: "Messages", quand: LOT_5, description: "Vous pourrez écrire à vos étudiants." },
 } satisfies Record<string, { titre: string; quand: string; description: string }>;
 
