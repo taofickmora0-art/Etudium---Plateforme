@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Video01Icon } from "@hugeicons/core-free-icons";
 import { Avatar } from "@/components/ui/Avatar";
 import { IconTile } from "@/components/ui/IconTile";
+import { texteBrut } from "@/lib/communaute/mise-en-forme";
 import { moment } from "@/lib/communaute/regles";
 import type { Activite, Tendance } from "@/lib/communaute/types";
 import { dateSession } from "@/lib/sessions/regles";
@@ -52,7 +53,7 @@ export function ColonneCommunaute({
                   <Link href={`/communaute/publications/${t.id}`} className={LIGNE}>
                     <Avatar initials={t.auteur.equipe ? "É" : t.auteur.initiales} tone={t.auteur.equipe ? "bleu" : tonAvatar(t.auteur.nomCourt)} />
                     <span className="flex min-w-0 flex-col gap-1">
-                      <span className="line-clamp-3 text-sm leading-[21px] wrap-anywhere text-encre">{t.extrait}</span>
+                      <span className="line-clamp-3 text-sm leading-[21px] wrap-anywhere text-encre">{texteBrut(t.extrait)}</span>
                       <span className="text-xs leading-[17px] text-discret">{t.auteur.nomCourt}</span>
                     </span>
                   </Link>
@@ -74,7 +75,7 @@ export function ColonneCommunaute({
                     <Avatar initials={a.auteur.initiales} tone={tonAvatar(a.auteur.nomCourt)} />
                     <span className="flex min-w-0 flex-col gap-[3px]">
                       <span className="text-sm leading-[21px] wrap-anywhere text-texte">
-                        <strong className="font-semibold text-encre">{a.auteur.nomCourt}</strong> {a.type === "commentaire" ? "a commenté" : "a publié"} « {extraitCourt(a.extrait)} »
+                        <strong className="font-semibold text-encre">{a.auteur.nomCourt}</strong> {a.type === "commentaire" ? "a commenté" : "a publié"} « {extraitCourt(texteBrut(a.extrait))} »
                       </span>
                       <span className="text-xs leading-[17px] font-medium text-bleu">{moment(a.creeLe, maintenant)}</span>
                     </span>

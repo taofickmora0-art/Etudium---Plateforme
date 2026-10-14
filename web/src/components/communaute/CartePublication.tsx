@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type FormEvent } from "react";
+import dynamic from "next/dynamic";
 import {
   Bookmark02Icon,
   Comment01Icon,
@@ -21,19 +22,26 @@ import { IconButton, iconButtonVariants } from "@/components/ui/IconButton";
 import { IconTile } from "@/components/ui/IconTile";
 import { Menu, type MenuEntry } from "@/components/ui/Menu";
 import { Tag } from "@/components/ui/Tag";
-import { Textarea } from "@/components/ui/Textarea";
 import { TextInput } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
 import { aimer, basculerEnregistrement, modifierPublication, supprimerPublication } from "@/lib/communaute/actions";
-import { moment, refusPublication, tailleLisible, TEXTE_MAX, TITRE_MAX } from "@/lib/communaute/regles";
+import { moment, refusPublication, tailleLisible, TITRE_MAX } from "@/lib/communaute/regles";
 import type { MoiCommunaute, PieceJointe, Publication, Reponse } from "@/lib/communaute/types";
 import { ApercuLien } from "./ApercuLien";
 import { FenetreSignalement } from "./FenetreSignalement";
 import { initiales, lienPublication, tonAvatar } from "./outils";
 import { Reponses, type EtatReponses } from "./Reponses";
-import { TexteAvecLiens } from "./TexteAvecLiens";
+import { TexteMisEnForme } from "./TexteMisEnForme";
+import { VideoIntegree } from "./VideoIntegree";
 import { VideoYoutube } from "./VideoYoutube";
+
+// L'éditeur visuel (Tiptap) n'est chargé qu'pour Modifier : le fil reste léger.
+const EditeurTexte = dynamic(() => import("./EditeurTexte").then((m) => m.EditeurTexte), {
+  ssr: false,
+  loading: () => <div aria-hidden className="h-[150px] animate-pulse rounded-champ border border-bordure-champ bg-page" />,
+});
+
 
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 const pluriel = (n: number, mot: string) => `${n.toLocaleString("fr-FR")} ${mot}${n > 1 ? "s" : ""}`;
@@ -292,16 +300,12 @@ export function CartePublication({
             placeholder="Titre (facultatif)"
             value={edition.titre}
             maxLength={TITRE_MAX}
-            onChange={(e) => setEdition({ ...edition, titre: e.target.value })}
+            onChange={(e) => {
+              const titre = e.target.value;
+              setEdition((actuelle) => actuelle && { ...actuelle, titre });
+            }}
           />
-          <Textarea
-            aria-label="Texte de la publication"
-            rows={4}
-            value={edition.texte}
-            maxLength={TEXTE_MAX}
-            autoFocus
-            onChange={(e) => setEdition({ ...edition, texte: e.target.value })}
-          />
+          <EditeurTexte etiquette="Texte de la publication" valeur={edition.texte} autoFocus onChange={(texte) => setEdition((actuelle) => actuelle && { ...actuelle, texte })} />
           {erreurEdition && (
             <p role="alert" className="m-0 text-sm leading-5 text-erreur-texte">
               {erreurEdition}
@@ -319,15 +323,17 @@ export function CartePublication({
       ) : (
         <>
           {p.titre && <h3 className="m-0 mt-3.5 text-[17px] leading-[25px] font-semibold wrap-anywhere text-encre max-sm:mt-3 max-sm:text-base max-sm:leading-6">{p.titre}</h3>}
-          <TexteAvecLiens
+          <TexteMisEnForme
             texte={p.texte}
             className={cn("text-[15px] leading-6 text-texte max-sm:text-sm max-sm:leading-[22px]", p.titre ? "mt-1.5" : "mt-3.5 max-sm:mt-3")}
           />
         </>
       )}
       {p.pieceJointe && <Piece piece={p.pieceJointe} />}
-      {p.apercu?.type === "youtube" && <VideoYoutube id={p.apercu.id} className="mt-3.5 rounded-[14px]" />}
-      {p.apercu?.type === "lien" && <ApercuLien apercu={p.apercu} />}
+      {p.video && <VideoIntegree video={p.video} className="mt-3.5 rounded-[14px]" />}
+      {/* L'aperçu du premier lien, sauf s'il montre la vidéo jointe. */}
+      {p.apercu?.type === "youtube" && !(p.video?.plateforme === "youtube" && p.video.id === p.apercu.id) && <VideoYoutube id={p.apercu.id} className="mt-3.5 rounded-[14px]" />}
+      {p.apercu?.type === "lien" && p.apercu.url !== p.video?.url && <ApercuLien apercu={p.apercu} />}
 
       {/* Pas encore en ligne : ni J’aime ni commentaires. */}
       {enLigne && (

@@ -10,6 +10,7 @@ import type { Espace, LotPublications, Publication, Reponse } from "@/lib/commun
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ storage: { from: () => ({ upload: vi.fn(), remove: vi.fn() }) } }) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
+vi.mock("@/components/communaute/EditeurTexte", () => import("./editeur-simule"));
 vi.mock("@/lib/communaute/actions", () => ({
   chargerFil: vi.fn(),
   chargerReponses: vi.fn(),
@@ -64,7 +65,10 @@ const rep = (o: Partial<Reponse> = {}): Reponse => ({
 });
 const lot = (publications: Publication[]): LotPublications => ({ publications, suite: false });
 const afficher = (ui: ReactNode) => render(<ToastProvider>{ui}</ToastProvider>);
-const ouvrirChamp = (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByRole("button", { name: "Quoi de neuf, Koffi ?" }));
+const ouvrirChamp = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(screen.getByRole("button", { name: "Quoi de neuf, Koffi ?" }));
+  await screen.findByRole("textbox", { name: "Nouvelle publication" });
+};
 const page = (initial: LotPublications, analyseActive = false) => afficher(<PageCommunaute espaces={ESPACES} initial={initial} moi={MOI} analyseActive={analyseActive} />);
 const carte = (nom = "Mireille Adjovi") => screen.getByRole("article", { name: `Publication de ${nom}` });
 

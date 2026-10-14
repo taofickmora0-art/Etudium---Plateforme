@@ -1,23 +1,33 @@
 "use client";
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { Attachment01Icon, Cancel01Icon, Image01Icon, Pdf01Icon } from "@hugeicons/core-free-icons";
+import dynamic from "next/dynamic";
+import { Attachment01Icon, Cancel01Icon, Image01Icon, Pdf01Icon, Video01Icon } from "@hugeicons/core-free-icons";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { IconTile } from "@/components/ui/IconTile";
-import { Textarea } from "@/components/ui/Textarea";
 import { TextInput } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
 import { formatDe, formatParMime } from "@/lib/admin/fichiers";
 import { publierPublication } from "@/lib/communaute/actions";
-import { REFUS_PIECE, refusPiece, refusPublication, tailleLisible, TEXTE_MAX, TITRE_MAX } from "@/lib/communaute/regles";
+import { REFUS_PIECE, refusPiece, refusPublication, tailleLisible, TITRE_MAX } from "@/lib/communaute/regles";
 import type { Espace, MoiCommunaute, PieceEnvoyee, Publication } from "@/lib/communaute/types";
+import { reconnaitreVideo } from "@/lib/communaute/video";
 import { createClient } from "@/lib/supabase/client";
+import { VideoIntegree } from "./VideoIntegree";
 
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 const ECHEC_ENVOI = "L’envoi du fichier n’a pas abouti. Réessayez.";
 const CADRE = "box-border flex min-w-0 rounded-2xl border border-bordure-carte bg-panneau";
+const ADRESSE_VIDEO = "Collez l’adresse complète de la vidéo (https://…).";
+
+// L'éditeur visuel (Tiptap) n'est chargé qu'à l'ouverture du champ : le fil reste léger.
+const EditeurTexte = dynamic(() => import("./EditeurTexte").then((m) => m.EditeurTexte), {
+  ssr: false,
+  loading: () => <div aria-hidden className="h-[150px] animate-pulse rounded-champ border border-bordure-champ bg-page" />,
+});
+
 
 type Piece = { fichier: File; type: string; extension: string };
 
@@ -25,8 +35,9 @@ type Piece = { fichier: File; type: string; extension: string };
 const apercu = (fichier: File) => (typeof URL.createObjectURL === "function" ? URL.createObjectURL(fichier) : null);
 
 /**
- * Le champ de publication (design NdCommunaute ; spec du fil « Actualités », §1). Fermé : « Quoi de neuf, <prénom> ? »,
- * Image et Fichier. Ouvert : un titre facultatif, le texte, une image ou un PDF, Publier. Le fichier part d'abord du
+ * Le champ de publication (design NdCommunaute ; spec du fil « Actualités », §1 ; spec mise en forme et vidéo). Fermé :
+ * « Quoi de neuf, <prénom> ? », Image, Vidéo et Fichier. Ouvert : un titre facultatif, le texte dans l'éditeur visuel,
+ * une image ou un PDF, le lien d'une vidéo et son aperçu, Publier. Le fichier part d'abord du
  * navigateur vers le dossier du compte dans l'espace de stockage « communaute », puis la publication est enregistrée ;
  * si elle est refusée, le fichier est retiré.
  */
@@ -46,7 +57,11 @@ export function ChampPublication({
   const [titre, setTitre] = useState("");
   const [texte, setTexte] = useState("");
   const [piece, setPiece] = useState<Piece | null>(null);
+  // Le lien de la vidéo ; null : le champ Vidéo est fermé.
+  const [video, setVideo] = useState<string | null>(null);
   const [ouvert, setOuvert] = useState(false);
+  // Ouvert par « Ajouter une vidéo » : le lien prend le focus, pas le texte.
+  const [focusTexte, setFocusTexte] = useState(true);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const image = useRef<HTMLInputElement>(null);
@@ -66,7 +81,9 @@ export function ChampPublication({
     setTitre("");
     setTexte("");
     setPiece(null);
+    setVideo(null);
     setErreur(null);
+    setFocusTexte(true);
     setOuvert(false);
   }
 
@@ -104,7 +121,7 @@ export function ChampPublication({
   }
 
   async function publier() {
-    const refus = refusPublication(titre, texte);
+    const refus = refusPublication(titre, texte) ?? (video?.trim() && !reconnaitreVideo(video) ? ADRESSE_VIDEO : null);
     if (refus) {
       setErreur(refus);
       return;
@@ -119,7 +136,7 @@ export function ChampPublication({
       }
       let resultat: Awaited<ReturnType<typeof publierPublication>>;
       try {
-        resultat = await publierPublication(espace.id, titre.trim(), texte.trim(), envoyee);
+        resultat = await publierPublication(espace.id, titre.trim(), texte.trim(), envoyee, video?.trim() || null);
       } catch {
         // L'action n'a pas répondu : le fichier ne reste pas sans publication.
         if (envoyee) await createClient().storage.from("communaute").remove([envoyee.chemin]).catch(() => undefined);
@@ -182,9 +199,19 @@ export function ChampPublication({
         >
           {moi.prenom ? `Quoi de neuf, ${moi.prenom} ?` : "Quoi de neuf ?"}
         </button>
-        {/* Sur téléphone, comme le design : l'avatar et « Quoi de neuf » seuls (Image et Fichier sont dans le champ ouvert). */}
+        {/* Sur téléphone, comme le design : l'avatar et « Quoi de neuf » seuls (Image, Vidéo et Fichier sont dans le champ ouvert). */}
         <span className="flex gap-0.5 max-sm:hidden">
           <IconButton icon={Image01Icon} label="Ajouter une image" variant="discret" onClick={() => image.current?.click()} />
+          <IconButton
+            icon={Video01Icon}
+            label="Ajouter une vidéo"
+            variant="discret"
+            onClick={() => {
+              setVideo("");
+              setFocusTexte(false);
+              setOuvert(true);
+            }}
+          />
           <IconButton icon={Attachment01Icon} label="Ajouter un fichier" variant="discret" onClick={() => pdf.current?.click()} />
         </span>
         {fichiers}
@@ -198,15 +225,14 @@ export function ChampPublication({
         <Avatar initials={moi.initiales} src={moi.photoUrl} size={44} className="max-sm:hidden" />
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <TextInput aria-label="Titre (facultatif)" placeholder="Titre (facultatif)" value={titre} maxLength={TITRE_MAX} onChange={(e) => setTitre(e.target.value)} />
-          <Textarea
-            aria-label="Nouvelle publication"
-            rows={3}
-            autoFocus
+          <EditeurTexte
+            etiquette="Nouvelle publication"
+            autoFocus={focusTexte}
             placeholder={`Partagez une question ou une réussite dans l’espace ${espace.nomCourt}…`}
-            value={texte}
-            maxLength={TEXTE_MAX}
-            onChange={(e) => setTexte(e.target.value)}
+            valeur={texte}
+            onChange={setTexte}
           />
+          {video !== null && <ChampVideo valeur={video} onChange={setVideo} desactive={envoi} />}
           {piece && (
             <div className="flex min-w-0 items-center gap-3 rounded-[14px] border border-bordure-carte px-3.5 py-2.5">
               <IconTile icon={piece.type === "application/pdf" ? Pdf01Icon : Image01Icon} />
@@ -228,6 +254,9 @@ export function ChampPublication({
         <div className="-ml-3 flex flex-wrap items-center gap-1 sm:ml-0">
           <Button variant="discret" size="sm" iconLeft={Image01Icon} disabled={envoi} onClick={() => image.current?.click()}>
             Image
+          </Button>
+          <Button variant="discret" size="sm" iconLeft={Video01Icon} disabled={envoi} onClick={() => setVideo((v) => v ?? "")}>
+            Vidéo
           </Button>
           <Button variant="discret" size="sm" iconLeft={Attachment01Icon} disabled={envoi} onClick={() => pdf.current?.click()}>
             Fichier
@@ -256,3 +285,36 @@ export function ChampPublication({
     </div>
   );
 }
+
+/** Le lien de la vidéo et son aperçu en direct ; une adresse qui n'en est pas une est signalée. */
+function ChampVideo({ valeur, onChange, desactive }: { valeur: string; onChange: (valeur: string | null) => void; desactive: boolean }) {
+  const reconnue = valeur.trim() ? reconnaitreVideo(valeur) : null;
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      <div className="flex min-w-0 items-center gap-1.5">
+        <TextInput
+          aria-label="Lien de la vidéo"
+          placeholder="https://www.youtube.com/watch?v=…"
+          value={valeur}
+          autoFocus
+          inputMode="url"
+          maxLength={1000}
+          disabled={desactive}
+          onChange={(e) => onChange(e.target.value)}
+          className="min-w-0 flex-1 max-sm:h-11 max-sm:text-sm"
+        />
+        <IconButton icon={Cancel01Icon} label="Retirer la vidéo" variant="discret" disabled={desactive} onClick={() => onChange(null)} />
+      </div>
+      {reconnue ? (
+        <VideoIntegree video={reconnue} lien={false} className="rounded-[14px]" />
+      ) : (
+        <p className={`m-0 text-[13px] leading-5 ${valeur.trim() ? "text-erreur-texte" : "text-discret"}`}>
+          {valeur.trim()
+            ? ADRESSE_VIDEO
+            : "YouTube, Vimeo, TikTok, Facebook, Instagram, Dailymotion, Loom, Google Drive ou un fichier .mp4 ; un autre site s’affiche en carte."}
+        </p>
+      )}
+    </div>
+  );
+}
+

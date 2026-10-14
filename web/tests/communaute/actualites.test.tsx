@@ -13,6 +13,7 @@ import type { Annonce, Espace, LotPublications, MoiCommunaute, Publication } fro
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ storage: { from: () => ({ upload: vi.fn(), remove: vi.fn() }) } }) }));
 let recherche = "";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }), useSearchParams: () => new URLSearchParams(recherche), unstable_rethrow: () => undefined }));
+vi.mock("@/components/communaute/EditeurTexte", () => import("./editeur-simule"));
 vi.mock("@/lib/communaute/actions", () => ({
   chargerFil: vi.fn(),
   chargerReponses: vi.fn(),
@@ -243,9 +244,10 @@ describe("Le champ de publication", () => {
     await user.click(screen.getByRole("button", { name: "Ajouter une image" }));
     await user.click(screen.getByRole("button", { name: "Ajouter un fichier" }));
     expect(choisir).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("button", { name: "Ajouter une vidéo" })).toBeInTheDocument();
     choisir.mockRestore();
     await user.click(screen.getByRole("button", { name: "Quoi de neuf, Koffi ?" }));
-    expect(screen.getByRole("textbox", { name: "Nouvelle publication" })).toHaveFocus();
+    expect(await screen.findByRole("textbox", { name: "Nouvelle publication" })).toHaveFocus();
     expect(screen.getByRole("button", { name: "Publier" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Annuler" }));
     expect(screen.queryByRole("textbox", { name: "Nouvelle publication" })).toBeNull();
@@ -286,6 +288,71 @@ describe("L'adresse et l'onglet", () => {
     expect(screen.getByText("Tous les espaces")).toBeInTheDocument();
     expect(screen.queryByText("Relu par le serveur")).toBeNull();
     remplacer.mockRestore();
+  });
+});
+
+describe("La vidéo jointe", () => {
+  const YT = { plateforme: "youtube" as const, id: "dQw4w9WgXcQ", url: "https://youtu.be/dQw4w9WgXcQ" };
+
+  it("le champ Vidéo : l'aperçu en direct (autre site, YouTube), une adresse invalide signalée ; publiée avec la publication ; Retirer la vidéo", async () => {
+    const user = userEvent.setup({ delay: null });
+    page(lot([]));
+    await user.click(screen.getByRole("button", { name: "Ajouter une vidéo" }));
+    const champ = await screen.findByRole("textbox", { name: "Lien de la vidéo" });
+    expect(champ).toHaveFocus();
+    await user.type(champ, "youtube point com");
+    expect(screen.getByText("Collez l’adresse complète de la vidéo (https://…).")).toBeInTheDocument();
+    await user.clear(champ);
+    await user.type(champ, "https://www.twitch.tv/videos/123");
+    expect(screen.getByRole("link", { name: /twitch\.tv/ })).toHaveAttribute("href", "https://www.twitch.tv/videos/123");
+    await user.clear(champ);
+    await user.type(champ, "https://youtu.be/dQw4w9WgXcQ");
+    expect(screen.getByRole("button", { name: "Lire la vidéo YouTube" })).toBeInTheDocument();
+    vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n1", statut: "publiee", apercu: null, video: YT });
+    await user.type(screen.getByRole("textbox", { name: "Nouvelle publication" }), "Le live");
+    await user.click(screen.getByRole("button", { name: "Publier" }));
+    expect(actions.publierPublication).toHaveBeenCalledWith(null, "", "Le live", null, "https://youtu.be/dQw4w9WgXcQ");
+    const nouvelle = await screen.findByRole("article", { name: "Publication de Koffi Dossou" });
+    expect(within(nouvelle).getByRole("button", { name: "Lire la vidéo YouTube" })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Lien de la vidéo" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Quoi de neuf, Koffi ?" }));
+    await user.click(await screen.findByRole("button", { name: "Vidéo" }));
+    expect(screen.getByRole("textbox", { name: "Lien de la vidéo" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Retirer la vidéo" }));
+    expect(screen.queryByRole("textbox", { name: "Lien de la vidéo" })).toBeNull();
+  });
+
+  it("dans la carte : le lecteur au clic (Vimeo), le lecteur du navigateur pour un fichier, une carte pour une autre page ; l'aperçu du même lien n'est pas répété", async () => {
+    const user = userEvent.setup({ delay: null });
+    page(
+      lot([
+        pub({ id: "v1", video: { plateforme: "vimeo", id: "76979871", url: "https://vimeo.com/76979871" } }),
+        pub({ id: "v2", auteur: { prenom: "Awa", nom: "Kpadé", role: null }, video: { plateforme: "fichier", url: "https://cdn.exemple.com/cours.mp4" } }),
+        pub({ id: "v3", auteur: { prenom: "Rodrigue", nom: "Houngbo", role: null }, video: { plateforme: "autre", url: "https://www.twitch.tv/x", titre: "Un live", image: null } }),
+        pub({
+          id: "v4",
+          auteur: { prenom: "Sènami", nom: "Dossa", role: null },
+          texte: "https://youtu.be/dQw4w9WgXcQ",
+          apercu: { type: "youtube", id: "dQw4w9WgXcQ" },
+          video: YT,
+        }),
+      ]),
+    );
+    expect(carte().querySelector("iframe")).toBeNull();
+    await user.click(within(carte()).getByRole("button", { name: "Lire la vidéo Vimeo" }));
+    expect(within(carte()).getByTitle("Vidéo Vimeo")).toHaveAttribute("src", "https://player.vimeo.com/video/76979871?autoplay=1");
+    expect(carte("Awa Kpadé").querySelector("video")).toHaveAttribute("src", "https://cdn.exemple.com/cours.mp4");
+    const twitch = within(carte("Rodrigue Houngbo")).getByRole("link", { name: /Un live/ });
+    expect(twitch).toHaveAttribute("href", "https://www.twitch.tv/x");
+    expect(twitch).toHaveTextContent("twitch.tv");
+    expect(within(carte("Sènami Dossa")).getAllByRole("button", { name: "Lire la vidéo YouTube" })).toHaveLength(1);
+  });
+
+  it("le texte mis en forme s'affiche dans la carte", () => {
+    page(lot([pub({ texte: "## Le programme\n\n- **Hooks**\n- _Montage_" })]));
+    expect(within(carte()).getByRole("heading", { level: 5, name: "Le programme" })).toBeInTheDocument();
+    expect(within(carte()).getByText("Hooks").tagName).toBe("STRONG");
   });
 });
 

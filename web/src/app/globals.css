@@ -182,3 +182,13 @@ html[data-menu="reduit"] .menu-lateral:not(:hover):not(:has(:focus-visible)) .me
     transition: none;
   }
 }
+
+/* L'éditeur visuel de la communauté (Tiptap) : le texte indicatif quand il est vide. */
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--color-indice);
+}
+

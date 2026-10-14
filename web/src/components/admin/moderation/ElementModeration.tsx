@@ -10,6 +10,7 @@ import { Tag } from "@/components/ui/Tag";
 import { moment, nomEspace } from "@/lib/communaute/regles";
 import { LIBELLES_MOTIFS, libelleCategorie } from "@/lib/moderation/regles";
 import type { ElementFile, OngletFile } from "@/lib/moderation/types";
+import { TexteMisEnForme } from "@/components/communaute/TexteMisEnForme";
 
 const LIEN = "focus-etudium text-sm leading-[22px] font-medium text-bleu no-underline hover:underline";
 
@@ -79,7 +80,7 @@ export function ElementModeration({
       {e.extrait && <p className="m-0 text-[13px] leading-5 wrap-anywhere text-discret">{`En réponse à « ${e.extrait} »`}</p>}
       <div className="flex min-w-0 flex-col gap-1.5">
         {e.titre && <h3 className="m-0 text-base leading-6 font-semibold wrap-anywhere text-encre">{e.titre}</h3>}
-        <p className="m-0 text-sm leading-[22px] whitespace-pre-line text-pretty wrap-anywhere text-texte">{e.texte}</p>
+        <TexteMisEnForme texte={e.texte} className="text-sm leading-[22px] text-texte" />
       </div>
       {e.pieceJointe && (
         <div className="flex min-w-0 items-center gap-2 text-sm leading-[22px]">

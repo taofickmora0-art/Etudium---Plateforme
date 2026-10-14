@@ -23,6 +23,7 @@ vi.mock("next/navigation", () => ({
   },
   unstable_rethrow: () => undefined,
 }));
+vi.mock("@/components/communaute/EditeurTexte", () => import("./editeur-simule"));
 vi.mock("@/lib/communaute/actions", () => ({
   chargerFil: vi.fn(),
   chargerReponses: vi.fn(),
@@ -103,7 +104,10 @@ const lot = (publications: Publication[], suite = false): LotPublications => ({ 
 const afficher = (ui: ReactNode) => render(<ToastProvider>{ui}</ToastProvider>);
 const page = (initial: LotPublications) => afficher(<PageCommunaute espaces={ESPACES} initial={initial} moi={MOI} />);
 const carte = (nom = "Mireille Adjovi") => screen.getByRole("article", { name: `Publication de ${nom}` });
-const ouvrirChamp = (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByRole("button", { name: "Quoi de neuf, Koffi ?" }));
+const ouvrirChamp = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(screen.getByRole("button", { name: "Quoi de neuf, Koffi ?" }));
+  await screen.findByRole("textbox", { name: "Nouvelle publication" });
+};
 const onglet = (nom: string) => within(screen.getByRole("group", { name: "Choisir un espace" })).getByRole("button", { name: nom });
 const PNG = () => new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0])], "affiche.png", { type: "image/png" });
 
@@ -195,7 +199,7 @@ describe("La page Communauté", () => {
 
     vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n1", statut: "publiee", apercu: { type: "youtube", id: "dQw4w9WgXcQ" }, video: null });
     await user.click(screen.getByRole("button", { name: "Publier" }));
-    expect(actions.publierPublication).toHaveBeenLastCalledWith(null, "Salut", "Bonjour à tous", null);
+    expect(actions.publierPublication).toHaveBeenLastCalledWith(null, "Salut", "Bonjour à tous", null, null);
     const nouvelle = await screen.findByRole("article", { name: "Publication de Koffi Dossou" });
     expect(within(nouvelle).getByText("Vous")).toBeInTheDocument();
     expect(within(nouvelle).getByText("à l’instant · Publié dans Général")).toBeInTheDocument();
@@ -225,13 +229,13 @@ describe("La page Communauté", () => {
     expect(screen.getByText("1 Ko")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
     vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n2", statut: "publiee", apercu: null, video: null });
-    await user.type(screen.getByRole("textbox", { name: "Nouvelle publication" }), "Mon affiche");
+    await user.type(await screen.findByRole("textbox", { name: "Nouvelle publication" }), "Mon affiche");
     await user.click(screen.getByRole("button", { name: "Publier" }));
     await waitFor(() => expect(actions.publierPublication).toHaveBeenCalled());
     const [chemin, , options] = upload.mock.calls[0];
     expect(chemin).toMatch(/^compte-1\/[0-9a-f-]{36}\.png$/);
     expect(options).toEqual({ contentType: "image/png", upsert: false });
-    expect(actions.publierPublication).toHaveBeenCalledWith(null, "", "Mon affiche", { chemin, nom: "affiche.png", type: "image/png", taille: 12 });
+    expect(actions.publierPublication).toHaveBeenCalledWith(null, "", "Mon affiche", { chemin, nom: "affiche.png", type: "image/png", taille: 12 }, null);
     expect(screen.queryByRole("button", { name: "Retirer affiche.png" })).toBeNull();
   });
 
@@ -241,7 +245,7 @@ describe("La page Communauté", () => {
     page(lot([]));
     fireEvent.change(screen.getByLabelText("Joindre une image"), { target: { files: [PNG()] } });
     expect(await screen.findByText("affiche.png")).toBeInTheDocument();
-    await user.type(screen.getByRole("textbox", { name: "Nouvelle publication" }), "Mon affiche");
+    await user.type(await screen.findByRole("textbox", { name: "Nouvelle publication" }), "Mon affiche");
     await user.click(screen.getByRole("button", { name: "Publier" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("L’envoi du fichier n’a pas abouti. Réessayez.");
     expect(actions.publierPublication).not.toHaveBeenCalled();
@@ -325,7 +329,7 @@ describe("La page Communauté", () => {
     await user.click(within(carte("Koffi Dossou")).getByRole("button", { name: "Actions sur la publication de Koffi Dossou" }));
     expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Modifier", "Copier le lien", "Supprimer"]);
     await user.click(screen.getByRole("menuitem", { name: "Modifier" }));
-    const texte = within(carte("Koffi Dossou")).getByRole("textbox", { name: "Texte de la publication" });
+    const texte = await within(carte("Koffi Dossou")).findByRole("textbox", { name: "Texte de la publication" });
     expect(texte).toHaveValue("Mon texte");
     await user.clear(texte);
     await user.type(texte, "Texte corrigé");
@@ -435,12 +439,12 @@ describe("La page Communauté", () => {
   it("colonne de droite : Publications tendances (vers la publication), Activités récentes, Prochaine session ; sans rien : les phrases d'attente", () => {
     const session = { id: "s1", titre: "Excel avancé : analyse de données", debut: "2026-10-24T14:00:00Z" } as ProchaineSession;
     const tendances: Tendance[] = [
-      { id: "t1", extrait: "Mon mémoire est validé ! Merci à Dr Adjovi.", auteur: { nomCourt: "Fifamè A.", initiales: "FA", equipe: false } },
+      { id: "t1", extrait: "**Mon mémoire** est validé ! Merci à _Dr Adjovi_.", auteur: { nomCourt: "Fifamè A.", initiales: "FA", equipe: false } },
       { id: "t2", extrait: "Nos excuses pour les lenteurs d’hier soir.", auteur: { nomCourt: "Équipe Étudium", initiales: "ÉÉ", equipe: true } },
     ];
     const activites: Activite[] = [
       { type: "publication", publicationId: "a1", auteur: { nomCourt: "Danilo K.", initiales: "DK" }, extrait: "Bonjour les coachs. Les abonnements qui augmentent chaque mois, comment faire ?", creeLe: "2026-10-14T14:37:00Z" },
-      { type: "commentaire", publicationId: "a2", auteur: { nomCourt: "Maos T.", initiales: "MT" }, extrait: "TikTok, un jeu d’enfant", creeLe: "2026-10-14T13:00:00Z" },
+      { type: "commentaire", publicationId: "a2", auteur: { nomCourt: "Maos T.", initiales: "MT" }, extrait: "# TikTok, un jeu d’enfant", creeLe: "2026-10-14T13:00:00Z" },
     ];
     const maintenant = new Date("2026-10-14T15:00:00Z");
     const { unmount } = render(<ColonneCommunaute session={session} tendances={tendances} activites={activites} maintenant={maintenant} />);
