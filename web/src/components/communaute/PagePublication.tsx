@@ -17,7 +17,7 @@ export async function PagePublication({ id }: { id: string }) {
   const nom = `${publication.auteur.prenom} ${publication.auteur.nom}`.trim();
   return (
     <div className="flex max-w-[760px] min-w-0 flex-col gap-6">
-      <Breadcrumb items={[{ label: "Communauté", href: "/communaute" }, { label: "Publication" }]} />
+      <Breadcrumb items={[{ label: "Accueil", href: "/accueil" }, { label: "Publication" }]} />
       <h1 className="sr-only">{nom ? `Publication de ${nom}` : "Publication"}</h1>
       <DetailPublication publication={publication} moi={moi} maintenant={new Date().toISOString()} />
     </div>

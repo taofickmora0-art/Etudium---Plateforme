@@ -268,7 +268,7 @@ describe("L'adresse et l'onglet", () => {
     const { rerender } = render(ui(lot([pub()])));
     await user.click(onglet("Général"));
     expect(await screen.findByText("Dans Général")).toBeInTheDocument();
-    expect(remplacer).toHaveBeenLastCalledWith(null, "", "/communaute?espace=general");
+    expect(remplacer).toHaveBeenLastCalledWith(null, "", "/accueil?espace=general");
     // L'adresse écrite par la page elle-même ne relit rien.
     recherche = "espace=general";
     rerender(ui(lot([pub()])));

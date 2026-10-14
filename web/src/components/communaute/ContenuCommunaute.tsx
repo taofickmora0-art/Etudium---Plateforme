@@ -1,6 +1,9 @@
 import { unstable_rethrow } from "next/navigation";
+import { formationsDisponibles, nouvellesFormations } from "@/lib/accueil/fil";
 import { demoModeActive, getAuthUser, getShellUser } from "@/lib/auth/current-user";
 import { canAccess } from "@/lib/auth/permissions";
+import { listCatalogue } from "@/lib/catalogue/data";
+import type { CarteCatalogue } from "@/lib/catalogue/types";
 import { lireAnnonce } from "@/lib/communaute/annonce";
 import { lireActivites, lireAnalyseActive, lireEspaces, lireFil, lireTendances } from "@/lib/communaute/data";
 import { UUID } from "@/lib/communaute/regles";
@@ -26,6 +29,17 @@ async function facultatif<T>(quoi: string, lire: () => Promise<Lecture<T>>): Pro
   }
 }
 
+/** Le catalogue, pour les nouvelles formations du fil et « Formations disponibles » ; vide s'il ne se lit pas. */
+async function catalogue(): Promise<CarteCatalogue[]> {
+  try {
+    return await listCatalogue();
+  } catch (erreur) {
+    unstable_rethrow(erreur);
+    console.error("Lecture du catalogue impossible :", erreur instanceof Error ? erreur.message : erreur);
+    return [];
+  }
+}
+
 /** Le compte connecté : son avatar, son dossier pour les fichiers joints, et s'il est de l'équipe. */
 export async function moiCommunaute(): Promise<MoiCommunaute> {
   const [shell, compte] = await Promise.all([getShellUser(), demoModeActive() ? null : getAuthUser()]);
@@ -40,13 +54,13 @@ export async function moiCommunaute(): Promise<MoiCommunaute> {
 }
 
 /**
- * Les espaces, le fil de l'onglet demandé (`?espace=tous|general|<parcours>`, Actualités par défaut), l'annonce et la
- * colonne de droite ; avant la migration 0019, un bandeau.
+ * L'Accueil (spec du nouvel Accueil) : les espaces, le fil de l'onglet demandé (`?espace=tous|general|<parcours>`, Actualités par défaut), l'annonce et la
+ * colonne de droite, les formations du catalogue ; avant la migration 0019, un bandeau.
  */
 export async function ContenuCommunaute({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> } = {}) {
   const brut = (await searchParams)?.espace;
   const demande = typeof brut === "string" && (brut === "tous" || brut === "general" || UUID.test(brut)) ? brut : "tous";
-  const [espaces, filDemande, tendances, activites, session, moi, analyseActive, annonce] = await Promise.all([
+  const [espaces, filDemande, tendances, activites, session, moi, analyseActive, annonce, cartes] = await Promise.all([
     lireEspaces(),
     lireFil(demande),
     facultatif("des tendances", lireTendances),
@@ -55,6 +69,7 @@ export async function ContenuCommunaute({ searchParams }: { searchParams?: Promi
     moiCommunaute(),
     lireAnalyseActive(),
     lireAnnonce(),
+    catalogue(),
   ]);
   if (espaces.migrationAbsente || filDemande.migrationAbsente) return <MigrationCommunauteAbsente />;
   // Un parcours inconnu (ou qui n'est plus actif) : les Actualités.
@@ -75,6 +90,9 @@ export async function ContenuCommunaute({ searchParams }: { searchParams?: Promi
       analyseActive={analyseActive}
       maintenant={maintenant.toISOString()}
       sessionsAVenir={session !== null}
+      titre={moi.prenom ? `Bonjour, ${moi.prenom}` : "Bonjour"}
+      nouvelles={nouvellesFormations(cartes, maintenant)}
+      disponibles={formationsDisponibles(cartes)}
       colonne={<ColonneCommunaute session={session} tendances={tendances} activites={activites} maintenant={maintenant} />}
     />
   );

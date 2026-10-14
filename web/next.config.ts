@@ -17,6 +17,10 @@ const nextConfig: NextConfig = {
   // Couvertures des formations (espace public « couvertures ») : redimensionnées et compressées par next/image.
   images: { remotePatterns: motifsImages(process.env.NEXT_PUBLIC_SUPABASE_URL) },
   partialPrefetching: true,
+  // L'Accueil est la communauté (spec du nouvel Accueil, §4) : les anciens liens y mènent, `?espace=` compris.
+  async redirects() {
+    return [{ source: "/communaute", destination: "/accueil", permanent: false }];
+  },
   experimental: {
     // Photo de profil : 2 Mo au plus, plus l'enveloppe de l'envoi (1 Mo par défaut).
     serverActions: { bodySizeLimit: "3mb" },

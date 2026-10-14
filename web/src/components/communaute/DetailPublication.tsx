@@ -6,7 +6,7 @@ import { useMaintenant } from "@/components/notifications/horloge";
 import type { MoiCommunaute, PublicationDetail } from "@/lib/communaute/types";
 import { CartePublication } from "./CartePublication";
 
-/** La publication et tous ses commentaires ; supprimée, retour à la Communauté ; un lien de commentaire y mène. */
+/** La publication et tous ses commentaires ; supprimée, retour à l'Accueil ; un lien de commentaire y mène. */
 export function DetailPublication({ publication, moi, maintenant: heureServeur }: { publication: PublicationDetail; moi: MoiCommunaute; maintenant?: string }) {
   const router = useRouter();
   const maintenant = useMaintenant(heureServeur);
@@ -21,7 +21,7 @@ export function DetailPublication({ publication, moi, maintenant: heureServeur }
       toutesReponses={publication.toutesReponses}
       moi={moi}
       maintenant={maintenant}
-      onSupprimee={() => router.push("/communaute")}
+      onSupprimee={() => router.push("/accueil")}
     />
   );
 }

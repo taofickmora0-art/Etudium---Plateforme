@@ -4,6 +4,8 @@ import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "rea
 import { useSearchParams } from "next/navigation";
 import { Bookmark02Icon, CalendarClockIcon, SquareLock02Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { useMaintenant } from "@/components/notifications/horloge";
+import { CarteNouvelleFormation } from "@/components/accueil/CarteNouvelleFormation";
+import { FormationsDisponibles } from "@/components/accueil/FormationsDisponibles";
 import { BoutonSessionsProgrammees } from "@/components/sessions/BoutonSessionsProgrammees";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
@@ -12,6 +14,8 @@ import { FilterChips } from "@/components/ui/FilterChips";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Heading, Lead } from "@/components/ui/Text";
+import { entrelacer, type ElementFil } from "@/lib/accueil/fil";
+import type { CarteCatalogue } from "@/lib/catalogue/types";
 import { chargerFil } from "@/lib/communaute/actions";
 import { curseur } from "@/lib/communaute/regles";
 import type { Annonce, Espace, LotPublications, MoiCommunaute, SuiteFil, TriFil } from "@/lib/communaute/types";
@@ -27,13 +31,16 @@ const VIDE: LotPublications = { publications: [], suite: false };
 /** Le fil « Actualités » : tous les espaces ouverts au compte. */
 const ACTUALITES = "tous";
 const valeur = (e: Espace) => e.id ?? "general";
+const INTRO = "Les dernières nouvelles d’Étudium : publications, nouvelles formations et sessions live.";
 /** Sous le champ : le fil des publications parues, ou les siennes programmées (spec sondages, quiz et programmation, §5). */
 type Vue = "publiees" | "programmees";
 
 /**
- * La page Communauté (design NdCommunaute ; spec du fil « Actualités », §1 à §4) : les onglets (Actualités = le fil de
+ * L'Accueil, qui est la communauté (spec du nouvel Accueil ; design NdCommunaute ; spec du fil « Actualités », §1 à §4) : les onglets (Actualités = le fil de
  * tous les espaces ouverts au compte, Général, puis un par parcours, un cadenas sur ceux qui lui sont fermés), l'annonce
  * épinglée en tête des Actualités, le champ de publication, « Trier par : », le fil et « Voir plus », la colonne de droite.
+ * Dans Actualités, « Les plus récentes », les nouvelles formations se glissent à leur date ; sous le fil, « Formations
+ * disponibles ».
  */
 export function PageCommunaute({
   espaces,
@@ -45,6 +52,10 @@ export function PageCommunaute({
   analyseActive = false,
   maintenant: heureServeur,
   sessionsAVenir = false,
+  titre = "Accueil",
+  intro = INTRO,
+  nouvelles = [],
+  disponibles = [],
 }: {
   espaces: Espace[];
   initial: LotPublications;
@@ -59,6 +70,13 @@ export function PageCommunaute({
   maintenant?: string;
   /** Une session live est à venir : le bouton « Sessions live programmées » (spec promotion des sessions live, §3). */
   sessionsAVenir?: boolean;
+  /** L'en-tête : « Bonjour, Koffi ». */
+  titre?: string;
+  intro?: string;
+  /** Les formations mises en ligne depuis 30 jours, glissées dans le fil (spec du nouvel Accueil, §2). */
+  nouvelles?: CarteCatalogue[];
+  /** « Formations disponibles » sous le fil (§3). */
+  disponibles?: CarteCatalogue[];
 }) {
   const liste = espaces.length > 0 ? espaces : [GENERAL];
   const general = liste.find((e) => e.id === null) ?? GENERAL;
@@ -108,7 +126,7 @@ export function PageCommunaute({
     if (ecrireAdresse) {
       // L'adresse suit l'onglet (le menu ≡ le marque, un lien copié le rouvre) ; Next garde son routeur à jour.
       adresse.current = cible;
-      window.history.replaceState(null, "", cible === ACTUALITES ? "/communaute" : `/communaute?espace=${encodeURIComponent(cible)}`);
+      window.history.replaceState(null, "", cible === ACTUALITES ? "/accueil" : `/accueil?espace=${encodeURIComponent(cible)}`);
     }
     const choisi = cible === ACTUALITES ? general : liste.find((e) => valeur(e) === cible);
     if (!choisi?.ouvert) {
@@ -165,6 +183,12 @@ export function PageCommunaute({
     }));
   }
 
+  // Les nouvelles formations, dans Actualités et « Les plus récentes » seulement.
+  const elements: ElementFil[] =
+    onglet === ACTUALITES && ordre === "recentes"
+      ? entrelacer(lot.publications, nouvelles, !lot.suite)
+      : lot.publications.map((publication) => ({ type: "publication", publication }));
+
   // Le fil : le même sous les deux onglets, lu selon `ordre`.
   const filAffiche = (
     <div className="flex min-w-0 flex-col gap-4">
@@ -174,7 +198,7 @@ export function PageCommunaute({
           <Skeleton className="h-40 rounded-2xl" />
           <Skeleton className="h-40 rounded-2xl" />
         </>
-      ) : lot.publications.length === 0 ? (
+      ) : elements.length === 0 ? (
         !erreur &&
         (vue === "programmees" ? (
           <EmptyState
@@ -188,16 +212,20 @@ export function PageCommunaute({
           <EmptyState icon={UserGroupIcon} title="Aucune publication pour l’instant" description="Lancez la conversation : posez une question ou partagez une réussite." />
         ))
       ) : (
-        lot.publications.map((p) => (
-          <CartePublication
-            key={`${onglet}-${ordre}-${p.id}`}
-            publication={p}
-            moi={moi}
-            maintenant={maintenant}
-            onSupprimee={retirer}
-            onParue={vue === "programmees" ? retirer : undefined}
-          />
-        ))
+        elements.map((e) =>
+          e.type === "formation" ? (
+            <CarteNouvelleFormation key={`formation-${e.formation.id}`} formation={e.formation} maintenant={maintenant} />
+          ) : (
+            <CartePublication
+              key={`${onglet}-${ordre}-${e.publication.id}`}
+              publication={e.publication}
+              moi={moi}
+              maintenant={maintenant}
+              onSupprimee={retirer}
+              onParue={vue === "programmees" ? retirer : undefined}
+            />
+          ),
+        )
       )}
       {!chargement && lot.suite && (
         <Button variant="contour" className="self-center" loading={suite} onClick={() => void voirPlus()}>
@@ -210,8 +238,10 @@ export function PageCommunaute({
   return (
     // Le fil (720 px) et sa colonne (320 px) restent au milieu de l'écran, l'en-tête aligné sur eux.
     <div className="mx-auto flex w-full max-w-[720px] min-w-0 flex-col xl:max-w-[1064px]">
-      <Heading level="page">Communauté</Heading>
-      <Lead className="mt-2.5">Posez vos questions, partagez vos réussites, entraidez-vous.</Lead>
+      <Heading level="page" className="max-sm:text-[28px] max-sm:leading-9">
+        {titre}
+      </Heading>
+      <Lead className="mt-2.5">{intro}</Lead>
       {/* Les espaces, et à droite (dessous sur téléphone) « Sessions live programmées » s'il y en a une à venir. */}
       <div className="mt-[21px] flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-3 max-sm:mt-4">
         <FilterChips
@@ -268,6 +298,7 @@ export function PageCommunaute({
                   { value: "programmees", label: "Programmées", content: filAffiche },
                 ]}
               />
+              <FormationsDisponibles cartes={disponibles} />
             </>
           )}
         </div>

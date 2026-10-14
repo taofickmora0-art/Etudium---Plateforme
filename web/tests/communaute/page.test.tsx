@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import type { ShellUser } from "@/lib/auth/current-user";
 import { REFUS_PIECE, REFUS_TEXTE } from "@/lib/communaute/regles";
+import type { CarteCatalogue } from "@/lib/catalogue/types";
 import type { Activite, Espace, LotPublications, Publication, Reponse, Tendance } from "@/lib/communaute/types";
 import type { ProchaineSession } from "@/lib/sessions/types";
 
@@ -44,6 +45,7 @@ vi.mock("@/lib/communaute/data", () => ({
   lireAnalyseActive: vi.fn(async () => false),
 }));
 vi.mock("@/lib/communaute/annonce", () => ({ lireAnnonce: vi.fn(async () => null) }));
+vi.mock("@/lib/catalogue/data", () => ({ listCatalogue: vi.fn(async () => []) }));
 vi.mock("@/lib/sessions/data", () => ({ lireProchaineSession: vi.fn() }));
 vi.mock("@/lib/auth/current-user", () => ({ getShellUser: vi.fn(), getAuthUser: vi.fn(), demoModeActive: () => false }));
 
@@ -51,6 +53,7 @@ const actions = await import("@/lib/communaute/actions");
 const { lireActivites, lireEspaces, lireFil, lirePublication, lireTendances } = await import("@/lib/communaute/data");
 const { lireProchaineSession } = await import("@/lib/sessions/data");
 const { getAuthUser, getShellUser } = await import("@/lib/auth/current-user");
+const { listCatalogue } = await import("@/lib/catalogue/data");
 const { ContenuCommunaute } = await import("@/components/communaute/ContenuCommunaute");
 const { PageCommunaute } = await import("@/components/communaute/PageCommunaute");
 const { ColonneCommunaute } = await import("@/components/communaute/ColonneCommunaute");
@@ -140,8 +143,9 @@ describe("La page Communauté", () => {
     vi.mocked(lireProchaineSession).mockRejectedValue(new Error("panne"));
     afficher(await ContenuCommunaute());
     expect(lireFil).toHaveBeenCalledWith("tous");
-    expect(screen.getByRole("heading", { level: 1, name: "Communauté" })).toBeInTheDocument();
-    expect(screen.getByText("Posez vos questions, partagez vos réussites, entraidez-vous.")).toBeInTheDocument();
+    // L'Accueil est la communauté (spec du nouvel Accueil, §1).
+    expect(screen.getByRole("heading", { level: 1, name: "Bonjour, Koffi" })).toBeInTheDocument();
+    expect(screen.getByText("Les dernières nouvelles d’Étudium : publications, nouvelles formations et sessions live.")).toBeInTheDocument();
     const onglets = within(screen.getByRole("group", { name: "Choisir un espace" })).getAllByRole("button");
     expect(onglets.map((o) => o.getAttribute("aria-label") ?? o.textContent)).toEqual(["Actualités", "Général", "Académique", "Business, espace verrouillé"]);
     expect(onglet("Actualités")).toHaveAttribute("aria-pressed", "true");
@@ -495,7 +499,7 @@ describe("La page Communauté", () => {
     });
     afficher(await PagePublication({ id: "p1" }));
     expect(lirePublication).toHaveBeenCalledWith("p1");
-    expect(screen.getByRole("link", { name: "Communauté" })).toHaveAttribute("href", "/communaute");
+    expect(screen.getByRole("link", { name: "Accueil" })).toHaveAttribute("href", "/accueil");
     for (const texte of ["Première", "Deuxième", "Troisième"]) expect(within(carte()).getByText(texte)).toBeInTheDocument();
     expect(within(carte()).queryByRole("button", { name: /Voir les/ })).toBeNull();
     expect(within(carte()).getByRole("textbox", { name: "Écrire un commentaire" })).toBeInTheDocument();
@@ -504,7 +508,7 @@ describe("La page Communauté", () => {
     await user.click(within(carte()).getByRole("button", { name: "Actions sur la publication de Mireille Adjovi" }));
     await user.click(screen.getByRole("menuitem", { name: "Supprimer" }));
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Supprimer" }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/communaute"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/accueil"));
     expect(actions.supprimerPublication).toHaveBeenCalledWith("p1", { relire: false });
 
     vi.mocked(lirePublication).mockResolvedValue({ migrationAbsente: false, donnees: null });
@@ -537,6 +541,20 @@ describe("La page Communauté", () => {
 
     afficher(await ContenuCommunaute({ searchParams: Promise.resolve({ espace: ["tous", "general"] }) }));
     expect(onglet("Actualités")).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("le catalogue : une nouvelle formation dans le fil, « Formations disponibles » ; illisible, le fil reste (spec du nouvel Accueil)", async () => {
+    const recente = new Date(Date.now() - 2 * 86_400_000).toISOString();
+    const carte = { id: "f1", slug: "prise-de-notes", titre: "La prise de notes", resume: "", niveau: "debutant", gratuite: false, achatSepare: false, badge: null, publieeLe: recente, dureeSecondes: 0, nbLecons: 0, parcours: [], note: null, nbAvis: 0, couverture: null } satisfies CarteCatalogue;
+    vi.mocked(listCatalogue).mockResolvedValueOnce([carte]);
+    const { unmount } = afficher(await ContenuCommunaute());
+    expect(screen.getByRole("article", { name: "Nouvelle formation : La prise de notes" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Formations disponibles" })).toBeInTheDocument();
+    unmount();
+    vi.mocked(listCatalogue).mockRejectedValueOnce(new Error("panne"));
+    afficher(await ContenuCommunaute());
+    expect(screen.getByRole("heading", { level: 1, name: "Bonjour, Koffi" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Formations disponibles" })).toBeNull();
   });
 
   it("avant la 0019 : le bandeau, sur les deux pages", async () => {
