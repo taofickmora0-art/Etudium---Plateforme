@@ -119,6 +119,7 @@ export const MENUS: Record<Espace, { libelle: string; groupes: GroupeNav[] }> = 
           { href: "/admin/utilisateurs", label: "Utilisateurs", icon: UserMultipleIcon },
           { href: "/admin/annonces", label: "Annonces", icon: Megaphone01Icon },
           { href: "/admin/paiements", label: "Abonnements et paiements", icon: CreditCardIcon },
+          { href: "/admin/communaute", label: "Communauté", icon: UserGroupIcon },
           { href: "/admin/moderation", label: "Modération", icon: Shield01Icon },
         ],
       },

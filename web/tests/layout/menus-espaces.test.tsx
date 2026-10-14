@@ -26,6 +26,7 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
       ["Utilisateurs", "/admin/utilisateurs"],
       ["Annonces", "/admin/annonces"],
       ["Abonnements et paiements", "/admin/paiements"],
+      ["Communauté", "/admin/communaute"],
       ["Modération", "/admin/moderation"],
     ]);
     expect(within(nav).getByRole("group", { name: "Contenus" })).toBeInTheDocument();
