@@ -31,6 +31,32 @@ create index if not exists publications_auteur_idx on public.publications (auteu
 alter table public.publications enable row level security;
 revoke all on public.publications from anon, authenticated;
 
+-- Les réponses : un seul niveau, sous une publication.
+create table if not exists public.commentaires_publications (
+  id uuid primary key default gen_random_uuid(),
+  publication_id uuid not null references public.publications (id) on delete cascade,
+  auteur uuid not null references public.profils (id) on delete cascade,
+  texte text not null,
+  cree_le timestamptz not null default now(),
+  constraint commentaires_texte_longueur check (char_length(texte) between 1 and 1000)
+);
+create index if not exists commentaires_publication_idx on public.commentaires_publications (publication_id, cree_le);
+create index if not exists commentaires_auteur_idx on public.commentaires_publications (auteur);
+
+-- « J’aime » : une fois par compte et par publication.
+create table if not exists public.reactions_publications (
+  publication_id uuid not null references public.publications (id) on delete cascade,
+  profil_id uuid not null references public.profils (id) on delete cascade,
+  cree_le timestamptz not null default now(),
+  primary key (publication_id, profil_id)
+);
+create index if not exists reactions_profil_idx on public.reactions_publications (profil_id);
+
+alter table public.commentaires_publications enable row level security;
+alter table public.reactions_publications enable row level security;
+revoke all on public.commentaires_publications from anon, authenticated;
+revoke all on public.reactions_publications from anon, authenticated;
+
 -- ─── Qui entre dans un espace ───────────────────────────────────────────────────────────────────────
 -- Interne (aussi utilisée par le stockage). Jamais pour un visiteur ni un compte suspendu.
 create or replace function public.peut_lire_espace(p_parcours uuid)
@@ -106,6 +132,26 @@ as $$
   end;
 $$;
 
+-- Une réponse : « Prénom N. », jamais l'adresse e-mail.
+create or replace function public.carte_reponse(c public.commentaires_publications)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'id', c.id,
+    'auteur', jsonb_build_object('prenom', coalesce(pr.prenom, ''), 'nom_court', public.nom_avis(pr.prenom, pr.nom)),
+    'est_moi', c.auteur = (select auth.uid()),
+    'texte', c.texte,
+    'cree_le', c.cree_le,
+    'peut_supprimer', c.auteur = (select auth.uid()) or public.equipe_contenus()
+  )
+  from public.profils pr
+  where pr.id = c.auteur;
+$$;
+
 create or replace function public.carte_publication(p public.publications)
 returns jsonb
 language sql
@@ -123,10 +169,18 @@ as $$
     'piece_jointe', p.piece_jointe,
     'cree_le', p.cree_le,
     'modifiee', p.modifiee,
-    'reactions', 0,
-    'j_aime', false,
-    'reponses', 0,
-    'dernieres_reponses', '[]'::jsonb,
+    'reactions', (select count(*)::int from public.reactions_publications r where r.publication_id = p.id),
+    'j_aime', exists (select 1 from public.reactions_publications r where r.publication_id = p.id and r.profil_id = (select auth.uid())),
+    'reponses', (select count(*)::int from public.commentaires_publications c where c.publication_id = p.id),
+    'dernieres_reponses', coalesce((
+      select jsonb_agg(public.carte_reponse(d) order by d.cree_le, d.id)
+      from (
+        select c.* from public.commentaires_publications c
+        where c.publication_id = p.id
+        order by c.cree_le desc, c.id desc
+        limit 2
+      ) d
+    ), '[]'::jsonb),
     'peut_supprimer', p.auteur = (select auth.uid()) or public.equipe_contenus()
   )
   from public.profils pr
@@ -199,7 +253,11 @@ begin
   if not found or not public.peut_lire_espace(v.parcours_id) then
     return null;
   end if;
-  return public.carte_publication(v) || jsonb_build_object('toutes_reponses', '[]'::jsonb);
+  return public.carte_publication(v) || jsonb_build_object('toutes_reponses', coalesce((
+    select jsonb_agg(public.carte_reponse(c) order by c.cree_le, c.id)
+    from public.commentaires_publications c
+    where c.publication_id = v.id
+  ), '[]'::jsonb));
 end;
 $$;
 
@@ -317,6 +375,159 @@ begin
 end;
 $$;
 
+-- ─── Répondre, aimer ────────────────────────────────────────────────────────────────────────────────
+-- La publication d'un espace ouvert au compte ; sinon le refus qui convient.
+create or replace function public.publication_ouverte(p_id uuid)
+returns public.publications
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v public.publications%rowtype;
+begin
+  perform public.exiger_compte_actif();
+  select * into v from public.publications where id = p_id;
+  if not found then
+    raise exception 'Cette publication n’existe plus.';
+  end if;
+  if not public.peut_lire_espace(v.parcours_id) then
+    raise exception 'Cet espace ne vous est pas ouvert.' using errcode = '42501';
+  end if;
+  return v;
+end;
+$$;
+
+-- Répondre ; l'auteur de la publication est prévenu (catégorie Communauté), jamais soi-même.
+create or replace function public.commenter(p_publication uuid, p_texte text)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v public.publications%rowtype := public.publication_ouverte(p_publication);
+  v_texte text := regexp_replace(coalesce(p_texte, ''), '^\s+|\s+$', '', 'g');
+  v_id uuid;
+  v_nom text;
+begin
+  if char_length(v_texte) not between 1 and 1000 then
+    raise exception 'Écrivez votre réponse (1 000 caractères au plus).';
+  end if;
+  insert into public.commentaires_publications (publication_id, auteur, texte)
+  values (p_publication, (select auth.uid()), v_texte)
+  returning id into v_id;
+  select public.nom_avis(prenom, nom) into v_nom from public.profils where id = (select auth.uid());
+  perform public.notifier(
+    array[v.auteur], 'communaute', 'Nouvelle réponse',
+    v_nom || ' a répondu à votre publication dans l’espace '
+      || coalesce((select pa.nom_court from public.parcours pa where pa.id = v.parcours_id), 'général') || '.',
+    '/communaute/publications/' || v.id
+  );
+  return v_id;
+end;
+$$;
+
+-- Son auteur, ou l'équipe.
+create or replace function public.supprimer_commentaire(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v public.commentaires_publications%rowtype;
+begin
+  perform public.exiger_compte_actif();
+  select * into v from public.commentaires_publications where id = p_id;
+  if not found then
+    return;
+  end if;
+  perform public.publication_ouverte(v.publication_id);
+  if v.auteur <> (select auth.uid()) and not public.equipe_contenus() then
+    raise exception 'Cette réponse n’est pas la vôtre.' using errcode = '42501';
+  end if;
+  delete from public.commentaires_publications where id = p_id;
+end;
+$$;
+
+-- « J’aime » : le premier clic l'ajoute, le second le retire. Rend l'état et le nombre.
+create or replace function public.basculer_reaction(p_publication uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_moi uuid := (select auth.uid());
+  v_aime boolean;
+begin
+  perform public.publication_ouverte(p_publication);
+  delete from public.reactions_publications where publication_id = p_publication and profil_id = v_moi;
+  if found then
+    v_aime := false;
+  else
+    insert into public.reactions_publications (publication_id, profil_id) values (p_publication, v_moi) on conflict do nothing;
+    v_aime := true;
+  end if;
+  return jsonb_build_object(
+    'j_aime', v_aime,
+    'reactions', (select count(*)::int from public.reactions_publications where publication_id = p_publication)
+  );
+end;
+$$;
+
+-- Les 3 comptes qui ont le plus publié et répondu en 7 jours, dans les espaces ouverts au compte qui demande, avec
+-- l'espace où ils ont le plus écrit.
+create or replace function public.membres_actifs()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  perform public.exiger_compte_actif();
+  return coalesce((
+    with ecrits as (
+      select p.auteur, p.parcours_id, p.cree_le
+      from public.publications p
+      where p.cree_le > now() - interval '7 days' and public.peut_lire_espace(p.parcours_id)
+      union all
+      select c.auteur, p.parcours_id, c.cree_le
+      from public.commentaires_publications c
+      join public.publications p on p.id = c.publication_id
+      where c.cree_le > now() - interval '7 days' and public.peut_lire_espace(p.parcours_id)
+    ),
+    par_espace as (
+      select auteur, parcours_id,
+             row_number() over (partition by auteur order by count(*) desc, max(cree_le) desc) as rang
+      from ecrits
+      group by auteur, parcours_id
+    ),
+    totaux as (
+      select auteur, count(*) as n, max(cree_le) as dernier from ecrits group by auteur
+    ),
+    premiers as (
+      select t.auteur, t.n, t.dernier from totaux t order by t.n desc, t.dernier desc limit 3
+    )
+    select jsonb_agg(
+      jsonb_build_object(
+        'prenom', coalesce(pr.prenom, ''),
+        'nom_court', public.nom_avis(pr.prenom, pr.nom),
+        'initiales', public.initiales_avis(pr.prenom, pr.nom),
+        'espace', coalesce((select pa.nom_court from public.parcours pa where pa.id = e.parcours_id), 'Général')
+      )
+      order by pm.n desc, pm.dernier desc
+    )
+    from premiers pm
+    join public.profils pr on pr.id = pm.auteur
+    join par_espace e on e.auteur = pm.auteur and e.rang = 1
+  ), '[]'::jsonb);
+end;
+$$;
+
 -- ─── Fichiers joints : l'espace de stockage « communaute » ──────────────────────────────────────────
 -- Un fichier se lit si une publication lisible par le compte l'attache (la règle du stockage s'exécute avec les droits
 -- du compte, qui ne lit pas la table : cette fonction le fait pour elle).
@@ -376,6 +587,16 @@ grant execute on function public.peut_lire_espace(uuid) to authenticated;
 revoke execute on function public.role_communaute(uuid) from public, anon, authenticated;
 revoke execute on function public.carte_publication(public.publications) from public, anon, authenticated;
 revoke execute on function public.verifier_piece(jsonb) from public, anon, authenticated;
+revoke execute on function public.carte_reponse(public.commentaires_publications) from public, anon, authenticated;
+revoke execute on function public.publication_ouverte(uuid) from public, anon, authenticated;
+revoke execute on function public.commenter(uuid, text) from public, anon;
+revoke execute on function public.supprimer_commentaire(uuid) from public, anon;
+revoke execute on function public.basculer_reaction(uuid) from public, anon;
+revoke execute on function public.membres_actifs() from public, anon;
+grant execute on function public.commenter(uuid, text) to authenticated;
+grant execute on function public.supprimer_commentaire(uuid) to authenticated;
+grant execute on function public.basculer_reaction(uuid) to authenticated;
+grant execute on function public.membres_actifs() to authenticated;
 revoke execute on function public.fichier_communaute_lisible(text) from public, anon;
 grant execute on function public.fichier_communaute_lisible(text) to authenticated;
 revoke execute on function public.espaces_communaute() from public, anon;

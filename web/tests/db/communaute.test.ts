@@ -170,6 +170,83 @@ describe("Espaces et publications", () => {
     expect(await banc.en({ id: E1 }, "select public.publication_communaute($1) as r", [randomUUID()])).toEqual([{ r: null }]);
   });
 
+  it("répondre : réponses et 2 dernières dans l'ordre ; « Nouvelle réponse » à l'auteur, pas à soi", async () => {
+    await banc.db.query("delete from public.notifications");
+    const id = await publier(E1, null, "Une question");
+    for (const texte of ["Première", "Deuxième", "Troisième"]) await banc.en({ id: F }, "select public.commenter($1, $2)", [id, texte]);
+    await banc.en({ id: E1 }, "select public.commenter($1, 'Merci !')", [id]);
+    type Rep = { texte: string; est_moi: boolean; auteur: { prenom: string; nom_court: string }; peut_supprimer: boolean };
+    const carte = (await fil(E1, "tous")).publications.find((p) => p.id === id) as Carte & { reponses: number; dernieres_reponses: Rep[] };
+    expect(carte.reponses).toBe(4);
+    expect(carte.dernieres_reponses.map((r) => r.texte)).toEqual(["Troisième", "Merci !"]);
+    expect(carte.dernieres_reponses[0]).toMatchObject({ est_moi: false, auteur: { prenom: "Mireille", nom_court: "Mireille A." }, peut_supprimer: false });
+    expect(carte.dernieres_reponses[1]).toMatchObject({ est_moi: true, peut_supprimer: true });
+    const notes = (await banc.db.query<{ categorie: string; titre: string; texte: string; lien: string }>("select categorie, titre, texte, lien from public.notifications where destinataire = $1", [E1])).rows;
+    expect(notes).toHaveLength(3);
+    expect(notes[0]).toEqual({ categorie: "communaute", titre: "Nouvelle réponse", texte: "Mireille A. a répondu à votre publication dans l’espace général.", lien: `/communaute/publications/${id}` });
+    const dansP = await publier(E1, P, "Dans Académique");
+    await banc.en({ id: F }, "select public.commenter($1, 'Oui')", [dansP]);
+    expect((await banc.db.query<{ texte: string }>("select texte from public.notifications where destinataire = $1 order by id desc limit 1", [E1])).rows[0].texte).toBe(
+      "Mireille A. a répondu à votre publication dans l’espace Académique.",
+    );
+    const [{ r }] = await banc.en<{ r: { toutes_reponses: Rep[] } }>({ id: E1 }, "select public.publication_communaute($1) as r", [id]);
+    expect(r.toutes_reponses.map((x) => x.texte)).toEqual(["Première", "Deuxième", "Troisième", "Merci !"]);
+  });
+
+  it("répondre ou aimer dans un espace fermé : refus ; publication inconnue ; réponse vide", async () => {
+    const dansP = await publier(F, P, "Réservé");
+    await expect(banc.en({ id: E2 }, "select public.commenter($1, 'Intrus')", [dansP])).rejects.toThrow(FERME);
+    await expect(banc.en({ id: E2 }, "select public.basculer_reaction($1)", [dansP])).rejects.toThrow(FERME);
+    await expect(banc.en({ id: E1 }, "select public.commenter($1, 'x')", [randomUUID()])).rejects.toThrow("Cette publication n’existe plus.");
+    await expect(banc.en({ id: E1 }, "select public.commenter($1, '   ')", [dansP])).rejects.toThrow("Écrivez votre réponse (1 000 caractères au plus).");
+    await expect(banc.en({ id: E1 }, "select public.commenter($1, $2)", [dansP, "x".repeat(1001)])).rejects.toThrow("Écrivez votre réponse (1 000 caractères au plus).");
+  });
+
+  it("supprimer une réponse : l'auteur ou l'équipe ; un autre : refus", async () => {
+    const id = await publier(E1, null, "Pour les réponses");
+    const [{ c: deE2 }] = await banc.en<{ c: string }>({ id: E2 }, "select public.commenter($1, 'De E2') as c", [id]);
+    const [{ c: deF }] = await banc.en<{ c: string }>({ id: F }, "select public.commenter($1, 'De F') as c", [id]);
+    await expect(banc.en({ id: E1 }, "select public.supprimer_commentaire($1)", [deE2])).rejects.toThrow("Cette réponse n’est pas la vôtre.");
+    await banc.en({ id: E2 }, "select public.supprimer_commentaire($1)", [deE2]);
+    await banc.en({ id: A }, "select public.supprimer_commentaire($1)", [deF]);
+    expect(await un("select count(*)::int as n from public.commentaires_publications where publication_id = $1", [id])).toEqual({ n: 0 });
+  });
+
+  it("J’aime bascule : 1 puis 0 ; j_aime suit le compte", async () => {
+    const id = await publier(F, P, "À aimer");
+    const aimer = async (qui: string) => (await banc.en<{ r: { j_aime: boolean; reactions: number } }>({ id: qui }, "select public.basculer_reaction($1) as r", [id]))[0].r;
+    expect(await aimer(E1)).toEqual({ j_aime: true, reactions: 1 });
+    expect(await aimer(A)).toEqual({ j_aime: true, reactions: 2 });
+    expect(await aimer(E1)).toEqual({ j_aime: false, reactions: 1 });
+    const carte = (await fil(A, "tous")).publications.find((p) => p.id === id) as Carte & { reactions: number; j_aime: boolean };
+    expect([carte.reactions, carte.j_aime]).toEqual([1, true]);
+  });
+
+  it("supprimer une publication emporte ses réponses et ses réactions", async () => {
+    const id = await publier(E1, null, "Éphémère");
+    await banc.en({ id: F }, "select public.commenter($1, 'Réponse')", [id]);
+    await banc.en({ id: F }, "select public.basculer_reaction($1)", [id]);
+    await banc.en({ id: E1 }, "select public.supprimer_publication($1)", [id]);
+    expect(await un("select (select count(*)::int from public.commentaires_publications where publication_id = $1) as c, (select count(*)::int from public.reactions_publications where publication_id = $1) as r", [id])).toEqual({ c: 0, r: 0 });
+  });
+
+  it("membres actifs : 3 au plus, les plus actifs, avec leur espace ; jamais un espace fermé au demandeur", async () => {
+    await banc.db.query("delete from public.publications");
+    for (let i = 0; i < 4; i++) await publier(E1, P, `Académique ${i}`);
+    for (let i = 0; i < 3; i++) await publier(F, null, `Général ${i}`);
+    const id = await publier(A, null, "Une");
+    await banc.en({ id: E2 }, "select public.commenter($1, 'Un')", [id]);
+    type M = { prenom: string; nom_court: string; initiales: string; espace: string };
+    const membres = async (qui: string) => (await banc.en<{ r: M[] }>({ id: qui }, "select public.membres_actifs() as r"))[0].r;
+    const pourE1 = await membres(E1);
+    expect(pourE1).toHaveLength(3);
+    expect(pourE1[0]).toEqual({ prenom: "Koffi", nom_court: "Koffi D.", initiales: "KD", espace: "Académique" });
+    expect(pourE1[1]).toMatchObject({ nom_court: "Mireille A.", espace: "Général" });
+    const pourE2 = await membres(E2);
+    expect(pourE2.map((m) => m.prenom)).not.toContain("Koffi");
+    expect(pourE2[0]).toMatchObject({ nom_court: "Mireille A." });
+  });
+
   it("compte suspendu et visiteur : refusés ; tables fermées ; la migration est rejouable", async () => {
     const E3 = randomUUID();
     await banc.creerCompte(E3);
