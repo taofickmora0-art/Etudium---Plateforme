@@ -602,9 +602,19 @@ Le champ de publication propose Image, Sondage avec images, Sondage avec texte, 
 
 1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0026_communaute_sondages.sql` (après la 0025). Si tu rejoues un jour une migration de la communauté (0019 à 0025), rejoue la 0026 juste après. **Si tu l'as appliquée avant le 15 octobre, rejoue-la** : la version corrigée compte une publication programmée dans la limite « 5 publications en 10 minutes » au moment où on l'écrit, et non jusqu'à sa parution.
    - Avec l'analyse IA active, un **sondage avec images** attend la vérification de l'équipe (`/admin/moderation`) avant de paraître : l'IA ne juge que le texte.
-2. **Sondage avec texte.** Communauté → « Quoi de neuf… » → **Sondage avec texte** : la question dans le texte, 2 options ou plus, « Plusieurs réponses possibles », la fin du sondage. **Publier**. Avec un autre compte : coche une option, **Voter** : les pourcentages s'affichent ; **Changer mon vote** reste possible jusqu'à la fin.
+2. **Sondage avec texte.** Accueil → « Quoi de neuf… » → **Sondage avec texte** : la question dans le texte, 2 options ou plus, « Plusieurs réponses possibles », la fin du sondage. **Publier**. Avec un autre compte : coche une option, **Voter** : les pourcentages s'affichent ; **Changer mon vote** reste possible jusqu'à la fin.
 3. **Sondage avec images.** Même chose avec une image par option (2 à 6) ; on vote en touchant une image.
 4. **Quiz.** La question, 2 à 6 réponses, coche **Bonne réponse** sur l'une, une explication si tu veux. Avec un autre compte : choisis une réponse, **Valider** : la bonne réponse s'affiche en vert (la tienne en rouge si elle est fausse), puis l'explication. On ne répond qu'une fois.
 5. **Programmer.** Écris une publication, clique la **flèche** à côté de « Publier » → **Programmer…**, choisis la date et l'heure (au moins 10 minutes plus tard) → le bouton devient « Programmer » et une ligne au-dessus rappelle « Programmée pour le … » (la croix revient à « Publier »).
    - Sous le champ, l'onglet **Programmées** la montre, avec « Modifier la date » et « Publier maintenant » dans son menu ⋮ ;
    - les autres comptes ne la voient pas avant l'heure ; à l'heure, elle paraît en haut du fil.
+
+## 32. Valider le nouvel Accueil, 10 minutes
+
+Aucune migration. L'Accueil est maintenant la communauté : « Communauté » a quitté le menu.
+
+1. **Le menu.** À gauche : Accueil, Formations, Messages, Événements. Sur téléphone, la barre du bas : Accueil, Formations, Événements, Certificats, Profil.
+2. **L'en-tête.** Accueil affiche « Bonjour, ton prénom », puis tout ce qu'avait la communauté : les espaces (Actualités, Général, parcours), le champ de publication, « Publiées / Programmées » et la colonne de droite.
+3. **Les nouvelles formations.** Dans Actualités, « Les plus récentes », une formation mise en ligne depuis moins de 30 jours apparaît dans le fil, à sa date, avec « Découvrir la formation ». Dans Général, un parcours ou un autre tri, elle n'y est pas.
+4. **Formations disponibles.** Sous le fil, les 4 formations les plus récentes et « Voir toutes les formations ». Sur téléphone, elles défilent en largeur.
+5. **Les anciens liens.** Ouvre `/communaute` : tu arrives sur l'Accueil ; `/communaute?espace=general` ouvre l'onglet Général. Une notification de commentaire ouvre toujours la page de la publication, dont le fil d'Ariane ramène à l'Accueil.
