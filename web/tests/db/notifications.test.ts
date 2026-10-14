@@ -186,3 +186,157 @@ describe("Lecture par les comptes", () => {
     expect((await recues(E1)).map((n) => n.titre)).toEqual(["Gardée"]);
   });
 });
+
+describe("Les événements qui notifient", () => {
+  const F = randomUUID(); // formateur « Mireille Akpo », fiche FA
+  const M = randomUUID(); // modérateur
+  let FA: string;
+  let P1: string; // nom court « Académique »
+  let P2: string; // nom court « Digital »
+  type Formation = { id: string; slug: string; titre: string; module: string; lecon: string };
+  let W: Formation; // publiée, dans P1 : suivie par E1, E3, F et A
+  let V: Formation; // publiée, dans P2 : suivie par E2 et E3
+
+  const un = async <T>(sql: string, params: unknown[] = []) => (await banc.db.query<T>(sql, params)).rows[0];
+  const toutEffacer = () => banc.db.query("delete from public.notifications");
+  const aucune = async () => (await banc.db.query("select * from public.notifications")).rows;
+  async function nouvelleFormation(titre: string, parcours: string[], statut = "brouillon"): Promise<Formation> {
+    const slug = `f-${randomUUID()}`;
+    const f = await un<{ id: string }>("insert into public.formations (titre, slug, formateur_id, statut) values ($1, $2, $3, $4) returning id", [titre, slug, FA, statut]);
+    for (const [i, p] of parcours.entries()) await banc.db.query("insert into public.formations_parcours (formation_id, parcours_id, ordre) values ($1, $2, $3)", [f.id, p, i]);
+    const m = await un<{ id: string }>("insert into public.modules (formation_id, titre, ordre) values ($1, 'Module 1', 1) returning id", [f.id]);
+    const l = await un<{ id: string }>("insert into public.lecons (module_id, titre, ordre) values ($1, 'Leçon 1', 1) returning id", [m.id]);
+    return { id: f.id, slug, titre, module: m.id, lecon: l.id };
+  }
+  const suivre = (compte: string, lecon: string, terminee = false) =>
+    banc.db.query("insert into public.progression_lecons (profil_id, lecon_id, terminee_le) values ($1, $2, case when $3 then now() end) on conflict do nothing", [compte, lecon, terminee]);
+  const parcours = async (nomCourt: string, ordre: number) =>
+    (await un<{ id: string }>("insert into public.parcours (slug, nom, nom_court, couleur, ordre) values ($1, $2, $3, 'academique', $4) returning id", [`p-${randomUUID()}`, `Parcours ${nomCourt}`, nomCourt, ordre])).id;
+
+  beforeAll(async () => {
+    for (const [id, roles] of [[F, []], [M, ["moderateur"]]] as const) await banc.creerCompte(id, [...roles]);
+    await banc.db.query("update public.profils set prenom = 'Mireille', nom = 'Akpo' where id = $1", [F]);
+    await banc.db.query("update public.profils set prenom = 'Fifamè', nom = 'Adjovi' where id = $1", [E2]);
+    await banc.en({ id: S }, "select public.changer_roles($1, '{formateur}', null, true)", [F]);
+    FA = (await un<{ id: string }>("select id from public.formateurs where compte_id = $1", [F])).id;
+    P1 = await parcours("Académique", -2);
+    P2 = await parcours("Digital", -1);
+    W = await nouvelleFormation("Méthodologie du mémoire", [P1], "publiee");
+    V = await nouvelleFormation("Canva", [P2], "publiee");
+    for (const compte of [E1, E3, F, A]) await suivre(compte, W.lecon);
+    for (const compte of [E2, E3]) await suivre(compte, V.lecon);
+  });
+
+  it("première publication : E1 « Dans le parcours Académique. », E2 celui de P2, une seule fois chacun ; F : « Votre formation est en ligne »", async () => {
+    const X = await nouvelleFormation("Maîtriser Microsoft Excel", [P1, P2]);
+    await toutEffacer();
+    await banc.en({ id: A }, "update public.formations set statut = 'publiee' where id = $1", [X.id]);
+    const nouvelle = (parcoursNom: string) => ({ categorie: "nouveaux_contenus", titre: "Nouvelle formation : Maîtriser Microsoft Excel", texte: `Dans le parcours ${parcoursNom}.`, lien: `/formations/${X.slug}` });
+    expect(await recues(E1)).toEqual([nouvelle("Académique")]);
+    expect(await recues(E2)).toEqual([nouvelle("Digital")]);
+    expect(await recues(E3)).toEqual([nouvelle("Académique")]);
+    // L'admin qui publie suit aussi le parcours : jamais notifié de sa propre action.
+    expect(await recues(A)).toEqual([]);
+    expect(await recues(F)).toEqual([{ categorie: "service", titre: "Votre formation est en ligne", texte: "Maîtriser Microsoft Excel", lien: `/formateur/formations/${X.id}` }]);
+  });
+
+  it("le formateur qui suit le parcours ne reçoit pas « Nouvelle formation »", async () => {
+    const X = await nouvelleFormation("Zotero", [P1]);
+    await toutEffacer();
+    await banc.en({ id: A }, "update public.formations set statut = 'publiee' where id = $1", [X.id]);
+    expect((await recues(F)).map((n) => n.titre)).toEqual(["Votre formation est en ligne"]);
+  });
+
+  it("archiver puis republier : « Formation archivée » à ses étudiants, puis aucune nouvelle annonce de formation", async () => {
+    const Y = await nouvelleFormation("PowerPoint", [P1], "publiee");
+    await suivre(E1, Y.lecon);
+    await toutEffacer();
+    await banc.en({ id: A }, "update public.formations set statut = 'archivee' where id = $1", [Y.id]);
+    expect(await recues(E1)).toEqual([{ categorie: "service", titre: "Formation archivée", texte: "PowerPoint n’est plus disponible. Votre progression est conservée.", lien: "/mes-formations" }]);
+    expect(await recues(E2)).toEqual([]);
+    await toutEffacer();
+    await banc.en({ id: A }, "update public.formations set statut = 'publiee' where id = $1", [Y.id]);
+    expect(await aucune()).toEqual([]);
+  });
+
+  it("nouvelle leçon : ses étudiants, lien vers la leçon ; dans un brouillon : rien ; jamais l'auteur", async () => {
+    await toutEffacer();
+    const [l] = await banc.en<{ id: string }>({ id: F }, "insert into public.lecons (module_id, titre, ordre) values ($1, 'Construire sa problématique', 2) returning id", [W.module]);
+    const lecon = { categorie: "nouveaux_contenus", titre: "Nouvelle leçon dans Méthodologie du mémoire", texte: "Construire sa problématique", lien: `/formations/${W.slug}/lecons/${l.id}` };
+    expect(await recues(E1)).toEqual([lecon]);
+    expect(await recues(A)).toEqual([lecon]);
+    expect(await recues(E2)).toEqual([]);
+    expect(await recues(F)).toEqual([]);
+    const B = await nouvelleFormation("Brouillon", [P1]);
+    await suivre(E1, B.lecon);
+    await toutEffacer();
+    await banc.en({ id: F }, "insert into public.lecons (module_id, titre, ordre) values ($1, 'Leçon 2', 2)", [B.module]);
+    expect(await aucune()).toEqual([]);
+  });
+
+  it("envoi en relecture : admin, modérateur et super admin, pas le formateur ; un second envoi pendant l'attente : rien", async () => {
+    const X = await nouvelleFormation("Word", [P1]);
+    await toutEffacer();
+    await banc.en({ id: F }, "select public.envoyer_en_relecture($1)", [X.id]);
+    const avalider = { categorie: "service", titre: "Formation à valider", texte: "Word, par Mireille Akpo", lien: `/admin/formations/${X.id}?onglet=publication` };
+    for (const compte of [A, M, S]) expect(await recues(compte)).toEqual([avalider]);
+    expect(await recues(F)).toEqual([]);
+    expect(await recues(E1)).toEqual([]);
+    await banc.en({ id: F }, "select public.envoyer_en_relecture($1)", [X.id]);
+    expect(await recues(A)).toHaveLength(1);
+  });
+
+  it("renvoi : le formateur, la remarque coupée à 120 caractères avec « … »", async () => {
+    const X = await nouvelleFormation("Excel avancé", [P1]);
+    await banc.en({ id: F }, "select public.envoyer_en_relecture($1)", [X.id]);
+    await toutEffacer();
+    const longue = `${"a".repeat(119)}bcdef`;
+    await banc.en({ id: A }, "select public.renvoyer_au_formateur($1, $2)", [X.id, longue]);
+    const lien = `/formateur/formations/${X.id}?onglet=publication`;
+    expect(await recues(F)).toEqual([{ categorie: "service", titre: "Votre formation est à corriger", texte: `${"a".repeat(119)}…`, lien }]);
+    expect(await recues(A)).toEqual([]);
+    await banc.en({ id: F }, "select public.envoyer_en_relecture($1)", [X.id]);
+    await banc.en({ id: A }, "select public.renvoyer_au_formateur($1, $2)", [X.id, "Ajoutez une vidéo."]);
+    expect((await recues(F)).map((n) => n.texte)).toEqual([`${"a".repeat(119)}…`, "Ajoutez une vidéo."]);
+  });
+
+  it("nouvel avis : le formateur, « Fifamè A. : 4/5 » ; modifier ou masquer l'avis : rien", async () => {
+    const Z = await nouvelleFormation("Canva avancé", [P2], "publiee");
+    await suivre(E2, Z.lecon, true);
+    await toutEffacer();
+    await banc.en({ id: E2 }, "select public.enregistrer_avis($1, 4::smallint, 'Très clair')", [Z.id]);
+    expect(await recues(F)).toEqual([{ categorie: "service", titre: "Nouvel avis sur Canva avancé", texte: "Fifamè A. : 4/5", lien: `/formations/${Z.slug}` }]);
+    await toutEffacer();
+    await banc.en({ id: E2 }, "select public.enregistrer_avis($1, 5::smallint, 'Excellent')", [Z.id]);
+    const avis = await un<{ id: string }>("select id from public.avis where profil_id = $1 and formation_id = $2", [E2, Z.id]);
+    await banc.en({ id: A }, "select public.masquer_avis($1, true)", [avis.id]);
+    expect(await aucune()).toEqual([]);
+  });
+
+  it("rôles : « Vous êtes formateur » ; admin et modérateur d'un coup : une seule « équipe » ; un rôle d'équipe de plus : rien ; ses propres rôles : rien", async () => {
+    const [R1, R2, R3] = [randomUUID(), randomUUID(), randomUUID()];
+    for (const id of [R1, R2, R3]) await banc.creerCompte(id);
+    expect(await recues(R3)).toEqual([]);
+    await banc.en({ id: S }, "select public.changer_roles($1, '{formateur}', null, true)", [R1]);
+    expect(await recues(R1)).toEqual([{ categorie: "service", titre: "Vous êtes formateur", texte: "Créez et suivez vos formations depuis l’espace formateur.", lien: "/formateur" }]);
+    await banc.en({ id: S }, "select public.changer_roles($1, '{admin,moderateur}')", [R2]);
+    expect(await recues(R2)).toEqual([{ categorie: "service", titre: "Vous faites partie de l’équipe", texte: "Le back-office vous est ouvert.", lien: "/admin" }]);
+    await banc.en({ id: S }, "select public.changer_roles($1, '{admin,moderateur,super_admin}')", [R2]);
+    expect(await recues(R2)).toHaveLength(1);
+    await toutEffacer();
+    await banc.en({ id: S }, "select public.changer_roles($1, '{super_admin,moderateur}')", [S]);
+    expect(await recues(S)).toEqual([]);
+  });
+
+  it("réactivation : « Votre compte est réactivé » ; supprimer un compte suspendu (auth.users) réussit", async () => {
+    const [R4, R5] = [randomUUID(), randomUUID()];
+    for (const id of [R4, R5]) await banc.creerCompte(id);
+    await banc.en({ id: A }, "select public.suspendre_compte($1, 'Test')", [R4]);
+    expect(await recues(R4)).toEqual([]);
+    await banc.en({ id: A }, "select public.reactiver_compte($1)", [R4]);
+    expect(await recues(R4)).toEqual([{ categorie: "service", titre: "Votre compte est réactivé", texte: "Vous retrouvez tous vos accès.", lien: "/accueil" }]);
+    await banc.en({ id: A }, "select public.suspendre_compte($1, 'Test')", [R5]);
+    await banc.db.query("delete from auth.users where id = $1", [R5]);
+    expect((await banc.db.query("select id from public.profils where id = $1", [R5])).rows).toEqual([]);
+  });
+});

@@ -128,7 +128,249 @@ as $$
   where destinataire = (select auth.uid()) and lue_le is null and (p_ids is null or id = any (p_ids));
 $$;
 
+-- ─── Qui notifier ───────────────────────────────────────────────────────────────────────────────────
+-- Règle provisoire avant les abonnements (lot 2) : un compte suit une formation dès qu'il en a ouvert une leçon.
+create or replace function public.suiveurs_formation(p_formation uuid)
+returns uuid[]
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(array_agg(distinct p.profil_id), '{}')
+  from public.progression_lecons p
+  join public.lecons l on l.id = p.lecon_id
+  join public.modules m on m.id = l.module_id
+  where m.formation_id = p_formation;
+$$;
+
+-- L'équipe (admin, modérateur, super admin), sans les comptes suspendus.
+create or replace function public.membres_equipe()
+returns uuid[]
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(array_agg(distinct r.profil_id), '{}')
+  from public.roles r
+  where r.role in ('admin', 'moderateur', 'super_admin')
+    and not exists (select 1 from public.suspensions s where s.profil_id = r.profil_id);
+$$;
+
+-- ─── Formations : publication, archivage, relecture ─────────────────────────────────────────────────
+-- Des déclencheurs plutôt que des fonctions réécrites : une action faite ailleurs (éditeur SQL) notifie aussi.
+create or replace function public.notifications_formations()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_formateur uuid;
+  v_deja uuid[] := '{}';
+  v_parcours record;
+  v_suiveurs uuid[];
+  v_remarque text;
+begin
+  select compte_id into v_formateur from public.formateurs where id = new.formateur_id;
+
+  -- Première publication (republier une formation archivée ne compte pas) : les étudiants de ses parcours, une
+  -- seule fois chacun, avec le premier parcours qu'ils suivent ; puis son formateur.
+  if new.publiee_le is not null and (tg_op = 'INSERT' or old.publiee_le is null) then
+    for v_parcours in
+      select pa.id, pa.nom_court
+      from public.formations_parcours fp
+      join public.parcours pa on pa.id = fp.parcours_id
+      where fp.formation_id = new.id
+      order by pa.ordre, pa.nom_court
+    loop
+      select coalesce(array_agg(distinct p.profil_id), '{}') into v_suiveurs
+      from public.progression_lecons p
+      join public.lecons l on l.id = p.lecon_id
+      join public.modules m on m.id = l.module_id
+      join public.formations_parcours fp on fp.formation_id = m.formation_id
+      where fp.parcours_id = v_parcours.id
+        and not (p.profil_id = any (v_deja))
+        and p.profil_id is distinct from v_formateur;
+      perform public.notifier(
+        v_suiveurs, 'nouveaux_contenus', 'Nouvelle formation : ' || new.titre,
+        'Dans le parcours ' || v_parcours.nom_court || '.', '/formations/' || new.slug
+      );
+      v_deja := v_deja || v_suiveurs;
+    end loop;
+    if v_formateur is not null then
+      perform public.notifier(array[v_formateur], 'service', 'Votre formation est en ligne', new.titre, '/formateur/formations/' || new.id);
+    end if;
+  end if;
+
+  if tg_op = 'UPDATE' then
+    if new.statut = 'archivee' and old.statut <> 'archivee' then
+      perform public.notifier(
+        public.suiveurs_formation(new.id), 'service', 'Formation archivée',
+        new.titre || ' n’est plus disponible. Votre progression est conservée.', '/mes-formations'
+      );
+    end if;
+
+    if new.envoyee_le is not null and old.envoyee_le is null then
+      perform public.notifier(
+        public.membres_equipe(), 'service', 'Formation à valider',
+        new.titre || ', par ' || coalesce((select nom from public.formateurs where id = new.formateur_id), 'un formateur'),
+        '/admin/formations/' || new.id || '?onglet=publication'
+      );
+    end if;
+
+    if new.renvoyee_le is not null and new.renvoyee_le is distinct from old.renvoyee_le and v_formateur is not null then
+      v_remarque := coalesce(new.remarque_relecture, '');
+      if char_length(v_remarque) > 120 then
+        v_remarque := left(v_remarque, 119) || '…';
+      end if;
+      perform public.notifier(
+        array[v_formateur], 'service', 'Votre formation est à corriger', v_remarque,
+        '/formateur/formations/' || new.id || '?onglet=publication'
+      );
+    end if;
+  end if;
+  return null;
+end;
+$$;
+
+drop trigger if exists notifications_formations on public.formations;
+create trigger notifications_formations
+  after insert or update on public.formations
+  for each row execute function public.notifications_formations();
+
+-- ─── Une leçon ajoutée à une formation en ligne ─────────────────────────────────────────────────────
+create or replace function public.notifications_lecons()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_formation record;
+begin
+  select f.id, f.titre, f.slug, f.statut into v_formation
+  from public.modules m
+  join public.formations f on f.id = m.formation_id
+  where m.id = new.module_id;
+  if found and v_formation.statut = 'publiee' then
+    perform public.notifier(
+      public.suiveurs_formation(v_formation.id), 'nouveaux_contenus', 'Nouvelle leçon dans ' || v_formation.titre,
+      new.titre, '/formations/' || v_formation.slug || '/lecons/' || new.id
+    );
+  end if;
+  return null;
+end;
+$$;
+
+drop trigger if exists notifications_lecons on public.lecons;
+create trigger notifications_lecons
+  after insert on public.lecons
+  for each row execute function public.notifications_lecons();
+
+-- ─── Un nouvel avis ─────────────────────────────────────────────────────────────────────────────────
+-- Une modification passe par « on conflict do update » (0010) : elle ne déclenche rien. Masquer non plus.
+create or replace function public.notifications_avis()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_formation record;
+  v_auteur record;
+begin
+  select f.titre, f.slug, fo.compte_id into v_formation
+  from public.formations f
+  left join public.formateurs fo on fo.id = f.formateur_id
+  where f.id = new.formation_id;
+  if v_formation.compte_id is null then
+    return null;
+  end if;
+  select prenom, nom into v_auteur from public.profils where id = new.profil_id;
+  perform public.notifier(
+    array[v_formation.compte_id], 'service', 'Nouvel avis sur ' || v_formation.titre,
+    public.nom_avis(v_auteur.prenom, v_auteur.nom) || ' : ' || new.note || '/5', '/formations/' || v_formation.slug
+  );
+  return null;
+end;
+$$;
+
+drop trigger if exists notifications_avis on public.avis;
+create trigger notifications_avis
+  after insert on public.avis
+  for each row execute function public.notifications_avis();
+
+-- ─── Un rôle donné ──────────────────────────────────────────────────────────────────────────────────
+-- Par requête, pas par ligne : un compte qui reçoit admin et modérateur d'un coup n'est averti qu'une fois, et un
+-- membre de l'équipe qui reçoit un rôle d'équipe de plus ne l'est pas.
+create or replace function public.notifications_roles()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_comptes uuid[];
+begin
+  v_comptes := array(select distinct profil_id from nouveaux where role = 'formateur');
+  if cardinality(v_comptes) > 0 then
+    perform public.notifier(v_comptes, 'service', 'Vous êtes formateur', 'Créez et suivez vos formations depuis l’espace formateur.', '/formateur');
+  end if;
+
+  v_comptes := array(
+    select distinct n.profil_id from nouveaux n
+    where n.role in ('moderateur', 'admin', 'super_admin')
+      and not exists (
+        select 1 from public.roles r
+        where r.profil_id = n.profil_id
+          and r.role in ('moderateur', 'admin', 'super_admin')
+          and not exists (select 1 from nouveaux n2 where n2.profil_id = r.profil_id and n2.role = r.role)
+      )
+  );
+  if cardinality(v_comptes) > 0 then
+    perform public.notifier(v_comptes, 'service', 'Vous faites partie de l’équipe', 'Le back-office vous est ouvert.', '/admin');
+  end if;
+  return null;
+end;
+$$;
+
+drop trigger if exists notifications_roles on public.roles;
+create trigger notifications_roles
+  after insert on public.roles
+  referencing new table as nouveaux
+  for each statement execute function public.notifications_roles();
+
+-- ─── Un compte réactivé ─────────────────────────────────────────────────────────────────────────────
+-- Supprimer un compte suspendu efface aussi sa suspension : son profil n'existe plus, personne n'est averti.
+create or replace function public.notifications_reactivation()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if exists (select 1 from public.profils where id = old.profil_id) then
+    perform public.notifier(array[old.profil_id], 'service', 'Votre compte est réactivé', 'Vous retrouvez tous vos accès.', '/accueil');
+  end if;
+  return null;
+end;
+$$;
+
+drop trigger if exists notifications_reactivation on public.suspensions;
+create trigger notifications_reactivation
+  after delete on public.suspensions
+  for each row execute function public.notifications_reactivation();
+
 revoke execute on function public.notifier(uuid[], text, text, text, text) from public, anon, authenticated;
+revoke execute on function public.suiveurs_formation(uuid) from public, anon, authenticated;
+revoke execute on function public.membres_equipe() from public, anon, authenticated;
+revoke execute on function public.notifications_formations() from public, anon, authenticated;
+revoke execute on function public.notifications_lecons() from public, anon, authenticated;
+revoke execute on function public.notifications_avis() from public, anon, authenticated;
+revoke execute on function public.notifications_roles() from public, anon, authenticated;
+revoke execute on function public.notifications_reactivation() from public, anon, authenticated;
 revoke execute on function public.mes_notifications(boolean, bigint, integer) from public, anon;
 revoke execute on function public.marquer_lues(bigint[]) from public, anon;
 grant execute on function public.mes_notifications(boolean, bigint, integer) to authenticated;
