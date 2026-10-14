@@ -100,7 +100,7 @@ function BoutonLien({ editor, estActif }: { editor: Editor | null; estActif: boo
         />
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content align="start" sideOffset={6} className={cn(FENETRE, "w-[min(340px,calc(100vw-32px))]")}>
+        <Popover.Content align="start" sideOffset={6} className={cn(FENETRE, "w-[340px] max-w-[calc(100vw_-_32px)]")}>
           <form className="flex flex-col gap-2" onSubmit={valider}>
             <TextInput aria-label="Adresse du lien" placeholder="https://…" inputMode="url" value={adresse} onChange={(e) => setAdresse(e.target.value)} className="h-10 text-sm" />
             {erreur && (
@@ -141,7 +141,7 @@ function BoutonEmoji({ editor }: { editor: Editor | null }) {
         <IconButton icon={SmileIcon} label="Emoji" variant="discret" size="sm" disabled={!editor} onMouseDown={(e) => e.preventDefault()} />
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content align="end" sideOffset={6} className={cn(FENETRE, "w-[min(296px,calc(100vw-32px))] p-2")}>
+        <Popover.Content align="end" sideOffset={6} className={cn(FENETRE, "w-[296px] max-w-[calc(100vw_-_32px)] p-2")}>
           <div role="group" aria-label="Emojis" className="grid grid-cols-8 gap-0.5">
             {EMOJIS.map(([emoji, nom]) => (
               <button

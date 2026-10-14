@@ -145,7 +145,8 @@ export function PageCommunaute({
   }
 
   return (
-    <div className="flex min-w-0 flex-col">
+    // Le fil (720 px) et sa colonne (320 px) restent au milieu de l'écran, l'en-tête aligné sur eux.
+    <div className="mx-auto flex w-full max-w-[720px] min-w-0 flex-col xl:max-w-[1064px]">
       <Heading level="page">Communauté</Heading>
       <Lead className="mt-2.5">Posez vos questions, partagez vos réussites, entraidez-vous.</Lead>
       <FilterChips
