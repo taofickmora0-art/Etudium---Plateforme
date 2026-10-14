@@ -46,8 +46,8 @@ const ACCES: { value: Acces; label: string }[] = [
 const compteur = (n: number) => `${n} ${n > 1 ? "formations" : "formation"}`;
 
 const GRILLE_PUBLIQUE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(250px,calc((100%-60px)/4))),1fr))] gap-5";
-// Connecté : 5 colonnes au plus, cartes de 220 px au moins (4 vers 1280 px, 5 vers 1440 px ; spec Formations et Événements, §2).
-const GRILLE_CONNECTEE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(220px,calc((100%-80px)/5))),1fr))] gap-5";
+// Connecté : 5 colonnes au plus, cartes de 190 px au moins (4 à 5 sur ordinateur ; spec Formations et Événements, §2).
+const GRILLE_CONNECTEE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(190px,calc((100%-80px)/5))),1fr))] gap-5";
 
 /**
  * Catalogue des formations (NdCataloguePublic pour un visiteur, NdCatalogue et NdMobCatalogue pour un compte connecté).

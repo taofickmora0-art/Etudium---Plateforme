@@ -13,7 +13,7 @@
   - Format enregistré : `[texte](https://adresse)`. Seules les adresses `http` et `https` sont acceptées ; une autre forme reste du texte.
   - Affichage : le texte est un lien ouvert dans un nouvel onglet (`noopener nofollow ugc`).
 
-## 2. Étape 2 — Les commentaires (migration 0023)
+## 2. Étape 2 — Les commentaires (migration 0024)
 
 - Sous chaque commentaire : **Répondre** et **J’aime** (avec le nombre), et un menu **⋮** :
   - **Copier le lien** (l'adresse de la publication, ancrée sur le commentaire), **Signaler** (pas pour son auteur ni l'équipe) ;
@@ -22,7 +22,7 @@
 - **« Voir plus de commentaires »** charge les commentaires suivants ; « Écrire un commentaire… » reste en bas.
 - Base : `commentaires_publications.parent_id`, `modifie_le` ; `reactions_commentaires` ; `commenter(p_publication, p_texte, p_parent)`, `modifier_commentaire`, `basculer_reaction_commentaire` ; la carte d'un commentaire rend `parent_id`, `reactions`, `j_aime`, `modifie`, `peut_modifier`.
 
-## 3. Étape 3 — Programmer et sondages (migration 0024)
+## 3. Étape 3 — Programmer et sondages (migration 0025)
 
 - **Programmer** (icône calendrier du champ) : une date et une heure à venir (heure du Bénin). Le bouton devient « Programmer ». La publication n'est visible que de son auteur (« Programmée pour le … ») et de l'équipe jusqu'à cette heure ; elle paraît alors en haut du fil. Analyse et limites comme une publication immédiate.
 - **Sondage** (icône du champ) : une question (le texte de la publication), 2 à 10 options, « Les membres peuvent choisir plusieurs options », une date de fin facultative.

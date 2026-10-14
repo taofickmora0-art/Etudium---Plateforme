@@ -16,7 +16,7 @@ export function CarteSuivieCompacte({ vue }: { vue: VueCarteSuivie }) {
   const classes = "box-border flex h-full min-w-0 flex-col overflow-hidden rounded-carte border border-bordure-carte bg-panneau text-inherit no-underline";
   const contenu = (
     <>
-      <Couverture src={vue.couverture} parcours={vue.parcours} sizes="(max-width: 640px) 168px, 220px" />
+      <Couverture src={vue.couverture} parcours={vue.parcours} sizes="(max-width: 640px) 136px, 220px" />
       <div className="flex min-w-0 flex-1 flex-col px-3 pt-2.5 pb-3">
         <h3 id={`${id}-titre`} title={vue.titre} className="m-0 line-clamp-2 min-h-10 text-sm leading-5 font-semibold text-encre">
           {vue.titre}

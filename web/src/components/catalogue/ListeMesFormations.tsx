@@ -32,7 +32,7 @@ export function ListeMesFormations({ suivies }: { suivies: VueCarteSuivie[] }) {
       </div>
       <ul
         aria-label="Mes formations"
-        className="m-0 grid list-none auto-cols-[minmax(168px,calc((100%-80px)/6))] grid-flow-col gap-4 overflow-x-auto p-0 pb-1 [scrollbar-width:thin] max-sm:-mx-4 max-sm:px-4"
+        className="m-0 grid list-none auto-cols-[minmax(136px,calc((100%-80px)/6))] grid-flow-col gap-4 overflow-x-auto p-0 pb-1 [scrollbar-width:thin] max-sm:-mx-4 max-sm:px-4"
       >
         {suivies.slice(0, RANGEE_MAX).map((vue) => (
           <li key={vue.id} className="min-w-0">
