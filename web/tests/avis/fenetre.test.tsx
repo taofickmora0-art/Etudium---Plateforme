@@ -27,7 +27,6 @@ const MIEN: AvisPublic = {
   creeLe: "2026-10-12T10:00:00Z",
   modifieLe: "2026-10-12T10:00:00Z",
   estMoi: true,
-  masque: false,
 };
 const monter = (avis: AvisPublic[] = []) =>
   render(

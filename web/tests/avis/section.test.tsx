@@ -21,7 +21,6 @@ const unAvis = (o: Partial<AvisPublic> = {}): AvisPublic => ({
   creeLe: "2026-10-12T10:00:00Z",
   modifieLe: "2026-10-12T10:00:00Z",
   estMoi: false,
-  masque: false,
   ...o,
 });
 const DESIGN: AvisFormation = { avis: [unAvis()], resume: resumeDepuis({ ...vide, 5: 103, 4: 17, 3: 5, 2: 1 }) };
@@ -43,16 +42,23 @@ describe("Section « Avis des étudiants »", () => {
     for (const pct of ["82 %", "13 %", "4 %", "1 %", "0 %"]) expect(screen.getByText(pct)).toBeInTheDocument();
   });
 
-  it("les cartes : nom, initiales, note, commentaire ; le sien d'abord, avec son état", () => {
+  it("la carte de son propre avis ne porte jamais « Masqué par l’équipe »", () => {
+    // Même si une base plus ancienne (avant la 0016) livrait encore l'information, l'auteur ne doit pas la voir.
+    const masque = { ...unAvis({ id: id(2), estMoi: true }), masque: true } as AvisPublic;
+    monter({ donnees: { avis: [masque], resume: resumeDepuis(vide) } });
+    expect(screen.getByText("Votre avis")).toBeInTheDocument();
+    expect(screen.queryByText(/Masqué/)).toBeNull();
+  });
+
+  it("les cartes : nom, initiales, note, commentaire ; le sien d'abord", () => {
     monter({
       donnees: {
-        avis: [unAvis({ id: id(2), estMoi: true, masque: true, note: 3, commentaire: "<script>alert(1)</script>", auteur: "Aïcha", initiales: "A" }), unAvis()],
+        avis: [unAvis({ id: id(2), estMoi: true, note: 3, commentaire: "<script>alert(1)</script>", auteur: "Aïcha", initiales: "A" }), unAvis()],
         resume: resumeDepuis({ ...vide, 4: 1 }),
       },
     });
     const cartes = within(screen.getByRole("list", { name: "Avis des étudiants" })).getAllByRole("listitem");
     expect(within(cartes[0]).getByText("Votre avis")).toBeInTheDocument();
-    expect(within(cartes[0]).getByText("Masqué par l’équipe")).toBeInTheDocument();
     expect(within(cartes[0]).getByRole("img", { name: "Note : 3 sur 5" })).toBeInTheDocument();
     expect(within(cartes[0]).getByText("<script>alert(1)</script>")).toBeInTheDocument();
     expect(within(cartes[1]).getByText("Fifamè A.")).toBeInTheDocument();

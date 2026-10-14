@@ -23,7 +23,7 @@ const LIGNE = {
   cree_le: "2026-10-12T10:00:00Z",
   modifie_le: "2026-10-13T10:00:00Z",
   est_moi: true,
-  masque: false,
+  masque: true,
 };
 
 describe("Avis : lecture", () => {
@@ -33,7 +33,7 @@ describe("Avis : lecture", () => {
     faux.repondre("rpc.avis_formation", { data: [LIGNE] });
     faux.repondre("rpc.repartition_avis", { data: [{ note: 5, nombre: 3 }, { note: 4, nombre: 1 }] });
     expect(await lireAvis(id(9))).toEqual({
-      avis: [{ id: id(1), note: 4, commentaire: "Très clair.", auteur: "Fifamè A.", initiales: "FA", creeLe: "2026-10-12T10:00:00Z", modifieLe: "2026-10-13T10:00:00Z", estMoi: true, masque: false }],
+      avis: [{ id: id(1), note: 4, commentaire: "Très clair.", auteur: "Fifamè A.", initiales: "FA", creeLe: "2026-10-12T10:00:00Z", modifieLe: "2026-10-13T10:00:00Z", estMoi: true }],
       resume: { moyenne: 4.8, total: 4, repartition: { 5: 3, 4: 1, 3: 0, 2: 0, 1: 0 } },
     });
     expect(faux.de("rpc", "avis_formation")[0].valeurs).toEqual({ p_formation: id(9), p_limite: 6 });

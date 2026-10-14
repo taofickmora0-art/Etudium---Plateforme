@@ -13,10 +13,11 @@ export type AvisPublic = {
   initiales: string;
   creeLe: string;
   modifieLe: string;
-  /** L'avis du compte connecté. */
+  /**
+   * L'avis du compte connecté. Masqué par l'équipe, il lui reste visible, sans aucune mention : son auteur ne doit
+   * pas savoir qu'il est masqué (spec des notifications, §5).
+   */
   estMoi: boolean;
-  /** Masqué par l'équipe : seul son auteur le voit encore. */
-  masque: boolean;
 };
 
 export type ResumeAvis = {

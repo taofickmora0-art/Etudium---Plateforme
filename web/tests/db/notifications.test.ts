@@ -395,3 +395,36 @@ describe("Les annonces", () => {
     await expect(banc.en({ id: A }, "select * from public.annonces")).rejects.toThrow(REFUS);
   });
 });
+
+describe("Avis masqué : son auteur ne le sait pas", () => {
+  let Z: string;
+  let avis: string;
+
+  beforeAll(async () => {
+    const un = async <T>(sql: string, params: unknown[] = []) => (await banc.db.query<T>(sql, params)).rows[0];
+    Z = (await un<{ id: string }>("insert into public.formations (titre, slug, statut) values ('Zotero', $1, 'publiee') returning id", [`z-${randomUUID()}`])).id;
+    const m = await un<{ id: string }>("insert into public.modules (formation_id, titre) values ($1, 'Module') returning id", [Z]);
+    const l = await un<{ id: string }>("insert into public.lecons (module_id, titre) values ($1, 'Leçon') returning id", [m.id]);
+    await banc.db.query("insert into public.progression_lecons (profil_id, lecon_id, terminee_le) values ($1, $2, now())", [E1, l.id]);
+    await banc.en({ id: E1 }, "select public.enregistrer_avis($1, 2::smallint, 'Bof')", [Z]);
+    avis = (await un<{ id: string }>("select id from public.avis where profil_id = $1 and formation_id = $2", [E1, Z])).id;
+    await banc.en({ id: A }, "select public.masquer_avis($1, true)", [avis]);
+  });
+
+  it("l'auteur reçoit son avis masqué avec masque = false ; un autre compte ne le reçoit pas", async () => {
+    const sien = await banc.en<{ id: string; est_moi: boolean; masque: boolean }>({ id: E1 }, "select id, est_moi, masque from public.avis_formation($1, 6)", [Z]);
+    expect(sien).toEqual([{ id: avis, est_moi: true, masque: false }]);
+    expect(await banc.en({ id: E2 }, "select id from public.avis_formation($1, 6)", [Z])).toEqual([]);
+    expect(await banc.en("anon", "select id from public.avis_formation($1, 6)", [Z])).toEqual([]);
+  });
+
+  it("l'auteur ne lit plus la colonne masque de ses avis ; il lit encore les autres colonnes", async () => {
+    await expect(banc.en({ id: E1 }, "select masque from public.avis")).rejects.toThrow(REFUS);
+    await expect(banc.en({ id: E1 }, "select * from public.avis")).rejects.toThrow(REFUS);
+    expect(await banc.en({ id: E1 }, "select id, note, commentaire from public.avis where formation_id = $1", [Z])).toEqual([{ id: avis, note: 2, commentaire: "Bof" }]);
+  });
+
+  it("l'équipe voit toujours qu'il est masqué", async () => {
+    expect(await banc.en({ id: S }, "select masque from public.avis_equipe() where id = $1", [avis])).toEqual([{ masque: true }]);
+  });
+});

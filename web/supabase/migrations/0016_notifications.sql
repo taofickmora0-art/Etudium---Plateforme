@@ -455,6 +455,52 @@ begin
 end;
 $$;
 
+-- ─── Avis masqués : l'auteur ne le sait pas ─────────────────────────────────────────────────────────
+-- Son avis masqué lui reste visible, exactement comme un autre : la colonne « masque » lui est toujours rendue fausse
+-- (gardée pour que la 0010 reste rejouable). Les autres ne le voient toujours pas ; il ne compte pas dans la note.
+create or replace function public.avis_formation(p_formation uuid, p_limite integer default 6)
+returns table (
+  id uuid,
+  note smallint,
+  commentaire text,
+  auteur text,
+  initiales text,
+  cree_le timestamptz,
+  modifie_le timestamptz,
+  est_moi boolean,
+  masque boolean
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select
+    a.id,
+    a.note,
+    a.commentaire,
+    public.nom_avis(p.prenom, p.nom),
+    public.initiales_avis(p.prenom, p.nom),
+    a.cree_le,
+    a.modifie_le,
+    coalesce(a.profil_id = (select auth.uid()), false),
+    false
+  from public.avis a
+  join public.profils p on p.id = a.profil_id
+  join public.formations f on f.id = a.formation_id
+  where a.formation_id = p_formation
+    and f.statut = 'publiee'
+    and (not a.masque or a.profil_id = (select auth.uid()))
+  order by coalesce(a.profil_id = (select auth.uid()), false) desc, a.modifie_le desc
+  limit greatest(coalesce(p_limite, 6), 0);
+$$;
+revoke execute on function public.avis_formation(uuid, integer) from public;
+grant execute on function public.avis_formation(uuid, integer) to anon, authenticated;
+
+-- Ses propres avis restent lisibles, sauf la colonne « masque », que seule l'équipe connaît (avis_equipe, compte_equipe).
+revoke select on public.avis from authenticated;
+grant select (id, profil_id, formation_id, note, commentaire, cree_le, modifie_le) on public.avis to authenticated;
+
 revoke execute on function public.publier_annonce(text, text, text) from public, anon;
 revoke execute on function public.annonces_equipe() from public, anon;
 grant execute on function public.publier_annonce(text, text, text) to authenticated;

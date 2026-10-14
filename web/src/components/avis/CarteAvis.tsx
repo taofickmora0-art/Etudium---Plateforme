@@ -7,7 +7,8 @@ import { EtoilesNote } from "./EtoilesNote";
 
 /**
  * Un avis (annexe 1.3 §5.4 publique, §6 c connectée) : avatar, nom, note, commentaire. La rangée d'étoiles s'ajoute à
- * la maquette : un avis peut n'avoir que sa note. Le sien porte « Votre avis » (et « Masqué par l’équipe » s'il l'est).
+ * la maquette : un avis peut n'avoir que sa note. Le sien porte « Votre avis », et jamais la mention d'un masquage :
+ * son auteur ne doit pas savoir que l'équipe l'a masqué.
  */
 export function CarteAvis({ avis, variante }: { avis: AvisPublic; variante: "public" | "connecte" }) {
   const publique = variante === "public";
@@ -24,7 +25,6 @@ export function CarteAvis({ avis, variante }: { avis: AvisPublic; variante: "pub
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className={cn("font-semibold text-encre wrap-anywhere", publique ? "text-[15px] leading-[22px]" : "text-sm leading-[22px]")}>{avis.auteur}</span>
             {avis.estMoi && <Tag tone="compteur">Votre avis</Tag>}
-            {avis.estMoi && avis.masque && <Tag tone="enAttente">Masqué par l’équipe</Tag>}
           </div>
           <EtoilesNote note={avis.note} label={`Note : ${avis.note} sur 5`} />
         </div>

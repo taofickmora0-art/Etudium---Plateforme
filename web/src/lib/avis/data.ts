@@ -45,7 +45,6 @@ export async function lireAvis(formationId: string): Promise<AvisFormation | nul
       creeLe: texte(a.cree_le),
       modifieLe: texte(a.modifie_le),
       estMoi: a.est_moi === true,
-      masque: a.masque === true,
     })),
     resume: resumeDepuis(parNote),
   };
