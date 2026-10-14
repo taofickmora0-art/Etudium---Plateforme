@@ -107,7 +107,13 @@ export type DonneesAnnonce = {
   parcoursId: string | null;
 };
 
-export type MembreActif = { prenom: string; nomCourt: string; initiales: string; espace: string };
-
 /** Le compte connecté, pour l'avatar du champ de publication et le dossier de ses fichiers. */
-export type MoiCommunaute = { compteId: string; prenom: string; nom: string; initiales: string; photoUrl: string | null };
+export type MoiCommunaute = {
+  compteId: string;
+  prenom: string;
+  nom: string;
+  initiales: string;
+  photoUrl: string | null;
+  /** L'équipe : « Gérer l’annonce » (0021). */
+  equipe?: boolean;
+};

@@ -1,50 +1,66 @@
 import { unstable_rethrow } from "next/navigation";
 import { demoModeActive, getAuthUser, getShellUser } from "@/lib/auth/current-user";
-import { lireAnalyseActive, lireEspaces, lireFil, lireMembresActifs } from "@/lib/communaute/data";
+import { canAccess } from "@/lib/auth/permissions";
+import { lireAnnonce } from "@/lib/communaute/annonce";
+import { lireActivites, lireAnalyseActive, lireEspaces, lireFil, lireTendances } from "@/lib/communaute/data";
 import type { MoiCommunaute } from "@/lib/communaute/types";
 import { lireProchaineSession } from "@/lib/sessions/data";
+import type { Lecture } from "@/lib/utilisateurs/types";
 import { MigrationCommunauteAbsente } from "./cadre";
 import { ColonneCommunaute } from "./ColonneCommunaute";
 import { PageCommunaute } from "./PageCommunaute";
 
-/** La prochaine session live (0018) ; null avant la migration, ou si la lecture échoue : la page ne casse pas pour elle. */
-async function prochaineSession() {
+/**
+ * Une lecture secondaire (la colonne de droite) : null avant sa migration, ou si elle échoue. La page ne casse pas pour
+ * elle ; les interruptions de Next (pré-rendu, rendu dynamique) ne sont pas des échecs : elles repartent.
+ */
+async function facultatif<T>(quoi: string, lire: () => Promise<Lecture<T>>): Promise<T | null> {
   try {
-    const lecture = await lireProchaineSession();
+    const lecture = await lire();
     return lecture.migrationAbsente ? null : lecture.donnees;
   } catch (erreur) {
-    // Les interruptions de Next (pré-rendu, rendu dynamique) ne sont pas des échecs : elles repartent.
     unstable_rethrow(erreur);
-    console.error("Lecture de la prochaine session impossible :", erreur instanceof Error ? erreur.message : erreur);
+    console.error(`Lecture ${quoi} impossible :`, erreur instanceof Error ? erreur.message : erreur);
     return null;
   }
 }
 
-/** Le compte connecté : son avatar, et son dossier pour les fichiers joints. */
+/** Le compte connecté : son avatar, son dossier pour les fichiers joints, et s'il est de l'équipe. */
 export async function moiCommunaute(): Promise<MoiCommunaute> {
   const [shell, compte] = await Promise.all([getShellUser(), demoModeActive() ? null : getAuthUser()]);
-  return { compteId: compte?.id ?? "", prenom: shell?.prenom ?? "", nom: shell?.nom ?? "", initiales: shell?.initials ?? "", photoUrl: shell?.photoUrl ?? null };
+  return {
+    compteId: compte?.id ?? "",
+    prenom: shell?.prenom ?? "",
+    nom: shell?.nom ?? "",
+    initiales: shell?.initials ?? "",
+    photoUrl: shell?.photoUrl ?? null,
+    equipe: shell ? canAccess("admin", shell.roles) : false,
+  };
 }
 
-/** Les espaces, le fil « Général » et la colonne de droite ; avant la migration 0019, un bandeau. */
+/** Les espaces, le fil « Actualités », l'annonce et la colonne de droite ; avant la migration 0019, un bandeau. */
 export async function ContenuCommunaute() {
-  const [espaces, fil, membres, session, moi, analyseActive] = await Promise.all([
+  const [espaces, fil, tendances, activites, session, moi, analyseActive, annonce] = await Promise.all([
     lireEspaces(),
     lireFil("tous"),
-    lireMembresActifs(),
-    prochaineSession(),
+    facultatif("des tendances", lireTendances),
+    facultatif("des activités", lireActivites),
+    facultatif("de la prochaine session", lireProchaineSession),
     moiCommunaute(),
     lireAnalyseActive(),
+    lireAnnonce(),
   ]);
   if (espaces.migrationAbsente || fil.migrationAbsente) return <MigrationCommunauteAbsente />;
+  const maintenant = new Date();
   return (
     <PageCommunaute
       espaces={espaces.donnees}
       initial={fil.donnees}
       moi={moi}
+      annonce={annonce}
       analyseActive={analyseActive}
-      maintenant={new Date().toISOString()}
-      colonne={<ColonneCommunaute session={session} membres={membres.migrationAbsente ? [] : membres.donnees} espaces={espaces.donnees} />}
+      maintenant={maintenant.toISOString()}
+      colonne={<ColonneCommunaute session={session} tendances={tendances} activites={activites} maintenant={maintenant} />}
     />
   );
 }

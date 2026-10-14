@@ -1,6 +1,3 @@
-import type { TagTone } from "@/components/ui/Tag";
-import type { Espace } from "@/lib/communaute/types";
-
 // Petites pièces partagées par les composants de la communauté.
 
 const TONS_AVATAR = ["bleu", "violet", "ambre"] as const;
@@ -15,13 +12,14 @@ export function tonAvatar(nom: string): (typeof TONS_AVATAR)[number] {
 /** « KD » pour Koffi Dossou ; « ? » sans nom. */
 export const initiales = (prenom: string, nom: string) => ((prenom.trim()[0] ?? "") + (nom.trim()[0] ?? "")).toUpperCase() || "?";
 
-const TONS_PARCOURS: Record<string, TagTone> = { academique: "academique", digital: "digital", business: "business" };
-
-/** L'étiquette d'un espace d'après sa couleur de parcours ; gris pour le général. */
-export function tonEspace(nomCourt: string, espaces: Espace[]): TagTone {
-  const couleur = espaces.find((e) => e.nomCourt === nomCourt)?.couleur;
-  return (couleur && TONS_PARCOURS[couleur]) || "enAttente";
-}
-
 /** L'adresse absolue d'une publication : celle que copie « Copier le lien ». */
 export const lienPublication = (id: string) => `${window.location.origin}/communaute/publications/${id}`;
+
+/** Le début d'un texte, coupé entre deux mots, avec « … » s'il est plus long (les activités récentes). */
+export function extraitCourt(texte: string, max = 60): string {
+  const t = texte.replace(/\s+/g, " ").trim();
+  if (t.length <= max) return t;
+  const coupe = t.slice(0, max);
+  const espace = coupe.lastIndexOf(" ");
+  return `${(espace > max / 2 ? coupe.slice(0, espace) : coupe).replace(/[\s.,;:!?]+$/, "")}…`;
+}

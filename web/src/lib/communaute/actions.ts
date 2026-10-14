@@ -90,12 +90,13 @@ const lireApercuDuTexte = (texte: string): Promise<Apercu | null> => apercuDuTex
 
 /**
  * Publier ou modifier avec l'aperçu, transmis seulement s'il y en a un ; avant la 0021 (fonction sans p_apercu),
- * le même appel sans lui.
+ * le même appel sans lui. Rend aussi l'aperçu enregistré, que la carte affiche aussitôt.
  */
 async function avecApercu(supabase: Client, fonction: string, parametres: Record<string, unknown>, apercu: Apercu | null) {
-  if (!apercu) return supabase.rpc(fonction, parametres);
+  if (!apercu) return { ...(await supabase.rpc(fonction, parametres)), apercu: null };
   const reponse = await supabase.rpc(fonction, { ...parametres, p_apercu: apercu });
-  return reponse.error && estFonctionAbsente(reponse.error) ? supabase.rpc(fonction, parametres) : reponse;
+  if (reponse.error && estFonctionAbsente(reponse.error)) return { ...(await supabase.rpc(fonction, parametres)), apercu: null };
+  return { ...reponse, apercu };
 }
 
 /** Le résultat de publier ou modifier : l'id (absent pour modifier), le statut, la catégorie d'un blocage. */
@@ -117,7 +118,7 @@ export async function publierPublication(
   titre: string,
   texte: string,
   piece: PieceEnvoyee | null,
-): Promise<{ ok: true; id: string; statut: StatutPublie } | Refus> {
+): Promise<{ ok: true; id: string; statut: StatutPublie; apercu: Apercu | null } | Refus> {
   if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
   const refus = refusPublication(titre, texte) ?? (piece ? refusPiece(piece.type, piece.taille) : null);
   if (refus) return { ok: false, message: refus };
@@ -156,7 +157,7 @@ export async function publierPublication(
     // Sans verdict (clé refusée, refus de l'IA), la base met la publication en attente de l'équipe.
     analyse = verdict ? { jeton: reglage.config.jeton, ...verdict, objet } : null;
   }
-  const { data, error } = await avecApercu(
+  const { data, error, apercu: apercuEnregistre } = await avecApercu(
     supabase,
     "publier",
     { p_parcours: parcours, p_titre: titre.trim(), p_texte: texte.trim(), p_piece: pieceEnvoyee, ...(reglage ? { p_analyse: analyse } : {}) },
@@ -169,11 +170,11 @@ export async function publierPublication(
   const resultat = lireResultat(data);
   if (resultat.statut === "bloquee") return { ok: false, message: messageBloquee(resultat.categorie) };
   refresh();
-  return { ok: true, id: resultat.id, statut: resultat.statut === "en_attente" ? "en_attente" : "publiee" };
+  return { ok: true, id: resultat.id, statut: resultat.statut === "en_attente" ? "en_attente" : "publiee", apercu: apercuEnregistre };
 }
 
 /** Son auteur seulement : le titre et le texte, réanalysés si l'analyse est active ; bloquée, l'ancienne version reste. */
-export async function modifierPublication(id: string, titre: string, texte: string): Promise<{ ok: true; statut: StatutPublie } | Refus> {
+export async function modifierPublication(id: string, titre: string, texte: string): Promise<{ ok: true; statut: StatutPublie; apercu: Apercu | null } | Refus> {
   if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
   if (!UUID.test(id)) return { ok: false, message: ECHEC };
   const refus = refusPublication(titre, texte);
@@ -191,7 +192,7 @@ export async function modifierPublication(id: string, titre: string, texte: stri
     const verdict = await analyserPublication({ titre: titre.trim(), texte: texte.trim(), espace, fichier: null }, reglage.config);
     analyse = verdict ? { jeton: reglage.config.jeton, ...verdict, objet: null } : null;
   }
-  const { data, error } = await avecApercu(
+  const { data, error, apercu: apercuEnregistre } = await avecApercu(
     supabase,
     "modifier_publication",
     { p_id: id, p_titre: titre.trim(), p_texte: texte.trim(), ...(reglage ? { p_analyse: analyse } : {}) },
@@ -201,7 +202,7 @@ export async function modifierPublication(id: string, titre: string, texte: stri
   const resultat = lireResultat(data);
   if (resultat.statut === "bloquee") return { ok: false, message: messageBloquee(resultat.categorie) };
   refresh();
-  return { ok: true, statut: resultat.statut === "en_attente" ? "en_attente" : "publiee" };
+  return { ok: true, statut: resultat.statut === "en_attente" ? "en_attente" : "publiee", apercu: apercuEnregistre };
 }
 
 /** Signaler une publication ou une réponse à l'équipe (migration 0020) ; l'auteur ne sait jamais qui l'a signalée. */

@@ -13,7 +13,7 @@ export const NOMBRE_FIL = 20;
 
 export const REFUS_TEXTE = "Écrivez votre publication (3 000 caractères au plus).";
 export const REFUS_TITRE = "Le titre dépasse 120 caractères.";
-export const REFUS_REPONSE = "Écrivez votre réponse (1 000 caractères au plus).";
+export const REFUS_REPONSE = "Écrivez votre commentaire (1 000 caractères au plus).";
 export const REFUS_PIECE = "Joignez une image (JPEG, PNG ou WebP) ou un PDF de 10 Mo au plus.";
 
 /** Le message de la base, ou null ; le texte d'abord, comme elle. */

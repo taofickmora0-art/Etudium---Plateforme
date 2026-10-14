@@ -48,7 +48,7 @@ describe("Publier", () => {
 
   it("publie : paramètres transmis, la page relue", async () => {
     faux.repondre("rpc.publier", { data: ID });
-    expect(await publierPublication(P, " Titre ", " Texte ", PIECE)).toEqual({ ok: true, id: ID, statut: "publiee" });
+    expect(await publierPublication(P, " Titre ", " Texte ", PIECE)).toEqual({ ok: true, id: ID, statut: "publiee", apercu: null });
     expect(faux.de("rpc", "publier")[0].valeurs).toEqual({ p_parcours: P, p_titre: "Titre", p_texte: "Texte", p_piece: PIECE, p_analyse: null });
     expect(refresh).toHaveBeenCalled();
   });
@@ -62,7 +62,7 @@ describe("Publier", () => {
 
 describe("Modifier, supprimer, répondre, aimer", () => {
   it("modifier : la fonction de la base ; supprimer : retire ensuite le fichier rendu", async () => {
-    expect(await modifierPublication(ID, "", "Nouveau")).toEqual({ ok: true, statut: "publiee" });
+    expect(await modifierPublication(ID, "", "Nouveau")).toEqual({ ok: true, statut: "publiee", apercu: null });
     expect(faux.de("rpc", "modifier_publication")[0].valeurs).toEqual({ p_id: ID, p_titre: "", p_texte: "Nouveau", p_analyse: null });
     faux.repondre("rpc.supprimer_publication", { data: PIECE.chemin });
     expect(await supprimerPublication(ID)).toEqual({ ok: true });
@@ -132,13 +132,13 @@ describe("Avec la modération (migration 0020)", () => {
     faux.repondre("rpc.moderation_active", { data: false });
     configuration.mockReturnValue(CONFIG);
     faux.repondre("rpc.publier", { data: { id: ID, statut: "publiee", categorie: null } });
-    expect(await publierPublication(null, "", "Texte", null)).toEqual({ ok: true, id: ID, statut: "publiee" });
+    expect(await publierPublication(null, "", "Texte", null)).toEqual({ ok: true, id: ID, statut: "publiee", apercu: null });
     expect(faux.de("rpc", "publier")[0].valeurs).toMatchObject({ p_analyse: null });
     expect(analyserPublication).not.toHaveBeenCalled();
     faux.vider();
     faux.repondre("rpc.moderation_active", { error: { code: "PGRST202" } });
     faux.repondre("rpc.publier", { data: ID });
-    expect(await publierPublication(null, "", "Texte", null)).toEqual({ ok: true, id: ID, statut: "publiee" });
+    expect(await publierPublication(null, "", "Texte", null)).toEqual({ ok: true, id: ID, statut: "publiee", apercu: null });
     expect(faux.de("rpc", "publier")[0].valeurs).not.toHaveProperty("p_analyse");
   });
 
@@ -147,7 +147,7 @@ describe("Avec la modération (migration 0020)", () => {
     faux.repondre("rpc.preparer_analyse", { data: { objet: "objet-1" } });
     faux.repondre("storage.communaute.download", { data: new Blob([PNG], { type: "image/png" }) });
     faux.repondre("rpc.publier", { data: { id: ID, statut: "en_attente", categorie: null } });
-    expect(await publierPublication(P, " Titre ", " Texte ", { ...PIECE, taille: PNG.length })).toEqual({ ok: true, id: ID, statut: "en_attente" });
+    expect(await publierPublication(P, " Titre ", " Texte ", { ...PIECE, taille: PNG.length })).toEqual({ ok: true, id: ID, statut: "en_attente", apercu: null });
     // Avant l'IA, la base vérifie tout et rend l'identifiant du fichier, que le verdict reprend.
     expect(faux.de("rpc", "preparer_analyse")[0].valeurs).toEqual({
       p_publication: null,
@@ -174,7 +174,7 @@ describe("Avec la modération (migration 0020)", () => {
     actif();
     analyserPublication.mockResolvedValue(null);
     faux.repondre("rpc.publier", { data: { id: ID, statut: "en_attente", categorie: null } });
-    expect(await publierPublication(null, "", "Texte", null)).toEqual({ ok: true, id: ID, statut: "en_attente" });
+    expect(await publierPublication(null, "", "Texte", null)).toEqual({ ok: true, id: ID, statut: "en_attente", apercu: null });
     expect(faux.de("rpc", "publier")[0].valeurs).toMatchObject({ p_analyse: null });
   });
 
@@ -189,7 +189,7 @@ describe("Avec la modération (migration 0020)", () => {
     faux.repondre("rpc.moderation_active", { data: true });
     configuration.mockReturnValue(null);
     faux.repondre("rpc.publier", { data: { id: ID, statut: "en_attente", categorie: null } });
-    expect(await publierPublication(null, "", "Texte", null)).toEqual({ ok: true, id: ID, statut: "en_attente" });
+    expect(await publierPublication(null, "", "Texte", null)).toEqual({ ok: true, id: ID, statut: "en_attente", apercu: null });
     expect(faux.de("rpc", "publier")[0].valeurs).toMatchObject({ p_analyse: null });
     expect(analyserPublication).not.toHaveBeenCalled();
   });
@@ -224,7 +224,7 @@ describe("Avec la modération (migration 0020)", () => {
     expect(analyserPublication).toHaveBeenCalledWith({ titre: "Titre", texte: "Achetez", espace: "Académique", fichier: null }, CONFIG);
     expect(faux.de("rpc", "modifier_publication")[0].valeurs).toMatchObject({ p_analyse: { jeton: "J", ...VERDICT } });
     faux.repondre("rpc.modifier_publication", { data: { statut: "en_attente", categorie: null } });
-    expect(await modifierPublication(ID, "Titre", "Corrigé")).toEqual({ ok: true, statut: "en_attente" });
+    expect(await modifierPublication(ID, "Titre", "Corrigé")).toEqual({ ok: true, statut: "en_attente", apercu: null });
   });
 
   it("signaler : paramètres, refus local, message de la base", async () => {
@@ -247,17 +247,17 @@ describe("Le fil Actualités (0021)", () => {
   it("publier et modifier : l'aperçu du texte transmis ; avant la 0021, sans aperçu", async () => {
     apercuDuTexte.mockResolvedValue(VIDEO);
     faux.repondre("rpc.publier", { data: { id: ID, statut: "publiee", categorie: null } });
-    expect(await publierPublication(null, "", "Regardez https://youtu.be/dQw4w9WgXcQ", null)).toEqual({ ok: true, id: ID, statut: "publiee" });
+    expect(await publierPublication(null, "", "Regardez https://youtu.be/dQw4w9WgXcQ", null)).toEqual({ ok: true, id: ID, statut: "publiee", apercu: VIDEO });
     expect(apercuDuTexte).toHaveBeenCalledWith("Regardez https://youtu.be/dQw4w9WgXcQ");
     expect(faux.de("rpc", "publier")[0].valeurs).toMatchObject({ p_apercu: VIDEO });
     faux.vider();
     let appel = 0;
     faux.repondre("rpc.publier", () => (++appel === 1 ? { error: { code: "PGRST202" } } : { data: ID }));
-    expect(await publierPublication(null, "", "Regardez https://youtu.be/dQw4w9WgXcQ", null)).toEqual({ ok: true, id: ID, statut: "publiee" });
+    expect(await publierPublication(null, "", "Regardez https://youtu.be/dQw4w9WgXcQ", null)).toEqual({ ok: true, id: ID, statut: "publiee", apercu: null });
     expect(faux.de("rpc", "publier")[1].valeurs).not.toHaveProperty("p_apercu");
     faux.vider();
     faux.repondre("rpc.modifier_publication", { data: { statut: "publiee", categorie: null } });
-    expect(await modifierPublication(ID, "", "https://youtu.be/dQw4w9WgXcQ")).toEqual({ ok: true, statut: "publiee" });
+    expect(await modifierPublication(ID, "", "https://youtu.be/dQw4w9WgXcQ")).toEqual({ ok: true, statut: "publiee", apercu: VIDEO });
     expect(faux.de("rpc", "modifier_publication")[0].valeurs).toMatchObject({ p_apercu: VIDEO });
   });
 

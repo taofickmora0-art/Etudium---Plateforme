@@ -9,7 +9,6 @@ import type {
   Espace,
   FiltreFil,
   LotPublications,
-  MembreActif,
   PieceJointe,
   Publication,
   PublicationDetail,
@@ -184,19 +183,6 @@ export async function lireAnalyseActive(): Promise<boolean> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("moderation_active");
   return !error && data === true;
-}
-
-/** Les trois membres qui ont le plus écrit en 7 jours. */
-export async function lireMembresActifs(): Promise<Lecture<MembreActif[]>> {
-  if (demoModeActive()) return { migrationAbsente: false, donnees: [] };
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("membres_actifs");
-  return (
-    verifier("des membres actifs", error) ?? {
-      migrationAbsente: false,
-      donnees: liste(data).map((m) => ({ prenom: texte(m.prenom), nomCourt: texte(m.nom_court), initiales: texte(m.initiales), espace: texte(m.espace) })),
-    }
-  );
 }
 
 /** Les publications tendances de la colonne de droite (0021). */

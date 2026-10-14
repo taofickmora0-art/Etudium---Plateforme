@@ -3,30 +3,88 @@ import Link from "next/link";
 import { Video01Icon } from "@hugeicons/core-free-icons";
 import { Avatar } from "@/components/ui/Avatar";
 import { IconTile } from "@/components/ui/IconTile";
-import { Tag } from "@/components/ui/Tag";
-import type { Espace, MembreActif } from "@/lib/communaute/types";
+import { moment } from "@/lib/communaute/regles";
+import type { Activite, Tendance } from "@/lib/communaute/types";
 import { dateSession } from "@/lib/sessions/regles";
 import type { ProchaineSession } from "@/lib/sessions/types";
-import { tonAvatar, tonEspace } from "./outils";
+import { extraitCourt, tonAvatar } from "./outils";
 
 const LIEN = "focus-etudium text-sm leading-[22px] font-medium text-bleu no-underline hover:underline";
+const LIGNE = "focus-etudium flex min-w-0 items-start gap-3 rounded-champ px-1 py-3 text-inherit no-underline transition-colors hover:bg-page";
+const LISTE = "m-0 flex list-none flex-col p-0 [&>li+li]:border-t [&>li+li]:border-bordure-carte";
 
 function Bloc({ titre, children }: { titre: string; children: ReactNode }) {
   return (
-    <section className="box-border flex min-w-0 flex-col rounded-2xl border border-bordure-carte bg-panneau px-5 pt-5 pb-2">
+    <section className="box-border flex min-w-0 flex-col rounded-2xl border border-bordure-carte bg-panneau px-5 pt-5 pb-2.5">
       <h2 className="m-0 text-base leading-6 font-semibold text-encre">{titre}</h2>
       <div className="mt-1.5">{children}</div>
     </section>
   );
 }
 
+const Attente = ({ children }: { children: ReactNode }) => <p className="m-0 px-1 pt-2 pb-3 text-sm leading-[22px] text-discret">{children}</p>;
+
 /**
- * La colonne de droite (design NdCommunaute ; spec, §3) : la prochaine session live et les membres actifs de la
- * semaine. « À la une » et « Challenge du mois » attendent les mots-clés et les challenges.
+ * La colonne de droite (design NdCommunaute ; spec du fil « Actualités », §5) : les publications tendances de la semaine,
+ * les activités récentes et la prochaine session live. Avant la migration 0021 (`null`), la prochaine session seule.
  */
-export function ColonneCommunaute({ session, membres, espaces }: { session: ProchaineSession | null; membres: MembreActif[]; espaces: Espace[] }) {
+export function ColonneCommunaute({
+  session,
+  tendances,
+  activites,
+  maintenant,
+}: {
+  session: ProchaineSession | null;
+  tendances: Tendance[] | null;
+  activites: Activite[] | null;
+  maintenant: Date;
+}) {
   return (
-    <div className="flex min-w-0 flex-col gap-4">
+    <aside aria-label="Autour de la communauté" className="flex min-w-0 flex-col gap-4">
+      {tendances && (
+        <Bloc titre="Publications tendances">
+          {tendances.length === 0 ? (
+            <Attente>Aucune publication tendance cette semaine.</Attente>
+          ) : (
+            <ul className={LISTE}>
+              {tendances.map((t) => (
+                <li key={t.id}>
+                  <Link href={`/communaute/publications/${t.id}`} className={LIGNE}>
+                    <Avatar initials={t.auteur.equipe ? "É" : t.auteur.initiales} tone={t.auteur.equipe ? "bleu" : tonAvatar(t.auteur.nomCourt)} />
+                    <span className="flex min-w-0 flex-col gap-1">
+                      <span className="line-clamp-3 text-sm leading-[21px] wrap-anywhere text-encre">{t.extrait}</span>
+                      <span className="text-xs leading-[17px] text-discret">{t.auteur.nomCourt}</span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Bloc>
+      )}
+      {activites && (
+        <Bloc titre="Activités récentes">
+          {activites.length === 0 ? (
+            <Attente>Aucune activité pour l’instant.</Attente>
+          ) : (
+            <ul className={LISTE}>
+              {activites.map((a, i) => (
+                <li key={`${a.publicationId}-${a.creeLe}-${i}`}>
+                  <Link href={`/communaute/publications/${a.publicationId}`} className={LIGNE}>
+                    <Avatar initials={a.auteur.initiales} tone={tonAvatar(a.auteur.nomCourt)} />
+                    <span className="flex min-w-0 flex-col gap-[3px]">
+                      <span className="text-sm leading-[21px] wrap-anywhere text-texte">
+                        <strong className="font-semibold text-encre">{a.auteur.nomCourt}</strong> {a.type === "commentaire" ? "a commenté" : "a publié"} « {extraitCourt(a.extrait)} »
+                      </span>
+                      <span className="text-xs leading-[17px] font-medium text-bleu">{moment(a.creeLe, maintenant)}</span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Bloc>
+      )}
       <Bloc titre="Prochaine session">
         {session ? (
           <>
@@ -52,21 +110,6 @@ export function ColonneCommunaute({ session, membres, espaces }: { session: Proc
           </div>
         )}
       </Bloc>
-      <Bloc titre="Membres actifs">
-        {membres.length === 0 ? (
-          <p className="m-0 px-1 pt-2 pb-3 text-sm leading-[22px] text-discret">Aucun membre actif cette semaine.</p>
-        ) : (
-          <ul className="m-0 flex list-none flex-col p-0 [&>li+li]:border-t [&>li+li]:border-bordure-carte">
-            {membres.map((m, i) => (
-              <li key={`${m.nomCourt}-${i}`} className="flex min-h-12 items-center gap-3.5 px-1 py-3.5">
-                <Avatar initials={m.initiales} tone={tonAvatar(m.nomCourt)} />
-                <span className="min-w-0 flex-1 truncate text-[15px] leading-[22px] font-medium text-encre">{m.nomCourt}</span>
-                <Tag tone={tonEspace(m.espace, espaces)}>{m.espace}</Tag>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Bloc>
-    </div>
+    </aside>
   );
 }

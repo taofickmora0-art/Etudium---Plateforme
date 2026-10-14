@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Attachment01Icon, Cancel01Icon, Image01Icon, Pdf01Icon } from "@hugeicons/core-free-icons";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
@@ -17,6 +17,7 @@ import { createClient } from "@/lib/supabase/client";
 
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 const ECHEC_ENVOI = "L’envoi du fichier n’a pas abouti. Réessayez.";
+const CADRE = "box-border flex min-w-0 rounded-2xl border border-bordure-carte bg-panneau";
 
 type Piece = { fichier: File; type: string; extension: string };
 
@@ -24,9 +25,10 @@ type Piece = { fichier: File; type: string; extension: string };
 const apercu = (fichier: File) => (typeof URL.createObjectURL === "function" ? URL.createObjectURL(fichier) : null);
 
 /**
- * Le champ de publication (design NdCommunaute ; spec, §3 et §4) : un titre facultatif (il paraît dès qu'on écrit), le
- * texte, une image ou un PDF. Le fichier part d'abord du navigateur vers le dossier du compte dans l'espace de stockage
- * « communaute », puis la publication est enregistrée ; si elle est refusée, le fichier est retiré.
+ * Le champ de publication (design NdCommunaute ; spec du fil « Actualités », §1). Fermé : « Quoi de neuf, <prénom> ? »,
+ * Image et Fichier. Ouvert : un titre facultatif, le texte, une image ou un PDF, Publier. Le fichier part d'abord du
+ * navigateur vers le dossier du compte dans l'espace de stockage « communaute », puis la publication est enregistrée ;
+ * si elle est refusée, le fichier est retiré.
  */
 export function ChampPublication({
   espace,
@@ -44,11 +46,29 @@ export function ChampPublication({
   const [titre, setTitre] = useState("");
   const [texte, setTexte] = useState("");
   const [piece, setPiece] = useState<Piece | null>(null);
-  const [deplie, setDeplie] = useState(false);
+  const [ouvert, setOuvert] = useState(false);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const image = useRef<HTMLInputElement>(null);
   const pdf = useRef<HTMLInputElement>(null);
+  const invite = useRef<HTMLButtonElement>(null);
+  // Refermé par « Annuler » : le focus revient sur « Quoi de neuf ».
+  const rendreLeFocus = useRef(false);
+
+  useEffect(() => {
+    if (!ouvert && rendreLeFocus.current) {
+      rendreLeFocus.current = false;
+      invite.current?.focus();
+    }
+  }, [ouvert]);
+
+  function fermer() {
+    setTitre("");
+    setTexte("");
+    setPiece(null);
+    setErreur(null);
+    setOuvert(false);
+  }
 
   async function choisir(e: ChangeEvent<HTMLInputElement>) {
     const fichier = e.target.files?.[0];
@@ -60,13 +80,13 @@ export function ChampPublication({
     const type = formatDe(fichier.name, octets);
     const extension = type ? formatParMime(type)?.extensions[0] : undefined;
     const refus = type && extension ? refusPiece(type, fichier.size) : REFUS_PIECE;
+    setOuvert(true);
     if (refus || !type || !extension) {
       setErreur(refus ?? REFUS_PIECE);
       return;
     }
     setErreur(null);
     setPiece({ fichier, type, extension });
-    setDeplie(true);
   }
 
   /** Dépose le fichier dans le dossier du compte ; null si l'envoi échoue. */
@@ -126,14 +146,11 @@ export function ChampPublication({
         dernieresReponses: [],
         peutSupprimer: true,
         peutSignaler: false,
-        apercu: null,
+        apercu: resultat.apercu,
         enregistree: false,
         aimeePar: [],
       });
-      setTitre("");
-      setTexte("");
-      setPiece(null);
-      setDeplie(false);
+      fermer();
       toast(
         resultat.statut === "en_attente"
           ? { tone: "information", title: "Publication envoyée", description: "Elle paraîtra après vérification par l’équipe Étudium." }
@@ -144,21 +161,48 @@ export function ChampPublication({
     }
   }
 
+  // Les champs de fichier restent présents, champ fermé ou ouvert : Image et Fichier les ouvrent.
+  const fichiers = (
+    <>
+      <input ref={image} type="file" accept="image/jpeg,image/png,image/webp" aria-label="Joindre une image" tabIndex={-1} className="sr-only" onChange={(e) => void choisir(e)} />
+      <input ref={pdf} type="file" accept="application/pdf,.pdf" aria-label="Joindre un fichier" tabIndex={-1} className="sr-only" onChange={(e) => void choisir(e)} />
+    </>
+  );
+
+  if (!ouvert) {
+    return (
+      <div className={`${CADRE} items-center gap-3 px-4 py-3.5 max-sm:gap-2 max-sm:px-3`}>
+        <Avatar initials={moi.initiales} src={moi.photoUrl} size={44} className="max-[359px]:hidden" />
+        <button
+          ref={invite}
+          type="button"
+          onClick={() => setOuvert(true)}
+          className="focus-etudium h-12 min-w-0 flex-1 cursor-text truncate rounded-champ bg-page px-4 text-left text-[15px] text-indice transition-colors hover:bg-coque"
+        >
+          {moi.prenom ? `Quoi de neuf, ${moi.prenom} ?` : "Quoi de neuf ?"}
+        </button>
+        <span className="flex gap-0.5">
+          <IconButton icon={Image01Icon} label="Ajouter une image" variant="discret" onClick={() => image.current?.click()} />
+          <IconButton icon={Attachment01Icon} label="Ajouter un fichier" variant="discret" onClick={() => pdf.current?.click()} />
+        </span>
+        {fichiers}
+      </div>
+    );
+  }
+
   return (
-    <div className="box-border flex min-w-0 flex-col rounded-2xl border border-bordure-carte bg-panneau px-[19px] pt-[18px] pb-4">
+    <div className={`${CADRE} flex-col px-5 pt-[18px] pb-4 max-sm:px-4`}>
       <div className="flex min-w-0 items-start gap-3">
-        <Avatar initials={moi.initiales} src={moi.photoUrl} size={44} />
+        <Avatar initials={moi.initiales} src={moi.photoUrl} size={44} className="max-sm:hidden" />
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          {deplie && (
-            <TextInput aria-label="Titre (facultatif)" placeholder="Titre (facultatif)" value={titre} maxLength={TITRE_MAX} onChange={(e) => setTitre(e.target.value)} />
-          )}
+          <TextInput aria-label="Titre (facultatif)" placeholder="Titre (facultatif)" value={titre} maxLength={TITRE_MAX} onChange={(e) => setTitre(e.target.value)} />
           <Textarea
             aria-label="Nouvelle publication"
-            rows={2}
+            rows={3}
+            autoFocus
             placeholder={`Partagez une question ou une réussite dans l’espace ${espace.nomCourt}…`}
             value={texte}
             maxLength={TEXTE_MAX}
-            onFocus={() => setDeplie(true)}
             onChange={(e) => setTexte(e.target.value)}
           />
           {piece && (
@@ -178,7 +222,7 @@ export function ChampPublication({
           )}
         </div>
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:pl-12">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:pl-14">
         <div className="-ml-3 flex flex-wrap items-center gap-1 sm:ml-0">
           <Button variant="discret" size="sm" iconLeft={Image01Icon} disabled={envoi} onClick={() => image.current?.click()}>
             Image
@@ -186,25 +230,26 @@ export function ChampPublication({
           <Button variant="discret" size="sm" iconLeft={Attachment01Icon} disabled={envoi} onClick={() => pdf.current?.click()}>
             Fichier
           </Button>
-          <input
-            ref={image}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            aria-label="Joindre une image"
-            tabIndex={-1}
-            className="sr-only"
-            onChange={(e) => void choisir(e)}
-          />
-          <input ref={pdf} type="file" accept="application/pdf,.pdf" aria-label="Joindre un fichier" tabIndex={-1} className="sr-only" onChange={(e) => void choisir(e)} />
+          {fichiers}
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs leading-[18px] text-discret">
-            {analyseActive ? "Les publications sont vérifiées automatiquement." : "Soyez bienveillant : l’équipe Étudium veille aux échanges."}
-          </span>
-          <Button loading={envoi} onClick={() => void publier()}>
-            Publier
-          </Button>
-        </div>
+        <span className="text-xs leading-[18px] text-discret">
+          {analyseActive ? "Les publications sont vérifiées automatiquement." : "Soyez bienveillant : l’équipe Étudium veille aux échanges."}
+        </span>
+      </div>
+      <div className="mt-3 flex flex-wrap justify-end gap-2">
+        <Button
+          variant="contour"
+          disabled={envoi}
+          onClick={() => {
+            rendreLeFocus.current = true;
+            fermer();
+          }}
+        >
+          Annuler
+        </Button>
+        <Button loading={envoi} onClick={() => void publier()}>
+          Publier
+        </Button>
       </div>
     </div>
   );

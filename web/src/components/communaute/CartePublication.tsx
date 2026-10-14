@@ -1,18 +1,19 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import {
+  Bookmark02Icon,
   Comment01Icon,
   Delete02Icon,
   Download04Icon,
+  FavouriteIcon,
   Flag02Icon,
   Link01Icon,
   MoreHorizontalIcon,
   PencilEdit02Icon,
   Pdf01Icon,
-  ThumbsUpIcon,
 } from "@hugeicons/core-free-icons";
-import { Avatar } from "@/components/ui/Avatar";
+import { Avatar, AvatarGroup } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Icon } from "@/components/ui/Icon";
@@ -24,15 +25,21 @@ import { Textarea } from "@/components/ui/Textarea";
 import { TextInput } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
-import { aimer, modifierPublication, supprimerPublication } from "@/lib/communaute/actions";
-import { moment, nomEspace, refusPublication, tailleLisible, TEXTE_MAX, TITRE_MAX } from "@/lib/communaute/regles";
+import { aimer, basculerEnregistrement, modifierPublication, supprimerPublication } from "@/lib/communaute/actions";
+import { moment, refusPublication, tailleLisible, TEXTE_MAX, TITRE_MAX } from "@/lib/communaute/regles";
 import type { MoiCommunaute, PieceJointe, Publication, Reponse } from "@/lib/communaute/types";
-import { initiales, lienPublication, tonAvatar } from "./outils";
+import { ApercuLien } from "./ApercuLien";
 import { FenetreSignalement } from "./FenetreSignalement";
+import { initiales, lienPublication, tonAvatar } from "./outils";
 import { Reponses, type EtatReponses } from "./Reponses";
+import { TexteAvecLiens } from "./TexteAvecLiens";
+import { VideoYoutube } from "./VideoYoutube";
 
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 const pluriel = (n: number, mot: string) => `${n.toLocaleString("fr-FR")} ${mot}${n > 1 ? "s" : ""}`;
+// Les boutons J’aime et Commenter du pied de carte (40 × 36 dans le design) ; pressé, l'icône se remplit.
+const BOUTON_PIED = "h-9 w-10 rounded-puce";
+const REMPLI = "text-bleu [&_path]:fill-current";
 
 function Etiquette({ publication }: { publication: Publication }) {
   if (publication.estMoi) return <Tag tone="enAttente">Vous</Tag>;
@@ -75,10 +82,18 @@ function Piece({ piece }: { piece: PieceJointe }) {
   );
 }
 
+/** Mes initiales en tête des derniers qui aiment, ou retirées. */
+function avecMoi(aimeePar: string[], miennes: string, jAime: boolean): string[] {
+  if (jAime) return [miennes, ...aimeePar.filter((i) => i !== miennes)].slice(0, 3);
+  const position = aimeePar.indexOf(miennes);
+  return position < 0 ? aimeePar : aimeePar.filter((_, i) => i !== position);
+}
+
 /**
- * Une publication (design NdCommunaute ; spec, §3) : l'auteur, son espace et son moment, le texte et le fichier joint,
- * J’aime, les réponses, et le menu ⋮ (copier le lien ; modifier pour l'auteur ; supprimer pour l'auteur et l'équipe).
- * Sur la page d'une publication (`toutesReponses`), toutes les réponses sont déjà là.
+ * Une publication (design NdCommunaute ; spec du fil « Actualités », §3 et §4) : l'auteur, son moment et son espace, le
+ * signet et le menu ⋮ (copier le lien ; modifier pour l'auteur ; signaler ; supprimer pour l'auteur et l'équipe), le texte
+ * et ses liens, le fichier joint, l'aperçu du premier lien, J’aime et Commenter, les initiales des derniers qui aiment, et
+ * les commentaires. Sur la page d'une publication (`toutesReponses`), tous les commentaires sont déjà là.
  */
 export function CartePublication({
   publication,
@@ -93,20 +108,21 @@ export function CartePublication({
   toutesReponses?: Reponse[];
   onSupprimee: (id: string) => void;
 }) {
-  // Sur sa propre page (toutes les réponses), la publication supprimée n'est pas relue : on revient à la Communauté.
+  // Sur sa propre page (tous les commentaires), la publication supprimée n'est pas relue : on revient à la Communauté.
   const relire = !toutesReponses;
   const { toast } = useToast();
+  const idChamp = useId();
   const [p, setP] = useState(publication);
   const [reponses, setReponses] = useState<EtatReponses>(() =>
     toutesReponses
       ? { reponses: toutesReponses, total: Math.max(publication.reponses, toutesReponses.length), completes: true }
       : { reponses: publication.dernieresReponses, total: publication.reponses, completes: publication.reponses <= publication.dernieresReponses.length },
   );
-  const [ouvert, setOuvert] = useState(Boolean(toutesReponses) || publication.reponses > 0);
   const [edition, setEdition] = useState<{ titre: string; texte: string } | null>(null);
-  const [enregistrement, setEnregistrement] = useState(false);
+  const [sauvegarde, setSauvegarde] = useState(false);
   const [erreurEdition, setErreurEdition] = useState<string | null>(null);
   const [aimerEnCours, setAimerEnCours] = useState(false);
+  const [signetEnCours, setSignetEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [suppression, setSuppression] = useState(false);
   const [signalement, setSignalement] = useState(false);
@@ -116,8 +132,10 @@ export function CartePublication({
 
   const nom = `${p.auteur.prenom} ${p.auteur.nom}`.trim() || "Membre d’Étudium";
   const enLigne = p.statut === "publiee";
-  const meta = `${nomEspace(p.espace)} · ${moment(p.creeLe, maintenant)}${p.modifiee ? " · modifiée" : ""}`;
-  const libelleReponses = reponses.total > 0 ? pluriel(reponses.total, "réponse") : "aucune réponse";
+  const meta = `${moment(p.creeLe, maintenant)} · Publié dans ${p.espace.id ? p.espace.nom : "Général"}${p.modifiee ? " · modifiée" : ""}`;
+  const compte = [p.reactions > 0 ? `${p.reactions.toLocaleString("fr-FR")} J’aime` : null, reponses.total > 0 ? pluriel(reponses.total, "commentaire") : null]
+    .filter(Boolean)
+    .join(" · ");
 
   async function copier() {
     try {
@@ -179,14 +197,14 @@ export function CartePublication({
       setErreurEdition(refus);
       return;
     }
-    setEnregistrement(true);
+    setSauvegarde(true);
     const reponse = await modifierPublication(p.id, edition.titre.trim(), edition.texte.trim()).catch(() => ({ ok: false as const, message: ECHEC }));
-    setEnregistrement(false);
+    setSauvegarde(false);
     if (!reponse.ok) {
       setErreurEdition(reponse.message);
       return;
     }
-    setP((actuelle) => ({ ...actuelle, titre: edition.titre.trim(), texte: edition.texte.trim(), modifiee: true, statut: reponse.statut }));
+    setP((actuelle) => ({ ...actuelle, titre: edition.titre.trim(), texte: edition.texte.trim(), modifiee: true, statut: reponse.statut, apercu: reponse.apercu }));
     setEdition(null);
   }
 
@@ -199,7 +217,24 @@ export function CartePublication({
       return;
     }
     setErreur(null);
-    setP((actuelle) => ({ ...actuelle, jAime: reponse.jAime, reactions: reponse.reactions }));
+    setP((actuelle) => ({ ...actuelle, jAime: reponse.jAime, reactions: reponse.reactions, aimeePar: avecMoi(actuelle.aimeePar, moi.initiales, reponse.jAime) }));
+  }
+
+  async function basculerSignet() {
+    setSignetEnCours(true);
+    const reponse = await basculerEnregistrement(p.id).catch(() => ({ ok: false as const, message: ECHEC }));
+    setSignetEnCours(false);
+    if (!reponse.ok) {
+      setErreur(reponse.message);
+      return;
+    }
+    setErreur(null);
+    setP((actuelle) => ({ ...actuelle, enregistree: reponse.enregistree }));
+    toast(
+      reponse.enregistree
+        ? { tone: "reussite", title: "Publication enregistrée", description: "Retrouvez-la dans « Mes enregistrements »." }
+        : { tone: "information", title: "Publication retirée des enregistrements" },
+    );
   }
 
   async function supprimer() {
@@ -213,11 +248,11 @@ export function CartePublication({
   }
 
   return (
-    <article aria-label={`Publication de ${nom}`} className="box-border flex min-w-0 flex-col rounded-2xl border border-bordure-carte bg-panneau px-[19px] pt-[18px] pb-3.5">
+    <article aria-label={`Publication de ${nom}`} className="box-border flex min-w-0 flex-col rounded-2xl border border-bordure-carte bg-panneau px-5 pt-[18px] pb-3.5 max-sm:px-4">
       <div className="flex min-w-0 items-start gap-3">
         <Avatar initials={initiales(p.auteur.prenom, p.auteur.nom)} size={44} tone={tonAvatar(nom)} src={p.estMoi ? moi.photoUrl : null} />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
             <span className="text-[15px] leading-[22px] font-semibold wrap-anywhere text-encre">{nom}</span>
             <Etiquette publication={p} />
             <EtiquetteStatut publication={p} />
@@ -225,9 +260,21 @@ export function CartePublication({
           <span className="text-[13px] leading-5 text-discret">{meta}</span>
         </div>
         <div className="-mt-1 -mr-1.5 flex">
+          {enLigne && (
+            <IconButton
+              icon={Bookmark02Icon}
+              label={p.enregistree ? `Retirer la publication de ${nom} des enregistrements` : `Enregistrer la publication de ${nom}`}
+              aria-pressed={p.enregistree}
+              variant="discret"
+              size="sm"
+              className={cn(p.enregistree && REMPLI)}
+              disabled={signetEnCours}
+              onClick={() => void basculerSignet()}
+            />
+          )}
           <Menu
             label="Actions sur la publication"
-            trigger={<IconButton icon={MoreHorizontalIcon} label={`Actions sur la publication de ${nom}`} variant="discret" />}
+            trigger={<IconButton icon={MoreHorizontalIcon} label={`Actions sur la publication de ${nom}`} variant="discret" size="sm" />}
             items={items}
             rendreLeFocus={() => {
               const rendre = !fenetreDemandee.current;
@@ -261,48 +308,48 @@ export function CartePublication({
             </p>
           )}
           <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="contour" size="sm" onClick={() => setEdition(null)} disabled={enregistrement}>
+            <Button variant="contour" size="sm" onClick={() => setEdition(null)} disabled={sauvegarde}>
               Annuler
             </Button>
-            <Button type="submit" size="sm" loading={enregistrement}>
+            <Button type="submit" size="sm" loading={sauvegarde}>
               Enregistrer
             </Button>
           </div>
         </form>
       ) : (
         <>
-          {p.titre && <h3 className="m-0 mt-3.5 text-base leading-6 font-semibold wrap-anywhere text-encre">{p.titre}</h3>}
-          <p className={cn("m-0 text-sm leading-[22px] whitespace-pre-line text-pretty wrap-anywhere text-texte", p.titre ? "mt-1.5" : "mt-3.5")}>{p.texte}</p>
+          {p.titre && <h3 className="m-0 mt-3.5 text-[17px] leading-[25px] font-semibold wrap-anywhere text-encre">{p.titre}</h3>}
+          <TexteAvecLiens texte={p.texte} className={cn("text-[15px] leading-6 text-texte", p.titre ? "mt-1.5" : "mt-3.5")} />
         </>
       )}
       {p.pieceJointe && <Piece piece={p.pieceJointe} />}
+      {p.apercu?.type === "youtube" && <VideoYoutube id={p.apercu.id} className="mt-3.5 rounded-[14px]" />}
+      {p.apercu?.type === "lien" && <ApercuLien apercu={p.apercu} />}
 
-      {/* Pas encore en ligne : ni J’aime ni réponses. */}
+      {/* Pas encore en ligne : ni J’aime ni commentaires. */}
       {enLigne && (
-        <div className="mt-3 -ml-2 flex flex-wrap items-center gap-1">
-          <Button
-            variant="discret"
-            size="sm"
-            iconLeft={ThumbsUpIcon}
+        <div className="-mx-2 mt-3 flex min-w-0 items-center gap-1 border-t border-bordure-carte pt-2">
+          <IconButton
+            icon={FavouriteIcon}
+            label={p.jAime ? "Retirer la mention J’aime" : "J’aime"}
             aria-pressed={p.jAime}
-            aria-label={p.jAime ? `Retirer la mention J’aime, ${pluriel(p.reactions, "mention")}` : `J’aime, ${pluriel(p.reactions, "mention")}`}
-            className={cn(p.jAime && "font-semibold text-bleu")}
+            variant="discret"
+            className={cn(BOUTON_PIED, p.jAime && REMPLI)}
             disabled={aimerEnCours}
             onClick={() => void basculerJaime()}
-          >
-            {p.reactions.toLocaleString("fr-FR")}
-          </Button>
-          <Button
-            variant="discret"
-            size="sm"
-            iconLeft={Comment01Icon}
-            aria-expanded={ouvert}
-            aria-label={`${ouvert ? "Masquer" : "Afficher"} les réponses, ${libelleReponses}`}
-            className={cn(ouvert && "bg-coque enabled:hover:bg-coque-survol")}
-            onClick={() => setOuvert(!ouvert)}
-          >
-            {reponses.total > 0 ? libelleReponses : "Répondre"}
-          </Button>
+          />
+          <IconButton icon={Comment01Icon} label="Commenter" variant="discret" className={BOUTON_PIED} onClick={() => document.getElementById(idChamp)?.focus()} />
+          <span className="flex-1" />
+          {p.aimeePar.length > 0 && (
+            <span aria-hidden>
+              <AvatarGroup>
+                {p.aimeePar.map((i, n) => (
+                  <Avatar key={`${i}-${n}`} initials={i} size={22} tone={tonAvatar(i)} />
+                ))}
+              </AvatarGroup>
+            </span>
+          )}
+          {compte && <span className="pr-2 pl-1 text-[13px] leading-5 text-discret">{compte}</span>}
         </div>
       )}
       {erreur && (
@@ -310,7 +357,7 @@ export function CartePublication({
           {erreur}
         </p>
       )}
-      {ouvert && enLigne && <Reponses publicationId={p.id} etat={reponses} onChange={setReponses} moi={moi} maintenant={maintenant} />}
+      {enLigne && <Reponses publicationId={p.id} etat={reponses} onChange={setReponses} moi={moi} maintenant={maintenant} idChamp={idChamp} />}
 
       <ConfirmDialog
         open={suppression}
@@ -318,7 +365,7 @@ export function CartePublication({
         tone="danger"
         icon={Delete02Icon}
         title="Supprimer cette publication ?"
-        description={`Elle disparaîtra de l’espace ${p.espace.nom} avec toutes ses réponses. Cette action est définitive.`}
+        description={`Elle disparaîtra de l’espace ${p.espace.nom} avec tous ses commentaires. Cette action est définitive.`}
         confirmLabel="Supprimer"
         errorMessage={erreurSuppression}
         onConfirm={supprimer}

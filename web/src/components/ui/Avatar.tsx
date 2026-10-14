@@ -12,6 +12,7 @@ const SIZES = {
   40: "size-10 text-sm",
   36: "size-9 text-[13px]",
   32: "size-8 text-xs",
+  22: "size-[22px] text-[10px]",
 } as const;
 
 const TONES = {

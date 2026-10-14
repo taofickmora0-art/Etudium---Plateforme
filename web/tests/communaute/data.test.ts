@@ -7,7 +7,7 @@ const faux = fauxSupabase();
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => faux.client }));
 vi.mock("@/lib/auth/current-user", () => ({ demoModeActive: () => false }));
 
-const { lireActivites, lireAnalyseActive, lireEspaces, lireFil, lireMembresActifs, lirePublication, lireTendances } = await import("@/lib/communaute/data");
+const { lireActivites, lireAnalyseActive, lireEspaces, lireFil, lirePublication, lireTendances } = await import("@/lib/communaute/data");
 
 const ID = "11111111-1111-4111-8111-111111111111";
 const P = "22222222-2222-4222-8222-222222222222";
@@ -90,14 +90,12 @@ describe("Lectures de la communauté", () => {
     expect(lecture.migrationAbsente ? null : lecture.donnees.publications[0].pieceJointe?.url).toBeNull();
   });
 
-  it("une publication et toutes ses réponses ; identifiant mal formé : null sans appel ; membres actifs", async () => {
+  it("une publication et toutes ses réponses ; identifiant mal formé : null sans appel", async () => {
     faux.repondre("rpc.publication_communaute", { data: { ...BRUTE, piece_jointe: null, toutes_reponses: BRUTE.dernieres_reponses } });
     expect(await lirePublication(ID)).toEqual({ migrationAbsente: false, donnees: { ...CONVERTIE, pieceJointe: null, toutesReponses: CONVERTIE.dernieresReponses } });
     faux.vider();
     expect(await lirePublication("abc")).toEqual({ migrationAbsente: false, donnees: null });
     expect(faux.appels).toEqual([]);
-    faux.repondre("rpc.membres_actifs", { data: [{ prenom: "Koffi", nom_court: "Koffi D.", initiales: "KD", espace: "Académique" }] });
-    expect(await lireMembresActifs()).toEqual({ migrationAbsente: false, donnees: [{ prenom: "Koffi", nomCourt: "Koffi D.", initiales: "KD", espace: "Académique" }] });
   });
 
   it("modération (0020) : statut et peut_signaler convertis ; analyse active lue, fausse avant la 0020", async () => {

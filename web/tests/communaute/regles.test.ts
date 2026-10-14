@@ -28,8 +28,8 @@ describe("Règles de la communauté", () => {
     expect(refusPublication("", "x".repeat(3001))).toBe("Écrivez votre publication (3 000 caractères au plus).");
     expect(refusPublication("t".repeat(121), "ok")).toBe("Le titre dépasse 120 caractères.");
     expect(refusReponse("Merci")).toBeNull();
-    expect(refusReponse(" ")).toBe("Écrivez votre réponse (1 000 caractères au plus).");
-    expect(refusReponse("x".repeat(1001))).toBe("Écrivez votre réponse (1 000 caractères au plus).");
+    expect(refusReponse(" ")).toBe("Écrivez votre commentaire (1 000 caractères au plus).");
+    expect(refusReponse("x".repeat(1001))).toBe("Écrivez votre commentaire (1 000 caractères au plus).");
   });
 
   it("tailleLisible, nomCourt, nomEspace, curseur", () => {

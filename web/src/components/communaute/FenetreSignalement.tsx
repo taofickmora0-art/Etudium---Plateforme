@@ -14,7 +14,7 @@ import type { MotifSignalement } from "@/lib/moderation/types";
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 
 /**
- * « Signaler cette publication » ou « Signaler cette réponse » (design NdCommunaute ; spec de la modération, §4) : un
+ * « Signaler cette publication » ou « Signaler ce commentaire » (design NdCommunaute ; spec de la modération, §4) : un
  * motif, des précisions (obligatoires pour « Autre »), puis « Signalement envoyé ».
  */
 export function FenetreSignalement({
@@ -53,7 +53,7 @@ export function FenetreSignalement({
     toast({
       tone: "reussite",
       title: "Signalement envoyé",
-      description: `Merci, ${surUneReponse ? "la réponse" : "la publication"} a été signalée à la modération.`,
+      description: surUneReponse ? "Merci, le commentaire a été signalé à la modération." : "Merci, la publication a été signalée à la modération.",
     });
   }
 
@@ -63,7 +63,7 @@ export function FenetreSignalement({
       onOpenChange={changer}
       icon={Flag02Icon}
       iconTone="attention"
-      title={surUneReponse ? "Signaler cette réponse" : "Signaler cette publication"}
+      title={surUneReponse ? "Signaler ce commentaire" : "Signaler cette publication"}
       description="L’équipe Étudium examinera votre signalement. L’auteur ne saura pas qui l’a envoyé."
       confirmLabel="Envoyer le signalement"
       errorMessage={erreur}

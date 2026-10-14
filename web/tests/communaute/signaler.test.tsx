@@ -20,6 +20,7 @@ vi.mock("@/lib/communaute/actions", () => ({
   supprimerReponse: vi.fn(),
   aimer: vi.fn(),
   signaler: vi.fn(),
+  basculerEnregistrement: vi.fn(),
 }));
 
 const actions = await import("@/lib/communaute/actions");
@@ -62,6 +63,7 @@ const rep = (o: Partial<Reponse> = {}): Reponse => ({
 });
 const lot = (publications: Publication[]): LotPublications => ({ publications, suite: false });
 const afficher = (ui: ReactNode) => render(<ToastProvider>{ui}</ToastProvider>);
+const ouvrirChamp = (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByRole("button", { name: "Quoi de neuf, Koffi ?" }));
 const page = (initial: LotPublications, analyseActive = false) => afficher(<PageCommunaute espaces={ESPACES} initial={initial} moi={MOI} analyseActive={analyseActive} />);
 const carte = (nom = "Mireille Adjovi") => screen.getByRole("article", { name: `Publication de ${nom}` });
 
@@ -103,55 +105,61 @@ describe("Signaler", () => {
     expect(screen.getByText("Merci, la publication a été signalée à la modération.")).toBeInTheDocument();
   });
 
-  it("une réponse : le drapeau, « Signaler cette réponse », le message", async () => {
+  it("un commentaire : Signaler, « Signaler ce commentaire », le message", async () => {
     const user = userEvent.setup({ delay: null });
     vi.mocked(actions.signaler).mockResolvedValueOnce({ ok: true });
     page(lot([pub({ reponses: 1, dernieresReponses: [rep()] })]));
-    await user.click(within(carte()).getByRole("button", { name: "Signaler la réponse de Awa K." }));
-    const fenetre = screen.getByRole("dialog", { name: "Signaler cette réponse" });
+    await user.click(within(carte()).getByRole("button", { name: "Signaler le commentaire de Awa K." }));
+    const fenetre = screen.getByRole("dialog", { name: "Signaler ce commentaire" });
     await user.click(within(fenetre).getByRole("radio", { name: "Spam ou publicité" }));
     await user.click(within(fenetre).getByRole("button", { name: "Envoyer le signalement" }));
     expect(actions.signaler).toHaveBeenCalledWith({ reponseId: "r1" }, "spam", "");
-    expect(await screen.findByText("Merci, la réponse a été signalée à la modération.")).toBeInTheDocument();
+    expect(await screen.findByText("Merci, le commentaire a été signalé à la modération.")).toBeInTheDocument();
   });
 
   it("l'auteur et l'équipe n'ont pas Signaler", async () => {
     const user = userEvent.setup({ delay: null });
     page(lot([pub({ peutSignaler: false, reponses: 1, dernieresReponses: [rep({ peutSignaler: false })] })]));
-    expect(within(carte()).queryByRole("button", { name: /Signaler la réponse/ })).toBeNull();
+    expect(within(carte()).queryByRole("button", { name: /Signaler le commentaire/ })).toBeNull();
     await user.click(within(carte()).getByRole("button", { name: "Actions sur la publication de Mireille Adjovi" }));
     expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Copier le lien"]);
   });
 });
 
 describe("Publications en attente", () => {
-  it("carte en attente : l'étiquette, ni J’aime ni réponses ; bloquée (vue de l'équipe) : « Bloquée »", () => {
+  it("carte en attente : l'étiquette, ni J’aime ni commentaires ; bloquée (vue de l'équipe) : « Bloquée »", () => {
     page(lot([pub({ estMoi: true, auteur: { prenom: "Koffi", nom: "Dossou", role: null }, statut: "en_attente", peutSignaler: false }), pub({ id: "p2", statut: "bloquee", peutSignaler: false })]));
     const attente = carte("Koffi Dossou");
     expect(within(attente).getByText("En attente de vérification")).toBeInTheDocument();
     expect(within(attente).queryByRole("button", { name: /J’aime/ })).toBeNull();
-    expect(within(attente).queryByRole("button", { name: /réponses/ })).toBeNull();
+    expect(within(attente).queryByRole("button", { name: "Commenter" })).toBeNull();
+    expect(within(attente).queryByRole("textbox", { name: "Écrire un commentaire" })).toBeNull();
+    expect(within(attente).queryByRole("button", { name: /Enregistrer la publication/ })).toBeNull();
     expect(within(carte()).getByText("Bloquée")).toBeInTheDocument();
   });
 
-  it("la mention du champ selon l'analyse", () => {
+  it("la mention du champ selon l'analyse", async () => {
+    const user = userEvent.setup({ delay: null });
     const { unmount } = page(lot([]), true);
+    await ouvrirChamp(user);
     expect(screen.getByText("Les publications sont vérifiées automatiquement.")).toBeInTheDocument();
     unmount();
     page(lot([]), false);
+    await ouvrirChamp(user);
     expect(screen.getByText("Soyez bienveillant : l’équipe Étudium veille aux échanges.")).toBeInTheDocument();
   });
 
   it("publier en attente : « Publication envoyée » et la carte ; bloquée : le message, le texte gardé", async () => {
     const user = userEvent.setup({ delay: null });
     page(lot([]), true);
+    await ouvrirChamp(user);
     vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: false, message: messageBloquee("arnaque") });
     await user.type(screen.getByRole("textbox", { name: "Nouvelle publication" }), "Envoyez 5 000 F");
     await user.click(screen.getByRole("button", { name: "Publier" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("elle semble enfreindre les règles de la communauté (Arnaque)");
     expect(screen.getByRole("textbox", { name: "Nouvelle publication" })).toHaveValue("Envoyez 5 000 F");
 
-    vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n1", statut: "en_attente" });
+    vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n1", statut: "en_attente", apercu: null });
     await user.clear(screen.getByRole("textbox", { name: "Nouvelle publication" }));
     await user.type(screen.getByRole("textbox", { name: "Nouvelle publication" }), "Bonjour à tous");
     await user.click(screen.getByRole("button", { name: "Publier" }));

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
-import { SquareLock02Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { Bookmark02Icon, SquareLock02Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { useMaintenant } from "@/components/notifications/horloge";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
@@ -11,25 +11,31 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { Heading, Lead } from "@/components/ui/Text";
 import { chargerFil } from "@/lib/communaute/actions";
 import { curseur } from "@/lib/communaute/regles";
-import type { Curseur, Espace, LotPublications, MoiCommunaute } from "@/lib/communaute/types";
+import type { Annonce, Espace, LotPublications, MoiCommunaute, SuiteFil, TriFil } from "@/lib/communaute/types";
+import { CarteAnnonce } from "./CarteAnnonce";
 import { CartePublication } from "./CartePublication";
 import { ChampPublication } from "./ChampPublication";
 import { EspaceVerrouille } from "./EspaceVerrouille";
+import { MenuTri } from "./MenuTri";
 
 const GENERAL: Espace = { id: null, nom: "Général", nomCourt: "Général", couleur: null, slug: null, ouvert: true };
 const ECHEC = "Les publications n’ont pas pu être chargées. Réessayez.";
-const valeur = (e: Espace) => e.id ?? "tous";
+const VIDE: LotPublications = { publications: [], suite: false };
+/** Le fil « Actualités » : tous les espaces ouverts au compte. */
+const ACTUALITES = "tous";
+const valeur = (e: Espace) => e.id ?? "general";
 
 /**
- * La page Communauté (design NdCommunaute ; spec, §3) : les onglets d'espaces (Général = le fil de tous les espaces
- * ouverts au compte, puis un par parcours, un cadenas sur ceux qui lui sont fermés), le champ de publication, le fil
- * et « Voir plus », la colonne de droite.
+ * La page Communauté (design NdCommunaute ; spec du fil « Actualités », §1 à §4) : les onglets (Actualités = le fil de
+ * tous les espaces ouverts au compte, Général, puis un par parcours, un cadenas sur ceux qui lui sont fermés), l'annonce
+ * épinglée en tête des Actualités, le champ de publication, « Trier par : », le fil et « Voir plus », la colonne de droite.
  */
 export function PageCommunaute({
   espaces,
   initial,
   moi,
   colonne,
+  annonce = null,
   analyseActive = false,
   maintenant: heureServeur,
 }: {
@@ -37,62 +43,83 @@ export function PageCommunaute({
   initial: LotPublications;
   moi: MoiCommunaute;
   colonne?: ReactNode;
+  /** Migration 0021 : l'annonce que voit le compte, ou null. */
+  annonce?: Annonce | null;
   /** Migration 0020 : la mention du champ de publication. */
   analyseActive?: boolean;
   maintenant?: string;
 }) {
   const liste = espaces.length > 0 ? espaces : [GENERAL];
-  const [onglet, setOnglet] = useState("tous");
+  const general = liste.find((e) => e.id === null) ?? GENERAL;
+  const [onglet, setOnglet] = useState(ACTUALITES);
+  const [tri, setTri] = useState<TriFil>("recentes");
   const [lot, setLot] = useState(initial);
+  // Les pages déjà lues, pour « Voir plus » des tris par page (populaires, enregistrées).
+  const [page, setPage] = useState(0);
   const [chargement, setChargement] = useState(false);
   const [suite, setSuite] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
-  // Seule la dernière lecture compte : un onglet changé deux fois de suite ne mélange pas les réponses.
+  // Seule la dernière lecture compte : un onglet ou un tri changé deux fois de suite ne mélange pas les réponses.
   const demande = useRef(0);
   const maintenant = useMaintenant(heureServeur);
-  const espace = liste.find((e) => valeur(e) === onglet) ?? liste[0];
+  const espace = onglet === ACTUALITES ? general : (liste.find((e) => valeur(e) === onglet) ?? general);
 
-  async function lire(cible: string, depuis: Curseur | null) {
+  async function lire(cible: string, ordre: TriFil, depuis: SuiteFil) {
     const numero = ++demande.current;
-    const reponse = await chargerFil(cible, "recentes", { curseur: depuis }).catch(() => ({ ok: false as const, message: ECHEC }));
-    if (numero !== demande.current) return null;
-    if (!reponse.ok) {
-      setErreur(reponse.message);
-      return null;
-    }
-    setErreur(null);
-    return reponse.lot;
+    const reponse = await chargerFil(cible, ordre, depuis).catch(() => ({ ok: false as const, message: ECHEC }));
+    return numero === demande.current ? reponse : null;
   }
 
-  async function changerOnglet(cible: string) {
-    setOnglet(cible);
+  async function recharger(cible: string, ordre: TriFil) {
     setErreur(null);
-    const choisi = liste.find((e) => valeur(e) === cible);
+    setLot(VIDE);
+    setPage(0);
+    setSuite(false);
+    setChargement(true);
+    const reponse = await lire(cible, ordre, {});
+    if (!reponse) return;
+    setChargement(false);
+    if (reponse.ok) setLot(reponse.lot);
+    else setErreur(reponse.message);
+  }
+
+  function changerOnglet(cible: string) {
+    setOnglet(cible);
+    const choisi = cible === ACTUALITES ? general : liste.find((e) => valeur(e) === cible);
     if (!choisi?.ouvert) {
       // Un espace fermé n'a pas de fil : une lecture en cours pour un autre onglet est oubliée.
       demande.current += 1;
+      setErreur(null);
       setChargement(false);
+      setSuite(false);
       return;
     }
-    setLot({ publications: [], suite: false });
-    setChargement(true);
-    const nouveau = await lire(cible, null);
-    if (nouveau) setLot(nouveau);
-    setChargement(false);
+    void recharger(cible, tri);
+  }
+
+  function changerTri(ordre: TriFil) {
+    setTri(ordre);
+    void recharger(onglet, ordre);
   }
 
   async function voirPlus() {
     const derniere = lot.publications.at(-1);
     if (!derniere) return;
+    const suivante = page + 1;
     setSuite(true);
-    const nouveau = await lire(onglet, curseur(derniere));
+    const reponse = await lire(onglet, tri, tri === "recentes" ? { curseur: curseur(derniere) } : { page: suivante });
+    if (!reponse) return;
     setSuite(false);
-    if (nouveau) {
-      setLot((actuel) => ({
-        publications: [...actuel.publications, ...nouveau.publications.filter((p) => !actuel.publications.some((a) => a.id === p.id))],
-        suite: nouveau.suite,
-      }));
+    if (!reponse.ok) {
+      setErreur(reponse.message);
+      return;
     }
+    setErreur(null);
+    setPage(suivante);
+    setLot((actuel) => ({
+      publications: [...actuel.publications, ...reponse.lot.publications.filter((p) => !actuel.publications.some((a) => a.id === p.id))],
+      suite: reponse.lot.suite,
+    }));
   }
 
   return (
@@ -102,28 +129,35 @@ export function PageCommunaute({
       <FilterChips
         className="mt-[21px]"
         label="Choisir un espace"
-        options={liste.map((e) => ({
-          value: valeur(e),
-          label: e.nomCourt,
-          icon: e.ouvert ? undefined : SquareLock02Icon,
-          ariaLabel: e.ouvert ? undefined : `${e.nomCourt}, espace verrouillé`,
-        }))}
+        options={[
+          { value: ACTUALITES, label: "Actualités" },
+          ...liste.map((e) => ({
+            value: valeur(e),
+            label: e.nomCourt,
+            icon: e.ouvert ? undefined : SquareLock02Icon,
+            ariaLabel: e.ouvert ? undefined : `${e.nomCourt}, espace verrouillé`,
+          })),
+        ]}
         value={onglet}
-        onValueChange={(cible) => void changerOnglet(cible)}
+        onValueChange={changerOnglet}
       />
       <div className="mt-5 h-px bg-separateur" />
-      <div className="mt-8 flex min-w-0 flex-col gap-6 xl:flex-row xl:items-start">
+      <div className="mt-7 flex min-w-0 flex-col gap-6 xl:flex-row xl:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           {!espace.ouvert ? (
             <EspaceVerrouille espace={espace} />
           ) : (
             <>
+              {onglet === ACTUALITES && annonce && <CarteAnnonce annonce={annonce} equipe={moi.equipe === true} />}
               <ChampPublication
+                key={valeur(espace)}
                 espace={espace}
                 moi={moi}
                 analyseActive={analyseActive}
-                onPubliee={(p) => setLot((actuel) => ({ ...actuel, publications: [p, ...actuel.publications] }))}
+                // Une nouvelle publication n'est pas encore dans « Mes enregistrements ».
+                onPubliee={(p) => tri !== "enregistrees" && setLot((actuel) => ({ ...actuel, publications: [p, ...actuel.publications] }))}
               />
+              <MenuTri valeur={tri} onChange={changerTri} />
               {erreur && <Banner tone="erreur" title={erreur} />}
               {chargement ? (
                 <>
@@ -131,17 +165,16 @@ export function PageCommunaute({
                   <Skeleton className="h-40 rounded-2xl" />
                 </>
               ) : lot.publications.length === 0 ? (
-                !erreur && (
-                  <EmptyState
-                    icon={UserGroupIcon}
-                    title="Aucune publication pour l’instant"
-                    description="Lancez la conversation : posez une question ou partagez une réussite."
-                  />
-                )
+                !erreur &&
+                (tri === "enregistrees" ? (
+                  <EmptyState icon={Bookmark02Icon} title="Aucune publication enregistrée" description="Touchez le signet d’une publication pour la retrouver ici." />
+                ) : (
+                  <EmptyState icon={UserGroupIcon} title="Aucune publication pour l’instant" description="Lancez la conversation : posez une question ou partagez une réussite." />
+                ))
               ) : (
                 lot.publications.map((p) => (
                   <CartePublication
-                    key={`${onglet}-${p.id}`}
+                    key={`${onglet}-${tri}-${p.id}`}
                     publication={p}
                     moi={moi}
                     maintenant={maintenant}
@@ -157,7 +190,7 @@ export function PageCommunaute({
             </>
           )}
         </div>
-        {colonne && <aside className="min-w-0 xl:w-[320px] xl:flex-none">{colonne}</aside>}
+        {colonne && <div className="min-w-0 xl:w-[320px] xl:flex-none">{colonne}</div>}
       </div>
     </div>
   );

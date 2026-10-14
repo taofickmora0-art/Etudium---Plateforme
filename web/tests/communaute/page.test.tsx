@@ -6,10 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import type { ShellUser } from "@/lib/auth/current-user";
 import { REFUS_PIECE, REFUS_TEXTE } from "@/lib/communaute/regles";
-import type { Espace, LotPublications, MembreActif, Publication, Reponse } from "@/lib/communaute/types";
+import type { Activite, Espace, LotPublications, Publication, Reponse, Tendance } from "@/lib/communaute/types";
 import type { ProchaineSession } from "@/lib/sessions/types";
 
-// La page Communauté et la page d'une publication (design NdCommunaute ; spec de la communauté, §3).
+// La page Communauté et la page d'une publication (design NdCommunaute ; spec de la communauté, §3 ; fil « Actualités »).
 
 const upload = vi.fn();
 const remove = vi.fn();
@@ -31,13 +31,22 @@ vi.mock("@/lib/communaute/actions", () => ({
   repondre: vi.fn(),
   supprimerReponse: vi.fn(),
   aimer: vi.fn(),
+  basculerEnregistrement: vi.fn(),
 }));
-vi.mock("@/lib/communaute/data", () => ({ lireEspaces: vi.fn(), lireFil: vi.fn(), lirePublication: vi.fn(), lireMembresActifs: vi.fn(), lireAnalyseActive: vi.fn(async () => false) }));
+vi.mock("@/lib/communaute/data", () => ({
+  lireEspaces: vi.fn(),
+  lireFil: vi.fn(),
+  lirePublication: vi.fn(),
+  lireTendances: vi.fn(),
+  lireActivites: vi.fn(),
+  lireAnalyseActive: vi.fn(async () => false),
+}));
+vi.mock("@/lib/communaute/annonce", () => ({ lireAnnonce: vi.fn(async () => null) }));
 vi.mock("@/lib/sessions/data", () => ({ lireProchaineSession: vi.fn() }));
 vi.mock("@/lib/auth/current-user", () => ({ getShellUser: vi.fn(), getAuthUser: vi.fn(), demoModeActive: () => false }));
 
 const actions = await import("@/lib/communaute/actions");
-const { lireEspaces, lireFil, lireMembresActifs, lirePublication } = await import("@/lib/communaute/data");
+const { lireActivites, lireEspaces, lireFil, lirePublication, lireTendances } = await import("@/lib/communaute/data");
 const { lireProchaineSession } = await import("@/lib/sessions/data");
 const { getAuthUser, getShellUser } = await import("@/lib/auth/current-user");
 const { ContenuCommunaute } = await import("@/components/communaute/ContenuCommunaute");
@@ -92,6 +101,7 @@ const lot = (publications: Publication[], suite = false): LotPublications => ({ 
 const afficher = (ui: ReactNode) => render(<ToastProvider>{ui}</ToastProvider>);
 const page = (initial: LotPublications) => afficher(<PageCommunaute espaces={ESPACES} initial={initial} moi={MOI} />);
 const carte = (nom = "Mireille Adjovi") => screen.getByRole("article", { name: `Publication de ${nom}` });
+const ouvrirChamp = (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByRole("button", { name: "Quoi de neuf, Koffi ?" }));
 const onglet = (nom: string) => within(screen.getByRole("group", { name: "Choisir un espace" })).getByRole("button", { name: nom });
 const PNG = () => new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0])], "affiche.png", { type: "image/png" });
 
@@ -104,7 +114,8 @@ beforeEach(() => {
   remove.mockResolvedValue({ data: [], error: null });
   vi.mocked(lireEspaces).mockResolvedValue({ migrationAbsente: false, donnees: ESPACES });
   vi.mocked(lireFil).mockResolvedValue({ migrationAbsente: false, donnees: lot([pub()]) });
-  vi.mocked(lireMembresActifs).mockResolvedValue({ migrationAbsente: false, donnees: [] });
+  vi.mocked(lireTendances).mockResolvedValue({ migrationAbsente: false, donnees: [] });
+  vi.mocked(lireActivites).mockResolvedValue({ migrationAbsente: false, donnees: [] });
   vi.mocked(lireProchaineSession).mockResolvedValue({ migrationAbsente: false, donnees: null });
   vi.mocked(getShellUser).mockResolvedValue(SHELL);
   vi.mocked(getAuthUser).mockResolvedValue({ id: "compte-1" } as Awaited<ReturnType<typeof getAuthUser>>);
@@ -112,7 +123,7 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("La page Communauté", () => {
-  it("en-tête, onglets Général puis parcours ; un espace fermé : cadenas, puis « Espace Business verrouillé » et le lien vers ses formations", async () => {
+  it("en-tête, onglets Actualités, Général puis parcours ; le champ fermé s'ouvre ; un espace fermé : cadenas, puis « Espace Business verrouillé » et le lien vers ses formations", async () => {
     const user = userEvent.setup();
     // La prochaine session est secondaire : une panne ne bloque pas la page.
     vi.mocked(lireProchaineSession).mockRejectedValue(new Error("panne"));
@@ -121,8 +132,10 @@ describe("La page Communauté", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Communauté" })).toBeInTheDocument();
     expect(screen.getByText("Posez vos questions, partagez vos réussites, entraidez-vous.")).toBeInTheDocument();
     const onglets = within(screen.getByRole("group", { name: "Choisir un espace" })).getAllByRole("button");
-    expect(onglets.map((o) => o.getAttribute("aria-label") ?? o.textContent)).toEqual(["Général", "Académique", "Business, espace verrouillé"]);
-    expect(onglet("Général")).toHaveAttribute("aria-pressed", "true");
+    expect(onglets.map((o) => o.getAttribute("aria-label") ?? o.textContent)).toEqual(["Actualités", "Général", "Académique", "Business, espace verrouillé"]);
+    expect(onglet("Actualités")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("textbox", { name: "Nouvelle publication" })).toBeNull();
+    await ouvrirChamp(user);
     expect(screen.getByRole("textbox", { name: "Nouvelle publication" })).toHaveAttribute("placeholder", "Partagez une question ou une réussite dans l’espace Général…");
     expect(screen.getByText("Soyez bienveillant : l’équipe Étudium veille aux échanges.")).toBeInTheDocument();
     expect(carte()).toBeInTheDocument();
@@ -137,7 +150,7 @@ describe("La page Communauté", () => {
     expect(screen.queryByRole("article")).toBeNull();
   });
 
-  it("changer d'onglet appelle chargerFil(id, null) ; Voir plus avec le curseur de la dernière publication", async () => {
+  it("changer d'onglet appelle chargerFil(id, tri, {}) ; Voir plus avec le curseur de la dernière publication", async () => {
     const user = userEvent.setup();
     vi.mocked(actions.chargerFil).mockResolvedValueOnce({ ok: true, lot: lot([pub({ id: "p3", texte: "La plus ancienne", creeLe: "2026-10-10T08:00:00Z" })]) });
     page(lot([pub(), pub({ id: "p2", texte: "Deuxième", creeLe: "2026-10-14T12:00:00Z" })], true));
@@ -149,14 +162,16 @@ describe("La page Communauté", () => {
 
     vi.mocked(actions.chargerFil).mockResolvedValueOnce({ ok: true, lot: lot([pub({ id: "p9", texte: "Dans Académique" })]) });
     await user.click(onglet("Académique"));
-    expect(actions.chargerFil).toHaveBeenLastCalledWith(P, "recentes", { curseur: null });
+    expect(actions.chargerFil).toHaveBeenLastCalledWith(P, "recentes", {});
     expect(await screen.findByText("Dans Académique")).toBeInTheDocument();
     expect(screen.queryByText("La plus ancienne")).toBeNull();
     expect(onglet("Académique")).toHaveAttribute("aria-pressed", "true");
+    await ouvrirChamp(user);
     expect(screen.getByRole("textbox", { name: "Nouvelle publication" })).toHaveAttribute("placeholder", "Partagez une question ou une réussite dans l’espace Académique…");
 
     vi.mocked(actions.chargerFil).mockResolvedValueOnce({ ok: false, message: "Les publications n’ont pas pu être chargées. Réessayez." });
     await user.click(onglet("Général"));
+    expect(actions.chargerFil).toHaveBeenLastCalledWith("general", "recentes", {});
     expect(await screen.findByText("Les publications n’ont pas pu être chargées. Réessayez.")).toBeInTheDocument();
   });
 
@@ -165,6 +180,7 @@ describe("La page Communauté", () => {
     page(lot([]));
     expect(screen.getByText("Aucune publication pour l’instant")).toBeInTheDocument();
     expect(screen.getByText("Lancez la conversation : posez une question ou partagez une réussite.")).toBeInTheDocument();
+    await ouvrirChamp(user);
     await user.click(screen.getByRole("button", { name: "Publier" }));
     expect(screen.getByRole("alert")).toHaveTextContent(REFUS_TEXTE);
     expect(actions.publierPublication).not.toHaveBeenCalled();
@@ -175,16 +191,20 @@ describe("La page Communauté", () => {
     await user.click(screen.getByRole("button", { name: "Publier" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Cet espace ne vous est pas ouvert.");
 
-    vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n1", statut: "publiee" });
+    vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n1", statut: "publiee", apercu: { type: "youtube", id: "dQw4w9WgXcQ" } });
     await user.click(screen.getByRole("button", { name: "Publier" }));
     expect(actions.publierPublication).toHaveBeenLastCalledWith(null, "Salut", "Bonjour à tous", null);
     const nouvelle = await screen.findByRole("article", { name: "Publication de Koffi Dossou" });
     expect(within(nouvelle).getByText("Vous")).toBeInTheDocument();
-    expect(within(nouvelle).getByText("Espace général · à l’instant")).toBeInTheDocument();
+    expect(within(nouvelle).getByText("à l’instant · Publié dans Général")).toBeInTheDocument();
     expect(within(nouvelle).getByRole("heading", { level: 3, name: "Salut" })).toBeInTheDocument();
+    // L'aperçu rendu par l'action s'affiche aussitôt.
+    expect(within(nouvelle).getByRole("button", { name: "Lire la vidéo YouTube" })).toBeInTheDocument();
     expect(screen.getByText("Publication en ligne")).toBeInTheDocument();
     expect(screen.getByText("Elle apparaît en haut du fil.")).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Nouvelle publication" })).toHaveValue("");
+    // Le champ se referme.
+    expect(screen.queryByRole("textbox", { name: "Nouvelle publication" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Quoi de neuf, Koffi ?" })).toBeInTheDocument();
     expect(screen.queryByText("Aucune publication pour l’instant")).toBeNull();
     expect(actions.chargerFil).not.toHaveBeenCalled();
   });
@@ -202,7 +222,7 @@ describe("La page Communauté", () => {
     expect(await screen.findByText("affiche.png")).toBeInTheDocument();
     expect(screen.getByText("1 Ko")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
-    vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n2", statut: "publiee" });
+    vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n2", statut: "publiee", apercu: null });
     await user.type(screen.getByRole("textbox", { name: "Nouvelle publication" }), "Mon affiche");
     await user.click(screen.getByRole("button", { name: "Publier" }));
     await waitFor(() => expect(actions.publierPublication).toHaveBeenCalled());
@@ -225,7 +245,7 @@ describe("La page Communauté", () => {
     expect(actions.publierPublication).not.toHaveBeenCalled();
   });
 
-  it("une publication : nom, Formateur ou Équipe Étudium ou Vous, Espace Académique · il y a 2 h, titre, texte, image ou PDF (nom · taille), J’aime 24, 2 réponses", () => {
+  it("une publication : nom, Formateur ou Équipe Étudium ou Vous, il y a 2 h · Publié dans Académique, titre, texte, image ou PDF (nom · taille), 24 J’aime · 2 commentaires", () => {
     page(
       lot([
         pub({
@@ -249,7 +269,7 @@ describe("La page Communauté", () => {
     );
     const mireille = carte();
     expect(within(mireille).getByText("Formateur")).toBeInTheDocument();
-    expect(within(mireille).getByText("Espace Académique · il y a 2 h · modifiée")).toBeInTheDocument();
+    expect(within(mireille).getByText("il y a 2 h · Publié dans Académique · modifiée")).toBeInTheDocument();
     expect(within(mireille).getByRole("heading", { level: 3, name: "Comment structurer la revue ?" })).toBeInTheDocument();
     expect(within(mireille).getByText("Je partage le plan.")).toBeInTheDocument();
     expect(within(mireille).getByText("Plan-revue.pdf")).toBeInTheDocument();
@@ -257,22 +277,24 @@ describe("La page Communauté", () => {
     const ouvrir = within(mireille).getByRole("link", { name: "Ouvrir Plan-revue.pdf" });
     expect(ouvrir).toHaveAttribute("href", "https://stockage/plan.pdf");
     expect(ouvrir).toHaveAttribute("target", "_blank");
-    expect(within(mireille).getByRole("button", { name: "J’aime, 24 mentions" })).toHaveTextContent("24");
-    expect(within(mireille).getByRole("button", { name: "Masquer les réponses, 2 réponses" })).toHaveTextContent("2 réponses");
+    expect(within(mireille).getByRole("button", { name: "J’aime" })).toHaveAttribute("aria-pressed", "false");
+    expect(within(mireille).getByText("24 J’aime · 2 commentaires")).toBeInTheDocument();
+    expect(within(mireille).queryByRole("button", { name: /Voir les/ })).toBeNull();
     expect(within(mireille).getByText("Très bon plan.")).toBeInTheDocument();
     expect(within(mireille).getByText("Merci, ça m’aide !")).toBeInTheDocument();
 
     const equipe = carte("Rodrigue Houngbo");
     expect(within(equipe).getByText("Équipe Étudium")).toBeInTheDocument();
-    expect(within(equipe).getByText("Espace général · hier")).toBeInTheDocument();
-    expect(within(equipe).getByRole("button", { name: "Afficher les réponses, aucune réponse" })).toHaveTextContent("Répondre");
-    expect(within(equipe).queryByRole("textbox", { name: "Répondre" })).toBeNull();
+    expect(within(equipe).getByText("hier · Publié dans Général")).toBeInTheDocument();
+    // Sans J’aime ni commentaire : pas de compte ; le champ du commentaire est là.
+    expect(within(equipe).queryByText(/J’aime ·|commentaire/)).toBeNull();
+    expect(within(equipe).getByRole("textbox", { name: "Écrire un commentaire" })).toHaveAttribute("placeholder", "Écrire un commentaire…");
 
     const moi = carte("Koffi Dossou");
     expect(within(moi).getByText("Vous")).toBeInTheDocument();
     // « Vous » comme le design : gris-bleu, sans cadenas.
     expect(within(moi).getByText("Vous").querySelector("svg")).toBeNull();
-    expect(within(moi).getByText("Espace Académique · il y a 2 jours")).toBeInTheDocument();
+    expect(within(moi).getByText("il y a 2 jours · Publié dans Académique")).toBeInTheDocument();
     expect(within(moi).getByRole("img", { name: "affiche.png" })).toHaveAttribute("src", "https://stockage/affiche.png");
   });
 
@@ -297,7 +319,7 @@ describe("La page Communauté", () => {
     await user.keyboard("{Escape}");
 
     // Modifier sur place.
-    vi.mocked(actions.modifierPublication).mockResolvedValueOnce({ ok: true, statut: "publiee" });
+    vi.mocked(actions.modifierPublication).mockResolvedValueOnce({ ok: true, statut: "publiee", apercu: null });
     await user.click(within(carte("Koffi Dossou")).getByRole("button", { name: "Actions sur la publication de Koffi Dossou" }));
     expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Modifier", "Copier le lien", "Supprimer"]);
     await user.click(screen.getByRole("menuitem", { name: "Modifier" }));
@@ -308,62 +330,67 @@ describe("La page Communauté", () => {
     await user.click(within(carte("Koffi Dossou")).getByRole("button", { name: "Enregistrer" }));
     expect(actions.modifierPublication).toHaveBeenCalledWith("p2", "", "Texte corrigé");
     expect(await within(carte("Koffi Dossou")).findByText("Texte corrigé")).toBeInTheDocument();
-    expect(within(carte("Koffi Dossou")).getByText("Espace Académique · il y a 2 h · modifiée")).toBeInTheDocument();
+    expect(within(carte("Koffi Dossou")).getByText("il y a 2 h · Publié dans Académique · modifiée")).toBeInTheDocument();
 
     // Supprimer, confirmé.
     vi.mocked(actions.supprimerPublication).mockResolvedValueOnce({ ok: true });
     await user.click(within(carte("Koffi Dossou")).getByRole("button", { name: "Actions sur la publication de Koffi Dossou" }));
     await user.click(screen.getByRole("menuitem", { name: "Supprimer" }));
     const fenetre = screen.getByRole("dialog", { name: "Supprimer cette publication ?" });
-    expect(within(fenetre).getByText("Elle disparaîtra de l’espace Académique avec toutes ses réponses. Cette action est définitive.")).toBeInTheDocument();
+    expect(within(fenetre).getByText("Elle disparaîtra de l’espace Académique avec tous ses commentaires. Cette action est définitive.")).toBeInTheDocument();
     await user.click(within(fenetre).getByRole("button", { name: "Supprimer" }));
     expect(actions.supprimerPublication).toHaveBeenCalledWith("p2", { relire: true });
     await waitFor(() => expect(screen.queryByRole("article", { name: "Publication de Koffi Dossou" })).toBeNull());
     expect(screen.getByText("Publication supprimée")).toBeInTheDocument();
   });
 
-  it("J’aime bascule ; Voir les 5 réponses les déplie ; Répondre ajoute la réponse ; Supprimer une réponse", async () => {
+  it("J’aime bascule ; Voir les 5 commentaires les déplie ; Commenter ajoute le commentaire ; Supprimer un commentaire", async () => {
     const user = userEvent.setup({ delay: null });
     vi.mocked(actions.aimer).mockResolvedValueOnce({ ok: true, jAime: true, reactions: 25 });
     page(lot([pub({ reactions: 24, reponses: 5, dernieresReponses: [rep("r4", "Quatrième"), rep("r5", "Cinquième")] })]));
-    await user.click(within(carte()).getByRole("button", { name: "J’aime, 24 mentions" }));
+    await user.click(within(carte()).getByRole("button", { name: "J’aime" }));
     expect(actions.aimer).toHaveBeenCalledWith("p1");
-    expect(await within(carte()).findByRole("button", { name: "Retirer la mention J’aime, 25 mentions" })).toHaveAttribute("aria-pressed", "true");
+    expect(await within(carte()).findByRole("button", { name: "Retirer la mention J’aime" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(carte()).getByText("25 J’aime · 5 commentaires")).toBeInTheDocument();
 
     vi.mocked(actions.chargerReponses).mockResolvedValueOnce({
       ok: true,
       reponses: [rep("r1", "Première"), rep("r2", "Deuxième"), rep("r3", "Troisième"), rep("r4", "Quatrième"), rep("r5", "Cinquième")],
     });
     expect(within(carte()).queryByText("Première")).toBeNull();
-    await user.click(within(carte()).getByRole("button", { name: "Voir les 5 réponses" }));
+    await user.click(within(carte()).getByRole("button", { name: "Voir les 5 commentaires" }));
     expect(actions.chargerReponses).toHaveBeenCalledWith("p1");
     expect(await within(carte()).findByText("Première")).toBeInTheDocument();
-    expect(within(carte()).queryByRole("button", { name: "Voir les 5 réponses" })).toBeNull();
+    expect(within(carte()).queryByRole("button", { name: "Voir les 5 commentaires" })).toBeNull();
 
     vi.mocked(actions.repondre).mockResolvedValueOnce({
       ok: true,
       reponse: rep("r9", "Merci !", { auteur: { prenom: "Koffi", nomCourt: "Koffi D." }, estMoi: true, peutSupprimer: true, creeLe: "2026-10-14T15:00:00Z" }),
     });
-    await user.type(within(carte()).getByRole("textbox", { name: "Répondre" }), "Merci !");
-    await user.click(within(carte()).getByRole("button", { name: "Envoyer la réponse" }));
+    // « Commenter » mène au champ du commentaire.
+    await user.click(within(carte()).getByRole("button", { name: "Commenter" }));
+    expect(within(carte()).getByRole("textbox", { name: "Écrire un commentaire" })).toHaveFocus();
+    await user.type(within(carte()).getByRole("textbox", { name: "Écrire un commentaire" }), "Merci !");
+    await user.click(within(carte()).getByRole("button", { name: "Envoyer le commentaire" }));
     expect(actions.repondre).toHaveBeenCalledWith("p1", "Merci !");
     expect(await within(carte()).findByText("Merci !")).toBeInTheDocument();
     expect(within(carte()).getByText("Koffi D.")).toBeInTheDocument();
-    expect(within(carte()).getByRole("button", { name: "Masquer les réponses, 6 réponses" })).toBeInTheDocument();
-    expect(within(carte()).getByRole("textbox", { name: "Répondre" })).toHaveValue("");
+    expect(within(carte()).getByText("25 J’aime · 6 commentaires")).toBeInTheDocument();
+    expect(within(carte()).getByRole("textbox", { name: "Écrire un commentaire" })).toHaveValue("");
 
     vi.mocked(actions.supprimerReponse).mockResolvedValueOnce({ ok: true });
-    await user.click(within(carte()).getByRole("button", { name: "Supprimer la réponse de Koffi D." }));
+    await user.click(within(carte()).getByRole("button", { name: "Supprimer le commentaire de Koffi D." }));
     expect(actions.supprimerReponse).toHaveBeenCalledWith("r9");
     await waitFor(() => expect(within(carte()).queryByText("Merci !")).toBeNull());
-    expect(within(carte()).getByRole("button", { name: "Masquer les réponses, 5 réponses" })).toBeInTheDocument();
+    expect(within(carte()).getByText("25 J’aime · 5 commentaires")).toBeInTheDocument();
+    expect(screen.getByText("Commentaire supprimé")).toBeInTheDocument();
 
-    // Une réponse vide est refusée sans appel.
-    await user.click(within(carte()).getByRole("button", { name: "Envoyer la réponse" }));
+    // Un commentaire vide est refusé sans appel.
+    await user.click(within(carte()).getByRole("button", { name: "Envoyer le commentaire" }));
     expect(actions.repondre).toHaveBeenCalledTimes(1);
   });
 
-  it("réponses : deux suppressions rapprochées retirent les deux ; une réponse envoyée pendant une suppression reste", async () => {
+  it("commentaires : deux suppressions rapprochées retirent les deux ; un commentaire envoyé pendant une suppression reste", async () => {
     const user = userEvent.setup({ delay: null });
     const finir: Record<string, () => void> = {};
     const attendre = (cle: string, valeur: unknown) => () => new Promise((ok) => (finir[cle] = () => ok(valeur)));
@@ -383,7 +410,7 @@ describe("La page Communauté", () => {
         }),
       ]),
     );
-    const corbeille = (nom: string) => within(carte()).getByRole("button", { name: `Supprimer la réponse de ${nom}` });
+    const corbeille = (nom: string) => within(carte()).getByRole("button", { name: `Supprimer le commentaire de ${nom}` });
     await user.click(corbeille("Awa K."));
     expect(corbeille("Awa K.")).toBeDisabled();
     await user.click(corbeille("Sènami D."));
@@ -391,37 +418,52 @@ describe("La page Communauté", () => {
     await act(async () => finir.b());
     expect(within(carte()).queryByText("Première")).toBeNull();
     expect(within(carte()).queryByText("Deuxième")).toBeNull();
-    expect(within(carte()).getByRole("button", { name: "Masquer les réponses, 1 réponse" })).toBeInTheDocument();
+    expect(within(carte()).getByText("1 commentaire")).toBeInTheDocument();
 
-    await user.type(within(carte()).getByRole("textbox", { name: "Répondre" }), "Merci !");
-    await user.click(within(carte()).getByRole("button", { name: "Envoyer la réponse" }));
+    await user.type(within(carte()).getByRole("textbox", { name: "Écrire un commentaire" }), "Merci !");
+    await user.click(within(carte()).getByRole("button", { name: "Envoyer le commentaire" }));
     await user.click(corbeille("Rodrigue H."));
     await act(async () => finir.c());
     await act(async () => finir.envoi());
     expect(within(carte()).getByText("Merci !")).toBeInTheDocument();
     expect(within(carte()).queryByText("Troisième")).toBeNull();
-    expect(within(carte()).getByRole("button", { name: "Masquer les réponses, 1 réponse" })).toBeInTheDocument();
+    expect(within(carte()).getByText("1 commentaire")).toBeInTheDocument();
   });
 
-  it("colonne de droite : Prochaine session (Voir la session), Membres actifs ; sans rien : les phrases d'attente", () => {
+  it("colonne de droite : Publications tendances (vers la publication), Activités récentes, Prochaine session ; sans rien : les phrases d'attente", () => {
     const session = { id: "s1", titre: "Excel avancé : analyse de données", debut: "2026-10-24T14:00:00Z" } as ProchaineSession;
-    const membres: MembreActif[] = [
-      { prenom: "Koffi", nomCourt: "Koffi D.", initiales: "KD", espace: "Académique" },
-      { prenom: "Awa", nomCourt: "Awa K.", initiales: "AK", espace: "Général" },
+    const tendances: Tendance[] = [
+      { id: "t1", extrait: "Mon mémoire est validé ! Merci à Dr Adjovi.", auteur: { nomCourt: "Fifamè A.", initiales: "FA", equipe: false } },
+      { id: "t2", extrait: "Nos excuses pour les lenteurs d’hier soir.", auteur: { nomCourt: "Équipe Étudium", initiales: "ÉÉ", equipe: true } },
     ];
-    const { unmount } = render(<ColonneCommunaute session={session} membres={membres} espaces={ESPACES} />);
-    expect(screen.getByRole("heading", { level: 2, name: "Prochaine session" })).toBeInTheDocument();
+    const activites: Activite[] = [
+      { type: "publication", publicationId: "a1", auteur: { nomCourt: "Danilo K.", initiales: "DK" }, extrait: "Bonjour les coachs. Les abonnements qui augmentent chaque mois, comment faire ?", creeLe: "2026-10-14T14:37:00Z" },
+      { type: "commentaire", publicationId: "a2", auteur: { nomCourt: "Maos T.", initiales: "MT" }, extrait: "TikTok, un jeu d’enfant", creeLe: "2026-10-14T13:00:00Z" },
+    ];
+    const maintenant = new Date("2026-10-14T15:00:00Z");
+    const { unmount } = render(<ColonneCommunaute session={session} tendances={tendances} activites={activites} maintenant={maintenant} />);
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Publications tendances", "Activités récentes", "Prochaine session"]);
+    expect(screen.getByRole("link", { name: /Mon mémoire est validé/ })).toHaveAttribute("href", "/communaute/publications/t1");
+    expect(screen.getByRole("link", { name: /Nos excuses/ })).toHaveTextContent("Équipe Étudium");
+    const danilo = screen.getByRole("link", { name: /Danilo K\./ });
+    expect(danilo).toHaveAttribute("href", "/communaute/publications/a1");
+    expect(danilo).toHaveTextContent("Danilo K. a publié « Bonjour les coachs. Les abonnements qui augmentent chaque… »");
+    expect(danilo).toHaveTextContent("il y a 23 min");
+    expect(screen.getByRole("link", { name: /Maos T\./ })).toHaveTextContent("Maos T. a commenté « TikTok, un jeu d’enfant »");
     expect(screen.getByText("Excel avancé : analyse de données")).toBeInTheDocument();
     expect(screen.getByText("Samedi 24 octobre · 15 h 00")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Voir la session" })).toHaveAttribute("href", "/evenements");
-    expect(screen.getByRole("heading", { level: 2, name: "Membres actifs" })).toBeInTheDocument();
-    expect(screen.getAllByRole("listitem").map((l) => l.textContent)).toEqual(["KDKoffi D.Académique", "AKAwa K.Général"]);
-    expect(screen.getByText("Général").querySelector("svg")).toBeNull();
     unmount();
-    render(<ColonneCommunaute session={null} membres={[]} espaces={ESPACES} />);
+    render(<ColonneCommunaute session={null} tendances={[]} activites={[]} maintenant={maintenant} />);
+    expect(screen.getByText("Aucune publication tendance cette semaine.")).toBeInTheDocument();
+    expect(screen.getByText("Aucune activité pour l’instant.")).toBeInTheDocument();
     expect(screen.getByText("Aucune session programmée pour l’instant.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Voir les événements" })).toHaveAttribute("href", "/evenements");
-    expect(screen.getByText("Aucun membre actif cette semaine.")).toBeInTheDocument();
+  });
+
+  it("colonne avant la 0021 : la prochaine session seule", () => {
+    render(<ColonneCommunaute session={null} tendances={null} activites={null} maintenant={new Date()} />);
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Prochaine session"]);
   });
 
   it("page d'une publication : toutes ses réponses, le fil d'Ariane ; supprimée : retour à la Communauté ; introuvable : page introuvable", async () => {
@@ -438,7 +480,7 @@ describe("La page Communauté", () => {
     expect(screen.getByRole("link", { name: "Communauté" })).toHaveAttribute("href", "/communaute");
     for (const texte of ["Première", "Deuxième", "Troisième"]) expect(within(carte()).getByText(texte)).toBeInTheDocument();
     expect(within(carte()).queryByRole("button", { name: /Voir les/ })).toBeNull();
-    expect(within(carte()).getByRole("textbox", { name: "Répondre" })).toBeInTheDocument();
+    expect(within(carte()).getByRole("textbox", { name: "Écrire un commentaire" })).toBeInTheDocument();
 
     vi.mocked(actions.supprimerPublication).mockResolvedValueOnce({ ok: true });
     await user.click(within(carte()).getByRole("button", { name: "Actions sur la publication de Mireille Adjovi" }));
