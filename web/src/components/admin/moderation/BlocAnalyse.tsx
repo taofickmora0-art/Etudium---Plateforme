@@ -27,6 +27,12 @@ export function BlocAnalyse({ etat, maintenant }: { etat: EtatModeration; mainte
   const [confirmation, setConfirmation] = useState(false);
   const [erreurConfirmation, setErreurConfirmation] = useState<string>();
   const activable = etat.cle && etat.jeton === "reconnu";
+  const configuration = (
+    <ul className="m-0 flex list-none flex-col gap-0.5 p-0 text-sm leading-[22px] text-discret">
+      <li>{`Clé de l’IA : ${etat.cle ? "présente" : "absente"}`}</li>
+      <li>{`Jeton de modération : ${JETONS[etat.jeton]}`}</li>
+    </ul>
+  );
 
   async function activer() {
     setEnvoi(true);
@@ -73,25 +79,32 @@ export function BlocAnalyse({ etat, maintenant }: { etat: EtatModeration; mainte
         )}
       </div>
       {active ? (
-        <p className="m-0 text-sm leading-[22px] text-discret">
-          {etat.derniereAnalyse
-            ? `Chaque publication est vérifiée par l’IA. Dernière analyse : ${moment(etat.derniereAnalyse, maintenant)}.`
-            : "Chaque publication est vérifiée par l’IA."}
-        </p>
+        <div className="flex flex-col gap-1">
+          <p className="m-0 text-sm leading-[22px] text-discret">
+            {etat.derniereAnalyse
+              ? `Chaque publication est vérifiée par l’IA. Dernière analyse : ${moment(etat.derniereAnalyse, maintenant)}.`
+              : "Chaque publication est vérifiée par l’IA."}
+          </p>
+          {configuration}
+        </div>
       ) : (
         <div className="flex flex-col gap-1 text-sm leading-[22px]">
           <p className="m-0 text-texte">Inactive : les publications paraissent sans vérification.</p>
-          <ul className="m-0 flex list-none flex-col gap-0.5 p-0 text-discret">
-            <li>{`Clé de l’IA : ${etat.cle ? "présente" : "absente"}`}</li>
-            <li>{`Jeton de modération : ${JETONS[etat.jeton]}`}</li>
-          </ul>
+          {configuration}
           {!activable && <p className="m-0 text-discret">Suivez la section 25 du guide « Ce qui te revient ».</p>}
         </div>
+      )}
+      {/* Active mais sans clé ou sans le bon jeton : le serveur ne transmet aucun verdict, tout attend l'équipe. */}
+      {active && !activable && (
+        <Banner
+          tone="attention"
+          title="L’analyse ne peut pas fonctionner : les nouvelles publications attendent l’équipe. Suivez la section 25 du guide « Ce qui te revient »."
+        />
       )}
       {active && etat.enAttente > 0 && (
         <Banner
           tone="attention"
-          title={`${etat.enAttente} publication${etat.enAttente > 1 ? "s attendent" : " attend"} : l’analyse n’a pas pu les vérifier. Vérifiez la clé de l’IA.`}
+          title={`${etat.enAttente} publication${etat.enAttente > 1 ? "s attendent" : " attend"} : l’analyse n’a pas pu les vérifier. Vérifiez la clé de l’IA et le jeton de modération.`}
         />
       )}
       {erreur && <Banner tone="erreur" title={erreur} />}

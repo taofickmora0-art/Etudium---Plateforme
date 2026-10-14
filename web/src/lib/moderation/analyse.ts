@@ -52,8 +52,11 @@ export function configurationModeration(env: Record<string, string | undefined> 
   return { cle, jeton, modele: env.MODERATION_MODELE?.trim() || MODELE_PAR_DEFAUT };
 }
 
-/** Une balise fermante écrite par l'auteur ne doit pas pouvoir sortir de la publication. */
-const neutraliser = (texte: string) => texte.replace(/<\/?\s*publication\s*>/gi, (balise) => balise.replace("<", "‹").replace(">", "›"));
+/** Aucun chevron de l'auteur : son texte ne peut ni fermer la publication ni ouvrir une autre balise. */
+const neutraliser = (texte: string) => texte.replace(/</g, "‹").replace(/>/g, "›");
+
+/** Une clé fausse ou révoquée, un crédit épuisé, un modèle inconnu, une requête refusée : rien à voir avec la publication. */
+const ERREURS_DE_CONFIGURATION = new Set([400, 401, 403, 404]);
 
 /** L'image réduite (1 568 px de côté au plus, JPEG), ou le PDF tel quel s'il fait 5 Mo au plus. */
 async function blocFichier(fichier: NonNullable<ContenuAnalyse["fichier"]>) {
@@ -70,14 +73,18 @@ async function blocFichier(fichier: NonNullable<ContenuAnalyse["fichier"]>) {
 }
 
 /**
- * Le verdict de l'IA. Ne lève jamais : une panne, un délai dépassé (20 s), une réponse hors format ou un fichier trop
- * lourd donnent « echec » (la publication paraît et entre dans la file de l'équipe).
+ * Le verdict de l'IA. Ne lève jamais :
+ * - une panne (5xx), un délai dépassé (20 s), une réponse hors format ou un fichier trop lourd donnent « echec » (la
+ *   publication paraît et entre dans la file de l'équipe) ;
+ * - une erreur de configuration (400, 401, 403, 404) ou un refus de l'IA de juger le contenu ne donnent aucun verdict
+ *   (null) : la base met alors la publication en attente de l'équipe.
  */
-export async function analyserPublication(contenu: ContenuAnalyse, config: ConfigModeration, f: typeof fetch = fetch): Promise<Verdict> {
+export async function analyserPublication(contenu: ContenuAnalyse, config: ConfigModeration, f: typeof fetch = fetch): Promise<Verdict | null> {
   const minuterie = new AbortController();
   const delai = setTimeout(() => minuterie.abort(), DELAI_ANALYSE_MS);
   try {
     const texte = [
+      ...(contenu.fichier ? ["Le fichier ci-dessus est joint à cette publication."] : []),
       `Espace : ${contenu.espace}`,
       "<publication>",
       `Titre : ${neutraliser(contenu.titre) || "(sans titre)"}`,
@@ -85,15 +92,15 @@ export async function analyserPublication(contenu: ContenuAnalyse, config: Confi
       neutraliser(contenu.texte),
       "</publication>",
     ].join("\n");
-    const content: unknown[] = [{ type: "text", text: texte }];
-    if (contenu.fichier) content.push(await blocFichier(contenu.fichier));
+    // Le fichier d'abord, puis le texte qui le présente (recommandation de l'API).
+    const content: unknown[] = [...(contenu.fichier ? [await blocFichier(contenu.fichier)] : []), { type: "text", text: texte }];
     const reponse = await f(ADRESSE, {
       method: "POST",
       headers: { "x-api-key": config.cle, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({
         model: config.modele,
         max_tokens: 400,
-        temperature: 0,
+        // Pas de température : Haiku 5.5 n'accepte que celle par défaut ; l'outil imposé cadre déjà la réponse.
         system: CONSIGNES,
         tools: [OUTIL],
         tool_choice: { type: "tool", name: OUTIL.name },
@@ -101,8 +108,10 @@ export async function analyserPublication(contenu: ContenuAnalyse, config: Confi
       }),
       signal: minuterie.signal,
     });
+    if (ERREURS_DE_CONFIGURATION.has(reponse.status)) return null;
     if (!reponse.ok) return echec(`erreur ${reponse.status}`);
-    const corps = (await reponse.json()) as { content?: { type?: string; name?: string; input?: unknown }[] };
+    const corps = (await reponse.json()) as { stop_reason?: string; content?: { type?: string; name?: string; input?: unknown }[] };
+    if (corps.stop_reason === "refusal") return null;
     const outil = corps.content?.find((b) => b.type === "tool_use" && b.name === OUTIL.name);
     const lu = VERDICT.safeParse(outil?.input);
     if (!lu.success) return echec("réponse inattendue");

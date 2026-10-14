@@ -25,6 +25,7 @@ type Client = Awaited<ReturnType<typeof createClient>>;
 /** En ligne, ou en attente de l'équipe (analyse active sans verdict valide). */
 type StatutPublie = "publiee" | "en_attente";
 const FAUX_FICHIER = "Ce fichier n’est pas une image ou un PDF valide.";
+const texteOuNull = (valeur: unknown) => (typeof valeur === "string" && valeur ? valeur : null);
 
 function message(error: Erreur): string {
   if (estFonctionAbsente(error)) return MIGRATION;
@@ -108,8 +109,22 @@ export async function publierPublication(
   const supabase = await createClient();
   const parcours = espaceId && UUID.test(espaceId) ? espaceId : null;
   const reglage = await moderation(supabase);
-  let analyse: Record<string, string> | null = null;
+  const pieceEnvoyee = piece ? { chemin: piece.chemin, nom: piece.nom, type: piece.type, taille: piece.taille } : null;
+  let analyse: Record<string, unknown> | null = null;
   if (reglage?.config) {
+    // Avant l'IA : tout ce que la base refuserait, la limite des analyses, et l'identifiant du fichier analysé.
+    const preparation = await supabase.rpc("preparer_analyse", {
+      p_publication: null,
+      p_parcours: parcours,
+      p_titre: titre.trim(),
+      p_texte: texte.trim(),
+      p_piece: pieceEnvoyee,
+    });
+    if (preparation.error) {
+      if (piece) await supabase.storage.from("communaute").remove([piece.chemin]);
+      return { ok: false, message: message(preparation.error) };
+    }
+    const objet = texteOuNull(un(preparation.data)?.objet);
     let fichier: ContenuAnalyse["fichier"] = null;
     let verdict: Verdict | null = null;
     if (piece) {
@@ -122,13 +137,14 @@ export async function publierPublication(
       else fichier = relu;
     }
     verdict ??= await analyserPublication({ titre: titre.trim(), texte: texte.trim(), espace: await nomDeLEspace(supabase, parcours), fichier }, reglage.config);
-    analyse = { jeton: reglage.config.jeton, ...verdict };
+    // Sans verdict (clé refusée, refus de l'IA), la base met la publication en attente de l'équipe.
+    analyse = verdict ? { jeton: reglage.config.jeton, ...verdict, objet } : null;
   }
   const { data, error } = await supabase.rpc("publier", {
     p_parcours: parcours,
     p_titre: titre.trim(),
     p_texte: texte.trim(),
-    p_piece: piece ? { chemin: piece.chemin, nom: piece.nom, type: piece.type, taille: piece.taille } : null,
+    p_piece: pieceEnvoyee,
     ...(reglage ? { p_analyse: analyse } : {}),
   });
   if (error) {
@@ -149,12 +165,15 @@ export async function modifierPublication(id: string, titre: string, texte: stri
   if (refus) return { ok: false, message: refus };
   const supabase = await createClient();
   const reglage = await moderation(supabase);
-  let analyse: Record<string, string> | null = null;
+  let analyse: Record<string, unknown> | null = null;
   if (reglage?.config) {
+    // Avant l'IA : la publication de l'appelant, non bloquée, et la limite des analyses.
+    const preparation = await supabase.rpc("preparer_analyse", { p_publication: id, p_parcours: null, p_titre: titre.trim(), p_texte: texte.trim(), p_piece: null });
+    if (preparation.error) return { ok: false, message: message(preparation.error) };
     const { data } = await supabase.rpc("publication_communaute", { p_id: id });
     const espace = String(un(un(data)?.espace)?.nom ?? "général");
     const verdict = await analyserPublication({ titre: titre.trim(), texte: texte.trim(), espace, fichier: null }, reglage.config);
-    analyse = { jeton: reglage.config.jeton, ...verdict };
+    analyse = verdict ? { jeton: reglage.config.jeton, ...verdict, objet: null } : null;
   }
   const { data, error } = await supabase.rpc("modifier_publication", {
     p_id: id,

@@ -100,7 +100,9 @@ describe("Le bloc « Analyse automatique »", () => {
     const user = userEvent.setup({ delay: null });
     vi.mocked(actions.reglerAnalyse).mockResolvedValueOnce({ ok: true });
     page([], { ...ETAT, enAttente: 2 });
-    expect(within(bloc()).getByText("2 publications attendent : l’analyse n’a pas pu les vérifier. Vérifiez la clé de l’IA.")).toBeInTheDocument();
+    expect(within(bloc()).getByText("2 publications attendent : l’analyse n’a pas pu les vérifier. Vérifiez la clé de l’IA et le jeton de modération.")).toBeInTheDocument();
+    expect(within(bloc()).getByText("Clé de l’IA : présente")).toBeInTheDocument();
+    expect(within(bloc()).getByText("Jeton de modération : reconnu")).toBeInTheDocument();
     await user.click(within(bloc()).getByRole("button", { name: "Désactiver" }));
     const fenetre = screen.getByRole("dialog", { name: "Désactiver l’analyse automatique ?" });
     expect(within(fenetre).getByText("Les publications paraîtront sans vérification.")).toBeInTheDocument();
@@ -108,6 +110,18 @@ describe("Le bloc « Analyse automatique »", () => {
     expect(actions.reglerAnalyse).toHaveBeenCalledWith(false);
     expect(await within(bloc()).findByText("Inactive : les publications paraissent sans vérification.")).toBeInTheDocument();
     expect(screen.getByText("Analyse automatique désactivée")).toBeInTheDocument();
+  });
+});
+
+describe("Le bloc actif mal configuré", () => {
+  it("clé absente ou jeton non reconnu : l'avertissement, les publications attendent l'équipe", () => {
+    const { unmount } = page([], { ...ETAT, cle: false });
+    expect(within(bloc()).getByText("Clé de l’IA : absente")).toBeInTheDocument();
+    expect(within(bloc()).getByText("L’analyse ne peut pas fonctionner : les nouvelles publications attendent l’équipe. Suivez la section 25 du guide « Ce qui te revient ».")).toBeInTheDocument();
+    unmount();
+    page([], { ...ETAT, jeton: "non_reconnu" });
+    expect(within(bloc()).getByText("Jeton de modération : non reconnu")).toBeInTheDocument();
+    expect(within(bloc()).getByText(/L’analyse ne peut pas fonctionner/)).toBeInTheDocument();
   });
 });
 

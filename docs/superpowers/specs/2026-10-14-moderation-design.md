@@ -43,7 +43,10 @@
   - l'espace (général ou parcours), pour juger le hors-sujet ;
   - l'image, réduite par le serveur à 1 568 px de côté au plus ;
   - le PDF, s'il fait 5 Mo au plus ; au-delà, l'analyse est « impossible » (en ligne et dans la file).
-- **Le modèle :** Claude Haiku (`claude-haiku-5-5`, réglable par `MODERATION_MODELE`), température 0, réponse imposée par un outil `rendre_verdict` ({ decision, categorie, raison }), vérifiée par le serveur.
+- **Le modèle :** Claude Haiku (`claude-haiku-5-5`, réglable par `MODERATION_MODELE`), température par défaut (Haiku 5.5 n'en accepte pas d'autre), réponse imposée par un outil `rendre_verdict` ({ decision, categorie, raison }), vérifiée par le serveur.
+- **Avant l'IA :** la base vérifie tout ce qu'elle refuserait (espace, texte, fichier, publication de l'appelant) et compte les analyses (10 par compte en 10 minutes, même si les publications sont supprimées) ; elle rend l'identifiant du fichier, que le verdict reprend : un fichier remplacé pendant l'analyse est refusé (« Ce fichier a changé pendant la vérification. Publiez-le de nouveau. »).
+- **Sans verdict :** une clé fausse, un crédit épuisé, un modèle inconnu (erreurs 400, 401, 403, 404) ou un refus de l'IA de juger le contenu : la publication attend l'équipe.
+- **Une publication en attente** le reste quand son auteur la modifie : seule l'équipe la publie.
 - **Délai :** 20 secondes au plus ; au-delà, « analyse impossible ».
 - **Le fichier :** le serveur le relit depuis le stockage avec la session de l'auteur et vérifie ses premiers octets. Un faux PDF ou une fausse image est refusé : « Ce fichier n’est pas une image ou un PDF valide. », et le fichier est retiré.
 - **Ce que voit l'auteur :**

@@ -39,6 +39,17 @@ insert into public.reglages_moderation (id, jeton)
 values (true, replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''))
 on conflict (id) do nothing;
 
+-- Chaque analyse demandée à l'IA (avant de publier ou de modifier) : 10 au plus par compte en 10 minutes, même si les
+-- publications sont supprimées ensuite. Le coût de l'IA reste borné.
+create table if not exists public.journal_moderation (
+  id bigint generated always as identity primary key,
+  profil_id uuid not null references public.profils (id) on delete cascade,
+  cree_le timestamptz not null default now()
+);
+create index if not exists journal_moderation_idx on public.journal_moderation (profil_id, cree_le);
+alter table public.journal_moderation enable row level security;
+revoke all on public.journal_moderation from anon, authenticated;
+
 create or replace function public.moderation_active()
 returns boolean
 language sql
@@ -489,6 +500,16 @@ begin
   end if;
   perform public.limiter_debit(false);
   if public.verdict_valide(p_analyse) then
+    -- Le fichier analysé ne doit pas avoir été remplacé entre l'analyse et la publication.
+    if p_piece is not null and jsonb_typeof(p_piece) <> 'null' and (
+      coalesce(p_analyse ->> 'objet', '') = ''
+      or not exists (
+        select 1 from storage.objects o
+        where o.bucket_id = 'communaute' and o.name = p_piece ->> 'chemin' and o.id::text = p_analyse ->> 'objet'
+      )
+    ) then
+      raise exception 'Ce fichier a changé pendant la vérification. Publiez-le de nouveau.';
+    end if;
     v_analyse := public.analyse_retenue(p_analyse);
     v_statut := case when v_analyse ->> 'decision' = 'bloquer' then 'bloquee' else 'publiee' end;
     v_examen := v_analyse ->> 'decision' in ('signaler', 'echec');
@@ -544,7 +565,8 @@ begin
     if v_analyse ->> 'decision' = 'bloquer' then
       return jsonb_build_object('statut', 'bloquee', 'categorie', v_analyse ->> 'categorie');
     end if;
-    v_statut := 'publiee';
+    -- En attente, elle le reste : la modification n'analyse que le texte, jamais le fichier ; seule l'équipe la publie.
+    v_statut := case when v.statut = 'en_attente' then 'en_attente' else 'publiee' end;
     v_examen := v.a_examiner or v_analyse ->> 'decision' in ('signaler', 'echec');
   elsif public.moderation_active() then
     v_statut := 'en_attente';
@@ -557,6 +579,55 @@ begin
     perform public.prevenir_equipe('Une publication de l’espace ' || public.nom_espace_communaute(v.parcours_id) || ' attend votre examen.');
   end if;
   return jsonb_build_object('statut', v_statut, 'categorie', v_analyse ->> 'categorie');
+end;
+$$;
+
+-- Avant d'appeler l'IA (serveur) : les refus de publier ou de modifier, la limite des analyses ; rend l'identifiant du
+-- fichier joint, que le verdict reprendra (« objet »). Une modification : la publication de l'appelant, non bloquée.
+create or replace function public.preparer_analyse(p_publication uuid, p_parcours uuid, p_titre text, p_texte text, p_piece jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v public.publications%rowtype;
+  v_moi uuid := (select auth.uid());
+  v_titre text := regexp_replace(coalesce(p_titre, ''), '^\s+|\s+$', '', 'g');
+  v_texte text := regexp_replace(coalesce(p_texte, ''), '^\s+|\s+$', '', 'g');
+  v_objet text;
+begin
+  perform public.exiger_compte_actif();
+  if p_publication is not null then
+    select * into v from public.publications where id = p_publication;
+    if not found or not public.peut_lire_espace(v.parcours_id) or v.statut = 'bloquee' then
+      raise exception 'Cette publication n’existe plus.';
+    end if;
+    if v.auteur <> v_moi then
+      raise exception 'Cette publication n’est pas la vôtre.' using errcode = '42501';
+    end if;
+  else
+    if not public.peut_lire_espace(p_parcours) then
+      raise exception 'Cet espace ne vous est pas ouvert.' using errcode = '42501';
+    end if;
+    perform public.limiter_debit(false);
+  end if;
+  if char_length(v_texte) not between 1 and 3000 then
+    raise exception 'Écrivez votre publication (3 000 caractères au plus).';
+  end if;
+  if char_length(v_titre) > 120 then
+    raise exception 'Le titre dépasse 120 caractères.';
+  end if;
+  if p_publication is null and p_piece is not null and jsonb_typeof(p_piece) <> 'null' then
+    perform public.verifier_piece(p_piece);
+    select o.id::text into v_objet from storage.objects o where o.bucket_id = 'communaute' and o.name = p_piece ->> 'chemin';
+  end if;
+  delete from public.journal_moderation where profil_id = v_moi and cree_le < now() - interval '1 day';
+  if (select count(*) from public.journal_moderation where profil_id = v_moi and cree_le > now() - interval '10 minutes') >= 10 then
+    raise exception 'Vous publiez beaucoup en peu de temps. Réessayez dans quelques minutes.';
+  end if;
+  insert into public.journal_moderation (profil_id) values (v_moi);
+  return jsonb_build_object('objet', v_objet);
 end;
 $$;
 
@@ -939,6 +1010,8 @@ grant execute on function public.moderation_active() to authenticated;
 grant execute on function public.etat_moderation(text) to authenticated;
 grant execute on function public.regler_analyse(boolean, text) to authenticated;
 grant execute on function public.publier(uuid, text, text, jsonb, jsonb) to authenticated;
+revoke execute on function public.preparer_analyse(uuid, uuid, text, text, jsonb) from public, anon;
+grant execute on function public.preparer_analyse(uuid, uuid, text, text, jsonb) to authenticated;
 grant execute on function public.modifier_publication(uuid, text, text, jsonb) to authenticated;
 
 revoke execute on function public.signaler(uuid, uuid, text, text) from public, anon;

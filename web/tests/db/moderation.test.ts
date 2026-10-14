@@ -75,6 +75,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   await banc.db.query("delete from public.publications");
   await banc.db.query("delete from public.notifications");
+  await banc.db.query("delete from public.journal_moderation");
   await activer(false);
 });
 
@@ -217,6 +218,64 @@ const file = async (onglet: string) => (await banc.en<{ r: Element[] }>({ id: A 
 const notes = async (qui: string) =>
   (await banc.db.query<{ titre: string; texte: string; lien: string; categorie: string }>("select titre, texte, lien, categorie from public.notifications where destinataire = $1 order by id", [qui])).rows;
 const equipe = (appel: string, params: unknown[]) => banc.en<{ r: string | null }>({ id: A }, `select public.${appel} as r`, params);
+
+describe("Revue finale : modifications, fichier, coût de l'IA", () => {
+  const preparer = async (qui: string, p: { publication?: string; parcours?: string | null; texte?: string; piece?: unknown }) =>
+    (
+      await banc.en<{ r: { objet: string | null } }>({ id: qui }, "select public.preparer_analyse($1, $2, '', $3, $4::jsonb) as r", [
+        p.publication ?? null,
+        p.parcours ?? null,
+        p.texte ?? "Bonjour",
+        json(p.piece ?? null),
+      ])
+    )[0].r;
+
+  it("modifier une publication en attente : elle reste en attente, quel que soit le verdict (seule l'équipe la publie)", async () => {
+    await activer(true);
+    const { id } = await publier(E1, null, "Sans verdict");
+    expect((await ligne(id)).statut).toBe("en_attente");
+    expect((await modifier(E1, id, "Texte anodin", verdict("autoriser"))).statut).toBe("en_attente");
+    expect(await ligne(id)).toMatchObject({ statut: "en_attente", texte: "Texte anodin" });
+    expect(await page(E2, id)).toBeNull();
+  });
+
+  it("preparer_analyse : refuse avant l'IA (espace fermé, texte vide, fichier déjà joint, publication d'un autre ou bloquée) ; 10 analyses en 10 minutes au plus, suppressions comprises", async () => {
+    await expect(preparer(E2, { parcours: P })).rejects.toThrow("Cet espace ne vous est pas ouvert.");
+    await expect(preparer(E1, { texte: " " })).rejects.toThrow("Écrivez votre publication (3 000 caractères au plus).");
+    const chemin = `${E1}/${randomUUID()}.png`;
+    await deposer(E1, chemin);
+    const piece = { chemin, nom: "a.png", type: "image/png", taille: 1000 };
+    const { objet } = await preparer(E1, { piece });
+    expect(objet).toBe((await un<{ id: string }>("select id from storage.objects where name = $1", [chemin])).id);
+    await publier(E1, null, "Avec image", null, piece);
+    await expect(preparer(E1, { piece })).rejects.toThrow("Ce fichier n’est pas le vôtre.");
+    const autre = await publier(E2, null, "La sienne");
+    await expect(preparer(E1, { publication: autre.id })).rejects.toThrow("Cette publication n’est pas la vôtre.");
+    expect(await preparer(E2, { publication: autre.id })).toEqual({ objet: null });
+    // Publier puis supprimer ne remet pas le compteur à zéro.
+    await banc.db.query("delete from public.journal_moderation");
+    await banc.db.query("delete from public.publications");
+    for (let i = 0; i < 10; i++) await preparer(E2, {});
+    await expect(preparer(E2, {})).rejects.toThrow(TROP_VITE);
+    expect((await un<{ n: number }>("select count(*)::int as n from public.publications")).n).toBe(0);
+  });
+
+  it("un verdict lié à un fichier remplacé pendant l'analyse est refusé ; lié au bon fichier, il s'applique", async () => {
+    await activer(true);
+    const chemin = `${E1}/${randomUUID()}.png`;
+    const piece = { chemin, nom: "a.png", type: "image/png", taille: 1000 };
+    await deposer(E1, chemin);
+    const { objet } = await preparer(E1, { piece });
+    // L'auteur retire le fichier analysé et en dépose un autre au même chemin.
+    await banc.en({ id: E1 }, "delete from storage.objects where bucket_id = 'communaute' and name = $1", [chemin]);
+    await deposer(E1, chemin);
+    const CHANGE = "Ce fichier a changé pendant la vérification. Publiez-le de nouveau.";
+    await expect(publier(E1, null, "Image", { ...verdict("autoriser"), objet }, piece)).rejects.toThrow(CHANGE);
+    await expect(publier(E1, null, "Image", verdict("autoriser"), piece)).rejects.toThrow(CHANGE);
+    const { objet: nouveau } = await preparer(E1, { piece });
+    expect((await publier(E1, null, "Image", { ...verdict("autoriser"), objet: nouveau }, piece)).statut).toBe("publiee");
+  });
+});
 
 describe("Signalements et file de l'équipe", () => {
   it("signaler : motif et précisions ; doublon refusé ; son propre contenu et l'équipe refusés ; Autre sans précisions refusé ; espace fermé refusé", async () => {

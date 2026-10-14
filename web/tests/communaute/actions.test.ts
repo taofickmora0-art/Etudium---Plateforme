@@ -119,6 +119,7 @@ describe("Avec la modération (migration 0020)", () => {
   const actif = () => {
     faux.repondre("rpc.moderation_active", { data: true });
     faux.repondre("rpc.espaces_communaute", { data: [{ id: null, nom_court: "Général" }, { id: P, nom_court: "Académique" }] });
+    faux.repondre("rpc.preparer_analyse", { data: { objet: null } });
     configuration.mockReturnValue(CONFIG);
     analyserPublication.mockResolvedValue(VERDICT);
   };
@@ -139,12 +140,38 @@ describe("Avec la modération (migration 0020)", () => {
 
   it("active et configurée : le fichier relu, le verdict et le jeton transmis ; statut en_attente rendu", async () => {
     actif();
+    faux.repondre("rpc.preparer_analyse", { data: { objet: "objet-1" } });
     faux.repondre("storage.communaute.download", { data: new Blob([PNG], { type: "image/png" }) });
     faux.repondre("rpc.publier", { data: { id: ID, statut: "en_attente", categorie: null } });
     expect(await publierPublication(P, " Titre ", " Texte ", { ...PIECE, taille: PNG.length })).toEqual({ ok: true, id: ID, statut: "en_attente" });
+    // Avant l'IA, la base vérifie tout et rend l'identifiant du fichier, que le verdict reprend.
+    expect(faux.de("rpc", "preparer_analyse")[0].valeurs).toEqual({
+      p_publication: null,
+      p_parcours: P,
+      p_titre: "Titre",
+      p_texte: "Texte",
+      p_piece: { ...PIECE, taille: PNG.length },
+    });
+    expect(faux.appels.findIndex((a) => a.op === "preparer_analyse")).toBeLessThan(faux.appels.findIndex((a) => a.op === "download"));
     expect(faux.de("storage.communaute", "download")[0].valeurs).toEqual([PIECE.chemin]);
     expect(analyserPublication).toHaveBeenCalledWith({ titre: "Titre", texte: "Texte", espace: "Académique", fichier: { type: "image/png", octets: PNG } }, CONFIG);
-    expect(faux.de("rpc", "publier")[0].valeurs).toMatchObject({ p_analyse: { jeton: "J", ...VERDICT } });
+    expect(faux.de("rpc", "publier")[0].valeurs).toMatchObject({ p_analyse: { jeton: "J", ...VERDICT, objet: "objet-1" } });
+  });
+
+  it("préparation refusée (limite, fichier déjà joint) : le message, aucun appel à l'IA, le fichier retiré ; aucun verdict (clé refusée) : p_analyse null", async () => {
+    actif();
+    faux.repondre("rpc.preparer_analyse", { error: { code: "P0001", message: "Vous publiez beaucoup en peu de temps. Réessayez dans quelques minutes." } });
+    expect(await publierPublication(null, "", "Texte", PIECE)).toEqual({ ok: false, message: "Vous publiez beaucoup en peu de temps. Réessayez dans quelques minutes." });
+    expect(analyserPublication).not.toHaveBeenCalled();
+    expect(faux.de("storage.communaute", "download")).toEqual([]);
+    expect(faux.de("storage.communaute", "remove")[0].valeurs).toEqual([[PIECE.chemin]]);
+    expect(faux.de("rpc", "publier")).toEqual([]);
+    faux.vider();
+    actif();
+    analyserPublication.mockResolvedValue(null);
+    faux.repondre("rpc.publier", { data: { id: ID, statut: "en_attente", categorie: null } });
+    expect(await publierPublication(null, "", "Texte", null)).toEqual({ ok: true, id: ID, statut: "en_attente" });
+    expect(faux.de("rpc", "publier")[0].valeurs).toMatchObject({ p_analyse: null });
   });
 
   it("bloquée : le message de l'auteur, le fichier gardé pour l'équipe ; active sans configuration : p_analyse null", async () => {
@@ -179,7 +206,13 @@ describe("Avec la modération (migration 0020)", () => {
     expect(faux.de("rpc", "publier")[0].valeurs).toMatchObject({ p_analyse: { jeton: "J", decision: "echec", categorie: "aucune" } });
   });
 
-  it("modifier : le titre et le texte analysés, dans l'espace de la publication ; bloquée → message", async () => {
+  it("modifier : préparée (sa publication), le titre et le texte analysés, dans l'espace de la publication ; bloquée → message", async () => {
+    actif();
+    faux.repondre("rpc.preparer_analyse", { error: { code: "42501", message: "Cette publication n’est pas la vôtre." } });
+    expect(await modifierPublication(ID, "Titre", "Achetez")).toEqual({ ok: false, message: "Cette publication n’est pas la vôtre." });
+    expect(analyserPublication).not.toHaveBeenCalled();
+    expect(faux.de("rpc", "preparer_analyse")[0].valeurs).toEqual({ p_publication: ID, p_parcours: null, p_titre: "Titre", p_texte: "Achetez", p_piece: null });
+    faux.vider();
     actif();
     faux.repondre("rpc.publication_communaute", { data: { id: ID, espace: { id: P, nom: "Académique" } } });
     faux.repondre("rpc.modifier_publication", { data: { statut: "bloquee", categorie: "spam" } });
