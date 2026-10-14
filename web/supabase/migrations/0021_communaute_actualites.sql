@@ -423,6 +423,169 @@ begin
 end;
 $$;
 
+-- ─── L'annonce épinglée ─────────────────────────────────────────────────────────────────────────────
+-- Une seule, réglée par l'équipe au back-office ; en haut du fil « Actualités ». Fermée : tout passe par les fonctions.
+create table if not exists public.annonce_communaute (
+  id boolean primary key default true check (id),
+  active boolean not null default false,
+  titre text not null default '',
+  texte text not null default '',
+  media text,
+  youtube_id text,
+  image_chemin text,
+  public text not null default 'tous',
+  parcours_id uuid references public.parcours (id) on delete set null,
+  modifiee_le timestamptz not null default now(),
+  constraint annonce_titre check (char_length(titre) <= 120),
+  constraint annonce_texte check (char_length(texte) <= 500),
+  constraint annonce_media check (media is null or media in ('youtube', 'image')),
+  constraint annonce_public check (public in ('tous', 'parcours'))
+);
+alter table public.annonce_communaute enable row level security;
+revoke all on public.annonce_communaute from anon, authenticated;
+insert into public.annonce_communaute (id) values (true) on conflict (id) do nothing;
+
+-- L'annonce, telle que la voit le compte qui demande : null si elle est inactive ou réservée à un parcours qu'il ne lit pas.
+create or replace function public.annonce_visible(a public.annonce_communaute)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select a.active
+    and (select auth.uid()) is not null
+    and not public.compte_suspendu()
+    and (a.public = 'tous' or (a.parcours_id is not null and public.peut_lire_espace(a.parcours_id)));
+$$;
+
+create or replace function public.annonce_communaute()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  a public.annonce_communaute%rowtype;
+begin
+  perform public.exiger_compte_actif();
+  select * into a from public.annonce_communaute where id;
+  if not found or not public.annonce_visible(a) then
+    return null;
+  end if;
+  return jsonb_build_object('titre', a.titre, 'texte', a.texte, 'media', a.media, 'youtube_id', a.youtube_id, 'image_chemin', a.image_chemin);
+end;
+$$;
+
+-- Le réglage complet, pour le back-office.
+create or replace function public.annonce_equipe()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  a public.annonce_communaute%rowtype;
+begin
+  perform public.exiger_equipe_moderation();
+  select * into a from public.annonce_communaute where id;
+  return jsonb_build_object(
+    'active', a.active, 'titre', a.titre, 'texte', a.texte, 'media', a.media, 'youtube_id', a.youtube_id,
+    'image_chemin', a.image_chemin, 'public', a.public, 'parcours_id', a.parcours_id, 'modifiee_le', a.modifiee_le
+  );
+end;
+$$;
+
+-- Enregistrer l'annonce (équipe). L'affiche est une image déposée par ce compte dans son dossier de l'espace « communaute ».
+create or replace function public.enregistrer_annonce(
+  p_active boolean, p_titre text, p_texte text, p_media text, p_youtube_id text, p_image_chemin text, p_public text, p_parcours uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_titre text := regexp_replace(coalesce(p_titre, ''), '^\s+|\s+$', '', 'g');
+  v_texte text := regexp_replace(coalesce(p_texte, ''), '^\s+|\s+$', '', 'g');
+  v_media text := case when p_media in ('youtube', 'image') then p_media end;
+  v_public text := case when p_public = 'parcours' then 'parcours' else 'tous' end;
+begin
+  perform public.exiger_equipe_moderation();
+  if char_length(v_titre) > 120 or (coalesce(p_active, false) and v_titre = '') then
+    raise exception 'Écrivez le titre de l’annonce (120 caractères au plus).';
+  end if;
+  if char_length(v_texte) > 500 then
+    raise exception 'Le texte de l’annonce dépasse 500 caractères.';
+  end if;
+  if v_media = 'youtube' and coalesce(p_youtube_id, '') !~ '^[A-Za-z0-9_-]{11}$' then
+    raise exception 'Cette adresse YouTube n’est pas reconnue.';
+  end if;
+  if v_media = 'image' and (
+    p_image_chemin is null or p_image_chemin ~ '\.\.'
+    or (storage.foldername(p_image_chemin))[1] is distinct from (select auth.uid())::text
+    or not exists (
+      select 1 from storage.objects o
+      where o.bucket_id = 'communaute' and o.name = p_image_chemin
+        and o.metadata ->> 'mimetype' in ('image/jpeg', 'image/png', 'image/webp')
+        and o.metadata ->> 'size' ~ '^[0-9]{1,9}$'
+        and (o.metadata ->> 'size')::bigint between 1 and 10485760
+    )
+  ) then
+    raise exception 'Choisissez une image JPEG, PNG ou WebP de 10 Mo au plus.';
+  end if;
+  if v_public = 'parcours' and (p_parcours is null or not exists (select 1 from public.parcours where id = p_parcours)) then
+    raise exception 'Choisissez un parcours.';
+  end if;
+  update public.annonce_communaute
+  set active = coalesce(p_active, false), titre = v_titre, texte = v_texte, media = v_media,
+      youtube_id = case when v_media = 'youtube' then p_youtube_id end,
+      image_chemin = case when v_media = 'image' then p_image_chemin end,
+      public = v_public, parcours_id = case when v_public = 'parcours' then p_parcours end,
+      modifiee_le = now()
+  where id;
+end;
+$$;
+
+-- Retirer l'annonce : inactive et vidée. Rend le chemin de l'ancienne affiche, à retirer du stockage.
+create or replace function public.retirer_annonce()
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_chemin text;
+begin
+  perform public.exiger_equipe_moderation();
+  select image_chemin into v_chemin from public.annonce_communaute where id;
+  update public.annonce_communaute
+  set active = false, titre = '', texte = '', media = null, youtube_id = null, image_chemin = null,
+      public = 'tous', parcours_id = null, modifiee_le = now()
+  where id;
+  return v_chemin;
+end;
+$$;
+
+-- Un fichier se lit si une publication en ligne d'un espace ouvert l'attache, ou si c'est l'affiche de l'annonce visible.
+create or replace function public.fichier_communaute_lisible(p_nom text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.publications p
+    where p.piece_jointe ->> 'chemin' = p_nom and p.statut = 'publiee' and public.peut_lire_espace(p.parcours_id)
+  ) or exists (
+    select 1 from public.annonce_communaute a
+    where a.image_chemin = p_nom and public.annonce_visible(a)
+  );
+$$;
+
 -- ─── Droits d'exécution ─────────────────────────────────────────────────────────────────────────────
 revoke execute on function public.verifier_apercu(jsonb, text) from public, anon, authenticated;
 revoke execute on function public.publier(uuid, text, text, jsonb, jsonb, jsonb) from public, anon;
@@ -437,5 +600,14 @@ grant execute on function public.fil_communaute(text, text, timestamptz, uuid, i
 grant execute on function public.basculer_enregistrement(uuid) to authenticated;
 grant execute on function public.publications_tendances() to authenticated;
 grant execute on function public.activites_recentes() to authenticated;
+revoke execute on function public.annonce_visible(public.annonce_communaute) from public, anon, authenticated;
+revoke execute on function public.annonce_communaute() from public, anon;
+revoke execute on function public.annonce_equipe() from public, anon;
+revoke execute on function public.enregistrer_annonce(boolean, text, text, text, text, text, text, uuid) from public, anon;
+revoke execute on function public.retirer_annonce() from public, anon;
+grant execute on function public.annonce_communaute() to authenticated;
+grant execute on function public.annonce_equipe() to authenticated;
+grant execute on function public.enregistrer_annonce(boolean, text, text, text, text, text, text, uuid) to authenticated;
+grant execute on function public.retirer_annonce() to authenticated;
 
 commit;

@@ -188,3 +188,64 @@ describe("Aperçus, fil, signets, tendances, activités", () => {
     await expect(banc.en({ id: E1 }, "select * from public.publications_enregistrees")).rejects.toThrow(REFUS);
   });
 });
+
+describe("L'annonce épinglée", () => {
+  type Donnees = { active: boolean; titre: string; texte: string; media: string | null; youtube_id: string | null; image_chemin: string | null; public: string; parcours: string | null };
+  const BASE: Donnees = { active: true, titre: "Bienvenue", texte: "Cinq minutes pour bien démarrer.", media: "youtube", youtube_id: "dQw4w9WgXcQ", image_chemin: null, public: "tous", parcours: null };
+  const lire = async (qui: string) => (await banc.en<{ r: Record<string, unknown> | null }>({ id: qui }, "select public.annonce_communaute() as r"))[0].r;
+  const ecrire = (qui: string, d: Partial<Donnees>) => {
+    const a = { ...BASE, ...d };
+    return banc.en({ id: qui }, "select public.enregistrer_annonce($1, $2, $3, $4, $5, $6, $7, $8)", [a.active, a.titre, a.texte, a.media, a.youtube_id, a.image_chemin, a.public, a.parcours]);
+  };
+  const deposer = (qui: string, chemin: string, type = "image/png", taille = 1000) =>
+    banc.en({ id: qui }, "insert into storage.objects (bucket_id, name, owner, metadata) values ('communaute', $1, $2, $3::jsonb)", [chemin, qui, JSON.stringify({ mimetype: type, size: taille })]);
+  const lit = async (qui: string, chemin: string) => (await banc.en({ id: qui }, "select name from storage.objects where bucket_id = 'communaute' and name = $1", [chemin])).length;
+
+  beforeEach(async () => {
+    await banc.en({ id: A }, "select public.retirer_annonce()");
+  });
+
+  it("inactive : rien ; tous ; un parcours : visible de qui en lit l'espace ; l'équipe seule lit et écrit le réglage", async () => {
+    expect(await lire(E1)).toBeNull();
+    await ecrire(A, {});
+    expect(await lire(E2)).toEqual({ titre: "Bienvenue", texte: "Cinq minutes pour bien démarrer.", media: "youtube", youtube_id: "dQw4w9WgXcQ", image_chemin: null });
+    await ecrire(A, { public: "parcours", parcours: P });
+    expect([await lire(E1), await lire(E2)]).toEqual([expect.objectContaining({ titre: "Bienvenue" }), null]);
+    await ecrire(A, { active: false, public: "parcours", parcours: P });
+    expect(await lire(E1)).toBeNull();
+    expect((await banc.en<{ r: Record<string, unknown> }>({ id: A }, "select public.annonce_equipe() as r"))[0].r).toMatchObject({ active: false, titre: "Bienvenue", public: "parcours", parcours_id: P });
+    await expect(ecrire(E1, {})).rejects.toThrow(REFUS);
+    await expect(banc.en({ id: E1 }, "select public.annonce_equipe()")).rejects.toThrow(REFUS);
+    await expect(banc.en({ id: E1 }, "select public.retirer_annonce()")).rejects.toThrow(REFUS);
+    await expect(banc.en({ id: E1 }, "select * from public.annonce_communaute")).rejects.toThrow(REFUS);
+  });
+
+  it("validations : titre, texte, YouTube, affiche, parcours", async () => {
+    await expect(ecrire(A, { titre: " " })).rejects.toThrow("Écrivez le titre de l’annonce (120 caractères au plus).");
+    await expect(ecrire(A, { titre: "x".repeat(121) })).rejects.toThrow("Écrivez le titre de l’annonce (120 caractères au plus).");
+    await expect(ecrire(A, { texte: "x".repeat(501) })).rejects.toThrow("Le texte de l’annonce dépasse 500 caractères.");
+    await expect(ecrire(A, { youtube_id: "pas-un-id" })).rejects.toThrow("Cette adresse YouTube n’est pas reconnue.");
+    const IMAGE = "Choisissez une image JPEG, PNG ou WebP de 10 Mo au plus.";
+    await expect(ecrire(A, { media: "image", youtube_id: null, image_chemin: `${A}/absente.png` })).rejects.toThrow(IMAGE);
+    const pdf = `${A}/${randomUUID()}.pdf`;
+    await deposer(A, pdf, "application/pdf");
+    await expect(ecrire(A, { media: "image", youtube_id: null, image_chemin: pdf })).rejects.toThrow(IMAGE);
+    const autre = `${E1}/${randomUUID()}.png`;
+    await deposer(E1, autre);
+    await expect(ecrire(A, { media: "image", youtube_id: null, image_chemin: autre })).rejects.toThrow(IMAGE);
+    await expect(ecrire(A, { public: "parcours", parcours: null })).rejects.toThrow("Choisissez un parcours.");
+  });
+
+  it("l'affiche : lisible selon le public ; retirer l'annonce rend son chemin et la ferme", async () => {
+    const affiche = `${A}/${randomUUID()}.png`;
+    await deposer(A, affiche);
+    await ecrire(A, { media: "image", youtube_id: null, image_chemin: affiche });
+    expect(await lire(E2)).toMatchObject({ media: "image", image_chemin: affiche, youtube_id: null });
+    expect([await lit(E1, affiche), await lit(E2, affiche)]).toEqual([1, 1]);
+    await ecrire(A, { media: "image", youtube_id: null, image_chemin: affiche, public: "parcours", parcours: P });
+    expect([await lit(E1, affiche), await lit(E2, affiche)]).toEqual([1, 0]);
+    expect((await banc.en<{ r: string | null }>({ id: A }, "select public.retirer_annonce() as r"))[0].r).toBe(affiche);
+    expect(await lire(E1)).toBeNull();
+    expect(await lit(E1, affiche)).toBe(0);
+  });
+});
