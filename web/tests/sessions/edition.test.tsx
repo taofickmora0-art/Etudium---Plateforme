@@ -113,6 +113,15 @@ describe("La liste des sessions", () => {
     expect(screen.getByText("Aucune session programmée.")).toBeInTheDocument();
   });
 
+  it("au back-office : toutes les sessions (sessions_equipe), sans fiche formateur à vérifier", async () => {
+    lireSessionsEquipe.mockResolvedValue({ migrationAbsente: false, donnees: { aVenir: [ligne({ animateur: "Équipe Étudium" })], passees: [] } });
+    render(await PageSessionsEdition({ espace: "admin" }));
+    expect(screen.getByRole("heading", { level: 1, name: "Sessions live" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Nouvelle session" })).toHaveAttribute("href", "/admin/sessions/nouvelle");
+    expect(lireMaFiche).not.toHaveBeenCalled();
+    expect(lireSessionsAnimees).not.toHaveBeenCalled();
+  });
+
   it("avant la 0018 et sans fiche formateur : les bandeaux", async () => {
     lireSessionsAnimees.mockResolvedValue({ migrationAbsente: true });
     const { unmount } = render(await PageSessionsEdition({ espace: "formateur" }));

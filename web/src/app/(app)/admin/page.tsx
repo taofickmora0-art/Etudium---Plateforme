@@ -5,14 +5,27 @@ import { TableauDeBordAdmin } from "@/components/admin/TableauDeBordAdmin";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { lireStatistiques } from "@/lib/admin/statistiques";
 import { requireSpace } from "@/lib/auth/require-space";
+import { lireSessionsEquipe } from "@/lib/sessions/data";
 
 export const metadata: Metadata = { title: "Back-office · Étudium" };
 
+/** Le nombre de sessions live programmées à venir (0018) ; null avant la migration ou si la lecture échoue. */
+async function sessionsAVenir(): Promise<number | null> {
+  try {
+    const lecture = await lireSessionsEquipe();
+    return lecture.migrationAbsente ? null : lecture.donnees.aVenir.filter((s) => s.statut === "programmee").length;
+  } catch (erreur) {
+    console.error("Lecture des sessions live impossible :", erreur instanceof Error ? erreur.message : erreur);
+    return null;
+  }
+}
+
 async function AccueilAdmin() {
   await requireSpace("admin");
+  const [stats, sessions] = await Promise.all([lireStatistiques(), sessionsAVenir()]);
   return (
     <PageAdmin titre="Tableau de bord" description="Vue d’ensemble de la plateforme : inscriptions, apprentissage et, à partir du lot 2, revenus.">
-      <TableauDeBordAdmin stats={await lireStatistiques()} />
+      <TableauDeBordAdmin stats={stats} sessionsAVenir={sessions} />
     </PageAdmin>
   );
 }

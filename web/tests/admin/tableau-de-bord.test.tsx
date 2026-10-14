@@ -65,6 +65,15 @@ describe("Tableau de bord du back-office : écran", () => {
     expect(within(tuile("Sessions live à venir")).getByText("Disponible au lot 5")).toBeInTheDocument();
   });
 
+  it("la tuile des sessions live : leur nombre (migration 0018), sinon « Disponible au lot 5 »", () => {
+    const { unmount } = render(<TableauDeBordAdmin stats={STATS} sessionsAVenir={3} />);
+    expect(within(tuile("Sessions live à venir")).getByText("3")).toBeInTheDocument();
+    expect(within(tuile("Sessions live à venir")).getByText("Programmées")).toBeInTheDocument();
+    unmount();
+    render(<TableauDeBordAdmin stats={STATS} sessionsAVenir={null} />);
+    expect(within(tuile("Sessions live à venir")).getByText("Disponible au lot 5")).toBeInTheDocument();
+  });
+
   it("les formations les plus suivies et la progression moyenne", () => {
     render(<TableauDeBordAdmin stats={STATS} />);
     const top = screen.getByRole("region", { name: "Formations les plus suivies" });

@@ -110,6 +110,7 @@ export const MENUS: Record<Espace, { libelle: string; groupes: GroupeNav[] }> = 
           { href: "/admin/formateurs", label: "Formateurs", icon: TeachingIcon },
           { href: "/admin/formations", label: "Formations", icon: BookOpen01Icon },
           { href: "/admin/avis", label: "Avis", icon: StarIcon },
+          { href: "/admin/sessions", label: "Sessions live", icon: Video01Icon },
         ],
       },
       {

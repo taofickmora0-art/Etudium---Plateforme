@@ -17,10 +17,10 @@ const chiffre = (n: number) => n.toLocaleString("fr-FR");
 
 /**
  * Tableau de bord du back-office : la vue globale de la plateforme (choisie par l'utilisateur le 13 octobre 2026).
- * Inscriptions, apprentissage, formations les plus suivies ; revenus et abonnés (lot 2) et sessions live (lot 5) ont
- * déjà leur place et s'afficheront avec leur lot.
+ * Inscriptions, apprentissage, formations les plus suivies, sessions live à venir (0018) ; revenus et abonnés (lot 2)
+ * ont déjà leur place et s'afficheront avec leur lot.
  */
-export function TableauDeBordAdmin({ stats }: { stats: StatistiquesBackOffice | null }) {
+export function TableauDeBordAdmin({ stats, sessionsAVenir = null }: { stats: StatistiquesBackOffice | null; sessionsAVenir?: number | null }) {
   if (!stats) {
     return (
       <Banner tone="attention" title="Les statistiques ne sont pas encore dans la base.">
@@ -97,7 +97,13 @@ export function TableauDeBordAdmin({ stats }: { stats: StatistiquesBackOffice | 
           >
             {stats.progressionMoyenne !== null && <ProgressBar value={stats.progressionMoyenne} label="Progression moyenne" className="mt-2.5" />}
           </Tuile>
-          <Tuile icon={Video01Icon} label="Sessions live à venir" value="—" hint="Disponible au lot 5" />
+          {/* Sessions live (migration 0018) : leur nombre ; avant, la tuile garde sa place. */}
+          <Tuile
+            icon={Video01Icon}
+            label="Sessions live à venir"
+            value={sessionsAVenir === null ? "—" : chiffre(sessionsAVenir)}
+            hint={sessionsAVenir === null ? "Disponible au lot 5" : "Programmées"}
+          />
         </div>
       </div>
     </div>
