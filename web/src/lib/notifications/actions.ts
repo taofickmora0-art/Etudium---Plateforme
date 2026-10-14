@@ -2,7 +2,7 @@
 
 import { refresh } from "next/cache";
 import { exigerEquipe, SESSION_EXPIREE } from "@/lib/admin/garde";
-import { getShellUser } from "@/lib/auth/current-user";
+import { demoModeActive, getShellUser } from "@/lib/auth/current-user";
 import { createClient } from "@/lib/supabase/server";
 import { lireNotifications } from "./data";
 import { ANNONCE_TEXTE_MAX, ANNONCE_TITRE_MAX, lienDuSite, NOMBRE_CLOCHE, NOMBRE_PAGE, REFUS_ANNONCE } from "./regles";
@@ -16,6 +16,14 @@ const typographie = (message: string) => message.replace(/'/g, "’");
 /** La cloche : les 8 dernières et le nombre de non lues ; null sans session, avant la 0016 ou si la base ne répond pas. */
 export async function chargerCloche(): Promise<LotNotifications | null> {
   if (!(await getShellUser())) return null;
+  // Les rappels des sessions live (migration 0018) sont créés quand la cloche se charge ; sans elle, rien n'est perdu.
+  if (!demoModeActive()) {
+    try {
+      await (await createClient()).rpc("rappels_sessions");
+    } catch {
+      // Ignoré : la cloche lit ce qu'elle a.
+    }
+  }
   try {
     const lecture = await lireNotifications({ nombre: NOMBRE_CLOCHE });
     return lecture.migrationAbsente ? null : lecture.donnees;

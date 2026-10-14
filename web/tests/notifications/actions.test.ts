@@ -46,6 +46,16 @@ describe("La cloche et la page", () => {
     expect(faux.appels).toEqual([]);
   });
 
+  it("chargerCloche demande d'abord les rappels des sessions live (0018), puis lit ; elle lit même si les rappels échouent", async () => {
+    faux.repondre("rpc.mes_notifications", { data: LOT });
+    await chargerCloche();
+    expect(faux.appels.map((a) => a.op)).toEqual(["rappels_sessions", "mes_notifications"]);
+    faux.vider();
+    faux.repondre("rpc.rappels_sessions", { error: { code: "PGRST202" } });
+    faux.repondre("rpc.mes_notifications", { data: LOT });
+    expect(await chargerCloche()).toMatchObject({ nonLues: 1 });
+  });
+
   it("chargerNotifications : 20 à la fois, depuis un curseur ; refus sans session ; erreur affichée", async () => {
     faux.repondre("rpc.mes_notifications", { data: LOT });
     expect(await chargerNotifications(true, "8")).toMatchObject({ ok: true, page: { nonLues: 1 } });
