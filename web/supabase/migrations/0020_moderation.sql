@@ -590,6 +590,338 @@ begin
 end;
 $$;
 
+-- ─── Signalements ───────────────────────────────────────────────────────────────────────────────────
+-- Une publication ou une réponse ; un seul par compte et par contenu. Fermés : l'équipe les lit par la file.
+create table if not exists public.signalements (
+  id uuid primary key default gen_random_uuid(),
+  publication_id uuid references public.publications (id) on delete cascade,
+  commentaire_id uuid references public.commentaires_publications (id) on delete cascade,
+  auteur uuid not null references public.profils (id) on delete cascade,
+  motif text not null,
+  precisions text not null default '',
+  cree_le timestamptz not null default now(),
+  traite_le timestamptz,
+  constraint signalements_une_cible check ((publication_id is null) <> (commentaire_id is null)),
+  constraint signalements_motif check (motif in ('inapproprie', 'spam', 'harcelement', 'autre')),
+  constraint signalements_precisions check (char_length(precisions) <= 500)
+);
+create unique index if not exists signalements_publication_unique on public.signalements (auteur, publication_id) where publication_id is not null;
+create unique index if not exists signalements_commentaire_unique on public.signalements (auteur, commentaire_id) where commentaire_id is not null;
+create index if not exists signalements_publication_idx on public.signalements (publication_id) where traite_le is null;
+create index if not exists signalements_commentaire_idx on public.signalements (commentaire_id) where traite_le is null;
+alter table public.signalements enable row level security;
+revoke all on public.signalements from anon, authenticated;
+
+-- Signaler : qui lit l'espace du contenu, sauf son auteur et l'équipe. L'équipe est prévenue au premier signalement d'un
+-- contenu qui n'était pas déjà dans sa file.
+create or replace function public.signaler(p_publication uuid, p_commentaire uuid, p_motif text, p_precisions text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_publication public.publications%rowtype;
+  v_commentaire public.commentaires_publications%rowtype;
+  v_auteur uuid;
+  v_precisions text := regexp_replace(coalesce(p_precisions, ''), '^\s+|\s+$', '', 'g');
+  v_dans_la_file boolean;
+begin
+  perform public.exiger_compte_actif();
+  if (p_publication is null) = (p_commentaire is null) then
+    raise exception 'Ce contenu n’existe plus.';
+  end if;
+  if p_commentaire is not null then
+    select * into v_commentaire from public.commentaires_publications where id = p_commentaire;
+    if not found then
+      raise exception 'Ce contenu n’existe plus.';
+    end if;
+    v_publication := public.publication_ouverte(v_commentaire.publication_id);
+    v_auteur := v_commentaire.auteur;
+    v_dans_la_file := exists (select 1 from public.signalements s where s.commentaire_id = p_commentaire and s.traite_le is null);
+  else
+    v_publication := public.publication_ouverte(p_publication);
+    v_auteur := v_publication.auteur;
+    v_dans_la_file := v_publication.a_examiner or v_publication.statut <> 'publiee'
+      or exists (select 1 from public.signalements s where s.publication_id = p_publication and s.traite_le is null);
+  end if;
+  if v_auteur = (select auth.uid()) then
+    raise exception 'Vous ne pouvez pas signaler votre propre contenu.';
+  end if;
+  if public.equipe_contenus() then
+    raise exception 'L’équipe modère depuis la file.';
+  end if;
+  if p_motif is null or p_motif not in ('inapproprie', 'spam', 'harcelement', 'autre') then
+    raise exception 'Choisissez un motif.';
+  end if;
+  if p_motif = 'autre' and v_precisions = '' then
+    raise exception 'Précisez le motif du signalement.';
+  end if;
+  if char_length(v_precisions) > 500 then
+    raise exception '500 caractères au plus pour les précisions.';
+  end if;
+  begin
+    insert into public.signalements (publication_id, commentaire_id, auteur, motif, precisions)
+    values (case when p_commentaire is null then p_publication end, p_commentaire, (select auth.uid()), p_motif, v_precisions);
+  exception when unique_violation then
+    raise exception 'Vous avez déjà signalé ce contenu.';
+  end;
+  if not v_dans_la_file then
+    perform public.prevenir_equipe(
+      case when p_commentaire is null then 'Une publication' else 'Une réponse' end
+      || ' de l’espace ' || public.nom_espace_communaute(v_publication.parcours_id) || ' attend votre examen.'
+    );
+  end if;
+end;
+$$;
+
+-- ─── La file de l'équipe ────────────────────────────────────────────────────────────────────────────
+-- Les signalements non traités d'un contenu : leur nombre, les motifs comptés, le détail (nom court de qui signale).
+create or replace function public.resume_signalements(p_publication uuid, p_commentaire uuid)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  with s as (
+    select * from public.signalements
+    where traite_le is null and (publication_id = p_publication or commentaire_id = p_commentaire)
+  )
+  select jsonb_build_object(
+    'nombre', (select count(*)::int from s),
+    'motifs', coalesce((
+      select jsonb_agg(jsonb_build_object('motif', m.motif, 'nombre', m.n) order by m.n desc, m.motif)
+      from (select motif, count(*)::int as n from s group by motif) m
+    ), '[]'::jsonb),
+    'details', coalesce((
+      select jsonb_agg(jsonb_build_object('motif', s.motif, 'precisions', s.precisions, 'par', public.nom_avis(pr.prenom, pr.nom), 'le', s.cree_le) order by s.cree_le, s.id)
+      from s join public.profils pr on pr.id = s.auteur
+    ), '[]'::jsonb)
+  );
+$$;
+
+create or replace function public.element_publication(p public.publications)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'type', 'publication',
+    'id', p.id,
+    'publication_id', p.id,
+    'espace', jsonb_build_object('id', p.parcours_id, 'nom', public.nom_espace_communaute(p.parcours_id)),
+    'auteur', jsonb_build_object('id', p.auteur, 'prenom', coalesce(pr.prenom, ''), 'nom', coalesce(pr.nom, '')),
+    'cree_le', p.cree_le,
+    'titre', p.titre,
+    'texte', p.texte,
+    'piece_jointe', p.piece_jointe,
+    'statut', p.statut,
+    'analyse', p.verdict,
+    'extrait', null,
+    'signalements', public.resume_signalements(p.id, null)
+  )
+  from public.profils pr
+  where pr.id = p.auteur;
+$$;
+
+create or replace function public.element_reponse(c public.commentaires_publications)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'type', 'reponse',
+    'id', c.id,
+    'publication_id', c.publication_id,
+    'espace', jsonb_build_object('id', p.parcours_id, 'nom', public.nom_espace_communaute(p.parcours_id)),
+    'auteur', jsonb_build_object('id', c.auteur, 'prenom', coalesce(pr.prenom, ''), 'nom', coalesce(pr.nom, '')),
+    'cree_le', c.cree_le,
+    'titre', '',
+    'texte', c.texte,
+    'piece_jointe', null,
+    'statut', p.statut,
+    'analyse', null,
+    'extrait', left(coalesce(nullif(p.titre, ''), p.texte), 140),
+    'signalements', public.resume_signalements(null, c.id)
+  )
+  from public.publications p
+  join public.profils pr on pr.id = c.auteur
+  where p.id = c.publication_id;
+$$;
+
+-- « À examiner » : publications en attente, signalées par l'analyse ou par des membres, et réponses signalées, les plus
+-- anciennes d'abord. « Bloquées » : refusées par l'analyse, les plus récentes d'abord. 50 au plus.
+create or replace function public.file_moderation(p_onglet text)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  perform public.exiger_equipe_moderation();
+  if p_onglet = 'bloquees' then
+    return coalesce((
+      select jsonb_agg(public.element_publication(b) order by b.cree_le desc, b.id desc)
+      from (select * from public.publications where statut = 'bloquee' order by cree_le desc, id desc limit 50) b
+    ), '[]'::jsonb);
+  end if;
+  return coalesce((
+    select jsonb_agg(e.element order by e.cree_le, e.id)
+    from (
+      select public.element_publication(p) as element, p.cree_le, p.id
+      from public.publications p
+      where p.statut = 'en_attente'
+        or (p.statut = 'publiee' and (p.a_examiner or exists (select 1 from public.signalements s where s.publication_id = p.id and s.traite_le is null)))
+      union all
+      select public.element_reponse(c), c.cree_le, c.id
+      from public.commentaires_publications c
+      where exists (select 1 from public.signalements s where s.commentaire_id = c.id and s.traite_le is null)
+      order by 2, 3
+      limit 50
+    ) e
+  ), '[]'::jsonb);
+end;
+$$;
+
+create or replace function public.nombre_a_examiner()
+returns integer
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  perform public.exiger_equipe_moderation();
+  return (
+    select count(*)::int from public.publications p
+    where p.statut = 'en_attente'
+      or (p.statut = 'publiee' and (p.a_examiner or exists (select 1 from public.signalements s where s.publication_id = p.id and s.traite_le is null)))
+  ) + (
+    select count(*)::int from public.commentaires_publications c
+    where exists (select 1 from public.signalements s where s.commentaire_id = c.id and s.traite_le is null)
+  );
+end;
+$$;
+
+-- « Publication en ligne » à son auteur, après vérification par l'équipe.
+create or replace function public.annoncer_mise_en_ligne(p public.publications)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform public.notifier(
+    array[p.auteur], 'service', 'Publication en ligne',
+    'Votre publication dans l’espace ' || public.nom_espace_communaute(p.parcours_id) || ' a été vérifiée par l’équipe Étudium et mise en ligne.',
+    '/communaute/publications/' || p.id
+  );
+end;
+$$;
+
+-- Garder : les signalements sont classés et le contenu quitte la file ; une publication en attente est mise en ligne.
+create or replace function public.garder_contenu(p_publication uuid, p_commentaire uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v public.publications%rowtype;
+begin
+  perform public.exiger_equipe_moderation();
+  if p_commentaire is not null then
+    if not exists (select 1 from public.commentaires_publications where id = p_commentaire) then
+      raise exception 'Ce contenu n’existe plus.';
+    end if;
+    update public.signalements set traite_le = now() where commentaire_id = p_commentaire and traite_le is null;
+    return;
+  end if;
+  select * into v from public.publications where id = p_publication for update;
+  if not found then
+    raise exception 'Ce contenu n’existe plus.';
+  end if;
+  update public.signalements set traite_le = now() where publication_id = p_publication and traite_le is null;
+  update public.publications
+  set a_examiner = false, statut = case when statut = 'en_attente' then 'publiee' else statut end
+  where id = p_publication;
+  if v.statut = 'en_attente' then
+    perform public.annoncer_mise_en_ligne(v);
+  end if;
+end;
+$$;
+
+-- Supprimer : le contenu disparaît (avec ses signalements) et son auteur est prévenu, sauf pour une publication bloquée,
+-- qu'il n'a jamais vue en ligne. Rend le chemin du fichier à retirer du stockage.
+create or replace function public.supprimer_contenu(p_publication uuid, p_commentaire uuid)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v public.publications%rowtype;
+  v_commentaire public.commentaires_publications%rowtype;
+  v_regles text := ' a été retirée par l’équipe Étudium : elle ne respecte pas les règles de la communauté.';
+begin
+  perform public.exiger_equipe_moderation();
+  if p_commentaire is not null then
+    select * into v_commentaire from public.commentaires_publications where id = p_commentaire for update;
+    if not found then
+      raise exception 'Ce contenu n’existe plus.';
+    end if;
+    select * into v from public.publications where id = v_commentaire.publication_id;
+    delete from public.commentaires_publications where id = p_commentaire;
+    perform public.notifier(
+      array[v_commentaire.auteur], 'service', 'Réponse retirée',
+      'Votre réponse dans l’espace ' || public.nom_espace_communaute(v.parcours_id) || v_regles, '/communaute'
+    );
+    return null;
+  end if;
+  select * into v from public.publications where id = p_publication for update;
+  if not found then
+    raise exception 'Ce contenu n’existe plus.';
+  end if;
+  delete from public.publications where id = p_publication;
+  if v.statut <> 'bloquee' then
+    perform public.notifier(
+      array[v.auteur], 'service', 'Publication retirée',
+      'Votre publication dans l’espace ' || public.nom_espace_communaute(v.parcours_id) || v_regles, '/communaute'
+    );
+  end if;
+  return v.piece_jointe ->> 'chemin';
+end;
+$$;
+
+-- Rétablir une publication bloquée par erreur : elle est mise en ligne et son auteur est prévenu.
+create or replace function public.retablir_publication(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v public.publications%rowtype;
+begin
+  perform public.exiger_equipe_moderation();
+  select * into v from public.publications where id = p_id for update;
+  if not found then
+    raise exception 'Ce contenu n’existe plus.';
+  end if;
+  if v.statut <> 'bloquee' then
+    return;
+  end if;
+  update public.publications set statut = 'publiee', a_examiner = false where id = p_id;
+  perform public.annoncer_mise_en_ligne(v);
+end;
+$$;
+
 -- ─── Droits d'exécution ─────────────────────────────────────────────────────────────────────────────
 revoke execute on function public.exiger_equipe_moderation() from public, anon, authenticated;
 revoke execute on function public.verdict_valide(jsonb) from public, anon, authenticated;
@@ -608,5 +940,22 @@ grant execute on function public.etat_moderation(text) to authenticated;
 grant execute on function public.regler_analyse(boolean, text) to authenticated;
 grant execute on function public.publier(uuid, text, text, jsonb, jsonb) to authenticated;
 grant execute on function public.modifier_publication(uuid, text, text, jsonb) to authenticated;
+
+revoke execute on function public.signaler(uuid, uuid, text, text) from public, anon;
+revoke execute on function public.resume_signalements(uuid, uuid) from public, anon, authenticated;
+revoke execute on function public.element_publication(public.publications) from public, anon, authenticated;
+revoke execute on function public.element_reponse(public.commentaires_publications) from public, anon, authenticated;
+revoke execute on function public.annoncer_mise_en_ligne(public.publications) from public, anon, authenticated;
+revoke execute on function public.file_moderation(text) from public, anon;
+revoke execute on function public.nombre_a_examiner() from public, anon;
+revoke execute on function public.garder_contenu(uuid, uuid) from public, anon;
+revoke execute on function public.supprimer_contenu(uuid, uuid) from public, anon;
+revoke execute on function public.retablir_publication(uuid) from public, anon;
+grant execute on function public.signaler(uuid, uuid, text, text) to authenticated;
+grant execute on function public.file_moderation(text) to authenticated;
+grant execute on function public.nombre_a_examiner() to authenticated;
+grant execute on function public.garder_contenu(uuid, uuid) to authenticated;
+grant execute on function public.supprimer_contenu(uuid, uuid) to authenticated;
+grant execute on function public.retablir_publication(uuid) to authenticated;
 
 commit;

@@ -196,3 +196,162 @@ describe("Publications analysées", () => {
     await expect(banc.en({ id: E1 }, "select * from public.reglages_moderation")).rejects.toThrow(REFUS);
   });
 });
+
+type Element = {
+  type: "publication" | "reponse";
+  id: string;
+  publication_id: string;
+  espace: { id: string | null; nom: string };
+  auteur: { id: string; prenom: string; nom: string };
+  texte: string;
+  statut: string;
+  analyse: Record<string, string> | null;
+  extrait: string | null;
+  signalements: { nombre: number; motifs: { motif: string; nombre: number }[]; details: { motif: string; precisions: string; par: string }[] };
+};
+const signaler = (qui: string, cible: { publication?: string; commentaire?: string }, motif = "spam", precisions = "") =>
+  banc.en({ id: qui }, "select public.signaler($1, $2, $3, $4)", [cible.publication ?? null, cible.commentaire ?? null, motif, precisions]);
+const repondre = async (qui: string, publication: string, texte = "Merci") =>
+  (await banc.en<{ id: string }>({ id: qui }, "select public.commenter($1, $2) as id", [publication, texte]))[0].id;
+const file = async (onglet: string) => (await banc.en<{ r: Element[] }>({ id: A }, "select public.file_moderation($1) as r", [onglet]))[0].r;
+const notes = async (qui: string) =>
+  (await banc.db.query<{ titre: string; texte: string; lien: string; categorie: string }>("select titre, texte, lien, categorie from public.notifications where destinataire = $1 order by id", [qui])).rows;
+const equipe = (appel: string, params: unknown[]) => banc.en<{ r: string | null }>({ id: A }, `select public.${appel} as r`, params);
+
+describe("Signalements et file de l'équipe", () => {
+  it("signaler : motif et précisions ; doublon refusé ; son propre contenu et l'équipe refusés ; Autre sans précisions refusé ; espace fermé refusé", async () => {
+    const { id } = await publier(E1, null, "Bonjour");
+    await signaler(E2, { publication: id }, "spam", "  Pub  ");
+    expect(await un("select motif, precisions, traite_le from public.signalements where publication_id = $1", [id])).toEqual({ motif: "spam", precisions: "Pub", traite_le: null });
+    await expect(signaler(E2, { publication: id })).rejects.toThrow("Vous avez déjà signalé ce contenu.");
+    await expect(signaler(E1, { publication: id })).rejects.toThrow("Vous ne pouvez pas signaler votre propre contenu.");
+    await expect(signaler(A, { publication: id })).rejects.toThrow("L’équipe modère depuis la file.");
+    await expect(signaler(F, { publication: id }, "autre", " ")).rejects.toThrow("Précisez le motif du signalement.");
+    await expect(signaler(F, { publication: id }, "inconnu")).rejects.toThrow("Choisissez un motif.");
+    await expect(signaler(F, { publication: id }, "spam", "x".repeat(501))).rejects.toThrow("500 caractères au plus pour les précisions.");
+    const ferme = await publier(E1, P, "Dans Académique");
+    await expect(signaler(E2, { publication: ferme.id })).rejects.toThrow("Cet espace ne vous est pas ouvert.");
+    const r = await repondre(F, id);
+    await signaler(E2, { commentaire: r }, "harcelement");
+    await expect(signaler(F, { commentaire: r })).rejects.toThrow("Vous ne pouvez pas signaler votre propre contenu.");
+    await expect(signaler(E2, {})).rejects.toThrow("Ce contenu n’existe plus.");
+  });
+
+  it("À modérer : au premier signalement seulement", async () => {
+    const { id } = await publier(E1, null, "Bonjour");
+    await signaler(E2, { publication: id });
+    expect(await aModerer()).toBe(2);
+    expect((await notes(A))[0]).toMatchObject({ categorie: "service", texte: "Une publication de l’espace général attend votre examen.", lien: "/admin/moderation" });
+    await signaler(F, { publication: id }, "harcelement");
+    expect(await aModerer()).toBe(2);
+    const r = await repondre(F, id);
+    await signaler(E2, { commentaire: r });
+    expect((await notes(A)).at(-1)?.texte).toBe("Une réponse de l’espace général attend votre examen.");
+  });
+
+  it("file : à examiner (en attente, signalée par l'IA, par les membres, réponse), dans l'ordre ; bloquées ; hors équipe refusé ; nombre", async () => {
+    await activer(true);
+    const attente = await publier(E1, null, "Attente");
+    const douteuse = await publier(E1, P, "Douteux", verdict("signaler", "publicite", "Lien externe"));
+    const normale = await publier(E2, null, "Normal", verdict("autoriser"));
+    await signaler(E1, { publication: normale.id }, "spam", "Pub");
+    await signaler(F, { publication: normale.id }, "harcelement", "Insultes");
+    const r = await repondre(F, normale.id, "Merci");
+    await signaler(E1, { commentaire: r }, "inapproprie");
+    const bloquee = await publier(E2, null, "Arnaque", verdict("bloquer", "arnaque"));
+    await publier(E2, null, "Rien", verdict("autoriser"));
+
+    const elements = await file("a_examiner");
+    expect(elements.map((e) => [e.type, e.id])).toEqual([
+      ["publication", attente.id],
+      ["publication", douteuse.id],
+      ["publication", normale.id],
+      ["reponse", r],
+    ]);
+    expect(elements[0]).toMatchObject({ statut: "en_attente", analyse: null, signalements: { nombre: 0 } });
+    expect(elements[1]).toMatchObject({
+      espace: { id: P, nom: "Académique" },
+      auteur: { id: E1, prenom: "Koffi", nom: "Dossou" },
+      analyse: { decision: "signaler", categorie: "publicite", raison: "Lien externe" },
+    });
+    expect(elements[2].signalements).toMatchObject({
+      nombre: 2,
+      motifs: [
+        { motif: "harcelement", nombre: 1 },
+        { motif: "spam", nombre: 1 },
+      ],
+      details: [
+        { motif: "spam", precisions: "Pub", par: "Koffi D." },
+        { motif: "harcelement", precisions: "Insultes" },
+      ],
+    });
+    expect(elements[3]).toMatchObject({ type: "reponse", publication_id: normale.id, texte: "Merci", extrait: "Normal", signalements: { nombre: 1 } });
+    expect((await file("bloquees")).map((e) => e.id)).toEqual([bloquee.id]);
+    expect((await banc.en<{ r: number }>({ id: A }, "select public.nombre_a_examiner() as r"))[0].r).toBe(4);
+    await expect(banc.en({ id: E1 }, "select public.file_moderation('a_examiner')")).rejects.toThrow(REFUS);
+    await expect(banc.en({ id: E1 }, "select public.nombre_a_examiner()")).rejects.toThrow(REFUS);
+  });
+
+  it("garder : quitte la file ; en_attente publiée et l'auteur prévenu", async () => {
+    await activer(true);
+    const attente = await publier(E1, null, "Attente");
+    const douteuse = await publier(E1, null, "Douteux", verdict("signaler", "spam"));
+    const normale = await publier(E2, null, "Normal", verdict("autoriser"));
+    await signaler(E1, { publication: normale.id });
+    const r = await repondre(F, normale.id);
+    await signaler(E1, { commentaire: r });
+    for (const id of [attente.id, douteuse.id, normale.id]) await equipe("garder_contenu($1, null)", [id]);
+    await equipe("garder_contenu(null, $1)", [r]);
+    expect(await file("a_examiner")).toEqual([]);
+    expect(await ligne(attente.id)).toMatchObject({ statut: "publiee", a_examiner: false });
+    expect(await ligne(douteuse.id)).toMatchObject({ statut: "publiee", a_examiner: false });
+    expect((await un<{ n: number }>("select count(*)::int as n from public.signalements where traite_le is null")).n).toBe(0);
+    expect((await notes(E1)).filter((n) => n.titre === "Publication en ligne")).toEqual([
+      {
+        titre: "Publication en ligne",
+        categorie: "service",
+        texte: "Votre publication dans l’espace général a été vérifiée par l’équipe Étudium et mise en ligne.",
+        lien: `/communaute/publications/${attente.id}`,
+      },
+    ]);
+  });
+
+  it("supprimer : la publication et ses signalements disparaissent, chemin rendu, l'auteur prévenu ; une réponse aussi", async () => {
+    const chemin = `${E2}/${randomUUID()}.png`;
+    await deposer(E2, chemin);
+    const pub = await publier(E2, null, "Pub", null, { chemin, nom: "a.png", type: "image/png", taille: 1000 });
+    await signaler(E1, { publication: pub.id });
+    expect((await equipe("supprimer_contenu($1, null)", [pub.id]))[0].r).toBe(chemin);
+    expect(await ligne(pub.id)).toBeUndefined();
+    expect((await un<{ n: number }>("select count(*)::int as n from public.signalements")).n).toBe(0);
+    expect((await notes(E2)).at(-1)).toEqual({
+      titre: "Publication retirée",
+      categorie: "service",
+      texte: "Votre publication dans l’espace général a été retirée par l’équipe Étudium : elle ne respecte pas les règles de la communauté.",
+      lien: "/communaute",
+    });
+    const autre = await publier(E1, null, "Question");
+    const r = await repondre(F, autre.id, "Insulte");
+    await signaler(E1, { commentaire: r });
+    expect((await equipe("supprimer_contenu(null, $1)", [r]))[0].r).toBeNull();
+    expect((await un<{ n: number }>("select count(*)::int as n from public.commentaires_publications where id = $1", [r])).n).toBe(0);
+    expect((await notes(F)).at(-1)).toMatchObject({
+      titre: "Réponse retirée",
+      texte: "Votre réponse dans l’espace général a été retirée par l’équipe Étudium : elle ne respecte pas les règles de la communauté.",
+    });
+  });
+
+  it("rétablir : bloquée → publiée, l'auteur prévenu ; contenu disparu : « Ce contenu n’existe plus. » ; hors équipe refusé", async () => {
+    await activer(true);
+    const bloquee = await publier(E2, null, "Faux positif", verdict("bloquer", "arnaque"));
+    await expect(banc.en({ id: E1 }, "select public.retablir_publication($1)", [bloquee.id])).rejects.toThrow(REFUS);
+    await equipe("retablir_publication($1)", [bloquee.id]);
+    expect(await ligne(bloquee.id)).toMatchObject({ statut: "publiee", a_examiner: false });
+    expect((await fil(E1)).map((p) => p.id)).toContain(bloquee.id);
+    expect((await notes(E2)).at(-1)).toMatchObject({ titre: "Publication en ligne", lien: `/communaute/publications/${bloquee.id}` });
+    const inconnu = randomUUID();
+    await expect(equipe("garder_contenu($1, null)", [inconnu])).rejects.toThrow("Ce contenu n’existe plus.");
+    await expect(equipe("supprimer_contenu($1, null)", [inconnu])).rejects.toThrow("Ce contenu n’existe plus.");
+    await expect(equipe("retablir_publication($1)", [inconnu])).rejects.toThrow("Ce contenu n’existe plus.");
+  });
+});
