@@ -1,7 +1,17 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
-import { Comment01Icon, Delete02Icon, Download04Icon, Link01Icon, MoreHorizontalIcon, PencilEdit02Icon, Pdf01Icon, ThumbsUpIcon } from "@hugeicons/core-free-icons";
+import {
+  Comment01Icon,
+  Delete02Icon,
+  Download04Icon,
+  Flag02Icon,
+  Link01Icon,
+  MoreHorizontalIcon,
+  PencilEdit02Icon,
+  Pdf01Icon,
+  ThumbsUpIcon,
+} from "@hugeicons/core-free-icons";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -18,6 +28,7 @@ import { aimer, modifierPublication, supprimerPublication } from "@/lib/communau
 import { moment, nomEspace, refusPublication, tailleLisible, TEXTE_MAX, TITRE_MAX } from "@/lib/communaute/regles";
 import type { MoiCommunaute, PieceJointe, Publication, Reponse } from "@/lib/communaute/types";
 import { initiales, lienPublication, tonAvatar } from "./outils";
+import { FenetreSignalement } from "./FenetreSignalement";
 import { Reponses, type EtatReponses } from "./Reponses";
 
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
@@ -27,6 +38,13 @@ function Etiquette({ publication }: { publication: Publication }) {
   if (publication.estMoi) return <Tag tone="verrouillee">Vous</Tag>;
   if (publication.auteur.role === "formateur") return <Tag tone="complementaire">Formateur</Tag>;
   if (publication.auteur.role === "equipe") return <Tag tone="nouveau">Équipe Étudium</Tag>;
+  return null;
+}
+
+/** Une publication pas encore en ligne (migration 0020) : en attente de l'équipe, ou bloquée (vue de l'équipe seule). */
+function EtiquetteStatut({ publication }: { publication: Publication }) {
+  if (publication.statut === "en_attente") return <Tag tone="aCorriger">En attente de vérification</Tag>;
+  if (publication.statut === "bloquee") return <Tag tone="echoue">Bloquée</Tag>;
   return null;
 }
 
@@ -91,11 +109,13 @@ export function CartePublication({
   const [aimerEnCours, setAimerEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [suppression, setSuppression] = useState(false);
+  const [signalement, setSignalement] = useState(false);
   const [erreurSuppression, setErreurSuppression] = useState<string>();
   // Modifier et Supprimer ouvrent un champ ou une fenêtre : le menu ne reprend pas le focus en se fermant.
   const fenetreDemandee = useRef(false);
 
   const nom = `${p.auteur.prenom} ${p.auteur.nom}`.trim() || "Membre d’Étudium";
+  const enLigne = p.statut === "publiee";
   const meta = `${nomEspace(p.espace)} · ${moment(p.creeLe, maintenant)}${p.modifiee ? " · modifiée" : ""}`;
   const libelleReponses = reponses.total > 0 ? pluriel(reponses.total, "réponse") : "aucune réponse";
 
@@ -123,6 +143,18 @@ export function CartePublication({
         ]
       : []),
     { label: "Copier le lien", icon: Link01Icon, onSelect: () => void copier() },
+    ...(p.peutSignaler
+      ? [
+          {
+            label: "Signaler",
+            icon: Flag02Icon,
+            onSelect: () => {
+              fenetreDemandee.current = true;
+              setSignalement(true);
+            },
+          },
+        ]
+      : []),
     ...(p.peutSupprimer
       ? [
           {
@@ -188,6 +220,7 @@ export function CartePublication({
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="text-[15px] leading-[22px] font-semibold wrap-anywhere text-encre">{nom}</span>
             <Etiquette publication={p} />
+            <EtiquetteStatut publication={p} />
           </div>
           <span className="text-[13px] leading-5 text-discret">{meta}</span>
         </div>
@@ -244,37 +277,40 @@ export function CartePublication({
       )}
       {p.pieceJointe && <Piece piece={p.pieceJointe} />}
 
-      <div className="mt-3 -ml-2 flex flex-wrap items-center gap-1">
-        <Button
-          variant="discret"
-          size="sm"
-          iconLeft={ThumbsUpIcon}
-          aria-pressed={p.jAime}
-          aria-label={p.jAime ? `Retirer la mention J’aime, ${pluriel(p.reactions, "mention")}` : `J’aime, ${pluriel(p.reactions, "mention")}`}
-          className={cn(p.jAime && "font-semibold text-bleu")}
-          disabled={aimerEnCours}
-          onClick={() => void basculerJaime()}
-        >
-          {p.reactions.toLocaleString("fr-FR")}
-        </Button>
-        <Button
-          variant="discret"
-          size="sm"
-          iconLeft={Comment01Icon}
-          aria-expanded={ouvert}
-          aria-label={`${ouvert ? "Masquer" : "Afficher"} les réponses, ${libelleReponses}`}
-          className={cn(ouvert && "bg-coque enabled:hover:bg-coque-survol")}
-          onClick={() => setOuvert(!ouvert)}
-        >
-          {reponses.total > 0 ? libelleReponses : "Répondre"}
-        </Button>
-      </div>
+      {/* Pas encore en ligne : ni J’aime ni réponses. */}
+      {enLigne && (
+        <div className="mt-3 -ml-2 flex flex-wrap items-center gap-1">
+          <Button
+            variant="discret"
+            size="sm"
+            iconLeft={ThumbsUpIcon}
+            aria-pressed={p.jAime}
+            aria-label={p.jAime ? `Retirer la mention J’aime, ${pluriel(p.reactions, "mention")}` : `J’aime, ${pluriel(p.reactions, "mention")}`}
+            className={cn(p.jAime && "font-semibold text-bleu")}
+            disabled={aimerEnCours}
+            onClick={() => void basculerJaime()}
+          >
+            {p.reactions.toLocaleString("fr-FR")}
+          </Button>
+          <Button
+            variant="discret"
+            size="sm"
+            iconLeft={Comment01Icon}
+            aria-expanded={ouvert}
+            aria-label={`${ouvert ? "Masquer" : "Afficher"} les réponses, ${libelleReponses}`}
+            className={cn(ouvert && "bg-coque enabled:hover:bg-coque-survol")}
+            onClick={() => setOuvert(!ouvert)}
+          >
+            {reponses.total > 0 ? libelleReponses : "Répondre"}
+          </Button>
+        </div>
+      )}
       {erreur && (
         <p role="alert" className="m-0 mt-2 text-sm leading-5 text-erreur-texte">
           {erreur}
         </p>
       )}
-      {ouvert && <Reponses publicationId={p.id} etat={reponses} onChange={setReponses} moi={moi} maintenant={maintenant} />}
+      {ouvert && enLigne && <Reponses publicationId={p.id} etat={reponses} onChange={setReponses} moi={moi} maintenant={maintenant} />}
 
       <ConfirmDialog
         open={suppression}
@@ -287,6 +323,7 @@ export function CartePublication({
         errorMessage={erreurSuppression}
         onConfirm={supprimer}
       />
+      {p.peutSignaler && <FenetreSignalement cible={{ publicationId: p.id }} open={signalement} onOpenChange={setSignalement} />}
     </article>
   );
 }

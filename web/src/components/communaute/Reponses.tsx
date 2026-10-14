@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
-import { Delete02Icon, SentIcon } from "@hugeicons/core-free-icons";
+import { Delete02Icon, Flag02Icon, SentIcon } from "@hugeicons/core-free-icons";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/Toast";
 import { chargerReponses, repondre, supprimerReponse } from "@/lib/communaute/actions";
 import { moment, refusReponse, REPONSE_MAX } from "@/lib/communaute/regles";
 import type { MoiCommunaute, Reponse } from "@/lib/communaute/types";
+import { FenetreSignalement } from "./FenetreSignalement";
 import { initiales, tonAvatar } from "./outils";
 
 export type EtatReponses = { reponses: Reponse[]; total: number; completes: boolean };
@@ -47,6 +48,8 @@ export function Reponses({
   const [erreur, setErreur] = useState<string | null>(null);
   // Les réponses en cours de suppression : leur corbeille est désactivée (pas de double envoi).
   const [enSuppression, setEnSuppression] = useState<string[]>([]);
+  // La réponse que l'on signale (une seule fenêtre pour toutes).
+  const [aSignaler, setASignaler] = useState<string | null>(null);
 
   async function toutVoir() {
     setChargement(true);
@@ -118,6 +121,16 @@ export function Reponses({
             </span>
             <span className="text-sm leading-[22px] whitespace-pre-line text-texte wrap-anywhere">{r.texte}</span>
           </div>
+          {r.peutSignaler && (
+            <IconButton
+              icon={Flag02Icon}
+              label={`Signaler la réponse de ${r.auteur.nomCourt}`}
+              variant="discret"
+              size="sm"
+              className="-my-1 -mr-2"
+              onClick={() => setASignaler(r.id)}
+            />
+          )}
           {r.peutSupprimer && (
             <IconButton
               icon={Delete02Icon}
@@ -148,6 +161,7 @@ export function Reponses({
         />
         <IconButton type="submit" icon={SentIcon} label="Envoyer la réponse" variant="discret" disabled={envoi} aria-busy={envoi || undefined} />
       </form>
+      {aSignaler && <FenetreSignalement key={aSignaler} cible={{ reponseId: aSignaler }} open onOpenChange={(ouvert) => !ouvert && setASignaler(null)} />}
     </div>
   );
 }

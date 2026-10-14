@@ -28,7 +28,18 @@ const apercu = (fichier: File) => (typeof URL.createObjectURL === "function" ? U
  * texte, une image ou un PDF. Le fichier part d'abord du navigateur vers le dossier du compte dans l'espace de stockage
  * « communaute », puis la publication est enregistrée ; si elle est refusée, le fichier est retiré.
  */
-export function ChampPublication({ espace, moi, onPubliee }: { espace: Espace; moi: MoiCommunaute; onPubliee: (publication: Publication) => void }) {
+export function ChampPublication({
+  espace,
+  moi,
+  analyseActive = false,
+  onPubliee,
+}: {
+  espace: Espace;
+  moi: MoiCommunaute;
+  /** Migration 0020 : les publications sont analysées par l'IA. */
+  analyseActive?: boolean;
+  onPubliee: (publication: Publication) => void;
+}) {
   const { toast } = useToast();
   const [titre, setTitre] = useState("");
   const [texte, setTexte] = useState("");
@@ -120,7 +131,11 @@ export function ChampPublication({ espace, moi, onPubliee }: { espace: Espace; m
       setTexte("");
       setPiece(null);
       setDeplie(false);
-      toast({ tone: "reussite", title: "Publication en ligne", description: "Elle apparaît en haut du fil." });
+      toast(
+        resultat.statut === "en_attente"
+          ? { tone: "information", title: "Publication envoyée", description: "Elle paraîtra après vérification par l’équipe Étudium." }
+          : { tone: "reussite", title: "Publication en ligne", description: "Elle apparaît en haut du fil." },
+      );
     } finally {
       setEnvoi(false);
     }
@@ -180,7 +195,9 @@ export function ChampPublication({ espace, moi, onPubliee }: { espace: Espace; m
           <input ref={pdf} type="file" accept="application/pdf,.pdf" aria-label="Joindre un fichier" tabIndex={-1} className="sr-only" onChange={(e) => void choisir(e)} />
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs leading-[18px] text-discret">Soyez bienveillant : l’équipe Étudium veille aux échanges.</span>
+          <span className="text-xs leading-[18px] text-discret">
+            {analyseActive ? "Les publications sont vérifiées automatiquement." : "Soyez bienveillant : l’équipe Étudium veille aux échanges."}
+          </span>
           <Button loading={envoi} onClick={() => void publier()}>
             Publier
           </Button>

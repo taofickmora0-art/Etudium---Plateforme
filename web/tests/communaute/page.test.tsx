@@ -32,7 +32,7 @@ vi.mock("@/lib/communaute/actions", () => ({
   supprimerReponse: vi.fn(),
   aimer: vi.fn(),
 }));
-vi.mock("@/lib/communaute/data", () => ({ lireEspaces: vi.fn(), lireFil: vi.fn(), lirePublication: vi.fn(), lireMembresActifs: vi.fn() }));
+vi.mock("@/lib/communaute/data", () => ({ lireEspaces: vi.fn(), lireFil: vi.fn(), lirePublication: vi.fn(), lireMembresActifs: vi.fn(), lireAnalyseActive: vi.fn(async () => false) }));
 vi.mock("@/lib/sessions/data", () => ({ lireProchaineSession: vi.fn() }));
 vi.mock("@/lib/auth/current-user", () => ({ getShellUser: vi.fn(), getAuthUser: vi.fn(), demoModeActive: () => false }));
 

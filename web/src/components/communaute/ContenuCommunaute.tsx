@@ -1,6 +1,6 @@
 import { unstable_rethrow } from "next/navigation";
 import { demoModeActive, getAuthUser, getShellUser } from "@/lib/auth/current-user";
-import { lireEspaces, lireFil, lireMembresActifs } from "@/lib/communaute/data";
+import { lireAnalyseActive, lireEspaces, lireFil, lireMembresActifs } from "@/lib/communaute/data";
 import type { MoiCommunaute } from "@/lib/communaute/types";
 import { lireProchaineSession } from "@/lib/sessions/data";
 import { MigrationCommunauteAbsente } from "./cadre";
@@ -28,13 +28,21 @@ export async function moiCommunaute(): Promise<MoiCommunaute> {
 
 /** Les espaces, le fil « Général » et la colonne de droite ; avant la migration 0019, un bandeau. */
 export async function ContenuCommunaute() {
-  const [espaces, fil, membres, session, moi] = await Promise.all([lireEspaces(), lireFil("tous"), lireMembresActifs(), prochaineSession(), moiCommunaute()]);
+  const [espaces, fil, membres, session, moi, analyseActive] = await Promise.all([
+    lireEspaces(),
+    lireFil("tous"),
+    lireMembresActifs(),
+    prochaineSession(),
+    moiCommunaute(),
+    lireAnalyseActive(),
+  ]);
   if (espaces.migrationAbsente || fil.migrationAbsente) return <MigrationCommunauteAbsente />;
   return (
     <PageCommunaute
       espaces={espaces.donnees}
       initial={fil.donnees}
       moi={moi}
+      analyseActive={analyseActive}
       maintenant={new Date().toISOString()}
       colonne={<ColonneCommunaute session={session} membres={membres.migrationAbsente ? [] : membres.donnees} espaces={espaces.donnees} />}
     />

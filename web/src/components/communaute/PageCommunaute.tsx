@@ -30,12 +30,15 @@ export function PageCommunaute({
   initial,
   moi,
   colonne,
+  analyseActive = false,
   maintenant: heureServeur,
 }: {
   espaces: Espace[];
   initial: LotPublications;
   moi: MoiCommunaute;
   colonne?: ReactNode;
+  /** Migration 0020 : la mention du champ de publication. */
+  analyseActive?: boolean;
   maintenant?: string;
 }) {
   const liste = espaces.length > 0 ? espaces : [GENERAL];
@@ -118,6 +121,7 @@ export function PageCommunaute({
               <ChampPublication
                 espace={espace}
                 moi={moi}
+                analyseActive={analyseActive}
                 onPubliee={(p) => setLot((actuel) => ({ ...actuel, publications: [p, ...actuel.publications] }))}
               />
               {erreur && <Banner tone="erreur" title={erreur} />}
