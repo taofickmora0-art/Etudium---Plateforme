@@ -595,3 +595,15 @@ Sous chaque commentaire : Répondre, J’aime et un menu ⋮ (copier le lien, si
    - **Signaler** : pour les commentaires des autres ;
    - **Modifier** et **Supprimer** : pour ton commentaire, et pour tous au compte de l'équipe. Un commentaire modifié porte « modifié » ; supprimé, ses réponses disparaissent avec lui.
 5. **Voir plus de commentaires** : la carte du fil montre les 2 derniers commentaires ; le bouton affiche tous les autres et leurs réponses.
+
+## 31. Valider les sondages, les quiz et les publications programmées, 20 minutes
+
+Le champ de publication propose Image, Sondage avec images, Sondage avec texte, Quiz, Vidéo et Fichier ; « Publier » a une flèche pour programmer.
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0026_communaute_sondages.sql` (après la 0025). Si tu rejoues un jour une migration de la communauté (0019 à 0025), rejoue la 0026 juste après.
+2. **Sondage avec texte.** Communauté → « Quoi de neuf… » → **Sondage avec texte** : la question dans le texte, 2 options ou plus, « Plusieurs réponses possibles », la fin du sondage. **Publier**. Avec un autre compte : coche une option, **Voter** : les pourcentages s'affichent ; **Changer mon vote** reste possible jusqu'à la fin.
+3. **Sondage avec images.** Même chose avec une image par option (2 à 6) ; on vote en touchant une image.
+4. **Quiz.** La question, 2 à 6 réponses, coche **Bonne réponse** sur l'une, une explication si tu veux. Avec un autre compte : choisis une réponse, **Valider** : la bonne réponse s'affiche en vert (la tienne en rouge si elle est fausse), puis l'explication. On ne répond qu'une fois.
+5. **Programmer.** Écris une publication, clique la **flèche** à côté de « Publier » → **Programmer…**, choisis la date et l'heure (au moins 10 minutes plus tard) → le bouton devient « Programmer pour le … ».
+   - Sous le champ, l'onglet **Programmées** la montre, avec « Modifier la date » et « Publier maintenant » dans son menu ⋮ ;
+   - les autres comptes ne la voient pas avant l'heure ; à l'heure, elle paraît en haut du fil.
