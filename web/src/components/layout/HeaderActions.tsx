@@ -1,34 +1,80 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { versPanneau } from "@/components/notifications/affichage";
 import { NotificationsPanel } from "@/components/ui/NotificationsPanel";
 import { ProfileMenu } from "@/components/ui/ProfileMenu";
+import { useToastFacultatif } from "@/components/ui/Toast";
 import type { ShellUser } from "@/lib/auth/current-user";
 import { spaceOf } from "@/lib/auth/permissions";
 import { chargerCloche, marquerLues } from "@/lib/notifications/actions";
 import { EVENEMENT_NOTIFICATIONS } from "@/lib/notifications/regles";
-import type { LotNotifications } from "@/lib/notifications/types";
+import type { LotNotifications, NotificationLue } from "@/lib/notifications/types";
 import { LogoutDialog } from "./LogoutDialog";
 
 const VIDE: LotNotifications = { lignes: [], suite: false, nonLues: 0 };
 
+/** La cloche se recharge seule toutes les minutes, tant que l'onglet est visible (spec Formations et Événements, §3.2). */
+export const INTERVALLE_CLOCHE_MS = 60_000;
+
+const plusGrand = (lignes: NotificationLue[]) => lignes.reduce((max, n) => Math.max(max, Number(n.id) || 0), 0);
+
 /**
  * Les 8 dernières notifications et le nombre de non lues (spec des notifications, §3). L'en-tête reste en place d'une
- * page à l'autre : la cloche se recharge à chaque changement de page, et quand la page Notifications en marque lues.
+ * page à l'autre : la cloche se recharge à chaque changement de page, quand la page Notifications en marque lues, toutes
+ * les minutes tant que l'onglet est visible, et au retour sur l'onglet. Une notification de session live arrivée depuis
+ * (« C’est l’heure du live », rappel 10 min avant) s'annonce aussi en bas de l'écran.
  */
 function useCloche() {
   const chemin = usePathname();
+  const router = useRouter();
+  const toast = useToastFacultatif();
   const [cloche, setCloche] = useState<LotNotifications>(VIDE);
   // Seule la dernière lecture compte : une réponse plus ancienne arrivée après elle est ignorée.
   const demande = useRef(0);
+  // La plus récente déjà vue ; null avant le premier chargement (rien n'est annoncé au premier).
+  const vue = useRef<number | null>(null);
+  // Le routeur et le toast par référence : `charger` reste stable (sinon chaque rendu relancerait la lecture).
+  const outils = useRef({ router, toast });
+  useEffect(() => {
+    outils.current = { router, toast };
+  });
 
   const charger = useCallback(async () => {
     const numero = ++demande.current;
     const lu = await chargerCloche();
-    if (numero === demande.current) setCloche(lu ?? VIDE);
+    if (numero !== demande.current) return;
+    setCloche(lu ?? VIDE);
+    if (!lu) return;
+    const avant = vue.current;
+    vue.current = Math.max(avant ?? 0, plusGrand(lu.lignes));
+    const { router: routeur, toast: annoncer } = outils.current;
+    if (avant === null || !annoncer) return;
+    const nouvelle = lu.lignes.find((n) => !n.lue && n.categorie === "sessions_live" && Number(n.id) > avant);
+    if (nouvelle) {
+      annoncer({
+        tone: "information",
+        title: nouvelle.titre,
+        description: nouvelle.texte || undefined,
+        action: { label: "Voir", onClick: () => routeur.push(nouvelle.lien ?? "/evenements") },
+      });
+    }
   }, []);
+
+  useEffect(() => {
+    const minuterie = setInterval(() => {
+      if (document.visibilityState === "visible") void charger();
+    }, INTERVALLE_CLOCHE_MS);
+    const retour = () => {
+      if (document.visibilityState === "visible") void charger();
+    };
+    document.addEventListener("visibilitychange", retour);
+    return () => {
+      clearInterval(minuterie);
+      document.removeEventListener("visibilitychange", retour);
+    };
+  }, [charger]);
 
   useEffect(() => {
     void charger();

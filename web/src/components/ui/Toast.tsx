@@ -36,6 +36,11 @@ export function useToast() {
   return context;
 }
 
+/** `toast()` s'il y a un `ToastProvider` autour, sinon null (l'en-tête peut s'afficher sans). */
+export function useToastFacultatif() {
+  return useContext(ToastContext)?.toast ?? null;
+}
+
 /** À monter une fois, autour de l'application : affiche les notifications en bas de l'écran. */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
