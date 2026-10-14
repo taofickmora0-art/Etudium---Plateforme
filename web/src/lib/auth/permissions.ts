@@ -8,8 +8,9 @@ export type Espace = "etudiant" | "formateur" | "admin";
 
 export const ACCES: Record<Espace, Role[] | "tous"> = {
   etudiant: "tous",
-  // Le super-administrateur passe partout, pour pouvoir tout vérifier.
-  formateur: ["formateur", "super_admin"],
+  // Deux espaces au plus (migration 0017) : l'équipe, super admin compris, gère les formations depuis le back-office
+  // et n'a pas l'espace formateur.
+  formateur: ["formateur"],
   admin: ["moderateur", "admin", "super_admin"],
 };
 

@@ -34,7 +34,9 @@ describe("Règles d'accès", () => {
     expect(canAccess("formateur", ["etudiant", "formateur"])).toBe(true);
     expect(canAccess("admin", ["etudiant", "formateur"])).toBe(false);
     expect(canAccess("admin", ["etudiant", "moderateur"])).toBe(true);
-    expect(canAccess("formateur", ["etudiant", "super_admin"])).toBe(true);
+    // Deux espaces au plus (migration 0017) : l'équipe, super admin compris, n'a pas l'espace formateur.
+    expect(canAccess("formateur", ["etudiant", "super_admin"])).toBe(false);
+    expect(canAccess("formateur", ["etudiant", "admin"])).toBe(false);
     expect(canAccess("admin", ["etudiant", "super_admin"])).toBe(true);
   });
 
@@ -71,13 +73,13 @@ describe("Pages réservées", () => {
 });
 
 describe("Menus selon les rôles", () => {
-  it("chacun voit ses espaces dans le menu du téléphone", () => {
+  it("chacun voit ses espaces dans le menu du téléphone : deux au plus", () => {
     const { unmount } = render(<MobileProfileMenu user={compte(["etudiant", "super_admin"])} />);
-    expect(screen.getByRole("link", { name: /Espace formateur/ })).toHaveAttribute("href", "/formateur");
+    expect(screen.queryByRole("link", { name: /Espace formateur/ })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Back-office/ })).toHaveAttribute("href", "/admin");
     unmount();
     render(<MobileProfileMenu user={compte(["etudiant", "formateur"])} />);
-    expect(screen.getByRole("link", { name: /Espace formateur/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Espace formateur/ })).toHaveAttribute("href", "/formateur");
     expect(screen.queryByRole("link", { name: /Back-office/ })).not.toBeInTheDocument();
   });
 

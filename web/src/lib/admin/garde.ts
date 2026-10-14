@@ -21,7 +21,7 @@ export async function exigerEquipe(): Promise<{ supabase: Supabase } | { erreur:
 
 export const ACCES_FORMATEUR = "Accès réservé aux formateurs.";
 
-/** Le suivi des étudiants : l'espace formateur (rôle formateur, ou super admin qui passe partout). */
+/** Le suivi des étudiants : l'espace formateur (rôle formateur seulement ; l'équipe n'a pas cet espace). */
 export async function exigerFormateur(): Promise<{ supabase: Supabase } | { erreur: string }> {
   const user = await getShellUser();
   if (!user) return { erreur: SESSION_EXPIREE };
