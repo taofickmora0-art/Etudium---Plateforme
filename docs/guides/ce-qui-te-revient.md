@@ -582,3 +582,16 @@ Une session programmée paraît dans la communauté, avec son affiche ou sa vid�
    - dans **Communauté**, le bouton **Sessions live programmées** porte une pastille rouge « 1 » ;
    - l'entrée **Événements** du menu porte la même pastille ;
    - ouvre **Événements** : les pastilles disparaissent.
+
+## 30. Valider les commentaires de la communauté, 10 minutes
+
+Sous chaque commentaire : Répondre, J’aime et un menu ⋮ (copier le lien, signaler, modifier, supprimer).
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0025_communaute_commentaires.sql` (après la 0024). Si tu rejoues un jour la 0019, la 0020 ou la 0024, rejoue la 0025 juste après.
+2. **Répondre.** Avec deux comptes : le premier commente une publication ; le second clique **Répondre** sous ce commentaire et envoie. La réponse s'affiche décalée sous le commentaire, et le premier compte reçoit « Nouvelle réponse à votre commentaire ». Répondre à une réponse la range sous le même commentaire, en citant son auteur.
+3. **J’aime** sous un commentaire : le nombre s'affiche ; un second clic le retire.
+4. **Le menu ⋮** d'un commentaire :
+   - **Copier le lien** : l'adresse ouvre la publication et descend jusqu'au commentaire ;
+   - **Signaler** : pour les commentaires des autres ;
+   - **Modifier** et **Supprimer** : pour ton commentaire, et pour tous au compte de l'équipe. Un commentaire modifié porte « modifié » ; supprimé, ses réponses disparaissent avec lui.
+5. **Voir plus de commentaires** : la carte du fil montre les 2 derniers commentaires ; le bouton affiche tous les autres et leurs réponses.
