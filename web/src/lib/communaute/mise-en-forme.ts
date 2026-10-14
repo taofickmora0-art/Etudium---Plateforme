@@ -2,11 +2,13 @@ import type { JSONContent } from "@tiptap/react";
 
 // Le texte mis en forme d'une publication (spec mise en forme et vidéo, §2). Il reste dans `publications.texte`, en
 // Markdown restreint : `# `, `## `, `### ` (titres), `**gras**`, `_italique_`, `++souligné++`, `~~barré~~`, `- ` et `1. `
-// (listes), `> ` (citation) ; une ligne vide sépare les paragraphes, `\` protège une marque. Une marque différente par
-// style : aucune ambiguïté de lecture. Ce module ne produit jamais de HTML : l'affichage construit lui-même ses éléments.
+// (listes), `> ` (citation), `[texte](https://…)` (lien) ; une ligne vide sépare les paragraphes, `\` protège une marque.
+// Une marque différente par style : aucune ambiguïté de lecture. Ce module ne produit jamais de HTML : l'affichage construit
+// lui-même ses éléments, et un lien n'accepte qu'une adresse http ou https.
 
 export type Marque = "gras" | "italique" | "souligne" | "barre";
-export type Segment = { texte: string; marques: Marque[] } | { saut: true };
+/** `lien` : l'adresse (http ou https) d'un texte rendu cliquable. */
+export type Segment = { texte: string; marques: Marque[]; lien?: string } | { saut: true };
 export type Bloc =
   | { type: "paragraphe"; segments: Segment[] }
   | { type: "titre"; niveau: 1 | 2 | 3; segments: Segment[] }
@@ -14,7 +16,7 @@ export type Bloc =
   | { type: "numeros"; debut: number; elements: Segment[][] }
   | { type: "citation"; segments: Segment[] };
 
-const ECHAPPABLES = new Set(["\\", "*", "_", "+", "~", "#", ">", "-", "."]);
+const ECHAPPABLES = new Set(["\\", "*", "_", "+", "~", "#", ">", "-", ".", "[", "]"]);
 const DOUBLES: Record<string, Marque> = { "*": "gras", "+": "souligne", "~": "barre" };
 const SYMBOLE: Record<Marque, string> = { gras: "**", italique: "_", souligne: "++", barre: "~~" };
 const ORDRE: Marque[] = ["gras", "italique", "souligne", "barre"];
@@ -37,6 +39,46 @@ function finAdresse(s: string, i: number, marquesFinales: boolean): number {
   let fin = i + m[0].length;
   if (marquesFinales) while (fin > i && "*+~_".includes(s[fin - 1])) fin--;
   return fin > i ? fin : -1;
+}
+
+/** Une adresse de lien acceptée : http ou https, sans espace ni guillemet, parenthèses équilibrées. */
+export function adresseDeLien(adresse: string): boolean {
+  if (!/^https?:\/\/[^\s<>"']+$/i.test(adresse) || adresse.length > 1000) return false;
+  let niveau = 0;
+  for (const c of adresse) {
+    if (c === "(") niveau++;
+    else if (c === ")" && --niveau < 0) return false;
+  }
+  return niveau === 0;
+}
+
+/** Le lien `[texte](adresse)` qui commence en `i` : la fin du texte, l'adresse et la fin ; null sinon (crochets imbriqués,
+ * adresse absente, pas http ou https, parenthèse non fermée). */
+function lienEn(s: string, i: number): { finTexte: number; adresse: string; fin: number } | null {
+  for (let j = i + 1; j < s.length; j++) {
+    if (s[j] === "\\" && ECHAPPABLES.has(s[j + 1] ?? "")) {
+      j++;
+      continue;
+    }
+    if (s[j] === "[" || s[j] === "\n") return null;
+    if (s[j] !== "]") continue;
+    if (j === i + 1 || s[j + 1] !== "(") return null;
+    let niveau = 0;
+    for (let k = j + 2; k < s.length; k++) {
+      const c = s[k];
+      if (/[\s<>"']/.test(c)) return null;
+      if (c === "(") niveau++;
+      else if (c === ")") {
+        if (niveau === 0) {
+          const adresse = s.slice(j + 2, k);
+          return adresseDeLien(adresse) ? { finTexte: j, adresse, fin: k + 1 } : null;
+        }
+        niveau--;
+      }
+    }
+    return null;
+  }
+  return null;
 }
 
 const longueurSuite = (s: string, i: number) => {
@@ -84,17 +126,17 @@ function fusionner(segments: Segment[]): Segment[] {
   const out: Segment[] = [];
   for (const s of segments) {
     const avant = out.at(-1);
-    if (avant && "texte" in avant && "texte" in s && avant.marques.join() === s.marques.join()) avant.texte += s.texte;
-    else out.push("texte" in s ? { texte: s.texte, marques: [...s.marques] } : s);
+    if (avant && "texte" in avant && "texte" in s && avant.marques.join() === s.marques.join() && avant.lien === s.lien) avant.texte += s.texte;
+    else out.push("texte" in s ? { texte: s.texte, marques: [...s.marques], ...(s.lien ? { lien: s.lien } : {}) } : s);
   }
   return out;
 }
 
-function enLigne(s: string, marques: Marque[], profondeur: number): Segment[] {
+function enLigne(s: string, marques: Marque[], profondeur: number, lien?: string): Segment[] {
   const out: Segment[] = [];
   let tampon = "";
   const vider = () => {
-    if (tampon) out.push({ texte: tampon, marques });
+    if (tampon) out.push({ texte: tampon, marques, ...(lien ? { lien } : {}) });
     tampon = "";
   };
   let i = 0;
@@ -117,11 +159,19 @@ function enLigne(s: string, marques: Marque[], profondeur: number): Segment[] {
       i = adresse;
       continue;
     }
+    // Un lien dans un lien n'existe pas : dedans, un crochet est du texte.
+    const unLien = c === "[" && !lien && profondeur < PROFONDEUR_MAX ? lienEn(s, i) : null;
+    if (unLien) {
+      vider();
+      out.push(...enLigne(s.slice(i + 1, unLien.finTexte), marques, profondeur + 1, unLien.adresse));
+      i = unLien.fin;
+      continue;
+    }
     const marque = profondeur < PROFONDEUR_MAX ? ouverture(s, i) : null;
     const fin = marque ? fermeture(s, i + marque.symbole.length, marque.symbole) : null;
     if (marque && fin !== null) {
       vider();
-      out.push(...enLigne(s.slice(i + marque.symbole.length, fin), [...marques, marque.nom], profondeur + 1));
+      out.push(...enLigne(s.slice(i + marque.symbole.length, fin), [...marques, marque.nom], profondeur + 1, lien));
       i = fin + marque.symbole.length;
       continue;
     }
@@ -209,7 +259,13 @@ function noeuds(s: Segment[]): JSONContent[] {
   return s.map((x) =>
     "saut" in x
       ? { type: "hardBreak" }
-      : { type: "text", text: x.texte, ...(x.marques.length ? { marks: x.marques.map((m) => ({ type: TIPTAP[m] })) } : {}) },
+      : {
+          type: "text",
+          text: x.texte,
+          ...(x.marques.length || x.lien
+            ? { marks: [...x.marques.map((m) => ({ type: TIPTAP[m] })), ...(x.lien ? [{ type: "link", attrs: { href: x.lien } }] : [])] }
+            : {}),
+        },
   );
 }
 
@@ -257,6 +313,7 @@ function echapper(texte: string): string {
     if (c === "\\") r += apres === undefined || ECHAPPABLES.has(apres) ? "\\\\" : "\\";
     else if ((c === "*" || c === "+" || c === "~") && (avant === c || apres === c)) r += `\\${c}`;
     else if (c === "_" && (!alnum(avant) || !alnum(apres))) r += "\\_";
+    else if (c === "[" || c === "]") r += `\\${c}`;
     else r += c;
   }
   return r;
@@ -271,7 +328,27 @@ function enLigneMd(contenu: JSONContent[] = [], sautEnEspace = false): string {
   const fermerJusqua = (n: number) => {
     while (ouvertes.length > n) sortie += SYMBOLE[ouvertes.pop()!];
   };
-  for (const n of contenu) {
+  const lienDe = (n: JSONContent) => {
+    const href = n.type === "text" ? n.marks?.find((m) => m.type === "link")?.attrs?.href : undefined;
+    return typeof href === "string" && adresseDeLien(href) ? href : null;
+  };
+  for (let indice = 0; indice < contenu.length; indice++) {
+    const n = contenu[indice];
+    // Un lien : ses nœuds consécutifs de même adresse, mis en forme entre crochets ; les marques ouvertes se ferment avant.
+    const href = lienDe(n);
+    if (href) {
+      const groupe: JSONContent[] = [];
+      while (indice < contenu.length && lienDe(contenu[indice]) === href) {
+        const x = contenu[indice];
+        groupe.push({ ...x, marks: (x.marks ?? []).filter((m) => m.type !== "link") });
+        indice++;
+      }
+      indice--;
+      fermerJusqua(0);
+      sortie += enAttente + `[${enLigneMd(groupe, sautEnEspace)}](${href})`;
+      enAttente = "";
+      continue;
+    }
     if (n.type === "hardBreak") {
       fermerJusqua(0);
       sortie += enAttente + (sautEnEspace ? " " : "\n");

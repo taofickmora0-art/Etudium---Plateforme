@@ -143,3 +143,54 @@ describe("L'aller-retour avec l'éditeur", () => {
     expect(versMarkdown(versDocument(texte))).toBe(texte);
   });
 });
+
+describe("Les liens [texte](https://…)", () => {
+  const lien = (texte: string, adresse: string, ...marques: ("gras" | "italique" | "souligne" | "barre")[]) => ({ texte, marques, lien: adresse });
+
+  it("lus : un lien, en gras, sur une partie de mot, avec des parenthèses équilibrées ; deux liens collés", () => {
+    expect(analyser("Voir [le programme](https://etudium.bj/programme) ici")).toEqual([para(t("Voir "), lien("le programme", "https://etudium.bj/programme"), t(" ici"))]);
+    expect(analyser("**[gras](https://a.com)**")).toEqual([para(lien("gras", "https://a.com", "gras"))]);
+    expect(analyser("pré[fixe](https://a.com)")).toEqual([para(t("pré"), lien("fixe", "https://a.com"))]);
+    expect(analyser("[Python](https://fr.wikipedia.org/wiki/Python_(langage))")).toEqual([para(lien("Python", "https://fr.wikipedia.org/wiki/Python_(langage)"))]);
+    expect(analyser("[a](https://a.com)[b](https://b.com)")).toEqual([para(lien("a", "https://a.com"), lien("b", "https://b.com"))]);
+  });
+
+  it("refusés, restent du texte : javascript:, data:, sans adresse web, crochet ou parenthèse non fermés ; les anciens textes à crochets", () => {
+    for (const s of ["[x](javascript:alert(1))", "[x](data:text/html,a)", "[x](exemple.com)", "[x](https://a.com", "[x] (https://a.com)", "Voir [1] et [note]"]) {
+      expect(analyser(s)).toEqual([para(t(s))]);
+    }
+    expect(analyser("[[a](https://a.com)](https://b.com)")).toEqual([para(t("["), lien("a", "https://a.com"), t("](https://b.com)"))]);
+  });
+
+  it("le texte sans marques garde le texte du lien", () => {
+    expect(texteBrut("Voir [le programme](https://etudium.bj/programme) ici")).toBe("Voir le programme ici");
+  });
+
+  it("aller-retour avec l'éditeur : un lien, un lien en gras, deux liens collés, des crochets littéraux ; une adresse dangereuse perd son lien", () => {
+    const l = (href: string) => ({ type: "link", attrs: { href } });
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "Voir " },
+            { type: "text", text: "le programme", marks: [l("https://etudium.bj/programme")] },
+            { type: "text", text: " et " },
+            { type: "text", text: "ceci", marks: [{ type: "bold" }, l("https://a.com")] },
+            { type: "text", text: "cela", marks: [l("https://b.com")] },
+            { type: "text", text: " [1] " },
+            { type: "text", text: "danger", marks: [l("javascript:alert(1)")] },
+          ],
+        },
+      ],
+    };
+    const texte = versMarkdown(doc);
+    expect(texte).toBe("Voir [le programme](https://etudium.bj/programme) et [**ceci**](https://a.com)[cela](https://b.com) \\[1\\] danger");
+    expect(versMarkdown(versDocument(texte))).toBe(texte);
+    expect(versDocument("[**a**](https://x.com)")).toEqual({
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "a", marks: [{ type: "bold" }, l("https://x.com")] }] }],
+    });
+  });
+});
