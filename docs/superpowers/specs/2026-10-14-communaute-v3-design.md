@@ -13,7 +13,7 @@
   - Format enregistré : `[texte](https://adresse)`. Seules les adresses `http` et `https` sont acceptées ; une autre forme reste du texte.
   - Affichage : le texte est un lien ouvert dans un nouvel onglet (`noopener nofollow ugc`).
 
-## 2. Étape 2 — Les commentaires (migration 0024)
+## 2. Étape 2 — Les commentaires (migration 0025)
 
 - Sous chaque commentaire : **Répondre** et **J’aime** (avec le nombre), et un menu **⋮** :
   - **Copier le lien** (l'adresse de la publication, ancrée sur le commentaire), **Signaler** (pas pour son auteur ni l'équipe) ;
@@ -21,8 +21,15 @@
 - **Les réponses** à un commentaire s'affichent dessous, décalées, sur un seul niveau (répondre à une réponse répond au même commentaire, en citant son auteur).
 - **« Voir plus de commentaires »** charge les commentaires suivants ; « Écrire un commentaire… » reste en bas.
 - Base : `commentaires_publications.parent_id`, `modifie_le` ; `reactions_commentaires` ; `commenter(p_publication, p_texte, p_parent)`, `modifier_commentaire`, `basculer_reaction_commentaire` ; la carte d'un commentaire rend `parent_id`, `reactions`, `j_aime`, `modifie`, `peut_modifier`.
+- Précisions (14 octobre, nuit) :
+  - l'auteur d'un commentaire est prévenu d'une réponse (« Nouvelle réponse à votre commentaire », catégorie communauté) ;
+  - dans le fil, la carte montre les 2 derniers commentaires de premier niveau ; « Voir plus de commentaires » charge tous
+    les commentaires et leurs réponses ;
+  - supprimer un commentaire supprime ses réponses ; un commentaire modifié porte « modifié » ;
+  - « Copier le lien » : l'adresse de la publication suivie de `#commentaire-<id>` ; la page de la publication fait
+    défiler jusqu'à lui.
 
-## 3. Étape 3 — Programmer et sondages (migration 0025)
+## 3. Étape 3 — Programmer et sondages (migration 0026)
 
 - **Programmer** (icône calendrier du champ) : une date et une heure à venir (heure du Bénin). Le bouton devient « Programmer ». La publication n'est visible que de son auteur (« Programmée pour le … ») et de l'équipe jusqu'à cette heure ; elle paraît alors en haut du fil. Analyse et limites comme une publication immédiate.
 - **Sondage** (icône du champ) : une question (le texte de la publication), 2 à 10 options, « Les membres peuvent choisir plusieurs options », une date de fin facultative.
