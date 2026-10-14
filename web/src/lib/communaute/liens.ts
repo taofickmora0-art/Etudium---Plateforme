@@ -70,3 +70,30 @@ export function domaine(url: string): string {
     return "";
   }
 }
+
+// Les sites de visioconférence, reconnus par leur adresse (https seulement).
+const VISIOS: [RegExp, string][] = [
+  [/(^|\.)meet\.google\.com$/i, "Google Meet"],
+  [/(^|\.)zoom\.us$/i, "Zoom"],
+  [/(^|\.)teams\.(microsoft|live)\.com$/i, "Microsoft Teams"],
+  [/(^|\.)whereby\.com$/i, "Whereby"],
+  [/(^|\.)meet\.jit\.si$/i, "Jitsi Meet"],
+];
+
+/**
+ * La carte d'un lien de visioconférence (« la séance sera sur Google Meet ou sur Zoom »), sans lire la page : une
+ * réunion renvoie souvent vers une page de connexion, qui ne donne aucun aperçu. Null pour un autre site.
+ */
+export function apercuVisio(adresse: string): Extract<Apercu, { type: "lien" }> | null {
+  let hote: string;
+  try {
+    const url = new URL(adresse);
+    if (url.protocol !== "https:") return null;
+    hote = url.hostname;
+  } catch {
+    return null;
+  }
+  const visio = VISIOS.find(([motif]) => motif.test(hote));
+  if (!visio) return null;
+  return { type: "lien", url: adresse, titre: visio[1], description: `Réunion en ligne sur ${visio[1]} : rejoignez-la depuis ce lien.`, image: null };
+}

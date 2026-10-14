@@ -301,6 +301,20 @@ describe("Le fil Actualités (0021)", () => {
     expect(lireApercu).not.toHaveBeenCalled();
   });
 
+  it("un lien Google Meet : la carte Google Meet, même quand la page ne se lit pas (vérification des demandes)", async () => {
+    const MEET = "https://meet.google.com/coj-aymk-rwe";
+    faux.repondre("rpc.reserver_apercu", { data: { lire: true, actuel: null } });
+    lireApercu.mockResolvedValue(null);
+    faux.repondre("rpc.publier", { data: { id: ID, statut: "publiee", categorie: null } });
+    const reponse = await publierPublication(null, "", `On est en live : ${MEET}`, null);
+    expect(reponse).toMatchObject({ ok: true, apercu: { type: "lien", url: MEET, titre: "Google Meet" } });
+    faux.vider();
+    // Plus de lectures permises : la carte quand même (elle ne lit rien).
+    faux.repondre("rpc.reserver_apercu", { data: { lire: false, actuel: null } });
+    faux.repondre("rpc.publier", { data: { id: ID, statut: "publiee", categorie: null } });
+    expect(await publierPublication(null, "", MEET, null)).toMatchObject({ apercu: { titre: "Google Meet" } });
+  });
+
   it("modifier : la sienne d'abord ; même lien : l'aperçu gardé sans lecture ; refusée : rien n'est lu", async () => {
     faux.repondre("rpc.reserver_apercu", { data: { lire: false, actuel: SITE } });
     faux.repondre("rpc.modifier_publication", { data: { statut: "publiee", categorie: null } });
@@ -389,9 +403,9 @@ describe("Mise en forme et vidéo (0022)", () => {
   it("le premier lien est cherché dans le texte sans marques", async () => {
     faux.repondre("rpc.reserver_apercu", { data: { lire: true, actuel: null } });
     faux.repondre("rpc.publier", { data: { id: ID, statut: "publiee", categorie: null } });
-    await publierPublication(null, "", "# Live\n\nRejoignez **https://meet.google.com/abc-defg-hij** ce soir", null);
-    expect(faux.de("rpc", "reserver_apercu")[0].valeurs).toMatchObject({ p_adresse: "https://meet.google.com/abc-defg-hij" });
-    expect(lireApercu).toHaveBeenCalledWith("https://meet.google.com/abc-defg-hij");
+    await publierPublication(null, "", "# Live\n\nRejoignez **https://etudium.bj/live** ce soir", null);
+    expect(faux.de("rpc", "reserver_apercu")[0].valeurs).toMatchObject({ p_adresse: "https://etudium.bj/live" });
+    expect(lireApercu).toHaveBeenCalledWith("https://etudium.bj/live");
   });
 
   it("analyse active : l'adresse de la vidéo est jugée avec la publication", async () => {

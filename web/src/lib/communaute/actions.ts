@@ -11,7 +11,7 @@ import { MOTIFS, type ContenuAnalyse, type MotifSignalement, type Verdict } from
 import { createClient } from "@/lib/supabase/server";
 import { lireApercu } from "./apercu";
 import { lireLot, UUID, versApercu, versEspace, versReponse } from "./data";
-import { idYoutube } from "./liens";
+import { apercuVisio, idYoutube } from "./liens";
 import { premiereAdresseDuTexte } from "./mise-en-forme";
 import { reconnaitreVideo, type Video } from "./video";
 import { nomCourt, refusPiece, refusPublication, refusReponse } from "./regles";
@@ -117,6 +117,9 @@ async function preparerApercu(
   if (!adresse) return { apercu: Promise.resolve(null) };
   const video = idYoutube(adresse);
   if (video) return { apercu: Promise.resolve({ type: "youtube", id: video }) };
+  // Google Meet, Zoom… : la carte de la visioconférence, sans lire la page (souvent une page de connexion).
+  const visio = apercuVisio(adresse);
+  if (visio) return { apercu: Promise.resolve(visio) };
   const { data, error } = await supabase.rpc("reserver_apercu", { p_publication: cible.publication, p_parcours: cible.parcours, p_adresse: adresse });
   if (error) return estFonctionAbsente(error) ? { apercu: Promise.resolve(null) } : { refus: message(error) };
   const reservation = un(data);

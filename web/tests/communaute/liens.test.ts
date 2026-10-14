@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decouperLiens, domaine, idYoutube, premiereAdresse } from "@/lib/communaute/liens";
+import { apercuVisio, decouperLiens, domaine, idYoutube, premiereAdresse } from "@/lib/communaute/liens";
 
 // Les liens d'une publication (spec du fil Actualités, §3) : règles pures, utilisées aussi par les écrans.
 
@@ -38,5 +38,24 @@ describe("Liens", () => {
     expect(domaine("https://www.meet.google.com/abc")).toBe("meet.google.com");
     expect(domaine("https://zoom.us/j/123")).toBe("zoom.us");
     expect(domaine("pas une adresse")).toBe("");
+  });
+});
+
+describe("L'aperçu d'un lien de visioconférence (Google Meet, Zoom)", () => {
+  it("une carte reconnaissable, sans lire la page", () => {
+    expect(apercuVisio("https://meet.google.com/coj-aymk-rwe")).toEqual({
+      type: "lien",
+      url: "https://meet.google.com/coj-aymk-rwe",
+      titre: "Google Meet",
+      description: "Réunion en ligne sur Google Meet : rejoignez-la depuis ce lien.",
+      image: null,
+    });
+    expect(apercuVisio("https://us02web.zoom.us/j/123456?pwd=x")).toMatchObject({ titre: "Zoom" });
+    expect(apercuVisio("https://teams.microsoft.com/l/meetup-join/x")).toMatchObject({ titre: "Microsoft Teams" });
+  });
+
+  it("un autre site : rien", () => {
+    expect(apercuVisio("https://etudium.bj/programme")).toBeNull();
+    expect(apercuVisio("https://meet.google.com.ailleurs.com/x")).toBeNull();
   });
 });
