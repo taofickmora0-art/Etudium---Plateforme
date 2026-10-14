@@ -6,6 +6,7 @@ import type { ShellUser } from "@/lib/auth/current-user";
 import { LIENS_ENTETE_TELEPHONE } from "@/lib/navigation";
 import { BoutonAjouterFormation } from "./BoutonAjouterFormation";
 import { BoutonMenuLateral } from "./BoutonMenuLateral";
+import { MenuTiroir } from "./MenuTiroir";
 import { HeaderActions } from "./HeaderActions";
 
 /**
@@ -19,6 +20,8 @@ export function AppHeader({ account }: { account?: ReactNode }) {
       <div className="flex min-w-0 flex-wrap items-center gap-2 lg:gap-3">
         {/* Grand écran : réduire la barre latérale à ses icônes, ou la rouvrir. */}
         <BoutonMenuLateral className="hidden lg:inline-flex" />
+        {/* Téléphone : le menu ≡, toutes les entrées de l'espace sans passer par le profil. */}
+        <MenuTiroir className="lg:hidden" />
         <LogoButton href="/accueil" />
         <SearchButton href="/recherche" className="hidden gap-1.5 pr-4 pl-3.5 lg:flex" />
         <BoutonAjouterFormation className="hidden lg:flex" />

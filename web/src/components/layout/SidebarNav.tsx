@@ -17,21 +17,40 @@ const NAV = "box-border flex w-[337px] flex-col gap-3 pt-5 pr-[18px] pb-5 pl-5";
  * `pathname` absent (rendu préalable) : aucune entrée active, et le menu de `espace` s'il est connu ; sinon la barre
  * reste vide un instant plutôt que d'afficher le menu d'un autre espace.
  */
-export function SidebarNavLinks({ pathname, espace, className }: { pathname: string | null; espace?: Espace; className?: string }) {
+export function SidebarNavLinks({
+  pathname,
+  espace,
+  className,
+  repliable = true,
+}: {
+  pathname: string | null;
+  espace?: Espace;
+  className?: string;
+  /** Faux dans le tiroir du téléphone : ni colonne d'icônes, ni identifiant de la barre de l'ordinateur. */
+  repliable?: boolean;
+}) {
   const actuel = pathname !== null ? spaceOf(pathname) : espace;
   const menu = actuel ? MENUS[actuel] : null;
   const entree = (e: NavEntry) => (
     <SidebarItem key={e.href} href={e.href} icon={e.icon} label={e.label} active={pathname !== null && isActive(pathname, e.href, e.exact)} />
   );
+  const groupes = menu?.groupes.map((groupe, index) => (
+    <SidebarGroup key={groupe.titre ?? index} title={groupe.titre}>
+      {groupe.entrees.map(entree)}
+    </SidebarGroup>
+  ));
+  if (!repliable) {
+    return (
+      <nav aria-label={menu?.libelle ?? "Navigation principale"} className={cn("box-border flex w-full flex-col gap-3 px-4 pt-2 pb-6", className)}>
+        {groupes}
+      </nav>
+    );
+  }
   return (
     <div className={cn("menu-lateral-place relative shrink-0", className)}>
       <div className="menu-lateral relative z-20 overflow-x-hidden rounded-l-coque bg-coque">
         <nav id="menu-lateral" aria-label={menu?.libelle ?? "Navigation principale"} className={NAV}>
-          {menu?.groupes.map((groupe, index) => (
-            <SidebarGroup key={groupe.titre ?? index} title={groupe.titre}>
-              {groupe.entrees.map(entree)}
-            </SidebarGroup>
-          ))}
+          {groupes}
         </nav>
       </div>
     </div>
