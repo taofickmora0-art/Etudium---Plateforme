@@ -61,6 +61,11 @@ const rep = (o: Partial<Reponse> = {}): Reponse => ({
   creeLe: "2026-10-14T14:00:00Z",
   peutSupprimer: false,
   peutSignaler: true,
+  parentId: null,
+  reactions: 0,
+  jAime: false,
+  modifie: false,
+  peutModifier: false,
   ...o,
 });
 const lot = (publications: Publication[]): LotPublications => ({ publications, suite: false });

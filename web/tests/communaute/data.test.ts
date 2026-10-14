@@ -43,7 +43,7 @@ const CONVERTIE = {
   jAime: true,
   reponses: 2,
   dernieresReponses: [
-    { id: "r1", auteur: { prenom: "Mireille", nomCourt: "Mireille A." }, estMoi: false, texte: "Très bon plan.", creeLe: "2026-10-14T11:00:00+00:00", peutSupprimer: false, peutSignaler: false },
+    { id: "r1", auteur: { prenom: "Mireille", nomCourt: "Mireille A." }, estMoi: false, texte: "Très bon plan.", creeLe: "2026-10-14T11:00:00+00:00", peutSupprimer: false, peutSignaler: false, parentId: null, reactions: 0, jAime: false, modifie: false, peutModifier: false },
   ],
   peutSupprimer: false,
   peutSignaler: false,

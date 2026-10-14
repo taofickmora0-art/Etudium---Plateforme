@@ -97,6 +97,11 @@ const rep = (id: string, texte: string, o: Partial<Reponse> = {}): Reponse => ({
   creeLe: "2026-10-14T14:00:00Z",
   peutSupprimer: false,
   peutSignaler: false,
+  parentId: null,
+  reactions: 0,
+  jAime: false,
+  modifie: false,
+  peutModifier: false,
   ...o,
 });
 const lot = (publications: Publication[], suite = false): LotPublications => ({ publications, suite });

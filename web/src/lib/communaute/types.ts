@@ -31,6 +31,13 @@ export type Reponse = {
   peutSupprimer: boolean;
   /** Ni l'auteur, ni l'équipe (migration 0020). */
   peutSignaler: boolean;
+  /** Le commentaire de premier niveau auquel celui-ci répond ; null pour un commentaire (migration 0025). */
+  parentId: string | null;
+  reactions: number;
+  jAime: boolean;
+  modifie: boolean;
+  /** Son auteur, ou l'équipe (migration 0025). */
+  peutModifier: boolean;
 };
 
 /** « en_attente » : vue par son auteur (et l'équipe) seulement ; « bloquee » : par l'équipe seule (migration 0020). */

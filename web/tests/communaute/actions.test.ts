@@ -16,7 +16,7 @@ vi.mock("@/lib/moderation/analyse", () => ({ configurationModeration: () => conf
 const lireApercu = vi.fn();
 vi.mock("@/lib/communaute/apercu", () => ({ lireApercu: (...a: unknown[]) => lireApercu(...a) }));
 
-const { aimer, basculerEnregistrement, chargerEspaces, chargerFil, chargerReponses, modifierPublication, publierPublication, repondre, signaler, supprimerPublication, supprimerReponse } = await import(
+const { aimer, aimerReponse, basculerEnregistrement, chargerEspaces, chargerFil, chargerReponses, modifierPublication, modifierReponse, publierPublication, repondre, signaler, supprimerPublication, supprimerReponse } = await import(
   "@/lib/communaute/actions"
 );
 const { messageBloquee } = await import("@/lib/moderation/regles");
@@ -108,7 +108,7 @@ describe("Modifier, supprimer, répondre, aimer", () => {
     });
     expect(await chargerReponses(ID)).toEqual({
       ok: true,
-      reponses: [{ id: R, auteur: { prenom: "Awa", nomCourt: "Awa K." }, estMoi: false, texte: "Oui", creeLe: "2026-10-14T10:00:00Z", peutSupprimer: false, peutSignaler: false }],
+      reponses: [{ id: R, auteur: { prenom: "Awa", nomCourt: "Awa K." }, estMoi: false, texte: "Oui", creeLe: "2026-10-14T10:00:00Z", peutSupprimer: false, peutSignaler: false, parentId: null, reactions: 0, jAime: false, modifie: false, peutModifier: false }],
     });
     expect(faux.de("rpc", "publication_communaute")[0].valeurs).toEqual({ p_id: ID });
     faux.repondre("rpc.publication_communaute", { data: null });
@@ -405,3 +405,38 @@ describe("Mise en forme et vidéo (0022)", () => {
   });
 });
 
+
+describe("Les commentaires (communauté v3, étape 2)", () => {
+  const MIGRATION_COMMENTAIRES = "Appliquez la migration 0025 (guide « Ce qui te revient », section 30).";
+
+  it("répondre à un commentaire : le parent est transmis et rendu ; sans parent, rien (la base d'avant la 0025 suffit)", async () => {
+    faux.repondre("rpc.commenter", { data: "r2" });
+    const reponse = await repondre(ID, "Merci", R);
+    expect(faux.de("rpc", "commenter")[0].valeurs).toEqual({ p_publication: ID, p_texte: "Merci", p_parent: R });
+    expect(reponse).toMatchObject({ ok: true, reponse: { id: "r2", parentId: R, reactions: 0, jAime: false, modifie: false, peutModifier: true } });
+    await repondre(ID, "Bonjour");
+    expect(faux.de("rpc", "commenter")[1].valeurs).toEqual({ p_publication: ID, p_texte: "Bonjour" });
+    faux.repondre("rpc.commenter", { error: { code: "PGRST202" } });
+    expect(await repondre(ID, "Merci", R)).toEqual({ ok: false, message: MIGRATION_COMMENTAIRES });
+  });
+
+  it("modifier un commentaire : le texte nettoyé ; vide refusé sans appel ; refus et migration absente", async () => {
+    expect(await modifierReponse(R, " Corrigé ")).toEqual({ ok: true });
+    expect(faux.de("rpc", "modifier_commentaire")[0].valeurs).toEqual({ p_id: R, p_texte: "Corrigé" });
+    faux.vider();
+    expect(await modifierReponse(R, "  ")).toMatchObject({ ok: false });
+    expect(faux.appels).toEqual([]);
+    faux.repondre("rpc.modifier_commentaire", { error: { code: "42501", message: "Ce commentaire n’est pas le vôtre." } });
+    expect(await modifierReponse(R, "x")).toEqual({ ok: false, message: "Ce commentaire n’est pas le vôtre." });
+    faux.repondre("rpc.modifier_commentaire", { error: { code: "PGRST202" } });
+    expect(await modifierReponse(R, "x")).toEqual({ ok: false, message: MIGRATION_COMMENTAIRES });
+  });
+
+  it("aimer un commentaire : l'état et le nombre", async () => {
+    faux.repondre("rpc.basculer_reaction_commentaire", { data: { j_aime: true, reactions: 3 } });
+    expect(await aimerReponse(R)).toEqual({ ok: true, jAime: true, reactions: 3 });
+    expect(faux.de("rpc", "basculer_reaction_commentaire")[0].valeurs).toEqual({ p_id: R });
+    faux.repondre("rpc.basculer_reaction_commentaire", { error: { code: "PGRST202" } });
+    expect(await aimerReponse(R)).toEqual({ ok: false, message: MIGRATION_COMMENTAIRES });
+  });
+});

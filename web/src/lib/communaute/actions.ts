@@ -23,6 +23,7 @@ import type { Apercu, Espace, FiltreFil, LotPublications, PieceEnvoyee, Reponse,
 const MIGRATION = "Appliquez la migration 0019 (guide « Ce qui te revient », section 24).";
 const MIGRATION_ACTUALITES = "Appliquez la migration 0021 (guide « Ce qui te revient », section 26).";
 const MIGRATION_VIDEO = "Appliquez la migration 0022 (guide « Ce qui te revient », section 27).";
+const MIGRATION_COMMENTAIRES = "Appliquez la migration 0025 (guide « Ce qui te revient », section 30).";
 const ADRESSE_VIDEO = "Collez l’adresse complète de la vidéo (https://…).";
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 type Erreur = { code?: string; message?: string };
@@ -318,16 +319,19 @@ export async function supprimerPublication(id: string, options: { relire?: boole
   return { ok: true };
 }
 
-/** Répondre : la réponse est rendue pour s'afficher aussitôt sous la publication. */
-export async function repondre(publicationId: string, texte: string): Promise<{ ok: true; reponse: Reponse } | Refus> {
+/**
+ * Commenter, ou répondre à un commentaire (`parentId`, migration 0025 ; un seul niveau) : le commentaire est rendu pour
+ * s'afficher aussitôt. Sans parent, l'appel est celui d'avant la 0025.
+ */
+export async function repondre(publicationId: string, texte: string, parentId: string | null = null): Promise<{ ok: true; reponse: Reponse } | Refus> {
   const moi = await getShellUser();
   if (!moi) return { ok: false, message: SESSION_EXPIREE };
-  if (!UUID.test(publicationId)) return { ok: false, message: ECHEC };
+  if (!UUID.test(publicationId) || (parentId !== null && !UUID.test(parentId))) return { ok: false, message: ECHEC };
   const refus = refusReponse(texte);
   if (refus) return { ok: false, message: refus };
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("commenter", { p_publication: publicationId, p_texte: texte.trim() });
-  if (error) return { ok: false, message: message(error) };
+  const { data, error } = await supabase.rpc("commenter", { p_publication: publicationId, p_texte: texte.trim(), ...(parentId ? { p_parent: parentId } : {}) });
+  if (error) return { ok: false, message: parentId && estFonctionAbsente(error) ? MIGRATION_COMMENTAIRES : message(error) };
   refresh();
   return {
     ok: true,
@@ -339,8 +343,37 @@ export async function repondre(publicationId: string, texte: string): Promise<{ 
       creeLe: new Date().toISOString(),
       peutSupprimer: true,
       peutSignaler: false,
+      parentId,
+      reactions: 0,
+      jAime: false,
+      modifie: false,
+      peutModifier: true,
     },
   };
+}
+
+/** Modifier un commentaire : son auteur ou l'équipe (migration 0025). */
+export async function modifierReponse(id: string, texte: string): Promise<Resultat> {
+  if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
+  if (!UUID.test(id)) return { ok: false, message: ECHEC };
+  const refus = refusReponse(texte);
+  if (refus) return { ok: false, message: refus };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("modifier_commentaire", { p_id: id, p_texte: texte.trim() });
+  if (error) return { ok: false, message: estFonctionAbsente(error) ? MIGRATION_COMMENTAIRES : message(error) };
+  refresh();
+  return { ok: true };
+}
+
+/** « J’aime » d'un commentaire : ajoute ou retire, et rend l'état et le nombre (migration 0025). */
+export async function aimerReponse(id: string): Promise<{ ok: true; jAime: boolean; reactions: number } | Refus> {
+  if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
+  if (!UUID.test(id)) return { ok: false, message: ECHEC };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("basculer_reaction_commentaire", { p_id: id });
+  if (error) return { ok: false, message: estFonctionAbsente(error) ? MIGRATION_COMMENTAIRES : message(error) };
+  const r = un(data);
+  return { ok: true, jAime: r?.j_aime === true, reactions: Number(r?.reactions) || 0 };
 }
 
 /** Son auteur ou l'équipe. */

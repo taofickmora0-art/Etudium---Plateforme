@@ -58,6 +58,11 @@ export function versReponse(l: Ligne): Reponse {
     creeLe: texte(l.cree_le),
     peutSupprimer: l.peut_supprimer === true,
     peutSignaler: l.peut_signaler === true,
+    parentId: texteOuNull(l.parent_id),
+    reactions: nombre(l.reactions),
+    jAime: l.j_aime === true,
+    modifie: l.modifie === true,
+    peutModifier: l.peut_modifier === true,
   };
 }
 
