@@ -68,6 +68,16 @@ describe("Analyse d'une publication", () => {
     expect(texte.match(/</g)).toHaveLength(2);
   });
 
+  it("la vidéo jointe : son adresse et le titre de sa page sont jugés avec la publication", async () => {
+    const { f, requetes } = faux();
+    await analyserPublication({ ...CONTENU, video: { url: "https://www.twitch.tv/x", titre: "Gagnez <vite>" } }, CONFIG, f);
+    const texte = blocs(requetes[0]).find((b) => b.type === "text")?.text ?? "";
+    expect(texte).toContain("Vidéo jointe : https://www.twitch.tv/x");
+    expect(texte).toContain("Titre de la page de la vidéo : Gagnez ‹vite›");
+    expect(texte.indexOf("Vidéo jointe")).toBeLessThan(texte.indexOf("</publication>"));
+    expect(texte.match(/</g)).toHaveLength(2);
+  });
+
   it("image : réduite à 1 568 px de côté au plus, en JPEG", async () => {
     const png = await sharp({ create: { width: 3000, height: 1000, channels: 3, background: "#0B18C9" } }).png().toBuffer();
     const { f, requetes } = faux();

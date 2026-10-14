@@ -12,6 +12,8 @@ import { createClient } from "@/lib/supabase/server";
 import { lireApercu } from "./apercu";
 import { lireLot, UUID, versApercu, versEspace, versReponse } from "./data";
 import { idYoutube, premiereAdresse } from "./liens";
+import { texteBrut } from "./mise-en-forme";
+import { reconnaitreVideo, type Video } from "./video";
 import { nomCourt, refusPiece, refusPublication, refusReponse } from "./regles";
 import type { Apercu, Espace, FiltreFil, LotPublications, PieceEnvoyee, Reponse, SuiteFil, TriFil } from "./types";
 
@@ -20,6 +22,8 @@ import type { Apercu, Espace, FiltreFil, LotPublications, PieceEnvoyee, Reponse,
 
 const MIGRATION = "Appliquez la migration 0019 (guide « Ce qui te revient », section 24).";
 const MIGRATION_ACTUALITES = "Appliquez la migration 0021 (guide « Ce qui te revient », section 26).";
+const MIGRATION_VIDEO = "Appliquez la migration 0022 (guide « Ce qui te revient », section 27).";
+const ADRESSE_VIDEO = "Collez l’adresse complète de la vidéo (https://…).";
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 type Erreur = { code?: string; message?: string };
 type Refus = { ok: false; message: string };
@@ -106,7 +110,8 @@ async function preparerApercu(
   texte: string,
   cible: { publication: string | null; parcours: string | null },
 ): Promise<{ apercu: Promise<Apercu | null> } | { refus: string }> {
-  const adresse = premiereAdresse(texte);
+  // Le texte mis en forme : le lien se cherche sans les marques (« **https://…** »).
+  const adresse = premiereAdresse(texteBrut(texte));
   if (!adresse) return { apercu: Promise.resolve(null) };
   const video = idYoutube(adresse);
   if (video) return { apercu: Promise.resolve({ type: "youtube", id: video }) };
@@ -118,6 +123,22 @@ async function preparerApercu(
   if (reservation?.lire !== true) return { apercu: Promise.resolve(null) };
   return { apercu: lireApercu(adresse).catch(() => null) };
 }
+
+/**
+ * La vidéo jointe (0022) : une plateforme connue telle quelle ; une autre page, son titre et son image lus par le serveur
+ * après la même réservation que les aperçus. Réservation refusée : `{ refus }`.
+ */
+async function preparerVideo(supabase: Client, video: Video, parcours: string | null): Promise<{ video: Video } | { refus: string }> {
+  if (video.plateforme !== "autre") return { video };
+  const { data, error } = await supabase.rpc("reserver_apercu", { p_publication: null, p_parcours: parcours, p_adresse: video.url });
+  if (error) return estFonctionAbsente(error) ? { video } : { refus: message(error) };
+  if (un(data)?.lire !== true) return { video };
+  const page = await lireApercu(video.url).catch(() => null);
+  return { video: page?.type === "lien" ? { ...video, ...(page.titre ? { titre: page.titre } : {}), image: page.image } : video };
+}
+
+/** Ce que l'IA juge de la vidéo jointe : son adresse, et le titre de sa page pour une autre plateforme. */
+const videoAnalyse = (video: Video | null) => (video ? { video: { url: video.url, ...(video.titre ? { titre: video.titre } : {}) } } : {});
 
 /** Ce que l'IA juge de l'aperçu d'un site : son adresse, son titre et sa description (l'image n'est pas transmise). */
 const lienAnalyse = (apercu: Apercu | null) => (apercu?.type === "lien" ? { lien: { url: apercu.url, titre: apercu.titre, description: apercu.description } } : {});
@@ -152,10 +173,13 @@ export async function publierPublication(
   titre: string,
   texte: string,
   piece: PieceEnvoyee | null,
-): Promise<{ ok: true; id: string; statut: StatutPublie; apercu: Apercu | null } | Refus> {
+  adresseVideo: string | null = null,
+): Promise<{ ok: true; id: string; statut: StatutPublie; apercu: Apercu | null; video: Video | null } | Refus> {
   if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
   const refus = refusPublication(titre, texte) ?? (piece ? refusPiece(piece.type, piece.taille) : null);
   if (refus) return { ok: false, message: refus };
+  const videoReconnue = adresseVideo?.trim() ? reconnaitreVideo(adresseVideo) : null;
+  if (adresseVideo?.trim() && !videoReconnue) return { ok: false, message: ADRESSE_VIDEO };
   const supabase = await createClient();
   const parcours = espaceId && UUID.test(espaceId) ? espaceId : null;
   // La page d'un lien n'est lue qu'une fois les droits et les limites vérifiés par la base.
@@ -165,6 +189,15 @@ export async function publierPublication(
     return { ok: false, message: preparation.refus };
   }
   const apercu = preparation.apercu;
+  let video: Video | null = null;
+  if (videoReconnue) {
+    const prete = await preparerVideo(supabase, videoReconnue, parcours);
+    if ("refus" in prete) {
+      if (piece) await supabase.storage.from("communaute").remove([piece.chemin]);
+      return { ok: false, message: prete.refus };
+    }
+    video = prete.video;
+  }
   const reglage = await moderation(supabase);
   const pieceEnvoyee = piece ? { chemin: piece.chemin, nom: piece.nom, type: piece.type, taille: piece.taille } : null;
   let analyse: Record<string, unknown> | null = null;
@@ -194,26 +227,26 @@ export async function publierPublication(
       else fichier = relu;
     }
     verdict ??= await analyserPublication(
-      { titre: titre.trim(), texte: texte.trim(), espace: await nomDeLEspace(supabase, parcours), fichier, ...lienAnalyse(await apercu) },
+      { titre: titre.trim(), texte: texte.trim(), espace: await nomDeLEspace(supabase, parcours), fichier, ...lienAnalyse(await apercu), ...videoAnalyse(video) },
       reglage.config,
     );
     // Sans verdict (clé refusée, refus de l'IA), la base met la publication en attente de l'équipe.
     analyse = verdict ? { jeton: reglage.config.jeton, ...verdict, objet } : null;
   }
-  const { data, error, apercu: apercuEnregistre } = await avecApercu(
-    supabase,
-    "publier",
-    { p_parcours: parcours, p_titre: titre.trim(), p_texte: texte.trim(), p_piece: pieceEnvoyee, ...(reglage ? { p_analyse: analyse } : {}) },
-    await apercu,
-  );
+  const parametres = { p_parcours: parcours, p_titre: titre.trim(), p_texte: texte.trim(), p_piece: pieceEnvoyee, ...(reglage ? { p_analyse: analyse } : {}) };
+  const apercuLu = await apercu;
+  // Avec une vidéo, la 0022 est nécessaire : pas de repli silencieux qui la perdrait.
+  const { data, error, apercu: apercuEnregistre } = video
+    ? { ...(await supabase.rpc("publier", { ...parametres, ...(apercuLu ? { p_apercu: apercuLu } : {}), p_video: video })), apercu: apercuLu }
+    : await avecApercu(supabase, "publier", parametres, apercuLu);
   if (error) {
     if (piece) await supabase.storage.from("communaute").remove([piece.chemin]);
-    return { ok: false, message: message(error) };
+    return { ok: false, message: video && estFonctionAbsente(error) ? MIGRATION_VIDEO : message(error) };
   }
   const resultat = lireResultat(data);
   if (resultat.statut === "bloquee") return { ok: false, message: messageBloquee(resultat.categorie) };
   refresh();
-  return { ok: true, id: resultat.id, statut: resultat.statut === "en_attente" ? "en_attente" : "publiee", apercu: apercuEnregistre };
+  return { ok: true, id: resultat.id, statut: resultat.statut === "en_attente" ? "en_attente" : "publiee", apercu: apercuEnregistre, video };
 }
 
 /** Son auteur seulement : le titre et le texte, réanalysés si l'analyse est active ; bloquée, l'ancienne version reste. */

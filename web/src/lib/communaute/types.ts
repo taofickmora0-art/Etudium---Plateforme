@@ -1,8 +1,9 @@
 // Types de la communauté (spec du 14 octobre 2026, migration 0019 ; fil « Actualités », migration 0021).
 
 import type { Apercu } from "./liens";
+import type { Video } from "./video";
 
-export type { Apercu };
+export type { Apercu, Video };
 
 /** Un espace : le général (id null) ou celui d'un parcours ; `ouvert` dit si le compte peut y lire et publier. */
 export type Espace = {
@@ -60,6 +61,8 @@ export type Publication = {
   enregistree: boolean;
   /** Les initiales des trois derniers qui l'aiment (0021). */
   aimeePar: string[];
+  /** La vidéo jointe (0022) ; null sans vidéo ou avant la 0022. */
+  video: Video | null;
 };
 
 export type PublicationDetail = Publication & { toutesReponses: Reponse[] };

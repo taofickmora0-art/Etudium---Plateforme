@@ -73,6 +73,7 @@ const pub = (o: Partial<Publication> = {}): Publication => ({
   apercu: null,
   enregistree: false,
   aimeePar: [],
+  video: null,
   ...o,
 });
 const lot = (publications: Publication[], suite = false): LotPublications => ({ publications, suite });

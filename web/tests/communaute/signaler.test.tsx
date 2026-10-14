@@ -49,6 +49,7 @@ const pub = (o: Partial<Publication> = {}): Publication => ({
   apercu: null,
   enregistree: false,
   aimeePar: [],
+  video: null,
   ...o,
 });
 const rep = (o: Partial<Reponse> = {}): Reponse => ({
@@ -159,7 +160,7 @@ describe("Publications en attente", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("elle semble enfreindre les règles de la communauté (Arnaque)");
     expect(screen.getByRole("textbox", { name: "Nouvelle publication" })).toHaveValue("Envoyez 5 000 F");
 
-    vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n1", statut: "en_attente", apercu: null });
+    vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n1", statut: "en_attente", apercu: null, video: null });
     await user.clear(screen.getByRole("textbox", { name: "Nouvelle publication" }));
     await user.type(screen.getByRole("textbox", { name: "Nouvelle publication" }), "Bonjour à tous");
     await user.click(screen.getByRole("button", { name: "Publier" }));

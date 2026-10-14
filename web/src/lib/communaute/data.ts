@@ -3,6 +3,7 @@ import { estFonctionAbsente, liste, texte, textes, un, type Ligne } from "@/lib/
 import { createClient } from "@/lib/supabase/server";
 import type { Lecture } from "@/lib/utilisateurs/types";
 import { NOMBRE_FIL, UUID } from "./regles";
+import { videoRangee } from "./video";
 import type {
   Activite,
   Apercu,
@@ -96,6 +97,7 @@ export function versPublication(l: Ligne): Publication {
     apercu: versApercu(l.apercu),
     enregistree: l.enregistree === true,
     aimeePar: textes(l.aimee_par),
+    video: videoRangee(l.video),
   };
 }
 

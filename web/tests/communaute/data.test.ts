@@ -50,6 +50,7 @@ const CONVERTIE = {
   apercu: null,
   enregistree: false,
   aimeePar: [],
+  video: null,
 };
 
 beforeEach(() => faux.vider());
@@ -156,4 +157,22 @@ describe("Lectures de la communauté", () => {
     faux.repondre("rpc.publications_tendances", { error: { code: "PGRST202" } });
     expect(await lireTendances()).toEqual({ migrationAbsente: true });
   });
+
+  it("la vidéo jointe (0022) : relue avec les règles de l'application ; une forme douteuse est ignorée", async () => {
+    faux.repondre("rpc.fil_communaute", {
+      data: {
+        publications: [
+          { ...BRUTE, piece_jointe: null, video: { plateforme: "vimeo", id: "76979871", url: "https://vimeo.com/76979871" } },
+          { ...BRUTE, id: "b", piece_jointe: null, video: { plateforme: "youtube", id: "../x", url: "https://youtu.be/x" } },
+        ],
+        suite: false,
+      },
+    });
+    const lecture = await lireFil("tous");
+    expect(lecture.migrationAbsente ? [] : lecture.donnees.publications.map((p) => p.video)).toEqual([
+      { plateforme: "vimeo", id: "76979871", url: "https://vimeo.com/76979871" },
+      null,
+    ]);
+  });
 });
+

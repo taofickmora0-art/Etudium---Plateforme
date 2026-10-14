@@ -149,6 +149,7 @@ export function ChampPublication({
         apercu: resultat.apercu,
         enregistree: false,
         aimeePar: [],
+        video: resultat.video,
       });
       fermer();
       toast(

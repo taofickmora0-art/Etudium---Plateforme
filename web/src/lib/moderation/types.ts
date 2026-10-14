@@ -22,6 +22,8 @@ export type ContenuAnalyse = {
   fichier: { type: string; octets: Uint8Array } | null;
   /** L'aperçu du premier lien, lu sur la page par le serveur (migration 0021) : la carte que les membres verront. */
   lien?: { url: string; titre: string; description: string };
+  /** La vidéo jointe (migration 0022) : son adresse, et le titre de sa page pour une autre plateforme. */
+  video?: { url: string; titre?: string };
 };
 
 export type OngletFile = "a_examiner" | "bloquees";
