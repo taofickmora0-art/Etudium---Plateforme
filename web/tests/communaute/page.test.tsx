@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import type { ReactNode } from "react";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -491,6 +491,34 @@ describe("La page Communauté", () => {
 
     vi.mocked(lirePublication).mockResolvedValue({ migrationAbsente: false, donnees: null });
     await expect(PagePublication({ id: "inconnue" })).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+
+  it("?espace= ouvre l'onglet demandé et lit son fil ; un parcours fermé : son cadenas ; inconnu : Actualités", async () => {
+    vi.mocked(lireFil).mockResolvedValue({ migrationAbsente: false, donnees: lot([pub({ texte: "Dans Académique" })]) });
+    const { unmount } = afficher(await ContenuCommunaute({ searchParams: Promise.resolve({ espace: P }) }));
+    expect(lireFil).toHaveBeenCalledWith(P);
+    expect(onglet("Académique")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Dans Académique")).toBeInTheDocument();
+    unmount();
+
+    afficher(await ContenuCommunaute({ searchParams: Promise.resolve({ espace: "general" }) }));
+    expect(lireFil).toHaveBeenLastCalledWith("general");
+    expect(onglet("Général")).toHaveAttribute("aria-pressed", "true");
+    cleanup();
+
+    afficher(await ContenuCommunaute({ searchParams: Promise.resolve({ espace: B }) }));
+    expect(onglet("Business, espace verrouillé")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("heading", { level: 3, name: "Espace Business verrouillé" })).toBeInTheDocument();
+    cleanup();
+
+    vi.mocked(lireFil).mockClear();
+    afficher(await ContenuCommunaute({ searchParams: Promise.resolve({ espace: "99999999-9999-4999-8999-999999999999" }) }));
+    expect(lireFil).toHaveBeenLastCalledWith("tous");
+    expect(onglet("Actualités")).toHaveAttribute("aria-pressed", "true");
+    cleanup();
+
+    afficher(await ContenuCommunaute({ searchParams: Promise.resolve({ espace: ["tous", "general"] }) }));
+    expect(onglet("Actualités")).toHaveAttribute("aria-pressed", "true");
   });
 
   it("avant la 0019 : le bandeau, sur les deux pages", async () => {

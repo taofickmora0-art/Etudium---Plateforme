@@ -16,7 +16,7 @@ vi.mock("@/lib/moderation/analyse", () => ({ configurationModeration: () => conf
 const apercuDuTexte = vi.fn();
 vi.mock("@/lib/communaute/apercu", () => ({ apercuDuTexte: (...a: unknown[]) => apercuDuTexte(...a) }));
 
-const { aimer, basculerEnregistrement, chargerFil, chargerReponses, modifierPublication, publierPublication, repondre, signaler, supprimerPublication, supprimerReponse } = await import(
+const { aimer, basculerEnregistrement, chargerEspaces, chargerFil, chargerReponses, modifierPublication, publierPublication, repondre, signaler, supprimerPublication, supprimerReponse } = await import(
   "@/lib/communaute/actions"
 );
 const { messageBloquee } = await import("@/lib/moderation/regles");
@@ -269,3 +269,17 @@ describe("Le fil Actualités (0021)", () => {
     expect(await basculerEnregistrement(ID)).toEqual({ ok: false, message: "Cette publication n’existe plus." });
   });
 });
+
+describe("Les espaces du menu ≡", () => {
+  it("chargerEspaces : convertis ; avant la 0019 : le message ; sans session : refusé sans appel", async () => {
+    faux.repondre("rpc.espaces_communaute", { data: [{ id: null, nom: "Général", nom_court: "Général", couleur: null, slug: null, ouvert: true }] });
+    expect(await chargerEspaces()).toEqual({ ok: true, espaces: [{ id: null, nom: "Général", nomCourt: "Général", couleur: null, slug: null, ouvert: true }] });
+    faux.repondre("rpc.espaces_communaute", { error: { code: "PGRST202" } });
+    expect(await chargerEspaces()).toEqual({ ok: false, message: "Appliquez la migration 0019 (guide « Ce qui te revient », section 24)." });
+    faux.vider();
+    getShellUser.mockResolvedValueOnce(null);
+    expect(await chargerEspaces()).toEqual({ ok: false, message: SESSION_EXPIREE });
+    expect(faux.appels).toEqual([]);
+  });
+});
+

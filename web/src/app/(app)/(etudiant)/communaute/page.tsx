@@ -6,12 +6,12 @@ import { Skeleton } from "@/components/ui/Skeleton";
 
 export const metadata: Metadata = { title: "Communauté · Étudium" };
 
-/** Communauté (NdCommunaute ; spec de la communauté, §3) : l'espace général et un espace par parcours. */
-export default function Page() {
+/** Communauté (NdCommunaute ; spec du fil « Actualités ») : les Actualités, l'espace général et un espace par parcours ; `?espace=…` choisit l'onglet. */
+export default function Page({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   return (
     <>
       <Suspense fallback={<Skeleton className="h-96 rounded-panneau" />}>
-        <ContenuCommunaute />
+        <ContenuCommunaute searchParams={searchParams} />
       </Suspense>
       <Suspense fallback={null}>
         <SessionGuard />

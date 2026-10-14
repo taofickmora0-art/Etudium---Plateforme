@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Fragment, Suspense, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { SidebarGroup } from "@/components/ui/SidebarGroup";
 import { SidebarItem } from "@/components/ui/SidebarItem";
@@ -22,12 +22,15 @@ export function SidebarNavLinks({
   espace,
   className,
   repliable = true,
+  apresPremierGroupe,
 }: {
   pathname: string | null;
   espace?: Espace;
   className?: string;
   /** Faux dans le tiroir du téléphone : ni colonne d'icônes, ni identifiant de la barre de l'ordinateur. */
   repliable?: boolean;
+  /** Un groupe glissé après le premier (les espaces de la communauté, dans le tiroir). */
+  apresPremierGroupe?: ReactNode;
 }) {
   const actuel = pathname !== null ? spaceOf(pathname) : espace;
   const menu = actuel ? MENUS[actuel] : null;
@@ -35,9 +38,10 @@ export function SidebarNavLinks({
     <SidebarItem key={e.href} href={e.href} icon={e.icon} label={e.label} active={pathname !== null && isActive(pathname, e.href, e.exact)} />
   );
   const groupes = menu?.groupes.map((groupe, index) => (
-    <SidebarGroup key={groupe.titre ?? index} title={groupe.titre}>
-      {groupe.entrees.map(entree)}
-    </SidebarGroup>
+    <Fragment key={groupe.titre ?? index}>
+      <SidebarGroup title={groupe.titre}>{groupe.entrees.map(entree)}</SidebarGroup>
+      {index === 0 && apresPremierGroupe}
+    </Fragment>
   ));
   if (!repliable) {
     return (

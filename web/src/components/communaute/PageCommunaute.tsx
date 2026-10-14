@@ -35,6 +35,7 @@ export function PageCommunaute({
   initial,
   moi,
   colonne,
+  ongletInitial = ACTUALITES,
   annonce = null,
   analyseActive = false,
   maintenant: heureServeur,
@@ -43,6 +44,8 @@ export function PageCommunaute({
   initial: LotPublications;
   moi: MoiCommunaute;
   colonne?: ReactNode;
+  /** L'onglet ouvert d'abord (`?espace=`) : « tous », « general » ou l'identifiant d'un parcours. */
+  ongletInitial?: string;
   /** Migration 0021 : l'annonce que voit le compte, ou null. */
   annonce?: Annonce | null;
   /** Migration 0020 : la mention du champ de publication. */
@@ -51,7 +54,7 @@ export function PageCommunaute({
 }) {
   const liste = espaces.length > 0 ? espaces : [GENERAL];
   const general = liste.find((e) => e.id === null) ?? GENERAL;
-  const [onglet, setOnglet] = useState(ACTUALITES);
+  const [onglet, setOnglet] = useState(() => (liste.some((e) => valeur(e) === ongletInitial) ? ongletInitial : ACTUALITES));
   const [tri, setTri] = useState<TriFil>("recentes");
   const [lot, setLot] = useState(initial);
   // Les pages déjà lues, pour « Voir plus » des tris par page (populaires, enregistrées).
@@ -85,6 +88,8 @@ export function PageCommunaute({
 
   function changerOnglet(cible: string) {
     setOnglet(cible);
+    // L'adresse suit l'onglet (le menu ≡ le marque, un lien copié le rouvre) ; Next garde son routeur à jour.
+    window.history.replaceState(null, "", cible === ACTUALITES ? "/communaute" : `/communaute?espace=${encodeURIComponent(cible)}`);
     const choisi = cible === ACTUALITES ? general : liste.find((e) => valeur(e) === cible);
     if (!choisi?.ouvert) {
       // Un espace fermé n'a pas de fil : une lecture en cours pour un autre onglet est oubliée.
@@ -127,7 +132,8 @@ export function PageCommunaute({
       <Heading level="page">Communauté</Heading>
       <Lead className="mt-2.5">Posez vos questions, partagez vos réussites, entraidez-vous.</Lead>
       <FilterChips
-        className="mt-[21px]"
+        // Sur téléphone, les onglets défilent en largeur (spec du fil « Actualités », §1).
+        className="mt-[21px] max-sm:-my-1 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:px-0.5 max-sm:py-1 max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden"
         label="Choisir un espace"
         options={[
           { value: ACTUALITES, label: "Actualités" },

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { Icon, type IconSvgElement } from "./Icon";
@@ -10,10 +11,12 @@ type SidebarItemProps = {
   active?: boolean;
   /** Étiquette bleue après le libellé (« Nouveau », « 1 à corriger »). */
   tag?: string;
+  /** Après le libellé, poussé à droite (le cadenas d'un espace fermé). */
+  fin?: ReactNode;
 };
 
 /** Entrée de la barre latérale (planche « Navigation ») : 48 px, rayon 14, icône 20, libellé 16. */
-export function SidebarItem({ href, icon, label, active = false, tag }: SidebarItemProps) {
+export function SidebarItem({ href, icon, label, active = false, tag, fin }: SidebarItemProps) {
   return (
     <Link
       href={href}
@@ -31,6 +34,7 @@ export function SidebarItem({ href, icon, label, active = false, tag }: SidebarI
           {tag}
         </span>
       )}
+      {fin && <span className="ml-auto flex items-center">{fin}</span>}
     </Link>
   );
 }

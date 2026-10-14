@@ -10,9 +10,9 @@ import { messageBloquee, refusSignalement } from "@/lib/moderation/regles";
 import { MOTIFS, type ContenuAnalyse, type MotifSignalement, type Verdict } from "@/lib/moderation/types";
 import { createClient } from "@/lib/supabase/server";
 import { apercuDuTexte } from "./apercu";
-import { lireLot, UUID, versReponse } from "./data";
+import { lireLot, UUID, versEspace, versReponse } from "./data";
 import { nomCourt, refusPiece, refusPublication, refusReponse } from "./regles";
-import type { Apercu, FiltreFil, LotPublications, PieceEnvoyee, Reponse, SuiteFil, TriFil } from "./types";
+import type { Apercu, Espace, FiltreFil, LotPublications, PieceEnvoyee, Reponse, SuiteFil, TriFil } from "./types";
 
 // Actions de la communauté (spec, §2 à §4). La base revérifie tout (migration 0019) et ses messages (P0001, 42501)
 // sont faits pour être affichés tels quels.
@@ -34,6 +34,15 @@ function message(error: Erreur): string {
   if (error.code === "P0001" && error.message) return error.message.replace(/'/g, "’");
   if (error.code === "42501" && error.message) return error.message;
   return ECHEC;
+}
+
+/** Les espaces, pour le groupe « Espaces de la communauté » du menu ≡ du téléphone. */
+export async function chargerEspaces(): Promise<{ ok: true; espaces: Espace[] } | Refus> {
+  if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("espaces_communaute");
+  if (error) return { ok: false, message: message(error) };
+  return { ok: true, espaces: liste(data).map(versEspace) };
 }
 
 /** « Voir plus », un changement d'espace ou de tri. */

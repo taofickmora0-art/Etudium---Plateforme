@@ -2,7 +2,7 @@ import { demoModeActive } from "@/lib/auth/current-user";
 import { estFonctionAbsente, liste, texte, textes, un, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import type { Lecture } from "@/lib/utilisateurs/types";
-import { NOMBRE_FIL } from "./regles";
+import { NOMBRE_FIL, UUID } from "./regles";
 import type {
   Activite,
   Apercu,
@@ -24,7 +24,7 @@ import type {
 // compte, et jamais d'adresse e-mail ; les fichiers joints reçoivent ici un lien temporaire (1 h), demandé en une fois
 // pour tout le lot.
 
-export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export { UUID };
 const DUREE_LIEN = 3600;
 const nombre = (valeur: unknown) => Number(valeur) || 0;
 const texteOuNull = (valeur: unknown) => (typeof valeur === "string" && valeur ? valeur : null);
@@ -35,7 +35,7 @@ const statut = (valeur: unknown): StatutPublication => (valeur === "en_attente" 
 type Client = Awaited<ReturnType<typeof createClient>>;
 type Erreur = { code?: string; message?: string };
 
-function versEspace(l: Ligne): Espace {
+export function versEspace(l: Ligne): Espace {
   return {
     id: texteOuNull(l.id),
     nom: texte(l.nom),

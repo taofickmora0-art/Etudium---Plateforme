@@ -10,6 +10,8 @@ export const REPONSE_MAX = 1000;
 export const PIECE_MAX_OCTETS = 10_485_760;
 export const TYPES_PIECE = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 export const NOMBRE_FIL = 20;
+/** Un identifiant de la base (publication, parcours). */
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const REFUS_TEXTE = "Écrivez votre publication (3 000 caractères au plus).";
 export const REFUS_TITRE = "Le titre dépasse 120 caractères.";

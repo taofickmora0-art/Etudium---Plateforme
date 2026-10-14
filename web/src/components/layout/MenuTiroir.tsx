@@ -6,15 +6,19 @@ import { Cancel01Icon, Menu01Icon } from "@hugeicons/core-free-icons";
 import { Dialog } from "radix-ui";
 import { IconButton } from "@/components/ui/IconButton";
 import { cn } from "@/lib/cn";
+import { EspacesCommunaute } from "./EspacesCommunaute";
 import { SidebarNavLinks } from "./SidebarNav";
 
 function EntreesActives() {
-  return <SidebarNavLinks pathname={usePathname()} repliable={false} />;
+  const pathname = usePathname();
+  // Sur les pages de la communauté, ses espaces (spec du fil « Actualités », §1).
+  const communaute = pathname === "/communaute" || pathname.startsWith("/communaute/");
+  return <SidebarNavLinks pathname={pathname} repliable={false} apresPremierGroupe={communaute ? <EspacesCommunaute pathname={pathname} /> : null} />;
 }
 
 /**
  * Le menu ≡ du téléphone (demande du 14 octobre 2026) : les mêmes entrées que la barre latérale de l'ordinateur, dans un
- * tiroir qui glisse depuis la gauche. Choisir une entrée le referme.
+ * tiroir qui glisse depuis la gauche ; sur la Communauté, ses espaces en plus. Choisir une entrée le referme.
  */
 export function MenuTiroir({ className }: { className?: string }) {
   const [ouvert, setOuvert] = useState(false);
