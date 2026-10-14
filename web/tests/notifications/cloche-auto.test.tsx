@@ -88,6 +88,29 @@ describe("La cloche se met à jour seule", () => {
     expect(push).toHaveBeenCalledWith("/evenements");
   });
 
+  it("un rechargement parti avant « Tout marquer comme lu » ne réaffiche pas les non lues (revue du plan)", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    afficher();
+    await screen.findByRole("button", { name: "Notifications, 1 non lue" });
+    let rendre: (l: LotNotifications) => void = () => {};
+    vi.mocked(chargerCloche).mockReturnValueOnce(new Promise((r) => (rendre = r)));
+    minute();
+    await user.click(screen.getByRole("button", { name: "Notifications, 1 non lue" }));
+    await user.click(await screen.findByRole("button", { name: "Tout marquer comme lu" }));
+    await act(async () => rendre(lot([notif()])));
+    expect(screen.queryByRole("button", { name: "Notifications, 1 non lue" })).toBeNull();
+  });
+
+  it("la base injoignable pendant un rechargement : la cloche garde ce qu'elle avait, sans erreur", async () => {
+    afficher();
+    await screen.findByRole("button", { name: "Notifications, 1 non lue" });
+    vi.mocked(chargerCloche).mockRejectedValueOnce(new Error("réseau"));
+    minute();
+    await waitFor(() => expect(chargerCloche).toHaveBeenCalledTimes(2));
+    await act(async () => {});
+    expect(screen.getByRole("button", { name: "Notifications, 1 non lue" })).toBeInTheDocument();
+  });
+
   it("une autre catégorie, ou une notification déjà vue : pas de message", async () => {
     vi.mocked(chargerCloche).mockResolvedValue(lot([LIVE]));
     afficher();

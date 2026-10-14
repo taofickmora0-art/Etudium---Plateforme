@@ -554,7 +554,8 @@ Un seul onglet **Formations** (juste après Accueil), « Ajouter à mon agenda �
 1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0023_sessions_rappels.sql` (après la 0022). Si tu rejoues un jour la 0018, rejoue la 0023 juste après.
    - La fin du fichier crée une **tâche planifiée** (pg_cron) qui envoie rappels et annonces **toutes les minutes**, même si personne n'est connecté.
    - Si le résultat affiche « pg_cron indisponible » : Supabase → **Integrations** → **Cron** → **Enable**, puis relance seulement le dernier bloc du fichier (de `do $cron$` à la fin).
-   - Pour vérifier : **Integrations** → **Cron** → la tâche `etudium-sessions-live` (toutes les minutes) apparaît, et son historique se remplit.
+   - Pour vérifier : **Integrations** → **Cron** → la tâche `etudium-sessions-live` (toutes les minutes) apparaît, et son historique se remplit. Une seconde tâche, `etudium-purge-cron`, efface chaque nuit l'historique de plus de 7 jours.
+   - Si le résultat affiche « Tâche planifiée non créée », la migration est quand même appliquée : envoie-moi le message.
 2. **Le menu.** Avec le compte étudiant, la barre latérale : Accueil, **Formations**, Communauté, Messages, Événements. « Mes formations » et « Toutes les formations » ne sont plus dans « Mon espace ». Communauté disparaîtra du menu quand l'Accueil deviendra le fil de la communauté.
 3. **La page Formations.**
    - En haut, **Mes formations** : tes formations commencées sur une seule ligne (6 au plus), en petites cartes avec la progression ; **Voir plus** ouvre la liste complète.

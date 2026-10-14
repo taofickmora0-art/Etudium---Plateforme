@@ -43,7 +43,13 @@ function useCloche() {
 
   const charger = useCallback(async () => {
     const numero = ++demande.current;
-    const lu = await chargerCloche();
+    let lu: LotNotifications | null;
+    try {
+      lu = await chargerCloche();
+    } catch {
+      // Base ou réseau injoignable : la cloche garde ce qu'elle avait, le prochain passage réessaiera.
+      return;
+    }
     if (numero !== demande.current) return;
     setCloche(lu ?? VIDE);
     if (!lu) return;
@@ -86,11 +92,14 @@ function useCloche() {
     return () => window.removeEventListener(EVENEMENT_NOTIFICATIONS, recharger);
   }, [charger]);
 
+  // Marquer lu écarte la lecture en cours, partie avant (sinon elle réafficherait les non lues).
   const toutLire = () => {
+    demande.current++;
     setCloche((c) => ({ ...c, nonLues: 0, lignes: c.lignes.map((n) => ({ ...n, lue: true })) }));
     void marquerLues(null);
   };
   const lire = (id: string) => {
+    demande.current++;
     setCloche((c) => {
       const cible = c.lignes.find((n) => n.id === id);
       if (!cible || cible.lue) return c;

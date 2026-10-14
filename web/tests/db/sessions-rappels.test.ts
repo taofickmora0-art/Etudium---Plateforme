@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { creerBanc, MIGRATIONS_LOT_0, type Banc } from "./banc";
@@ -155,6 +156,15 @@ describe("Annonce du début du live", () => {
     expect((await recues(E1)).map((n) => n.titre)).toEqual(["Session live dans moins d’une heure"]);
     // À la nouvelle heure, le début est annoncé de nouveau.
     await banc.db.query("update public.sessions_live set debut = now() - interval '1 minute' where id = $1", [id]);
+    expect(await traiter()).toBe(comptes - 1);
+  });
+});
+
+describe("Rejouer la migration", () => {
+  it("rejouée pendant un live pas encore annoncé : l'annonce part quand même (revue du plan)", async () => {
+    await session("-30 seconds", { titre: "En cours" });
+    await banc.db.exec(readFileSync("supabase/migrations/0023_sessions_rappels.sql", "utf8"));
+    const comptes = (await un<{ n: number }>("select count(*)::int as n from public.profils")).n;
     expect(await traiter()).toBe(comptes - 1);
   });
 });

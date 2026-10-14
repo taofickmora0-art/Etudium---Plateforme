@@ -9,9 +9,19 @@ begin;
 
 -- ─── Suivi des nouveaux envois ──────────────────────────────────────────────────────────────────────
 alter table public.inscriptions_sessions add column if not exists rappel_dix_le timestamptz;
-alter table public.sessions_live add column if not exists debut_annonce_le timestamptz;
--- Les sessions déjà commencées quand la migration s'applique ne sont pas annoncées après coup.
-update public.sessions_live set debut_annonce_le = now() where debut_annonce_le is null and debut <= now();
+-- À la première application seulement, les sessions déjà commencées ne sont pas annoncées après coup (rejouée plus
+-- tard, la migration ne retire pas l'annonce d'un live en cours).
+do $colonne$
+begin
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'sessions_live' and column_name = 'debut_annonce_le'
+  ) then
+    alter table public.sessions_live add column debut_annonce_le timestamptz;
+    update public.sessions_live set debut_annonce_le = now() where debut <= now();
+  end if;
+end
+$colonne$;
 
 -- ─── Le traitement de toutes les sessions ───────────────────────────────────────────────────────────
 -- Chaque envoi est d'abord réservé (update … where … is null returning), puis envoyé : deux traitements simultanés
@@ -26,11 +36,24 @@ declare
   v_nombre integer := 0;
   r record;
 begin
-  -- Le début du live : tous les comptes (équipe et non-inscrits compris), une fois, tant que la session est en cours.
+  -- Un traitement à la fois : un appel qui en trouve un en cours repart aussitôt (la tâche planifiée repasse dans la
+  -- minute), sans attendre ni rien perdre.
+  if not pg_try_advisory_xact_lock(hashtext('etudium.traiter_sessions_live')) then
+    return 0;
+  end if;
+  -- Les sessions proches sont figées le temps du traitement : un report ou une annulation en cours est d'abord validé
+  -- (les envois qui suivent voient la nouvelle heure), ou attend la fin du traitement.
+  perform 1 from public.sessions_live
+  where statut = 'programmee' and debut > now() - interval '4 hours' and debut <= now() + interval '24 hours'
+  for share;
+
+  -- Le début du live : tous les comptes (équipe et non-inscrits compris), une fois, tant que la session est en cours
+  -- (4 h au plus : la durée maximale d'une session).
   for r in
     update public.sessions_live s
     set debut_annonce_le = now()
     where s.statut = 'programmee' and s.debut_annonce_le is null
+      and s.debut > now() - interval '4 hours'
       and s.debut <= now() and s.debut + make_interval(mins => s.duree_minutes) > now()
     returning s.titre, s.formateur_id
   loop
@@ -223,7 +246,13 @@ begin
     raise notice 'pg_cron indisponible (%) : activez Cron dans Supabase, puis relancez ce bloc.', sqlerrm;
     return;
   end;
-  -- Même nom : la tâche est remplacée, jamais doublée.
-  perform cron.schedule('etudium-sessions-live', '* * * * *', 'select public.traiter_sessions_live()');
+  -- Même nom : la tâche est remplacée, jamais doublée. L'historique des passages (1 440 par jour) est purgé chaque
+  -- nuit au-delà de 7 jours. Un refus (droits sur le schéma cron) reste un avertissement : la migration est appliquée.
+  begin
+    perform cron.schedule('etudium-sessions-live', '* * * * *', 'select public.traiter_sessions_live()');
+    perform cron.schedule('etudium-purge-cron', '30 3 * * *', $purge$delete from cron.job_run_details where end_time < now() - interval '7 days'$purge$);
+  exception when others then
+    raise notice 'Tâche planifiée non créée (%) : voir le guide « Ce qui te revient », section 28.', sqlerrm;
+  end;
 end
 $cron$;
