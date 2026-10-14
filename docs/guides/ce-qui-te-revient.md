@@ -604,6 +604,6 @@ Le champ de publication propose Image, Sondage avec images, Sondage avec texte, 
 2. **Sondage avec texte.** Communauté → « Quoi de neuf… » → **Sondage avec texte** : la question dans le texte, 2 options ou plus, « Plusieurs réponses possibles », la fin du sondage. **Publier**. Avec un autre compte : coche une option, **Voter** : les pourcentages s'affichent ; **Changer mon vote** reste possible jusqu'à la fin.
 3. **Sondage avec images.** Même chose avec une image par option (2 à 6) ; on vote en touchant une image.
 4. **Quiz.** La question, 2 à 6 réponses, coche **Bonne réponse** sur l'une, une explication si tu veux. Avec un autre compte : choisis une réponse, **Valider** : la bonne réponse s'affiche en vert (la tienne en rouge si elle est fausse), puis l'explication. On ne répond qu'une fois.
-5. **Programmer.** Écris une publication, clique la **flèche** à côté de « Publier » → **Programmer…**, choisis la date et l'heure (au moins 10 minutes plus tard) → le bouton devient « Programmer pour le … ».
+5. **Programmer.** Écris une publication, clique la **flèche** à côté de « Publier » → **Programmer…**, choisis la date et l'heure (au moins 10 minutes plus tard) → le bouton devient « Programmer » et une ligne au-dessus rappelle « Programmée pour le … » (la croix revient à « Publier »).
    - Sous le champ, l'onglet **Programmées** la montre, avec « Modifier la date » et « Publier maintenant » dans son menu ⋮ ;
    - les autres comptes ne la voient pas avant l'heure ; à l'heure, elle paraît en haut du fil.
