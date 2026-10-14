@@ -24,7 +24,7 @@ const VIDES: Record<VueSessions, { titre: string; texte: string; retour: boolean
   a_venir: { titre: "Aucune session programmée", texte: "Les prochaines sessions live apparaîtront ici.", retour: false },
   inscriptions: {
     titre: "Aucune inscription pour le moment",
-    texte: "Inscrivez-vous à une session live pour la retrouver ici. Un rappel vous sera envoyé la veille et 1 h avant.",
+    texte: "Inscrivez-vous à une session live pour la retrouver ici. Un rappel vous sera envoyé la veille, 1 h avant et 10 min avant.",
     retour: true,
   },
   passees: { titre: "Aucune session passée", texte: "Les sessions de vos inscriptions apparaîtront ici une fois terminées.", retour: true },
@@ -164,7 +164,7 @@ export function PageEvenements({ initial }: { initial: SessionCarte[] }) {
   return (
     <div className="flex min-w-0 flex-col">
       <Heading level="page">Événements</Heading>
-      <Lead className="mt-2.5">Sessions live avec vos formateurs, sur Google Meet ou Zoom. Un rappel vous est envoyé la veille et 1 h avant.</Lead>
+      <Lead className="mt-2.5">Sessions live avec vos formateurs, sur Google Meet ou Zoom. Un rappel vous est envoyé la veille, 1 h avant et 10 min avant.</Lead>
       <FilterChips className="mt-[21px]" label="Filtrer les événements" options={VUES} value={vue} onValueChange={changerVue} />
       <div className="mt-5 h-px bg-separateur" />
       <div className="mt-8 flex min-w-0 flex-col gap-4">

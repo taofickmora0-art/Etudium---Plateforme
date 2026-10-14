@@ -50,6 +50,16 @@ describe("La carte d'une session", () => {
     expect(screen.getByText("Tous les parcours")).toBeInTheDocument();
     expect(screen.getByText("Inscription confirmée")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Se désinscrire" })).toBeInTheDocument();
+    // Inscrit, avant le début : la session s'ajoute à Google Agenda depuis la carte aussi.
+    expect(screen.getByRole("link", { name: "Ajouter à mon agenda" }).getAttribute("href")).toMatch(/^https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE&/);
+  });
+
+  it("pas d'« Ajouter à mon agenda » sans inscription, ni une fois la session commencée", () => {
+    const { unmount } = render(<CarteSession session={S} maintenant={MAINTENANT} onInscrire={rien} onDesinscrire={rien} />);
+    expect(screen.queryByRole("link", { name: "Ajouter à mon agenda" })).toBeNull();
+    unmount();
+    render(<CarteSession session={{ ...S, debut: "2026-10-14T14:55:00Z", inscrit: true }} maintenant={MAINTENANT} onInscrire={rien} onDesinscrire={rien} />);
+    expect(screen.queryByRole("link", { name: "Ajouter à mon agenda" })).toBeNull();
   });
 
   it("Rejoindre seulement avec un lien, dans un nouvel onglet ; En cours pendant ; Annulée sans bouton", () => {
@@ -79,18 +89,24 @@ describe("La page Événements", () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  it("l'en-tête ; Je m’inscris : sinscrire(id), la fenêtre « Inscription confirmée », Ajouter à mon agenda télécharge un .ics", async () => {
+  it("l'en-tête ; Je m’inscris : sinscrire(id), la fenêtre « Inscription confirmée », Ajouter à mon agenda ouvre Google Agenda", async () => {
     const user = userEvent.setup();
     render(<PageEvenements initial={[S]} />);
     expect(screen.getByRole("heading", { level: 1, name: "Événements" })).toBeInTheDocument();
-    expect(screen.getByText("Sessions live avec vos formateurs, sur Google Meet ou Zoom. Un rappel vous est envoyé la veille et 1 h avant.")).toBeInTheDocument();
+    expect(screen.getByText("Sessions live avec vos formateurs, sur Google Meet ou Zoom. Un rappel vous est envoyé la veille, 1 h avant et 10 min avant.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Je m’inscris" }));
     expect(sinscrire).toHaveBeenCalledWith(S.id);
     const fenetre = await screen.findByRole("dialog", { name: "Inscription confirmée" });
-    expect(fenetre).toHaveTextContent(`${S.titre}, samedi 24 octobre à 15 h 00, sur Google Meet. Un rappel vous sera envoyé la veille et 1 h avant.`);
+    expect(fenetre).toHaveTextContent(`${S.titre}, samedi 24 octobre à 15 h 00, sur Google Meet. Un rappel vous sera envoyé la veille, 1 h avant et 10 min avant.`);
     const agenda = within(fenetre).getByRole("link", { name: "Ajouter à mon agenda" });
-    expect(agenda).toHaveAttribute("download", "etudium-session.ics");
-    expect(decodeURIComponent(agenda.getAttribute("href") ?? "")).toMatch(/^data:text\/calendar;charset=utf-8,BEGIN:VCALENDAR[\s\S]*DTSTART:20261024T140000Z/);
+    expect(agenda.getAttribute("href")).toMatch(/^https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE&.*dates=20261024T140000Z%2F20261024T150000Z/);
+    expect(agenda).toHaveAttribute("target", "_blank");
+    expect(agenda).toHaveAttribute("rel", "noopener noreferrer");
+    expect(agenda).not.toHaveAttribute("download");
+    // Les autres agendas (Apple, Outlook) : le fichier, avec son alerte 10 min avant.
+    const ics = within(fenetre).getByRole("link", { name: "Autre agenda (.ics)" });
+    expect(ics).toHaveAttribute("download", "etudium-session.ics");
+    expect(decodeURIComponent(ics.getAttribute("href") ?? "")).toMatch(/^data:text\/calendar;charset=utf-8,BEGIN:VCALENDAR[\s\S]*DTSTART:20261024T140000Z[\s\S]*TRIGGER:-PT10M/);
     // La croix s'appelle aussi « Fermer » : le bouton du design est le dernier.
     await user.click(within(fenetre).getAllByRole("button", { name: "Fermer" }).at(-1)!);
     expect(screen.getByText("Inscription confirmée")).toBeInTheDocument();
@@ -117,7 +133,7 @@ describe("La page Événements", () => {
     await user.click(within(filtres).getByRole("button", { name: "Mes inscriptions" }));
     expect(chargerSessions).toHaveBeenLastCalledWith("inscriptions");
     expect(await screen.findByText("Aucune inscription pour le moment")).toBeInTheDocument();
-    expect(screen.getByText("Inscrivez-vous à une session live pour la retrouver ici. Un rappel vous sera envoyé la veille et 1 h avant.")).toBeInTheDocument();
+    expect(screen.getByText("Inscrivez-vous à une session live pour la retrouver ici. Un rappel vous sera envoyé la veille, 1 h avant et 10 min avant.")).toBeInTheDocument();
     await user.click(within(filtres).getByRole("button", { name: "Passées" }));
     expect(chargerSessions).toHaveBeenLastCalledWith("passees");
     expect(await screen.findByText("Aucune session passée")).toBeInTheDocument();

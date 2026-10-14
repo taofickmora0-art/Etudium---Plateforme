@@ -7,6 +7,7 @@ import { Icon, type IconSvgElement } from "@/components/ui/Icon";
 import { Tag, type TagTone } from "@/components/ui/Tag";
 import { dateSession, enCours, jourCarte, libelleInscriptions, terminee } from "@/lib/sessions/regles";
 import type { SessionCarte } from "@/lib/sessions/types";
+import { AjouterAgenda } from "./AjouterAgenda";
 
 const TONS_PARCOURS: Record<string, TagTone> = { academique: "academique", digital: "digital", business: "business" };
 
@@ -97,9 +98,12 @@ export function CarteSession({ session: s, maintenant, onInscrire, onDesinscrire
               <>
                 <InscriptionConfirmee />
                 {!commencee && (
-                  <Button variant="discret" loading={occupe} onClick={() => onDesinscrire(s)}>
-                    Se désinscrire
-                  </Button>
+                  <>
+                    <AjouterAgenda session={s} variante="discret" />
+                    <Button variant="discret" loading={occupe} onClick={() => onDesinscrire(s)}>
+                      Se désinscrire
+                    </Button>
+                  </>
                 )}
               </>
             ) : (
