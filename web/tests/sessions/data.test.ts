@@ -92,6 +92,8 @@ describe("Lectures des sessions", () => {
         statut: "programmee",
         annuleeLe: null,
         inscrits: [{ prenom: "Fifamè", nom: "Adjovi" }],
+        promoImage: null,
+        promoVideo: null,
       },
     });
     expect(faux.de("rpc", "session_detail")[0].valeurs).toEqual({ p_session: ID });

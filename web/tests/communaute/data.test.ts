@@ -51,6 +51,7 @@ const CONVERTIE = {
   enregistree: false,
   aimeePar: [],
   video: null,
+  session: null,
 };
 
 beforeEach(() => faux.vider());

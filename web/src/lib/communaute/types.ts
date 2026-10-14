@@ -1,9 +1,10 @@
 // Types de la communauté (spec du 14 octobre 2026, migration 0019 ; fil « Actualités », migration 0021).
 
 import type { Apercu } from "./liens";
+import type { SessionPublication } from "@/lib/sessions/types";
 import type { Video } from "./video";
 
-export type { Apercu, Video };
+export type { Apercu, SessionPublication, Video };
 
 /** Un espace : le général (id null) ou celui d'un parcours ; `ouvert` dit si le compte peut y lire et publier. */
 export type Espace = {
@@ -63,6 +64,8 @@ export type Publication = {
   aimeePar: string[];
   /** La vidéo jointe (0022) ; null sans vidéo ou avant la 0022. */
   video: Video | null;
+  /** Le bloc de la session live qu'annonce la publication (migration 0024) ; absent sinon. */
+  session?: SessionPublication | null;
 };
 
 export type PublicationDetail = Publication & { toutesReponses: Reponse[] };

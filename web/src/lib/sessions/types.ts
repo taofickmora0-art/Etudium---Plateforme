@@ -1,4 +1,6 @@
-// Événements et sessions live (spec des sessions live, migration 0018).
+import type { Video } from "@/lib/communaute/video";
+
+// Événements et sessions live (spec des sessions live, migration 0018 ; promotion, migration 0024).
 
 export type VueSessions = "a_venir" | "inscriptions" | "passees";
 export type StatutSession = "programmee" | "annulee";
@@ -54,6 +56,24 @@ export type SessionDetail = {
   statut: StatutSession;
   annuleeLe: string | null;
   inscrits: { prenom: string; nom: string }[];
+  /** Le visuel de promotion : l'affiche (avec un lien temporaire) ou la vidéo ; null sans visuel ou avant la 0024. */
+  promoImage: (PieceSession & { url: string | null }) | null;
+  promoVideo: Video | null;
+};
+
+/** L'affiche d'une session : un fichier de l'espace de stockage « communaute ». */
+export type PieceSession = { chemin: string; nom: string; type: string; taille: number };
+
+/** Le bloc d'une session dans sa publication de la communauté (jamais son lien). */
+export type SessionPublication = {
+  id: string;
+  debut: string;
+  dureeMinutes: number;
+  plateforme: string;
+  animateur: string;
+  statut: StatutSession;
+  inscriptions: number;
+  inscrit: boolean;
 };
 
 /** Ce que saisit le formulaire ; date et heure à l'heure du Bénin. */
@@ -69,4 +89,7 @@ export type DonneesSession = {
   parcoursId: string | null;
   /** L'animateur choisi par l'équipe ; ignoré pour un formateur (il anime toujours ses sessions). */
   formateurId: string | null;
+  /** Le visuel de promotion : une affiche déjà déposée, ou l'adresse d'une vidéo (pas les deux). */
+  image?: PieceSession | null;
+  video?: string | null;
 };

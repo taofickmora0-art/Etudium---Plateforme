@@ -1,4 +1,5 @@
 import { demoModeActive } from "@/lib/auth/current-user";
+import { videoRangee } from "@/lib/communaute/video";
 import { estFonctionAbsente, liste, texte, un, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import type { Lecture } from "@/lib/utilisateurs/types";
@@ -67,7 +68,16 @@ function versDetail(l: Ligne): SessionDetail {
     statut: statut(l.statut),
     annuleeLe: texteOuNull(l.annulee_le),
     inscrits: liste(l.inscrits).map((i) => ({ prenom: texte(i.prenom), nom: texte(i.nom) })),
+    promoImage: versAffiche(l.promo_image),
+    promoVideo: videoRangee(l.promo_video),
   };
+}
+
+function versAffiche(valeur: unknown): SessionDetail["promoImage"] {
+  const a = un(valeur);
+  const chemin = texteOuNull(a?.chemin);
+  if (!a || !chemin) return null;
+  return { chemin, nom: texte(a.nom), type: texte(a.type), taille: nombre(a.taille), url: null };
 }
 
 type Erreur = { code?: string; message?: string };
@@ -119,8 +129,15 @@ export async function lireSessionDetail(id: string): Promise<Lecture<SessionDeta
   if (!UUID.test(id)) return { migrationAbsente: false, donnees: null };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("session_detail", { p_session: id });
-  return lecture("de la session", error, () => {
+  const lu = lecture("de la session", error, () => {
     const l = un(data);
     return l ? versDetail(l) : null;
   });
+  // L'affiche, dans l'espace privé « communaute » : un lien temporaire (1 h) pour le formulaire.
+  const affiche = "donnees" in lu ? lu.donnees?.promoImage : null;
+  if (affiche) {
+    const { data: lien } = await supabase.storage.from("communaute").createSignedUrl(affiche.chemin, 3600);
+    affiche.url = lien?.signedUrl ?? null;
+  }
+  return lu;
 }

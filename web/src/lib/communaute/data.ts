@@ -15,6 +15,7 @@ import type {
   PublicationDetail,
   Reponse,
   RoleAuteur,
+  SessionPublication,
   StatutPublication,
   SuiteFil,
   Tendance,
@@ -74,6 +75,22 @@ export function versApercu(valeur: unknown): Apercu | null {
   return null;
 }
 
+/** Le bloc de la session live d'une publication (migration 0024) ; null sinon. */
+export function versSessionPublication(valeur: unknown): SessionPublication | null {
+  const s = un(valeur);
+  if (!s || !texte(s.id)) return null;
+  return {
+    id: texte(s.id),
+    debut: texte(s.debut),
+    dureeMinutes: nombre(s.duree_minutes),
+    plateforme: texte(s.plateforme) || "En ligne",
+    animateur: texte(s.animateur),
+    statut: s.statut === "annulee" ? "annulee" : "programmee",
+    inscriptions: nombre(s.inscriptions),
+    inscrit: s.inscrit === true,
+  };
+}
+
 export function versPublication(l: Ligne): Publication {
   const auteur = un(l.auteur);
   const espace = un(l.espace);
@@ -98,6 +115,7 @@ export function versPublication(l: Ligne): Publication {
     enregistree: l.enregistree === true,
     aimeePar: textes(l.aimee_par),
     video: videoRangee(l.video),
+    session: versSessionPublication(l.session),
   };
 }
 

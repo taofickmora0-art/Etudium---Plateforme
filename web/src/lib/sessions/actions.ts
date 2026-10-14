@@ -3,7 +3,8 @@
 import { refresh } from "next/cache";
 import { exigerEditeur, SESSION_EXPIREE } from "@/lib/admin/garde";
 import { getShellUser } from "@/lib/auth/current-user";
-import { estFonctionAbsente, liste } from "@/lib/contenus/lecture";
+import { reconnaitreVideo } from "@/lib/communaute/video";
+import { estFonctionAbsente, liste, un } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import { versCarte } from "./data";
 import { debutDepuis, refusSession } from "./regles";
@@ -14,13 +15,16 @@ import type { DonneesSession, SessionCarte, VueSessions } from "./types";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MIGRATION = "Appliquez la migration 0018 (guide « Ce qui te revient », section 23).";
+const MIGRATION_PROMOTION = "Appliquez la migration 0024 (guide « Ce qui te revient », section 29).";
+const DEUX_VISUELS = "Choisissez une affiche ou une vidéo, pas les deux.";
+const ADRESSE_VIDEO = "Collez l’adresse complète de la vidéo (https://…).";
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 const VUES: VueSessions[] = ["a_venir", "inscriptions", "passees"];
 type Erreur = { code?: string; message?: string };
 type Resultat = { ok: boolean; message?: string };
 
-function message(error: Erreur): string {
-  if (estFonctionAbsente(error)) return MIGRATION;
+function message(error: Erreur, avecVisuel = false): string {
+  if (estFonctionAbsente(error)) return avecVisuel ? MIGRATION_PROMOTION : MIGRATION;
   if (error.code === "P0001" && error.message) return error.message.replace(/'/g, "’");
   if (error.code === "42501" && error.message) return error.message;
   return ECHEC;
@@ -56,6 +60,21 @@ export async function seDesinscrire(id: string): Promise<Resultat> {
   return inscription("se_desinscrire_session", id);
 }
 
+/**
+ * Le visuel de promotion (spec promotion des sessions live, §1) : transmis seulement s'il y en a un, pour qu'une session
+ * sans visuel se programme aussi avant la 0024. Sans paramètre, la base retire le visuel d'une session modifiée.
+ */
+function visuel(d: DonneesSession): { refus: string } | { p_image?: DonneesSession["image"]; p_video?: object } {
+  const adresse = d.video?.trim() || null;
+  if (d.image && adresse) return { refus: DEUX_VISUELS };
+  if (adresse) {
+    const video = reconnaitreVideo(adresse);
+    return video ? { p_video: video } : { refus: ADRESSE_VIDEO };
+  }
+  if (d.image) return { p_image: { chemin: d.image.chemin, nom: d.image.nom, type: d.image.type, taille: d.image.taille } };
+  return {};
+}
+
 function parametres(d: DonneesSession, equipe: boolean) {
   return {
     p_titre: d.titre.trim(),
@@ -75,8 +94,10 @@ export async function creerSession(d: DonneesSession): Promise<{ ok: true; id: s
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   const refus = refusSession(d, new Date());
   if (refus) return { ok: false, message: refus };
-  const { data, error } = await garde.supabase.rpc("creer_session", parametres(d, garde.equipe));
-  if (error) return { ok: false, message: message(error) };
+  const promo = visuel(d);
+  if ("refus" in promo) return { ok: false, message: promo.refus };
+  const { data, error } = await garde.supabase.rpc("creer_session", { ...parametres(d, garde.equipe), ...promo });
+  if (error) return { ok: false, message: message(error, Object.keys(promo).length > 0) };
   refresh();
   return { ok: true, id: String(data) };
 }
@@ -88,10 +109,25 @@ export async function modifierSession(id: string, d: DonneesSession): Promise<Re
   if (!UUID.test(id)) return { ok: false, message: ECHEC };
   const refus = refusSession(d, new Date(), { verifierDebut: false });
   if (refus) return { ok: false, message: refus };
-  const { error } = await garde.supabase.rpc("modifier_session", { p_session: id, ...parametres(d, garde.equipe) });
-  if (error) return { ok: false, message: message(error) };
+  const promo = visuel(d);
+  if ("refus" in promo) return { ok: false, message: promo.refus };
+  // L'affiche d'avant : une fois remplacée ou retirée, elle n'est plus jointe à rien et quitte le stockage.
+  const avant = await affichePrecedente(garde.supabase, id);
+  const { error } = await garde.supabase.rpc("modifier_session", { p_session: id, ...parametres(d, garde.equipe), ...promo });
+  if (error) return { ok: false, message: message(error, Object.keys(promo).length > 0) };
+  if (avant && avant !== promo.p_image?.chemin) await garde.supabase.storage.from("communaute").remove([avant]).catch(() => undefined);
   refresh();
   return { ok: true };
+}
+
+async function affichePrecedente(supabase: Awaited<ReturnType<typeof createClient>>, id: string): Promise<string | null> {
+  try {
+    const { data } = await supabase.rpc("session_detail", { p_session: id });
+    const chemin = un(un(data)?.promo_image)?.chemin;
+    return typeof chemin === "string" && chemin ? chemin : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Annuler une session : ses inscrits sont prévenus. */

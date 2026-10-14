@@ -69,6 +69,8 @@ const DETAIL: SessionDetail = {
   statut: "programmee",
   annuleeLe: null,
   inscrits: [{ prenom: "Fifamè", nom: "Adjovi" }],
+  promoImage: null,
+  promoVideo: null,
 };
 const PARCOURS = [{ id: P, nomCourt: "Académique" }];
 const avecToast = (enfant: React.ReactNode) => render(<ToastProvider>{enfant}</ToastProvider>);
