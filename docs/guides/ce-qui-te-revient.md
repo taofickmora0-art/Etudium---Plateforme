@@ -456,6 +456,8 @@ Un compte a l’espace étudiant, plus soit l’espace formateur, soit le back-o
 
 ## 24. Valider la communauté, 20 minutes
 
+> Depuis le fil « Actualités » (section 26), quelques libellés ont changé : l’onglet **Actualités** s’ouvre d’abord, le champ est fermé (« Quoi de neuf, … ? »), « Répondre… » devient « Écrire un commentaire… », et « Membres actifs » laisse la place à « Activités récentes ».
+
 L’espace général est ouvert à tout compte connecté. L’espace d’un parcours est ouvert à qui a commencé une formation de ce parcours (il en a ouvert une leçon), au formateur d’une formation du parcours et à l’équipe. Le signalement et la vérification automatique des publications arrivent avec la partie Modération.
 
 1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0019_communaute.sql` (après la 0018). Elle crée aussi l’espace de stockage privé « communaute » des fichiers joints : rien à faire dans le tableau de bord.
@@ -502,3 +504,27 @@ L'analyse automatique envoie chaque nouvelle publication à une IA (Claude, d'An
 7. **Sans la clé.** Retire `ANTHROPIC_API_KEY` de `web/.env.local` et relance : une nouvelle publication affiche « Publication envoyée » et attend l'équipe (« En attente de vérification » pour son auteur seul) ; le bloc de la file le signale. **Garder** la met en ligne. Remets la clé et relance.
 8. **Désactiver** (bloc « Analyse automatique ») : les publications paraissent de nouveau sans vérification. Réactive-la ensuite.
 9. **Politique de confidentialité** : quand tu la rédigeras, indique que les publications de la communauté sont analysées par un service d'IA (Anthropic) pour la modération.
+
+## 26. Valider le fil « Actualités », 30 minutes
+
+La communauté prend la forme des captures « izimentor » : l'onglet **Actualités** rassemble tous les espaces, une annonce épinglée (vidéo ou affiche) s'affiche en haut, les liens donnent un aperçu, et la colonne de droite montre les publications tendances et les activités récentes.
+
+1. **La migration.** D'abord, rejoue la **0020 actuelle** (`web/supabase/migrations/0020_moderation.sql`) : celle de ta base est une version précédente. Puis applique `web/supabase/migrations/0021_communaute_actualites.sql`. Si tu rejoues un jour la 0019 ou la 0020, rejoue la 0021 juste après.
+2. **L'annonce.** Avec ton compte : Back-office → **Communauté** (groupe Plateforme).
+   - Allume **Afficher l’annonce**, écris un titre et un texte, laisse **Vidéo YouTube** et colle l'adresse d'une vidéo (par exemple une vidéo de la chaîne Étudium). L'aperçu à droite suit ta saisie. **Enregistrer** : « Annonce enregistrée ».
+   - Avec le compte étudiant : **Communauté**. L'annonce est en haut des **Actualités**, avec « Annonce épinglée ». Le bouton Lecture charge la vidéo. Elle n'est pas dans l'onglet **Général**.
+   - De retour au back-office : **Affiche** → une image (JPEG, PNG ou WebP, 10 Mo au plus) → **Enregistrer**. Dans la Communauté, l'affiche remplace la vidéo.
+   - **Qui la voit** → « Les membres d’un parcours » → un parcours que l'étudiant n'a pas commencé → **Enregistrer** : l'étudiant ne la voit plus. Le formateur de ce parcours, lui, la voit.
+   - Pour toi (l'équipe), la carte de l'annonce porte **⋯** « Gérer l’annonce », qui ramène à cette page.
+   - **Retirer l’annonce**, puis confirme : elle disparaît du fil.
+3. **Les liens.** Avec le compte étudiant, dans **Actualités** : clique « Quoi de neuf, … ? », puis publie trois messages :
+   - un lien Google Meet (`https://meet.google.com/…`) : le lien est cliquable, et une carte « meet.google.com » s'affiche avec une caméra ;
+   - un lien YouTube : l'image de la vidéo et le bouton Lecture ; la vidéo se lit dans la publication, et **Regarder sur YouTube** l'ouvre sur YouTube ;
+   - un site quelconque (un article de presse, par exemple) : sa carte avec image, domaine, titre et description. Un site qui ne répond pas donne une publication sans carte.
+   - La carte apparaît aussitôt. Si tu modifies le texte (⋮ → **Modifier**), la carte suit le nouveau lien.
+4. **Commenter.** Avec le compte formateur, sur une de ces publications : la bulle **Commenter** amène au champ « Écrire un commentaire… ». Les deux derniers commentaires s'affichent en bulles sous la publication ; au-delà, **Voir les N commentaires**. Sous chaque bulle : **Signaler** et **Supprimer** (selon les droits).
+5. **J’aime et les initiales.** Le cœur devient bleu ; à droite du pied de la publication, les initiales des trois derniers qui aiment et « 1 J’aime · 2 commentaires ».
+6. **Trier et enregistrer.** « Trier par : » → **Les plus populaires** (les plus aimées et commentées du mois) ; puis le signet d'une publication (« Publication enregistrée ») et **Mes enregistrements** : elle s'y trouve. Un second clic sur le signet la retire.
+7. **La colonne de droite** (grand écran ; sous le fil sinon) : **Publications tendances** (les plus aimées et commentées de la semaine), **Activités récentes** (« Koffi D. a publié « … » », « … a commenté « … » », le moment en bleu), puis **Prochaine session**. Chaque ligne ouvre la publication.
+8. **Sur ton téléphone** (`http://192.168.0.3:3000`) : les onglets défilent du doigt. Le bouton **≡** ouvre le menu, avec le groupe **Espaces de la communauté** (Actualités, Général, les parcours, un cadenas sur ceux qui sont fermés) : chaque entrée ouvre son onglet.
+9. **Hors communauté**, le menu ≡ ne montre pas ce groupe. Sur ordinateur, le bouton à gauche du logo réduit toujours la barre latérale à ses icônes.

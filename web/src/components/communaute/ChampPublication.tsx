@@ -172,7 +172,7 @@ export function ChampPublication({
   if (!ouvert) {
     return (
       <div className={`${CADRE} items-center gap-3 px-4 py-3.5 max-sm:gap-2 max-sm:px-3`}>
-        <Avatar initials={moi.initiales} src={moi.photoUrl} size={44} className="max-[359px]:hidden" />
+        <Avatar initials={moi.initiales} src={moi.photoUrl} size={44} />
         <button
           ref={invite}
           type="button"
@@ -181,7 +181,8 @@ export function ChampPublication({
         >
           {moi.prenom ? `Quoi de neuf, ${moi.prenom} ?` : "Quoi de neuf ?"}
         </button>
-        <span className="flex gap-0.5">
+        {/* Sur téléphone, comme le design : l'avatar et « Quoi de neuf » seuls (Image et Fichier sont dans le champ ouvert). */}
+        <span className="flex gap-0.5 max-sm:hidden">
           <IconButton icon={Image01Icon} label="Ajouter une image" variant="discret" onClick={() => image.current?.click()} />
           <IconButton icon={Attachment01Icon} label="Ajouter un fichier" variant="discret" onClick={() => pdf.current?.click()} />
         </span>
