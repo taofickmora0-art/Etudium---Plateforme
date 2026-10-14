@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { unstable_rethrow } from "next/navigation";
 import { PageAdmin } from "@/components/admin/PageAdmin";
 import { TableauDeBordAdmin } from "@/components/admin/TableauDeBordAdmin";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -15,6 +16,8 @@ async function sessionsAVenir(): Promise<number | null> {
     const lecture = await lireSessionsEquipe();
     return lecture.migrationAbsente ? null : lecture.donnees.aVenir.filter((s) => s.statut === "programmee").length;
   } catch (erreur) {
+    // Les interruptions de Next (pré-rendu, rendu dynamique) ne sont pas des échecs : elles repartent.
+    unstable_rethrow(erreur);
     console.error("Lecture des sessions live impossible :", erreur instanceof Error ? erreur.message : erreur);
     return null;
   }

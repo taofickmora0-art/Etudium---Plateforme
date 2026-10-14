@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import { TableauDeBord } from "@/components/accueil/TableauDeBord";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { SessionGuard } from "@/components/layout/SessionGuard";
@@ -34,6 +35,8 @@ async function prochaineSession() {
     const lecture = await lireProchaineSession();
     return lecture.migrationAbsente ? null : lecture.donnees;
   } catch (erreur) {
+    // Les interruptions de Next (pré-rendu, rendu dynamique) ne sont pas des échecs : elles repartent.
+    unstable_rethrow(erreur);
     console.error("Lecture de la prochaine session impossible :", erreur instanceof Error ? erreur.message : erreur);
     return null;
   }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import { Certificate01Icon, CourseIcon, Target02Icon, UserMultipleIcon } from "@hugeicons/core-free-icons";
 import { PageAdmin } from "@/components/admin/PageAdmin";
 import { AVENIR, Carte, GRILLE_CHIFFRES, RANGEE, Tuile } from "@/components/tableau/Blocs";
@@ -33,6 +34,8 @@ async function prochaineSession(): Promise<{ ligne: LigneSessionEdition | null; 
     const detail = await lireSessionDetail(ligne.id);
     return { ligne, inscrits: detail.migrationAbsente || !detail.donnees ? [] : detail.donnees.inscrits };
   } catch (erreur) {
+    // Les interruptions de Next (pré-rendu, rendu dynamique) ne sont pas des échecs : elles repartent.
+    unstable_rethrow(erreur);
     console.error("Lecture des sessions du formateur impossible :", erreur instanceof Error ? erreur.message : erreur);
     return undefined;
   }

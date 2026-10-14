@@ -429,3 +429,24 @@ Un compte a l’espace étudiant, plus soit l’espace formateur, soit le back-o
 4. Avec le troisième compte : la cloche dit « Vous êtes formateur ». Rond de profil → **Espace formateur** → **Mes formations** : crée une formation tout de suite, sans aucun message de fiche. Back-office → **Formateurs** : sa fiche est là, à son nom.
 5. Remets-lui le rôle **Étudiant** : l’espace formateur disparaît de son rond de profil, et sa formation reste (Back-office → Formations). S’il redevient formateur, il retrouve sa fiche et sa formation.
 6. Sur ta propre fiche (Utilisateurs → ton compte), choisis **Admin** : la base refuse, « Vous ne pouvez pas vous retirer le rôle super admin. ».
+
+## 23. Valider les sessions live, 20 minutes
+
+1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0018_sessions_live.sql` (après la 0017).
+2. **Programmer.** Avec le compte formateur : **Espace formateur** → **Sessions live** → **Nouvelle session**.
+   - Programme une session qui commence **dans 15 minutes**, avec un vrai lien Google Meet (crée-le dans Google Meet, « Nouvelle réunion »).
+   - Programme une deuxième session pour **demain**.
+   - Les autres comptes reçoivent « Nouvelle session live : … » dans la cloche ; le formateur, non.
+3. **S’inscrire.** Avec le compte étudiant : menu **Événements**.
+   - Les deux sessions, avec leur date, « Google Meet » et le formateur.
+   - **Je m’inscris** sur celle de demain : la fenêtre « Inscription confirmée » ; **Ajouter à mon agenda** télécharge un fichier à ouvrir dans ton agenda.
+   - L’**Accueil** montre la carte « Prochaine session live ».
+4. **Rejoindre.** Reste sur la page Événements : 10 minutes avant le début de la première session, **Rejoindre** apparaît sans recharger la page, même pour un compte qui ne s’est pas inscrit. Le bouton ouvre Google Meet.
+5. **Le rappel.** Inscris le compte étudiant à la première session, avant qu’elle commence : le rappel arrive dans la cloche s’il reste moins d’1 h. Pour celle de demain, le rappel de la veille arrive quand le compte ouvre l’application, à moins de 24 h du début.
+6. **Modifier et annuler.** Avec le formateur : ouvre la session de demain (Sessions live → son titre).
+   - La liste « Inscriptions » montre le compte étudiant (prénom et nom, sans adresse e-mail).
+   - **Modifier** : change l’heure, **Enregistrer** ; l’étudiant reçoit « Session live modifiée ».
+   - **Annuler la session**, puis confirme : l’étudiant reçoit « Session live annulée » ; dans **Mes inscriptions**, la session est marquée « Annulée ».
+   - Le **tableau de bord** du formateur montre sa prochaine session live.
+7. **Back-office.** Avec ton compte : **Sessions live** (groupe Contenus) liste toutes les sessions. **Nouvelle session** : choisis « Équipe Étudium » comme animateur. Le **tableau de bord** du back-office compte les sessions à venir.
+8. **Sur ton téléphone** (`http://192.168.0.3:3000`) : la page Événements et la carte de l’accueil.
