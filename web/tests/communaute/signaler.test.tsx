@@ -119,7 +119,8 @@ describe("Signaler", () => {
     const user = userEvent.setup({ delay: null });
     vi.mocked(actions.signaler).mockResolvedValueOnce({ ok: true });
     page(lot([pub({ reponses: 1, dernieresReponses: [rep()] })]));
-    await user.click(within(carte()).getByRole("button", { name: "Signaler le commentaire de Awa K." }));
+    await user.click(within(carte()).getByRole("button", { name: "Actions sur le commentaire de Awa K." }));
+    await user.click(screen.getByRole("menuitem", { name: "Signaler" }));
     const fenetre = screen.getByRole("dialog", { name: "Signaler ce commentaire" });
     await user.click(within(fenetre).getByRole("radio", { name: "Spam ou publicité" }));
     await user.click(within(fenetre).getByRole("button", { name: "Envoyer le signalement" }));

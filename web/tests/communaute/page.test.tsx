@@ -355,7 +355,7 @@ describe("La page Communauté", () => {
     expect(screen.getByText("Publication supprimée")).toBeInTheDocument();
   });
 
-  it("J’aime bascule ; Voir les 5 commentaires les déplie ; Commenter ajoute le commentaire ; Supprimer un commentaire", async () => {
+  it("J’aime bascule ; Voir plus de commentaires les déplie ; Commenter ajoute le commentaire ; Supprimer un commentaire", async () => {
     const user = userEvent.setup({ delay: null });
     vi.mocked(actions.aimer).mockResolvedValueOnce({ ok: true, jAime: true, reactions: 25 });
     page(lot([pub({ reactions: 24, reponses: 5, dernieresReponses: [rep("r4", "Quatrième"), rep("r5", "Cinquième")] })]));
@@ -369,10 +369,10 @@ describe("La page Communauté", () => {
       reponses: [rep("r1", "Première"), rep("r2", "Deuxième"), rep("r3", "Troisième"), rep("r4", "Quatrième"), rep("r5", "Cinquième")],
     });
     expect(within(carte()).queryByText("Première")).toBeNull();
-    await user.click(within(carte()).getByRole("button", { name: "Voir les 5 commentaires" }));
+    await user.click(within(carte()).getByRole("button", { name: "Voir plus de commentaires" }));
     expect(actions.chargerReponses).toHaveBeenCalledWith("p1");
     expect(await within(carte()).findByText("Première")).toBeInTheDocument();
-    expect(within(carte()).queryByRole("button", { name: "Voir les 5 commentaires" })).toBeNull();
+    expect(within(carte()).queryByRole("button", { name: "Voir plus de commentaires" })).toBeNull();
 
     vi.mocked(actions.repondre).mockResolvedValueOnce({
       ok: true,
@@ -390,7 +390,8 @@ describe("La page Communauté", () => {
     expect(within(carte()).getByRole("textbox", { name: "Écrire un commentaire" })).toHaveValue("");
 
     vi.mocked(actions.supprimerReponse).mockResolvedValueOnce({ ok: true });
-    await user.click(within(carte()).getByRole("button", { name: "Supprimer le commentaire de Koffi D." }));
+    await user.click(within(carte()).getByRole("button", { name: "Actions sur le commentaire de Koffi D." }));
+    await user.click(screen.getByRole("menuitem", { name: "Supprimer" }));
     expect(actions.supprimerReponse).toHaveBeenCalledWith("r9");
     await waitFor(() => expect(within(carte()).queryByText("Merci !")).toBeNull());
     expect(within(carte()).getByText("25 J’aime · 5 commentaires")).toBeInTheDocument();
@@ -421,10 +422,14 @@ describe("La page Communauté", () => {
         }),
       ]),
     );
-    const corbeille = (nom: string) => within(carte()).getByRole("button", { name: `Supprimer le commentaire de ${nom}` });
-    await user.click(corbeille("Awa K."));
-    expect(corbeille("Awa K.")).toBeDisabled();
-    await user.click(corbeille("Sènami D."));
+    // Supprimer passe par le menu ⋮ du commentaire ; pendant l'envoi, ses boutons sont désactivés.
+    const supprimer = async (nom: string) => {
+      await user.click(within(carte()).getByRole("button", { name: `Actions sur le commentaire de ${nom}` }));
+      await user.click(screen.getByRole("menuitem", { name: "Supprimer" }));
+    };
+    await supprimer("Awa K.");
+    expect(within(carte()).getByRole("button", { name: "J’aime le commentaire de Awa K." })).toBeDisabled();
+    await supprimer("Sènami D.");
     await act(async () => finir.a());
     await act(async () => finir.b());
     expect(within(carte()).queryByText("Première")).toBeNull();
@@ -433,7 +438,7 @@ describe("La page Communauté", () => {
 
     await user.type(within(carte()).getByRole("textbox", { name: "Écrire un commentaire" }), "Merci !");
     await user.click(within(carte()).getByRole("button", { name: "Envoyer le commentaire" }));
-    await user.click(corbeille("Rodrigue H."));
+    await supprimer("Rodrigue H.");
     await act(async () => finir.c());
     await act(async () => finir.envoi());
     expect(within(carte()).getByText("Merci !")).toBeInTheDocument();
