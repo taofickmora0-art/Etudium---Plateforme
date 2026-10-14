@@ -66,7 +66,7 @@ export function CarteProchaineSession({ session }: { session: ProchaineSession }
           {s.initiales.length > 0 && (
             <span className="flex -space-x-2">
               {s.initiales.map((initiales, i) => (
-                <Avatar key={`${initiales}-${i}`} initials={initiales} size={28} />
+                <Avatar key={`${initiales}-${i}`} initials={initiales} size={32} />
               ))}
             </span>
           )}
