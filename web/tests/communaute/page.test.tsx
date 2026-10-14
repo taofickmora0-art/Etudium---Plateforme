@@ -267,6 +267,8 @@ describe("La page Communauté", () => {
 
     const moi = carte("Koffi Dossou");
     expect(within(moi).getByText("Vous")).toBeInTheDocument();
+    // « Vous » comme le design : gris-bleu, sans cadenas.
+    expect(within(moi).getByText("Vous").querySelector("svg")).toBeNull();
     expect(within(moi).getByText("Espace Académique · il y a 2 jours")).toBeInTheDocument();
     expect(within(moi).getByRole("img", { name: "affiche.png" })).toHaveAttribute("src", "https://stockage/affiche.png");
   });
@@ -411,6 +413,7 @@ describe("La page Communauté", () => {
     expect(screen.getByRole("link", { name: "Voir la session" })).toHaveAttribute("href", "/evenements");
     expect(screen.getByRole("heading", { level: 2, name: "Membres actifs" })).toBeInTheDocument();
     expect(screen.getAllByRole("listitem").map((l) => l.textContent)).toEqual(["KDKoffi D.Académique", "AKAwa K.Général"]);
+    expect(screen.getByText("Général").querySelector("svg")).toBeNull();
     unmount();
     render(<ColonneCommunaute session={null} membres={[]} espaces={ESPACES} />);
     expect(screen.getByText("Aucune session programmée pour l’instant.")).toBeInTheDocument();

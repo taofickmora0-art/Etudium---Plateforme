@@ -20,7 +20,7 @@ const TONS_PARCOURS: Record<string, TagTone> = { academique: "academique", digit
 /** L'étiquette d'un espace d'après sa couleur de parcours ; gris pour le général. */
 export function tonEspace(nomCourt: string, espaces: Espace[]): TagTone {
   const couleur = espaces.find((e) => e.nomCourt === nomCourt)?.couleur;
-  return (couleur && TONS_PARCOURS[couleur]) || "verrouillee";
+  return (couleur && TONS_PARCOURS[couleur]) || "enAttente";
 }
 
 /** L'adresse absolue d'une publication : celle que copie « Copier le lien ». */

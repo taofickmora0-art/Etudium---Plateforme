@@ -476,3 +476,29 @@ L’espace général est ouvert à tout compte connecté. L’espace d’un parc
 6. **L’équipe.** Avec ton compte : tous les onglets sont ouverts. Sur la publication d’un autre compte, **⋮** propose **Supprimer** (pas Modifier) ; la corbeille d’une réponse la supprime aussi.
 7. **La colonne de droite** (sur un grand écran ; sous le fil sinon) : « Prochaine session » avec **Voir la session**, et « Membres actifs », les trois comptes qui ont le plus écrit cette semaine.
 8. **Sur ton téléphone** (`http://192.168.0.3:3000`) : publie avec une photo prise sur le moment. **Copier le lien** peut y dire « Le lien n’a pas pu être copié. » : sur une adresse en `http://` autre que `localhost`, le navigateur bloque le presse-papiers ; en ligne (`https://`), il fonctionnera.
+
+## 25. Valider la modération, 30 minutes
+
+L'analyse automatique envoie chaque nouvelle publication à une IA (Claude, d'Anthropic), qui l'autorise, la signale à l'équipe ou la bloque. Les membres signalent aussi publications et réponses. Tout arrive au back-office, dans **Modération**.
+
+1. Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0020_moderation.sql` (après la 0019). Si tu rejoues un jour la 0019, rejoue la 0020 juste après.
+2. **La clé et le jeton** (toi seul les vois ; ne me les envoie jamais) :
+   - sur console.anthropic.com, crée un compte, ajoute un peu de crédit, puis **API Keys** → **Create Key** ;
+   - dans l'éditeur SQL de Supabase : `select jeton from public.reglages_moderation;` ;
+   - dans `web/.env.local`, ajoute deux lignes : `ANTHROPIC_API_KEY=` suivi de la clé, et `MODERATION_JETON=` suivi du jeton (voir `web/.env.example`) ;
+   - arrête puis relance l'application.
+3. **Activer.** Avec ton compte : Back-office → **Modération**. Le bloc « Analyse automatique » dit « Clé de l’IA : présente » et « Jeton de modération : reconnu ». Clique **Activer l’analyse automatique**. Dans la Communauté, le champ dit désormais « Les publications sont vérifiées automatiquement. ».
+4. **Trois publications de test**, avec le compte étudiant :
+   - une normale (« Quelqu’un a un conseil pour le plan de mon mémoire ? ») : elle paraît ;
+   - une arnaque (« Envoyez 5 000 F par Mobile Money à ce numéro pour recevoir 50 000 F demain ») : elle est refusée, avec la catégorie dans le message ; elle apparaît dans l'onglet **Bloquées** de la file ;
+   - une douteuse (un lien vers un site inconnu et une promotion insistante) : elle paraît, et arrive dans **À examiner** avec la raison de l'IA. Ta cloche affiche « À modérer ».
+   - L'IA peut juger autrement d'une fois à l'autre : si la douteuse passe, essaie une formulation plus appuyée.
+5. **Signaler.** Avec le compte formateur, sur une publication du compte étudiant : **⋮** → **Signaler** → « Spam ou publicité » → **Envoyer le signalement** ; puis le drapeau d'une réponse. Un second signalement du même contenu est refusé. Ta cloche n'affiche « À modérer » qu'au premier signalement de chaque contenu.
+6. **La file.** Back-office → Modération :
+   - **Garder** : le contenu quitte la file ;
+   - **Supprimer**, puis confirme : il disparaît de la Communauté, et son auteur reçoit « Publication retirée » (ou « Réponse retirée ») ;
+   - onglet **Bloquées** → **Rétablir** : l'arnaque de test paraît, et son auteur reçoit « Publication en ligne ». Supprime-la ensuite.
+   - Le **tableau de bord** du back-office montre « Contenus à examiner » et le lien vers la file.
+7. **Sans la clé.** Retire `ANTHROPIC_API_KEY` de `web/.env.local` et relance : une nouvelle publication affiche « Publication envoyée » et attend l'équipe (« En attente de vérification » pour son auteur seul) ; le bloc de la file le signale. **Garder** la met en ligne. Remets la clé et relance.
+8. **Désactiver** (bloc « Analyse automatique ») : les publications paraissent de nouveau sans vérification. Réactive-la ensuite.
+9. **Politique de confidentialité** : quand tu la rédigeras, indique que les publications de la communauté sont analysées par un service d'IA (Anthropic) pour la modération.

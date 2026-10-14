@@ -117,6 +117,7 @@ describe("La file", () => {
     expect(onglet("À examiner (4)")).toHaveAttribute("aria-pressed", "true");
     const pub = screen.getByRole("article", { name: "Publication de Jules Kossou" });
     expect(within(pub).getByRole("link", { name: "Jules Kossou" })).toHaveAttribute("href", "/admin/utilisateurs/a1");
+    expect(within(pub).getByText("Publication").querySelector("svg")).toBeNull();
     expect(within(pub).getByText("Espace Académique · il y a 2 h")).toBeInTheDocument();
     expect(within(pub).getByText("Gagnez vite")).toBeInTheDocument();
     expect(within(pub).getByText("Cliquez ici")).toBeInTheDocument();

@@ -70,7 +70,7 @@ export function ElementModeration({
   return (
     <article aria-label={`${reponse ? "Réponse" : "Publication"} de ${nom}`} className="box-border flex min-w-0 flex-col gap-3 rounded-2xl border border-bordure-carte bg-panneau px-5 py-[18px]">
       <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-        <Tag tone="verrouillee">{reponse ? "Réponse" : "Publication"}</Tag>
+        <Tag tone="enAttente">{reponse ? "Réponse" : "Publication"}</Tag>
         <Link href={`/admin/utilisateurs/${e.auteur.id}`} className="focus-etudium min-w-0 text-[15px] leading-[22px] font-semibold wrap-anywhere text-encre no-underline hover:underline">
           {nom}
         </Link>

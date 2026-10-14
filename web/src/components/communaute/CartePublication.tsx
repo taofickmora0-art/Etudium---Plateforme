@@ -35,7 +35,7 @@ const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 const pluriel = (n: number, mot: string) => `${n.toLocaleString("fr-FR")} ${mot}${n > 1 ? "s" : ""}`;
 
 function Etiquette({ publication }: { publication: Publication }) {
-  if (publication.estMoi) return <Tag tone="verrouillee">Vous</Tag>;
+  if (publication.estMoi) return <Tag tone="enAttente">Vous</Tag>;
   if (publication.auteur.role === "formateur") return <Tag tone="complementaire">Formateur</Tag>;
   if (publication.auteur.role === "equipe") return <Tag tone="nouveau">Équipe Étudium</Tag>;
   return null;
