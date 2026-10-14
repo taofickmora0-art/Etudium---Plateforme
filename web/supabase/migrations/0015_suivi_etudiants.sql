@@ -194,6 +194,7 @@ begin
         'etat', public.etat_suivi(s.terminees, s.total, s.derniere_activite, p_maintenant),
         'modules', (
           select coalesce(jsonb_agg(jsonb_build_object(
+            'id', m.id,
             'titre', m.titre,
             'lecons', (
               select coalesce(jsonb_agg(jsonb_build_object(
@@ -335,6 +336,7 @@ begin
         'etudiant_id', r.etudiant,
         'prenom', r.prenom,
         'nom', r.nom,
+        'formation_id', r.formation,
         'formation_titre', r.formation_titre,
         'jours', floor(extract(epoch from (p_maintenant - r.derniere_activite)) / 86400)::integer,
         'pourcentage', case when r.total > 0 then round(r.terminees::numeric * 100 / r.total)::integer else 0 end

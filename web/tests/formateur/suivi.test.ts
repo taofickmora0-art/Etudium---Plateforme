@@ -61,7 +61,7 @@ describe("Lectures du suivi", () => {
             secondes: 90,
             derniere_activite: "2026-10-13T08:00:00+00:00",
             etat: "en_cours",
-            modules: [{ titre: "Module 1", lecons: [{ id: "l1", titre: "Leçon 1", etat: "terminee", terminee_le: "2026-10-12T08:00:00+00:00", secondes: 90 }] }],
+            modules: [{ id: "m1", titre: "Module 1", lecons: [{ id: "l1", titre: "Leçon 1", etat: "terminee", terminee_le: "2026-10-12T08:00:00+00:00", secondes: 90 }] }],
           },
         ],
         remarque: { texte: "Progresse bien.", modifiee_le: "2026-10-13T09:00:00+00:00" },
@@ -82,7 +82,7 @@ describe("Lectures du suivi", () => {
             secondes: 90,
             derniereActivite: "2026-10-13T08:00:00+00:00",
             etat: "en_cours",
-            modules: [{ titre: "Module 1", lecons: [{ id: "l1", titre: "Leçon 1", etat: "terminee", termineeLe: "2026-10-12T08:00:00+00:00", secondes: 90 }] }],
+            modules: [{ id: "m1", titre: "Module 1", lecons: [{ id: "l1", titre: "Leçon 1", etat: "terminee", termineeLe: "2026-10-12T08:00:00+00:00", secondes: 90 }] }],
           },
         ],
         remarque: { texte: "Progresse bien.", modifieeLe: "2026-10-13T09:00:00+00:00" },
@@ -100,7 +100,7 @@ describe("Lectures du suivi", () => {
         formations: { total: 3, brouillons: 1 },
         etudiants: { total: 4, ce_mois: 3 },
         progression_moyenne: 38,
-        a_risque: [{ etudiant_id: E, prenom: "Fifamè", nom: "Adjovi", formation_titre: "Excel", jours: 14, pourcentage: 22 }],
+        a_risque: [{ etudiant_id: E, prenom: "Fifamè", nom: "Adjovi", formation_id: X, formation_titre: "Excel", jours: 14, pourcentage: 22 }],
         formations_detail: [
           { id: X, titre: "Excel", statut: "brouillon", envoyee_le: "2026-10-13T08:00:00+00:00", renvoyee_le: null, inscrits: 2, progression_moyenne: 50, completion: 50, note_moyenne: 4.8, nb_avis: 12 },
         ],
@@ -113,7 +113,7 @@ describe("Lectures du suivi", () => {
         formations: { total: 3, brouillons: 1 },
         etudiants: { total: 4, ceMois: 3 },
         progressionMoyenne: 38,
-        aRisque: [{ etudiantId: E, prenom: "Fifamè", nom: "Adjovi", formationTitre: "Excel", jours: 14, pourcentage: 22 }],
+        aRisque: [{ etudiantId: E, prenom: "Fifamè", nom: "Adjovi", formationId: X, formationTitre: "Excel", jours: 14, pourcentage: 22 }],
         formationsDetail: [
           {
             id: X,

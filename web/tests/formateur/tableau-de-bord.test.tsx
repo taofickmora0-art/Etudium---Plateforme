@@ -17,7 +17,7 @@ const DONNEES: Donnees = {
   formations: { total: 3, brouillons: 1 },
   etudiants: { total: 428, ceMois: 36 },
   progressionMoyenne: 67,
-  aRisque: [{ etudiantId: "e1", prenom: "Fifamè", nom: "Agossou", formationTitre: "Maîtriser Microsoft Excel", jours: 14, pourcentage: 22 }],
+  aRisque: [{ etudiantId: "e1", prenom: "Fifamè", nom: "Agossou", formationId: "f1", formationTitre: "Maîtriser Microsoft Excel", jours: 14, pourcentage: 22 }],
   formationsDetail: [
     { id: "f1", titre: "Maîtriser Microsoft Excel", etat: "publiee", inscrits: 214, progressionMoyenne: 71, completion: 38, noteMoyenne: 4.8, nbAvis: 12 },
     { id: "f2", titre: "Power Query pour débutants", etat: "brouillon", inscrits: 0, progressionMoyenne: null, completion: null, noteMoyenne: null, nbAvis: 0 },
@@ -55,6 +55,16 @@ describe("Tableau de bord du formateur", () => {
     expect(carte).toHaveTextContent("Fifamè Agossou");
     expect(carte).toHaveTextContent("Aucune activité depuis 14 jours · Maîtriser Microsoft Excel 22 %");
     expect(within(carte).getByRole("link", { name: "Voir le suivi de Fifamè Agossou" })).toHaveAttribute("href", "/formateur/etudiants/e1");
+  });
+
+  it("un étudiant à risque sur deux formations de même titre : aucune clé en double", async () => {
+    const erreurs = vi.spyOn(console, "error").mockImplementation(() => {});
+    const risque = (formationId: string) => ({ etudiantId: "e1", prenom: "Fifamè", nom: "Agossou", formationId, formationTitre: "Excel", jours: 14, pourcentage: 22 });
+    lireTableauDeBordFormateur.mockResolvedValue({ migrationAbsente: false, donnees: { ...DONNEES, aRisque: [risque("f1"), risque("f2")] } });
+    render(await TableauDeBordFormateur());
+    expect(within(screen.getByRole("region", { name: "Étudiants à risque" })).getAllByRole("listitem")).toHaveLength(2);
+    expect(erreurs.mock.calls.some((c) => String(c[0]).includes("same key"))).toBe(false);
+    erreurs.mockRestore();
   });
 
   it("aucun étudiant à risque : le message", async () => {

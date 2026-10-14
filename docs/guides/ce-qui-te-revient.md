@@ -377,14 +377,19 @@ Pas de migration pour cette tâche : il faut seulement que la 0003 à la 0009 so
 ## 20. Valider le suivi des étudiants et le tableau de bord du formateur, 20 minutes
 
 1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0015_suivi_etudiants.sql` (après la 0014).
-2. Il te faut un **troisième compte**, sans rôle. Ton compte (équipe) et celui du formateur ne comptent pas comme étudiants. Inscris-en un nouveau dans une autre fenêtre privée (ou un autre navigateur).
-3. Avec ce compte : ouvre la formation publiée du compte de test (section 19), ouvre une leçon, regarde un peu de la vidéo, termine-la.
+2. Prépare la formation du compte de test (section 19), avec ton compte, au back-office :
+   - qu’elle soit **gratuite** (onglet Informations), sinon le troisième compte ne pourra pas ouvrir ses leçons ;
+   - qu’elle ait **deux leçons** : la leçon vidéo, et une leçon de texte, sans vidéo. Le formateur peut ajouter la seconde depuis son espace.
+3. Il te faut un **troisième compte**, sans rôle. Ton compte (équipe) et celui du formateur ne comptent pas comme étudiants. Inscris-en un nouveau dans une autre fenêtre privée, ou un autre navigateur. Avec ce compte :
+   - ouvre la leçon vidéo et regarde quelques secondes (une leçon vidéo ne se termine qu’après avoir regardé la plus grande partie de la vidéo) ;
+   - ouvre la leçon de texte et clique **Marquer comme terminée**.
 4. Avec le compte de test (formateur), **Espace formateur** :
-   - le tableau de bord du design : « Bonjour … », les chiffres (Formations, Étudiants « +1 ce mois », Progression moyenne), et le tableau « Mes formations » (Inscrits 1, progression, taux de complétion, statut, Modifier) ;
+   - le tableau de bord du design : « Bonjour … », les chiffres (Formations, Étudiants « +1 ce mois », Progression moyenne 50 %) ;
+   - le tableau « Mes formations » : Inscrits 1, progression 50 %, taux de complétion 0 %, statut, Modifier ;
    - « Étudiants à risque » : « Aucun étudiant à risque. » (il faut plus de 10 jours sans activité).
-5. **Étudiants** (menu) : la ligne du troisième compte, avec sa formation, « 1 / N », la date et l’état « En cours ».
-   - Essaie le filtre « Terminés » et la recherche par son prénom. L’adresse de la page ne change pas.
-6. Clique sur son nom : ses leçons (« Terminée le … », « Pas encore ouverte »), le temps de vidéo, la mention du lot 3.
+5. **Étudiants** (menu) : la ligne du troisième compte, avec sa formation, « 1 / 2 », la date et l’état « En cours ».
+   - Essaie le filtre « Terminés » (vide) et la recherche par son prénom. L’adresse de la page ne change pas.
+6. Clique sur son nom : ses leçons (« Terminée le … » pour la leçon de texte, « Ouverte » pour la vidéo), le temps de vidéo, la mention du lot 3.
    - Écris une **remarque privée**, **Enregistrer** : « Remarque enregistrée ». Recharge : elle est là, avec sa date.
 7. Avec ton compte : Back-office → **Utilisateurs** → le troisième compte : la section « Remarques des formateurs » montre la remarque, avec le nom de la fiche formateur.
 8. Avec le troisième compte : rien de cette remarque n’apparaît nulle part.

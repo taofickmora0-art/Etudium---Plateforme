@@ -63,7 +63,7 @@ export async function FicheEtudiant({ id }: { id: string }) {
               <span className="text-[13px] leading-5 text-discret">{`Dernière activité le ${dateCourte(f.derniereActivite)}`}</span>
             </div>
             {f.modules.map((m) => (
-              <div key={m.titre} className="flex flex-col gap-2">
+              <div key={m.id} className="flex flex-col gap-2">
                 <h3 className="m-0 text-[15px] leading-[22px] font-semibold text-encre">{m.titre}</h3>
                 <ul className="m-0 flex list-none flex-col p-0">
                   {m.lecons.map((l) => (

@@ -55,6 +55,7 @@ const SUIVI: SuiviEtudiant = {
       etat: "en_cours",
       modules: [
         {
+          id: "m1",
           titre: "Les bases",
           lecons: [
             { id: "l1", titre: "Découvrir l’interface", etat: "terminee", termineeLe: "2026-10-12T08:00:00Z", secondes: 90 },
@@ -135,6 +136,17 @@ describe("Fiche d'un étudiant", () => {
     expect(screen.getByText("Ouverte")).toBeInTheDocument();
     expect(screen.getByText("Pas encore ouverte")).toBeInTheDocument();
     expect(screen.getByText("Quiz, exercices et certificat : disponibles au lot 3.")).toBeInTheDocument();
+  });
+
+  it("deux modules de même titre : aucune clé en double (l'affichage reste juste après un enregistrement)", async () => {
+    const erreurs = vi.spyOn(console, "error").mockImplementation(() => {});
+    const unModule = (id: string, lecon: string) => ({ id, titre: "Intro", lecons: [{ id: lecon, titre: `Leçon ${lecon}`, etat: "ouverte" as const, termineeLe: null, secondes: 0 }] });
+    const formation = { ...SUIVI.formations[0], modules: [unModule("m1", "a"), unModule("m2", "b")] };
+    lireSuiviEtudiant.mockResolvedValue({ migrationAbsente: false, donnees: { ...SUIVI, formations: [formation] } });
+    avecToast(await FicheEtudiant({ id: E }));
+    expect(screen.getAllByRole("heading", { level: 3, name: "Intro" })).toHaveLength(2);
+    expect(erreurs.mock.calls.some((c) => String(c[0]).includes("same key"))).toBe(false);
+    erreurs.mockRestore();
   });
 
   it("un compte qui ne suit aucune de ses formations : page introuvable", async () => {

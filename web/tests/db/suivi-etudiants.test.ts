@@ -306,3 +306,33 @@ describe("Migration 0015 : tableau de bord du formateur", () => {
     expect((await tableau()).etudiants.total).toBeGreaterThan(0);
   });
 });
+
+describe("Migration 0015 : un étudiant de deux formateurs", () => {
+  const E6 = randomUUID();
+  beforeAll(async () => {
+    await banc.creerCompte(E6);
+    // Par identifiant : les exemples du lot 1 ont aussi une formation « Maîtriser Microsoft Excel ».
+    const premiere = async (formationId: string) =>
+      (await un<{ id: string }>("select l.id from public.lecons l join public.modules m on m.id = l.module_id where m.formation_id = $1 order by l.ordre limit 1", [formationId])).id;
+    const zotero = (await un<{ id: string }>("select f.id from public.formations f join public.formateurs fo on fo.id = f.formateur_id where fo.compte_id = $1", [G])).id;
+    await progression(E6, await premiere(X), "1 hour");
+    await progression(E6, await premiere(zotero), "1 hour");
+    await banc.en({ id: G }, "select public.enregistrer_remarque($1, 'Remarque de G sur E6.')", [E6]);
+  });
+
+  it("chaque formateur ne voit que ses formations et sa propre remarque", async () => {
+    const fiche = async (qui: string) =>
+      (await banc.en<{ r: { formations: { titre: string }[]; remarque: { texte: string } | null } }>({ id: qui }, "select public.etudiant_formateur($1) as r", [E6]))[0].r;
+    const vueDeF = await fiche(F);
+    expect(vueDeF.formations.map((f) => f.titre)).toEqual(["Maîtriser Microsoft Excel"]);
+    expect(vueDeF.remarque).toBeNull();
+    const vueDeG = await fiche(G);
+    expect(vueDeG.formations.map((f) => f.titre)).toEqual(["Zotero"]);
+    expect(vueDeG.remarque).toMatchObject({ texte: "Remarque de G sur E6." });
+    await banc.en({ id: F }, "select public.enregistrer_remarque($1, 'Remarque de F sur E6.')", [E6]);
+    expect((await fiche(F)).remarque).toMatchObject({ texte: "Remarque de F sur E6." });
+    expect((await fiche(G)).remarque).toMatchObject({ texte: "Remarque de G sur E6." });
+    const lignesDeF = (await liste(F, "", null, "tous", 1)).lignes.filter((l) => l.etudiant_id === E6);
+    expect(lignesDeF.map((l) => l.formation_titre)).toEqual(["Maîtriser Microsoft Excel"]);
+  });
+});

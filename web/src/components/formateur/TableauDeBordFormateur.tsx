@@ -72,7 +72,7 @@ export async function TableauDeBordFormateur() {
                 {t.aRisque.map((r) => {
                   const nom = nomAffiche(r.prenom, r.nom);
                   return (
-                    <li key={`${r.etudiantId}-${r.formationTitre}`} className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-bordure-carte py-3 first:border-t-0">
+                    <li key={`${r.etudiantId}-${r.formationId}`} className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-bordure-carte py-3 first:border-t-0">
                       <Avatar initials={initialesCompte(r.prenom, r.nom, "?")} size={36} />
                       <span className="flex min-w-0 flex-[1_1_180px] flex-col">
                         <span className="text-sm leading-[22px] font-medium break-words text-encre">{nom}</span>

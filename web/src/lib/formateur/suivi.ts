@@ -38,7 +38,7 @@ export type SuiviEtudiant = {
     secondes: number;
     derniereActivite: string;
     etat: EtatSuivi;
-    modules: { titre: string; lecons: LeconSuivie[] }[];
+    modules: { id: string; titre: string; lecons: LeconSuivie[] }[];
   }[];
   remarque: { texte: string; modifieeLe: string } | null;
 };
@@ -48,7 +48,7 @@ export type TableauDeBordFormateur = {
   formations: { total: number; brouillons: number };
   etudiants: { total: number; ceMois: number };
   progressionMoyenne: number | null;
-  aRisque: { etudiantId: string; prenom: string; nom: string; formationTitre: string; jours: number; pourcentage: number }[];
+  aRisque: { etudiantId: string; prenom: string; nom: string; formationId: string; formationTitre: string; jours: number; pourcentage: number }[];
   formationsDetail: {
     id: string;
     titre: string;
@@ -104,6 +104,7 @@ function versSuiviEtudiant(l: Ligne): SuiviEtudiant {
       derniereActivite: texte(f.derniere_activite),
       etat: etat(f.etat),
       modules: liste(f.modules).map((m) => ({
+        id: texte(m.id),
         titre: texte(m.titre),
         lecons: liste(m.lecons).map((le) => ({
           id: texte(le.id),
@@ -130,6 +131,7 @@ function versTableauDeBord(l: Ligne): TableauDeBordFormateur {
       etudiantId: texte(r.etudiant_id),
       prenom: texte(r.prenom),
       nom: texte(r.nom),
+      formationId: texte(r.formation_id),
       formationTitre: texte(r.formation_titre),
       jours: nombre(r.jours),
       pourcentage: nombre(r.pourcentage),
