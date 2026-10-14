@@ -396,3 +396,18 @@ describe("La vidéo jointe", () => {
   });
 });
 
+
+describe("La publication d'une session live", () => {
+  it("le bloc de la session sous le texte : Google Meet, « Voir la session » (spec promotion des sessions live, §2)", () => {
+    const session = { id: "s1", debut: "2099-10-24T14:00:00Z", dureeMinutes: 60, plateforme: "Google Meet", animateur: "Mireille Akpo", statut: "programmee" as const, inscriptions: 3, inscrit: false };
+    page(lot([pub({ titre: "Excel avancé", session })]));
+    const bloc = within(carte()).getByRole("group", { name: /^Session live du / });
+    expect(within(bloc).getByText("Google Meet")).toBeInTheDocument();
+    expect(within(bloc).getByRole("link", { name: "Voir la session" })).toHaveAttribute("href", "/evenements");
+  });
+
+  it("une publication ordinaire n'a pas de bloc de session", () => {
+    page(lot([pub()]));
+    expect(within(carte()).queryByRole("group", { name: /^Session live du / })).toBeNull();
+  });
+});

@@ -33,6 +33,7 @@ import { FenetreSignalement } from "./FenetreSignalement";
 import { initiales, lienPublication, tonAvatar } from "./outils";
 import { Reponses, type EtatReponses } from "./Reponses";
 import { TexteMisEnForme } from "./TexteMisEnForme";
+import { BlocSession } from "@/components/sessions/BlocSession";
 import { VideoIntegree } from "./VideoIntegree";
 import { VideoYoutube } from "./VideoYoutube";
 
@@ -334,6 +335,8 @@ export function CartePublication({
       {/* L'aperçu du premier lien, sauf s'il montre la vidéo jointe. */}
       {p.apercu?.type === "youtube" && !(p.video?.plateforme === "youtube" && p.video.id === p.apercu.id) && <VideoYoutube id={p.apercu.id} className="mt-3.5 rounded-[14px]" />}
       {p.apercu?.type === "lien" && p.apercu.url !== p.video?.url && <ApercuLien apercu={p.apercu} />}
+      {/* Une session live programmée : son bloc (date, plateforme, « Voir la session »). */}
+      {p.session && <BlocSession session={p.session} maintenant={maintenant} />}
 
       {/* Pas encore en ligne : ni J’aime ni commentaires. */}
       {enLigne && (
