@@ -136,7 +136,7 @@ export function CarteSondage({
                 >
                   <Vignette option={o} alt="">
                     {choisi && (
-                      <span className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-full bg-bleu text-white">
+                      <span className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-full bg-bleu text-white ring-2 ring-white">
                         <Icon icon={Tick02Icon} size={16} />
                       </span>
                     )}
@@ -201,11 +201,11 @@ export function CarteSondage({
             return (
               <li key={o.id} className="flex min-w-0 flex-col gap-1.5">
                 <Vignette option={o} alt={o.texte || `Image ${i + 1}`}>
-                  <span className={cn("absolute right-2 bottom-2 rounded-full px-2 py-0.5 text-xs leading-[18px] font-semibold tabular-nums", o.moi ? "bg-bleu text-white" : "bg-encre/75 text-white")}>
+                  <span className={cn("absolute right-2 bottom-2 rounded-full px-2 py-0.5 text-xs leading-[18px] font-semibold tabular-nums", o.moi ? "bg-bleu text-white ring-2 ring-white" : "bg-encre/75 text-white")}>
                     {pct} %
                   </span>
                   {o.moi && (
-                    <span aria-hidden className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-full bg-bleu text-white">
+                    <span aria-hidden className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-full bg-bleu text-white ring-2 ring-white">
                       <Icon icon={Tick02Icon} size={16} />
                     </span>
                   )}

@@ -398,7 +398,7 @@ export function ChampPublication({
         {/* Un seul ajout par publication : en choisir un autre remplace le premier (après confirmation s'il est rempli). */}
         <div role="group" aria-label="Ajouter à la publication" className="-ml-3 flex flex-wrap items-center gap-1 sm:ml-0">
           {AJOUTS.map(([cle, libelle, icone]) => (
-            <Button key={cle} variant="discret" size="sm" iconLeft={icone} disabled={envoi} onClick={() => ajouter(cle)}>
+            <Button key={cle} variant="discret" size="sm" iconLeft={icone} disabled={envoi} className="max-sm:px-2" onClick={() => ajouter(cle)}>
               {libelle}
             </Button>
           ))}

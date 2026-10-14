@@ -12,5 +12,7 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     // Le banc SQL (PGlite) démarre un vrai Postgres et applique les migrations : plus long quand toute la suite tourne en parallèle.
     hookTimeout: 60_000,
+    // Les écrans qui saisissent beaucoup de texte (userEvent) dépassent 5 s quand toute la suite tourne en parallèle.
+    testTimeout: 20_000,
   },
 });
