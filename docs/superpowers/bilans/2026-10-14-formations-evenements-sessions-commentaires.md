@@ -1,8 +1,7 @@
 # Bilan : onglet Formations, Événements, promotion des sessions, commentaires (14 octobre 2026, nuit)
 
 Tes demandes du 14 octobre (13 h 28, 18 h 13, 18 h 41, 19 h 50), relues une par une. Écrit sans validation intermédiaire, à ta
-demande ; chaque partie a eu sa relecture indépendante et ses points importants sont corrigés (celle des commentaires
-est en cours ; ses corrections suivront).
+demande ; chaque partie a eu sa relecture indépendante, et ses points importants sont corrigés.
 
 ## En bref
 
@@ -26,7 +25,7 @@ est en cours ; ses corrections suivront).
     ouvrant la page Événements.
 - **Commentaires** : sous chaque commentaire, J’aime, Répondre (un seul niveau, la personne citée), menu ⋮ (copier le lien,
   signaler, modifier, supprimer) et « Voir plus de commentaires ». L'auteur d'un commentaire est prévenu d'une réponse.
-- **Vérifications** : 1 443 tests (dont les migrations sur une vraie base Postgres en mémoire), types, code, compilation de
+- **Vérifications** : 1 453 tests (dont les migrations sur une vraie base Postgres en mémoire), types, code, compilation de
   production ; rendus vérifiés au navigateur à 1440, 1280, 390 et 320 px.
 
 ## Corrigé après les relectures
@@ -41,6 +40,11 @@ est en cours ; ses corrections suivront).
   - « Voir la session » de l'aperçu quittait le formulaire en perdant la saisie ;
   - le lien d'un live pouvait être collé comme « vidéo » et paraître avant sa fenêtre de 10 min ;
   - une affiche refusée ou d'une publication supprimée restait dans le stockage.
+
+- **Commentaires** :
+  - après la suppression d'un commentaire dont les réponses n'étaient pas affichées, le compteur restait faux ;
+  - supprimer un commentaire effaçait les réponses des autres sans confirmation : une fenêtre le demande maintenant ;
+  - « modifié » s'affichait sans changement ; la ligne de réponse était trop étroite à 320 px.
 
 ## Décisions que j'ai prises pour toi
 
