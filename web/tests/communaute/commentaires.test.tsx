@@ -69,7 +69,7 @@ describe("Les commentaires", () => {
     expect(fil.getByText("Réponse")).toBeInTheDocument();
     expect(commentaire("r1").closest("[data-reponses]")).not.toBeNull();
     expect(fil.getByText(/modifié/)).toBeInTheDocument();
-    expect(fil.getByRole("button", { name: "J’aime le commentaire de Awa K." })).toHaveTextContent("3");
+    expect(fil.getByRole("button", { name: "J’aime le commentaire de Awa K. (3 J’aime)" })).toHaveTextContent("3");
   });
 
   it("Répondre : le champ sous le commentaire ; la réponse s'ajoute dessous ; répondre à une réponse cite son auteur et vise le même commentaire", async () => {
@@ -93,7 +93,7 @@ describe("Les commentaires", () => {
     render(<Essai initial={{ reponses: [rep("c1", "Question ?")], total: 1, completes: true }} />);
     await user.click(screen.getByRole("button", { name: "J’aime le commentaire de Awa K." }));
     expect(actions.aimerReponse).toHaveBeenCalledWith("c1");
-    const bouton = await screen.findByRole("button", { name: "Retirer la mention J’aime du commentaire de Awa K." });
+    const bouton = await screen.findByRole("button", { name: "Retirer la mention J’aime du commentaire de Awa K. (1 J’aime)" });
     expect(bouton).toHaveAttribute("aria-pressed", "true");
     expect(bouton).toHaveTextContent("1");
   });
@@ -114,7 +114,7 @@ describe("Les commentaires", () => {
   it("Modifier (auteur ou équipe) : le champ, Enregistrer, « modifié » ; Supprimer retire le commentaire et ses réponses", async () => {
     const user = userEvent.setup();
     vi.mocked(actions.modifierReponse).mockResolvedValueOnce({ ok: true });
-    vi.mocked(actions.supprimerReponse).mockResolvedValueOnce({ ok: true });
+    vi.mocked(actions.supprimerReponse).mockResolvedValueOnce({ ok: true, supprimes: 1 });
     const mien = { estMoi: true, auteur: { prenom: "Koffi", nomCourt: "Koffi D." }, peutModifier: true, peutSupprimer: true, peutSignaler: false };
     render(<Essai initial={{ reponses: [rep("c1", "Avant", mien), rep("r1", "Réponse", { parentId: "c1" })], total: 2, completes: true }} />);
     await user.click(screen.getByRole("button", { name: "Actions sur le commentaire de Koffi D." }));
@@ -130,9 +130,37 @@ describe("Les commentaires", () => {
 
     await user.click(screen.getByRole("button", { name: "Actions sur le commentaire de Koffi D." }));
     await user.click(screen.getByRole("menuitem", { name: "Supprimer" }));
+    // Une confirmation : ses réponses partent avec lui.
+    const fenetre = screen.getByRole("dialog", { name: "Supprimer ce commentaire ?" });
+    expect(fenetre).toHaveTextContent("Ses réponses seront aussi supprimées.");
+    await user.click(within(fenetre).getByRole("button", { name: "Supprimer" }));
     expect(actions.supprimerReponse).toHaveBeenCalledWith("c1");
     await waitFor(() => expect(screen.queryByText("Réponse")).toBeNull());
     expect(screen.getByText("Total : 0")).toBeInTheDocument();
+  });
+
+  it("supprimer un commentaire dont les réponses ne sont pas affichées : le total baisse du nombre retiré par la base (revue)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.supprimerReponse).mockResolvedValueOnce({ ok: true, supprimes: 4 });
+    const mien = { estMoi: true, auteur: { prenom: "Koffi", nomCourt: "Koffi D." }, peutModifier: true, peutSupprimer: true, peutSignaler: false };
+    render(<Essai initial={{ reponses: [rep("c1", "Le mien", mien), rep("c2", "Un autre")], total: 5, completes: false }} />);
+    await user.click(screen.getByRole("button", { name: "Actions sur le commentaire de Koffi D." }));
+    await user.click(screen.getByRole("menuitem", { name: "Supprimer" }));
+    await user.click(within(screen.getByRole("dialog", { name: "Supprimer ce commentaire ?" })).getByRole("button", { name: "Supprimer" }));
+    expect(await screen.findByText("Total : 1")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Voir plus de commentaires" })).toBeNull();
+  });
+
+  it("Enregistrer sans rien changer : pas d'appel, pas de « modifié »", async () => {
+    const user = userEvent.setup();
+    const mien = { estMoi: true, auteur: { prenom: "Koffi", nomCourt: "Koffi D." }, peutModifier: true, peutSupprimer: true, peutSignaler: false };
+    render(<Essai initial={{ reponses: [rep("c1", "Pareil", mien)], total: 1, completes: true }} />);
+    await user.click(screen.getByRole("button", { name: "Actions sur le commentaire de Koffi D." }));
+    await user.click(screen.getByRole("menuitem", { name: "Modifier" }));
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect(actions.modifierReponse).not.toHaveBeenCalled();
+    expect(within(commentaire("c1")).queryByText(/modifié/)).toBeNull();
+    expect(screen.queryByRole("textbox", { name: "Modifier le commentaire" })).toBeNull();
   });
 
   it("« Voir plus de commentaires » charge tous les commentaires et leurs réponses", async () => {

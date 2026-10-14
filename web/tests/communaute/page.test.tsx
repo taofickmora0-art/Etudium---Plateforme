@@ -389,9 +389,10 @@ describe("La page Communauté", () => {
     expect(within(carte()).getByText("25 J’aime · 6 commentaires")).toBeInTheDocument();
     expect(within(carte()).getByRole("textbox", { name: "Écrire un commentaire" })).toHaveValue("");
 
-    vi.mocked(actions.supprimerReponse).mockResolvedValueOnce({ ok: true });
+    vi.mocked(actions.supprimerReponse).mockResolvedValueOnce({ ok: true, supprimes: 1 });
     await user.click(within(carte()).getByRole("button", { name: "Actions sur le commentaire de Koffi D." }));
     await user.click(screen.getByRole("menuitem", { name: "Supprimer" }));
+    await user.click(within(screen.getByRole("dialog", { name: "Supprimer ce commentaire ?" })).getByRole("button", { name: "Supprimer" }));
     expect(actions.supprimerReponse).toHaveBeenCalledWith("r9");
     await waitFor(() => expect(within(carte()).queryByText("Merci !")).toBeNull());
     expect(within(carte()).getByText("25 J’aime · 5 commentaires")).toBeInTheDocument();
@@ -407,9 +408,9 @@ describe("La page Communauté", () => {
     const finir: Record<string, () => void> = {};
     const attendre = (cle: string, valeur: unknown) => () => new Promise((ok) => (finir[cle] = () => ok(valeur)));
     vi.mocked(actions.supprimerReponse)
-      .mockImplementationOnce(attendre("a", { ok: true }) as never)
-      .mockImplementationOnce(attendre("b", { ok: true }) as never)
-      .mockImplementationOnce(attendre("c", { ok: true }) as never);
+      .mockImplementationOnce(attendre("a", { ok: true, supprimes: 1 }) as never)
+      .mockImplementationOnce(attendre("b", { ok: true, supprimes: 1 }) as never)
+      .mockImplementationOnce(attendre("c", { ok: true, supprimes: 1 }) as never);
     vi.mocked(actions.repondre).mockImplementationOnce(
       attendre("envoi", { ok: true, reponse: rep("r9", "Merci !", { auteur: { prenom: "Koffi", nomCourt: "Koffi D." }, estMoi: true, peutSupprimer: true }) }) as never,
     );
@@ -426,9 +427,10 @@ describe("La page Communauté", () => {
     const supprimer = async (nom: string) => {
       await user.click(within(carte()).getByRole("button", { name: `Actions sur le commentaire de ${nom}` }));
       await user.click(screen.getByRole("menuitem", { name: "Supprimer" }));
+      await user.click(within(screen.getByRole("dialog", { name: "Supprimer ce commentaire ?" })).getByRole("button", { name: "Supprimer" }));
     };
     await supprimer("Awa K.");
-    expect(within(carte()).getByRole("button", { name: "J’aime le commentaire de Awa K." })).toBeDisabled();
+    expect(within(carte()).getByRole("button", { name: /^J’aime le commentaire de Awa K\./ })).toBeDisabled();
     await supprimer("Sènami D.");
     await act(async () => finir.a());
     await act(async () => finir.b());

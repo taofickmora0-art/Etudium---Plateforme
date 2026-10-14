@@ -377,14 +377,15 @@ export async function aimerReponse(id: string): Promise<{ ok: true; jAime: boole
 }
 
 /** Son auteur ou l'équipe. */
-export async function supprimerReponse(id: string): Promise<Resultat> {
+export async function supprimerReponse(id: string): Promise<{ ok: true; supprimes: number } | Refus> {
   if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
   if (!UUID.test(id)) return { ok: false, message: ECHEC };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("supprimer_commentaire", { p_id: id });
+  const { data, error } = await supabase.rpc("supprimer_commentaire", { p_id: id });
   if (error) return { ok: false, message: message(error) };
   refresh();
-  return { ok: true };
+  // Le nombre retiré, lui et ses réponses (migration 0025) ; avant elle, la base ne rend rien : un seul.
+  return { ok: true, supprimes: typeof data === "number" && data > 0 ? data : 1 };
 }
 
 /** « J’aime » : ajoute ou retire, et rend l'état et le nombre. */

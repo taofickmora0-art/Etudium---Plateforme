@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
-import { Delete02Icon, Flag02Icon, FavouriteIcon, Link01Icon, MoreHorizontalIcon, PencilEdit02Icon, SentIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Delete02Icon, Flag02Icon, FavouriteIcon, Link01Icon, MoreHorizontalIcon, PencilEdit02Icon, SentIcon } from "@hugeicons/core-free-icons";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Icon } from "@/components/ui/Icon";
 import { IconButton } from "@/components/ui/IconButton";
 import { Menu, type MenuEntry } from "@/components/ui/Menu";
@@ -67,6 +68,8 @@ export function Reponses({
   // Le commentaire en cours de modification.
   const [edition, setEdition] = useState<{ id: string; texte: string } | null>(null);
   const [sauvegarde, setSauvegarde] = useState(false);
+  // Le commentaire dont on confirme la suppression (ses réponses partent avec lui).
+  const [aSupprimer, setASupprimer] = useState<Reponse | null>(null);
 
   const occuper = (id: string, oui: boolean) => setOccupes((ids) => (oui ? [...ids, id] : ids.filter((x) => x !== id)));
   const remplacer = (id: string, modif: Partial<Reponse>) => onChange((actuel) => ({ ...actuel, reponses: actuel.reponses.map((x) => (x.id === id ? { ...x, ...modif } : x)) }));
@@ -89,7 +92,8 @@ export function Reponses({
     onChange((actuel) => {
       const lues = new Set(lu.reponses.map((r) => r.id));
       const reponses = [...lu.reponses, ...actuel.reponses.filter((r) => r.estMoi && !lues.has(r.id))];
-      return { reponses, total: Math.max(actuel.total, reponses.length), completes: true };
+      // La liste est complète : son nombre fait foi (des commentaires ont pu partir entre-temps).
+      return { reponses, total: reponses.length, completes: true };
     });
   }
 
@@ -147,6 +151,11 @@ export function Reponses({
   async function enregistrer(e: FormEvent) {
     e.preventDefault();
     if (!edition) return;
+    // Rien de changé : on referme, sans appel ni « modifié ».
+    if (edition.texte.trim() === etat.reponses.find((x) => x.id === edition.id)?.texte) {
+      setEdition(null);
+      return;
+    }
     const refus = refusReponse(edition.texte);
     if (refus) {
       setErreur(refus);
@@ -174,11 +183,12 @@ export function Reponses({
       return;
     }
     setErreur(null);
-    // Ses réponses disparaissent avec lui.
+    // Ses réponses disparaissent avec lui, même celles qui ne sont pas affichées (la base dit combien).
     onChange((actuel) => {
       const partis = actuel.reponses.filter((x) => x.id === r.id || x.parentId === r.id);
       if (partis.length === 0) return actuel;
-      return { ...actuel, reponses: actuel.reponses.filter((x) => !partis.includes(x)), total: Math.max(0, actuel.total - partis.length) };
+      const retires = Math.max(resultat.supprimes, partis.length);
+      return { ...actuel, reponses: actuel.reponses.filter((x) => !partis.includes(x)), total: Math.max(0, actuel.total - retires) };
     });
     toast({ tone: "reussite", title: "Commentaire supprimé" });
   }
@@ -204,7 +214,7 @@ export function Reponses({
       { label: "Copier le lien", icon: Link01Icon, onSelect: () => void copier(r) },
       ...(r.peutSignaler ? [{ label: "Signaler", icon: Flag02Icon, onSelect: () => setASignaler(r.id) }] : []),
       ...(r.peutModifier ? [{ label: "Modifier", icon: PencilEdit02Icon, onSelect: () => setEdition({ id: r.id, texte: r.texte }) }] : []),
-      ...(r.peutSupprimer ? [{ label: "Supprimer", icon: Delete02Icon, danger: true, onSelect: () => void supprimer(r) }] : []),
+      ...(r.peutSupprimer ? [{ label: "Supprimer", icon: Delete02Icon, danger: true, onSelect: () => setASupprimer(r) }] : []),
     ];
     const occupe = occupes.includes(r.id);
     return (
@@ -246,7 +256,7 @@ export function Reponses({
             <button
               type="button"
               aria-pressed={r.jAime}
-              aria-label={r.jAime ? `Retirer la mention J’aime du commentaire de ${nom}` : `J’aime le commentaire de ${nom}`}
+              aria-label={`${r.jAime ? "Retirer la mention J’aime du commentaire" : "J’aime le commentaire"} de ${nom}${r.reactions > 0 ? ` (${r.reactions} J’aime)` : ""}`}
               className={cn(ACTION, r.jAime && "text-erreur-vif hover:text-erreur-texte")}
               disabled={occupe}
               onClick={() => void aimer(r)}
@@ -295,9 +305,8 @@ export function Reponses({
                       className={CHAMP}
                     />
                     <IconButton type="submit" icon={SentIcon} label="Envoyer la réponse" variant="discret" disabled={envoiReponse} aria-busy={envoiReponse || undefined} />
-                    <Button type="button" variant="discret" size="sm" onClick={() => setReponse(null)}>
-                      Annuler
-                    </Button>
+                    {/* Une croix : la ligne tient sur un téléphone de 320 px. */}
+                    <IconButton icon={Cancel01Icon} label="Annuler la réponse" variant="discret" onClick={() => setReponse(null)} />
                   </form>
                 )}
               </div>
@@ -334,6 +343,18 @@ export function Reponses({
         />
         <IconButton type="submit" icon={SentIcon} label="Envoyer le commentaire" variant="discret" disabled={envoi} aria-busy={envoi || undefined} />
       </form>
+      <ConfirmDialog
+        open={aSupprimer !== null}
+        onOpenChange={(ouvert) => !ouvert && setASupprimer(null)}
+        title="Supprimer ce commentaire ?"
+        description={aSupprimer?.parentId ? "Cette réponse sera supprimée." : "Ses réponses seront aussi supprimées."}
+        confirmLabel="Supprimer"
+        tone="danger"
+        // La fenêtre se ferme aussitôt : la suppression continue (son commentaire est désactivé pendant l'envoi).
+        onConfirm={() => {
+          if (aSupprimer) void supprimer(aSupprimer);
+        }}
+      />
       {aSignaler && <FenetreSignalement key={aSignaler} cible={{ reponseId: aSignaler }} open onOpenChange={(ouvert) => !ouvert && setASignaler(null)} />}
     </div>
   );

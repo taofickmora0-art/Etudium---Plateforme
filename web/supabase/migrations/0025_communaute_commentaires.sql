@@ -65,7 +65,7 @@ begin
   perform public.notifier(
     array(select v.auteur where v.auteur is distinct from v_parent.auteur), 'communaute', 'Nouvelle réponse',
     v_nom || ' a répondu à votre publication dans l’espace ' || public.nom_espace_communaute(v.parcours_id) || '.',
-    '/communaute/publications/' || v.id
+    '/communaute/publications/' || v.id || '#commentaire-' || v_id
   );
   return v_id;
 end;
@@ -93,6 +93,10 @@ begin
   end if;
   if char_length(v_texte) not between 1 and 1000 then
     raise exception 'Écrivez votre commentaire (1 000 caractères au plus).';
+  end if;
+  -- Le même texte : rien ne change, pas de « modifié ».
+  if v_texte = v.texte then
+    return;
   end if;
   update public.commentaires_publications set texte = v_texte, modifie_le = now() where id = p_id;
 end;
@@ -153,6 +157,33 @@ as $$
   )
   from public.profils pr
   where pr.id = c.auteur;
+$$;
+
+-- ─── Supprimer un commentaire : rend le nombre retiré (lui et ses réponses), pour le compteur de la carte ─────
+drop function if exists public.supprimer_commentaire(uuid);
+create or replace function public.supprimer_commentaire(p_id uuid)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v public.commentaires_publications%rowtype;
+  v_nombre integer;
+begin
+  perform public.exiger_compte_actif();
+  select * into v from public.commentaires_publications where id = p_id;
+  if not found then
+    return 0;
+  end if;
+  perform public.publication_ouverte(v.publication_id);
+  if v.auteur <> (select auth.uid()) and not public.equipe_contenus() then
+    raise exception 'Cette réponse n’est pas la vôtre.' using errcode = '42501';
+  end if;
+  select count(*) + 1 into v_nombre from public.commentaires_publications where parent_id = p_id;
+  delete from public.commentaires_publications where id = p_id;
+  return v_nombre;
+end;
 $$;
 
 -- ─── La carte d'une publication : les 2 derniers commentaires de premier niveau ─────────────────────
@@ -225,5 +256,7 @@ revoke execute on function public.modifier_commentaire(uuid, text) from public, 
 grant execute on function public.modifier_commentaire(uuid, text) to authenticated;
 revoke execute on function public.basculer_reaction_commentaire(uuid) from public, anon;
 grant execute on function public.basculer_reaction_commentaire(uuid) to authenticated;
+revoke execute on function public.supprimer_commentaire(uuid) from public, anon;
+grant execute on function public.supprimer_commentaire(uuid) to authenticated;
 
 commit;

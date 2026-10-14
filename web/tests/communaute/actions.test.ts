@@ -95,8 +95,11 @@ describe("Modifier, supprimer, répondre, aimer", () => {
   it("aimer et supprimer une réponse ; le fil d'un onglet", async () => {
     faux.repondre("rpc.basculer_reaction", { data: { j_aime: true, reactions: 25 } });
     expect(await aimer(ID)).toEqual({ ok: true, jAime: true, reactions: 25 });
-    expect(await supprimerReponse(R)).toEqual({ ok: true });
+    // Avant la 0025, la base ne rend rien : un seul commentaire retiré ; après, le nombre (lui et ses réponses).
+    expect(await supprimerReponse(R)).toEqual({ ok: true, supprimes: 1 });
     expect(faux.de("rpc", "supprimer_commentaire")[0].valeurs).toEqual({ p_id: R });
+    faux.repondre("rpc.supprimer_commentaire", { data: 3 });
+    expect(await supprimerReponse(R)).toEqual({ ok: true, supprimes: 3 });
     faux.repondre("rpc.fil_communaute", { data: { publications: [], suite: false } });
     expect(await chargerFil(P, "populaires", { page: 1 })).toEqual({ ok: true, lot: { publications: [], suite: false } });
     expect(faux.de("rpc", "fil_communaute")[0].valeurs).toMatchObject({ p_espace: P, p_tri: "populaires", p_page: 1 });

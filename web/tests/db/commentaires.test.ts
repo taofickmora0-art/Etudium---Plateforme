@@ -10,7 +10,6 @@ const E1 = randomUUID(); // « Koffi Dossou »
 const E2 = randomUUID(); // « Awa Sow »
 const E3 = randomUUID();
 
-const un = async <T>(sql: string, params: unknown[] = []) => (await banc.db.query<T>(sql, params)).rows[0];
 const publier = async (qui: string) => (await banc.en<{ id: string }>({ id: qui }, "select (public.publier(null, '', 'Bonjour', null) ->> 'id')::uuid as id"))[0].id;
 const commenter = async (qui: string, publication: string, texte: string, parent: string | null = null) =>
   (await banc.en<{ id: string }>({ id: qui }, "select public.commenter($1, $2, $3) as id", [publication, texte, parent]))[0].id;
@@ -119,6 +118,31 @@ describe("J’aime et modifier", () => {
   });
 });
 
+describe("Revue de l'étape 2", () => {
+  it("supprimer un commentaire rend le nombre de commentaires retirés (lui et ses réponses)", async () => {
+    const pub = await publier(E3);
+    const c = await commenter(E1, pub, "Parent");
+    await commenter(E2, pub, "Enfant 1", c);
+    await commenter(E3, pub, "Enfant 2", c);
+    const { n } = (await banc.en<{ n: number }>({ id: E1 }, "select public.supprimer_commentaire($1) as n", [c]))[0];
+    expect(n).toBe(3);
+  });
+
+  it("modifier sans changer le texte ne marque pas « modifié »", async () => {
+    const pub = await publier(E3);
+    const c = await commenter(E1, pub, "Pareil");
+    await banc.en({ id: E1 }, "select public.modifier_commentaire($1, $2)", [c, " Pareil "]);
+    expect((await detail(E1, pub)).toutes_reponses[0]).toMatchObject({ modifie: false });
+  });
+
+  it("la notification de l'auteur de la publication mène au commentaire", async () => {
+    const pub = await publier(E3);
+    const c = await commenter(E1, pub, "Bonjour");
+    const { lien } = (await banc.db.query<{ lien: string }>("select lien from public.notifications where destinataire = $1 order by id desc limit 1", [E3])).rows[0];
+    expect(lien).toBe(`/communaute/publications/${pub}#commentaire-${c}`);
+  });
+});
+
 describe("La carte du fil", () => {
   it("les 2 derniers commentaires de premier niveau ; le total compte aussi les réponses", async () => {
     const pub = await publier(E3);
@@ -131,6 +155,6 @@ describe("La carte du fil", () => {
     expect(d.reponses).toBe(5);
     expect(d.dernieres_reponses.map((x) => x.id)).toEqual([b, c]);
     expect(d.dernieres_reponses.every((x) => x.parent_id === null)).toBe(true);
-    expect(a).toBeTruthy();
+    expect(d.dernieres_reponses.map((x) => x.id)).not.toContain(a);
   });
 });
