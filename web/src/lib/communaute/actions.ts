@@ -88,15 +88,18 @@ export async function modifierPublication(id: string, titre: string, texte: stri
   return { ok: true };
 }
 
-/** Son auteur ou l'équipe ; la base rend le chemin du fichier joint, retiré ensuite. */
-export async function supprimerPublication(id: string): Promise<Resultat> {
+/**
+ * Son auteur ou l'équipe ; la base rend le chemin du fichier joint, retiré ensuite. Depuis la page de la publication,
+ * `relire: false` : relue, elle n'existerait plus (page introuvable) avant le retour à la Communauté.
+ */
+export async function supprimerPublication(id: string, options: { relire?: boolean } = {}): Promise<Resultat> {
   if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
   if (!UUID.test(id)) return { ok: false, message: ECHEC };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("supprimer_publication", { p_id: id });
   if (error) return { ok: false, message: message(error) };
   if (typeof data === "string" && data) await supabase.storage.from("communaute").remove([data]);
-  refresh();
+  if (options.relire !== false) refresh();
   return { ok: true };
 }
 

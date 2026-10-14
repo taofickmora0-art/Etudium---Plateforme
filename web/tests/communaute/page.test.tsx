@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import type { ReactNode } from "react";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -309,7 +309,7 @@ describe("La page Communauté", () => {
     const fenetre = screen.getByRole("dialog", { name: "Supprimer cette publication ?" });
     expect(within(fenetre).getByText("Elle disparaîtra de l’espace Académique avec toutes ses réponses. Cette action est définitive.")).toBeInTheDocument();
     await user.click(within(fenetre).getByRole("button", { name: "Supprimer" }));
-    expect(actions.supprimerPublication).toHaveBeenCalledWith("p2");
+    expect(actions.supprimerPublication).toHaveBeenCalledWith("p2", { relire: true });
     await waitFor(() => expect(screen.queryByRole("article", { name: "Publication de Koffi Dossou" })).toBeNull());
     expect(screen.getByText("Publication supprimée")).toBeInTheDocument();
   });
@@ -355,6 +355,46 @@ describe("La page Communauté", () => {
     expect(actions.repondre).toHaveBeenCalledTimes(1);
   });
 
+  it("réponses : deux suppressions rapprochées retirent les deux ; une réponse envoyée pendant une suppression reste", async () => {
+    const user = userEvent.setup({ delay: null });
+    const finir: Record<string, () => void> = {};
+    const attendre = (cle: string, valeur: unknown) => () => new Promise((ok) => (finir[cle] = () => ok(valeur)));
+    vi.mocked(actions.supprimerReponse)
+      .mockImplementationOnce(attendre("a", { ok: true }) as never)
+      .mockImplementationOnce(attendre("b", { ok: true }) as never)
+      .mockImplementationOnce(attendre("c", { ok: true }) as never);
+    vi.mocked(actions.repondre).mockImplementationOnce(
+      attendre("envoi", { ok: true, reponse: rep("r9", "Merci !", { auteur: { prenom: "Koffi", nomCourt: "Koffi D." }, estMoi: true, peutSupprimer: true }) }) as never,
+    );
+    const auteur = (prenom: string, nomCourt: string) => ({ auteur: { prenom, nomCourt }, peutSupprimer: true });
+    page(
+      lot([
+        pub({
+          reponses: 3,
+          dernieresReponses: [rep("r1", "Première", auteur("Awa", "Awa K.")), rep("r2", "Deuxième", auteur("Sènami", "Sènami D.")), rep("r3", "Troisième", auteur("Rodrigue", "Rodrigue H."))],
+        }),
+      ]),
+    );
+    const corbeille = (nom: string) => within(carte()).getByRole("button", { name: `Supprimer la réponse de ${nom}` });
+    await user.click(corbeille("Awa K."));
+    expect(corbeille("Awa K.")).toBeDisabled();
+    await user.click(corbeille("Sènami D."));
+    await act(async () => finir.a());
+    await act(async () => finir.b());
+    expect(within(carte()).queryByText("Première")).toBeNull();
+    expect(within(carte()).queryByText("Deuxième")).toBeNull();
+    expect(within(carte()).getByRole("button", { name: "Masquer les réponses, 1 réponse" })).toBeInTheDocument();
+
+    await user.type(within(carte()).getByRole("textbox", { name: "Répondre" }), "Merci !");
+    await user.click(within(carte()).getByRole("button", { name: "Envoyer la réponse" }));
+    await user.click(corbeille("Rodrigue H."));
+    await act(async () => finir.c());
+    await act(async () => finir.envoi());
+    expect(within(carte()).getByText("Merci !")).toBeInTheDocument();
+    expect(within(carte()).queryByText("Troisième")).toBeNull();
+    expect(within(carte()).getByRole("button", { name: "Masquer les réponses, 1 réponse" })).toBeInTheDocument();
+  });
+
   it("colonne de droite : Prochaine session (Voir la session), Membres actifs ; sans rien : les phrases d'attente", () => {
     const session = { id: "s1", titre: "Excel avancé : analyse de données", debut: "2026-10-24T14:00:00Z" } as ProchaineSession;
     const membres: MembreActif[] = [
@@ -396,6 +436,7 @@ describe("La page Communauté", () => {
     await user.click(screen.getByRole("menuitem", { name: "Supprimer" }));
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Supprimer" }));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/communaute"));
+    expect(actions.supprimerPublication).toHaveBeenCalledWith("p1", { relire: false });
 
     vi.mocked(lirePublication).mockResolvedValue({ migrationAbsente: false, donnees: null });
     await expect(PagePublication({ id: "inconnue" })).rejects.toThrow("NEXT_NOT_FOUND");

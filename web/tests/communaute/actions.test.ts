@@ -62,6 +62,13 @@ describe("Modifier, supprimer, répondre, aimer", () => {
     expect(faux.de("storage.communaute", "remove")).toEqual([]);
   });
 
+  it("supprimer depuis la page de la publication : la page n'est pas relue (elle n'existe plus), le fichier est retiré", async () => {
+    faux.repondre("rpc.supprimer_publication", { data: PIECE.chemin });
+    expect(await supprimerPublication(ID, { relire: false })).toEqual({ ok: true });
+    expect(refresh).not.toHaveBeenCalled();
+    expect(faux.de("storage.communaute", "remove")[0].valeurs).toEqual([[PIECE.chemin]]);
+  });
+
   it("répondre : la réponse est rendue (« Koffi D. ») ; refus de la base affiché ; réponse vide refusée sans appel", async () => {
     faux.repondre("rpc.commenter", { data: "r1" });
     const reponse = await repondre(ID, " Merci ");

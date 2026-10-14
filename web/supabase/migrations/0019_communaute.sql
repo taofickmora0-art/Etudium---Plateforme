@@ -27,6 +27,8 @@ create table if not exists public.publications (
 create index if not exists publications_fil_idx on public.publications (cree_le desc, id desc);
 create index if not exists publications_parcours_idx on public.publications (parcours_id);
 create index if not exists publications_auteur_idx on public.publications (auteur);
+-- Un fichier n'est joint qu'à une seule publication ; l'index sert aussi aux règles du stockage.
+create unique index if not exists publications_piece_idx on public.publications ((piece_jointe ->> 'chemin')) where piece_jointe is not null;
 
 alter table public.publications enable row level security;
 revoke all on public.publications from anon, authenticated;
@@ -286,6 +288,7 @@ begin
   if v_chemin is null or v_chemin ~ '\.\.'
      or (storage.foldername(v_chemin))[1] is distinct from (select auth.uid())::text
      or not exists (select 1 from storage.objects o where o.bucket_id = 'communaute' and o.name = v_chemin)
+     or exists (select 1 from public.publications p where p.piece_jointe ->> 'chemin' = v_chemin)
      or v_type is null or v_type not in ('image/jpeg', 'image/png', 'image/webp', 'application/pdf')
      or v_taille is null or v_taille < 1 or v_taille > 10485760 then
     raise exception 'Ce fichier n’est pas le vôtre.';
@@ -544,8 +547,20 @@ as $$
   );
 $$;
 
+-- Un fichier joint à une publication : son auteur ne peut plus le retirer (ni donc le remplacer) tant qu'elle existe.
+create or replace function public.fichier_communaute_attache(p_nom text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (select 1 from public.publications p where p.piece_jointe ->> 'chemin' = p_nom);
+$$;
+
 -- Privé, 10 Mo, images et PDF. Chacun dépose dans son dossier (« <compte>/… ») ; on lit un fichier si une publication
--- lisible l'attache, ou si c'est le sien ; on supprime le sien, et l'équipe tout.
+-- lisible l'attache, si c'est le sien, ou pour l'équipe ; on supprime le sien tant qu'aucune publication ne l'attache
+-- (un fichier publié ne se remplace pas), et l'équipe tout. Supprimer demande aussi de pouvoir lire : l'équipe lit tout.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('communaute', 'communaute', false, 10485760, array['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
 on conflict (id) do update
@@ -570,6 +585,7 @@ create policy "communaute : lire" on storage.objects
     and (
       (storage.foldername(name))[1] = (select auth.uid())::text
       or (select public.fichier_communaute_lisible(objects.name))
+      or (select public.equipe_contenus())
     )
   );
 
@@ -578,7 +594,10 @@ create policy "communaute : supprimer" on storage.objects
   for delete to authenticated
   using (
     bucket_id = 'communaute'
-    and ((storage.foldername(name))[1] = (select auth.uid())::text or (select public.equipe_contenus()))
+    and (
+      ((storage.foldername(name))[1] = (select auth.uid())::text and not (select public.fichier_communaute_attache(objects.name)))
+      or (select public.equipe_contenus())
+    )
   );
 
 -- ─── Droits d'exécution ─────────────────────────────────────────────────────────────────────────────
@@ -599,6 +618,8 @@ grant execute on function public.basculer_reaction(uuid) to authenticated;
 grant execute on function public.membres_actifs() to authenticated;
 revoke execute on function public.fichier_communaute_lisible(text) from public, anon;
 grant execute on function public.fichier_communaute_lisible(text) to authenticated;
+revoke execute on function public.fichier_communaute_attache(text) from public, anon;
+grant execute on function public.fichier_communaute_attache(text) to authenticated;
 revoke execute on function public.espaces_communaute() from public, anon;
 revoke execute on function public.fil_communaute(text, timestamptz, uuid, integer) from public, anon;
 revoke execute on function public.publication_communaute(uuid) from public, anon;

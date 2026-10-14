@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import { Delete02Icon, SentIcon } from "@hugeicons/core-free-icons";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
@@ -35,7 +35,8 @@ export function Reponses({
 }: {
   publicationId: string;
   etat: EtatReponses;
-  onChange: (etat: EtatReponses) => void;
+  /** Toujours une mise à jour fonctionnelle : plusieurs envois et suppressions peuvent se croiser. */
+  onChange: Dispatch<SetStateAction<EtatReponses>>;
   moi: MoiCommunaute;
   maintenant: Date;
 }) {
@@ -44,6 +45,8 @@ export function Reponses({
   const [envoi, setEnvoi] = useState(false);
   const [chargement, setChargement] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  // Les réponses en cours de suppression : leur corbeille est désactivée (pas de double envoi).
+  const [enSuppression, setEnSuppression] = useState<string[]>([]);
 
   async function toutVoir() {
     setChargement(true);
@@ -54,7 +57,12 @@ export function Reponses({
       return;
     }
     setErreur(null);
-    onChange({ reponses: reponse.reponses, total: reponse.reponses.length, completes: true });
+    // Une réponse envoyée entre-temps, absente de la liste lue, est gardée.
+    onChange((actuel) => {
+      const lues = new Set(reponse.reponses.map((r) => r.id));
+      const reponses = [...reponse.reponses, ...actuel.reponses.filter((r) => r.estMoi && !lues.has(r.id))];
+      return { reponses, total: Math.max(actuel.total, reponses.length), completes: true };
+    });
   }
 
   async function envoyer(e: FormEvent) {
@@ -73,17 +81,23 @@ export function Reponses({
     }
     setErreur(null);
     setTexte("");
-    onChange({ ...etat, reponses: [...etat.reponses, reponse.reponse], total: etat.total + 1 });
+    onChange((actuel) => ({ ...actuel, reponses: [...actuel.reponses, reponse.reponse], total: actuel.total + 1 }));
   }
 
   async function supprimer(r: Reponse) {
+    setEnSuppression((ids) => [...ids, r.id]);
     const reponse = await supprimerReponse(r.id).catch(() => ({ ok: false as const, message: ECHEC }));
+    setEnSuppression((ids) => ids.filter((id) => id !== r.id));
     if (!reponse.ok) {
       setErreur(reponse.message);
       return;
     }
     setErreur(null);
-    onChange({ ...etat, reponses: etat.reponses.filter((x) => x.id !== r.id), total: Math.max(0, etat.total - 1) });
+    onChange((actuel) =>
+      actuel.reponses.some((x) => x.id === r.id)
+        ? { ...actuel, reponses: actuel.reponses.filter((x) => x.id !== r.id), total: Math.max(0, actuel.total - 1) }
+        : actuel,
+    );
     toast({ tone: "reussite", title: "Réponse supprimée" });
   }
 
@@ -111,6 +125,7 @@ export function Reponses({
               variant="discret"
               size="sm"
               className="-my-1 -mr-2"
+              disabled={enSuppression.includes(r.id)}
               onClick={() => void supprimer(r)}
             />
           )}

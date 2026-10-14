@@ -155,6 +155,28 @@ describe("Espaces et publications", () => {
     await expect(deposer(E1, `${E2}/${randomUUID()}.png`)).rejects.toThrow(REFUS);
   });
 
+  it("l'équipe supprime la publication d'un autre : son fichier se retire aussi du stockage", async () => {
+    const chemin = `${E1}/${randomUUID()}.png`;
+    await deposer(E1, chemin);
+    const id = await publier(E1, null, "À retirer", "", { chemin, nom: "a.png", type: "image/png", taille: 1000 });
+    const [{ rendu }] = await banc.en<{ rendu: string }>({ id: A }, "select public.supprimer_publication($1) as rendu", [id]);
+    const retires = await banc.en<{ name: string }>({ id: A }, "delete from storage.objects where bucket_id = 'communaute' and name = $1 returning name", [rendu]);
+    expect(retires).toEqual([{ name: chemin }]);
+  });
+
+  it("un fichier publié ne se retire ni ne se remplace par son auteur, et ne s'attache qu'une fois ; libéré à la suppression", async () => {
+    const chemin = `${E1}/${randomUUID()}.png`;
+    const piece = { chemin, nom: "a.png", type: "image/png", taille: 1000 };
+    const retirer = (qui: string) => banc.en<{ name: string }>({ id: qui }, "delete from storage.objects where bucket_id = 'communaute' and name = $1 returning name", [chemin]);
+    await deposer(E1, chemin);
+    const id = await publier(E1, null, "Mon affiche", "", piece);
+    expect(await retirer(E1)).toEqual([]);
+    await expect(deposer(E1, chemin)).rejects.toThrow();
+    await expect(publier(E1, null, "La même affiche", "", piece)).rejects.toThrow("Ce fichier n’est pas le vôtre.");
+    await banc.en({ id: E1 }, "select public.supprimer_publication($1)", [id]);
+    expect(await retirer(E1)).toEqual([{ name: chemin }]);
+  });
+
   it("carte : rôle formateur ou équipe, est_moi, peut_supprimer ; aucune adresse e-mail", async () => {
     const deF = await publier(F, null, "Du formateur");
     const deA = await publier(A, null, "De l'équipe");

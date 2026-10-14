@@ -75,6 +75,8 @@ export function CartePublication({
   toutesReponses?: Reponse[];
   onSupprimee: (id: string) => void;
 }) {
+  // Sur sa propre page (toutes les réponses), la publication supprimée n'est pas relue : on revient à la Communauté.
+  const relire = !toutesReponses;
   const { toast } = useToast();
   const [p, setP] = useState(publication);
   const [reponses, setReponses] = useState<EtatReponses>(() =>
@@ -169,7 +171,7 @@ export function CartePublication({
   }
 
   async function supprimer() {
-    const reponse = await supprimerPublication(p.id).catch(() => ({ ok: false as const, message: ECHEC }));
+    const reponse = await supprimerPublication(p.id, { relire }).catch(() => ({ ok: false as const, message: ECHEC }));
     if (!reponse.ok) {
       setErreurSuppression(reponse.message);
       throw new Error(reponse.message);
