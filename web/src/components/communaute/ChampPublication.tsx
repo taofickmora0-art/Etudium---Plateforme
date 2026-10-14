@@ -2,9 +2,19 @@
 
 import { useEffect, useId, useRef, useState, type ChangeEvent } from "react";
 import dynamic from "next/dynamic";
-import { Attachment01Icon, Cancel01Icon, Image01Icon, Pdf01Icon, Video01Icon } from "@hugeicons/core-free-icons";
+import {
+  Attachment01Icon,
+  Cancel01Icon,
+  CheckmarkSquare02Icon,
+  Image01Icon,
+  ImageCompositionIcon,
+  LeftToRightListBulletIcon,
+  Pdf01Icon,
+  Video01Icon,
+} from "@hugeicons/core-free-icons";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { IconButton } from "@/components/ui/IconButton";
 import { IconTile } from "@/components/ui/IconTile";
 import { Select } from "@/components/ui/Select";
@@ -13,9 +23,13 @@ import { useToast } from "@/components/ui/Toast";
 import { formatDe, formatParMime } from "@/lib/admin/fichiers";
 import { publierPublication } from "@/lib/communaute/actions";
 import { REFUS_PIECE, refusPiece, refusPublication, tailleLisible, TITRE_MAX } from "@/lib/communaute/regles";
+import { refusSondage, type SondageEnvoye, type TypeSondage } from "@/lib/communaute/sondage";
 import type { Espace, MoiCommunaute, PieceEnvoyee, Publication } from "@/lib/communaute/types";
 import { reconnaitreVideo } from "@/lib/communaute/video";
+import { phraseSession } from "@/lib/sessions/regles";
 import { createClient } from "@/lib/supabase/client";
+import { BoutonPublier } from "./BoutonPublier";
+import { ChampSondage, sondageRempli, sondageVide, type EtatSondage } from "./ChampSondage";
 import { VideoIntegree } from "./VideoIntegree";
 import { identifiantAleatoire } from "@/lib/identifiant";
 
@@ -23,6 +37,15 @@ const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 const ECHEC_ENVOI = "L’envoi du fichier n’a pas abouti. Réessayez.";
 const CADRE = "box-border flex min-w-0 rounded-2xl border border-bordure-carte bg-panneau";
 const ADRESSE_VIDEO = "Collez l’adresse complète de la vidéo (https://…).";
+// La rangée d'options, dans l'ordre de la capture.
+const AJOUTS: [Ajout, string, typeof Image01Icon][] = [
+  ["image", "Image", Image01Icon],
+  ["images", "Sondage avec images", ImageCompositionIcon],
+  ["texte", "Sondage avec texte", LeftToRightListBulletIcon],
+  ["quiz", "Quiz", CheckmarkSquare02Icon],
+  ["video", "Vidéo", Video01Icon],
+  ["fichier", "Fichier", Attachment01Icon],
+];
 
 // L'éditeur visuel (Tiptap) n'est chargé qu'à l'ouverture du champ : le fil reste léger.
 const EditeurTexte = dynamic(() => import("./EditeurTexte").then((m) => m.EditeurTexte), {
@@ -32,6 +55,9 @@ const EditeurTexte = dynamic(() => import("./EditeurTexte").then((m) => m.Editeu
 
 
 type Piece = { fichier: File; type: string; extension: string };
+/** Un seul ajout par publication (spec sondages, quiz et programmation, §1). */
+type Ajout = "image" | "fichier" | "video" | TypeSondage;
+const NOMS_AJOUT: Record<Ajout, string> = { image: "l’image", fichier: "le fichier", video: "la vidéo", texte: "le sondage", images: "le sondage", quiz: "le quiz" };
 
 /** Un aperçu local du fichier publié, le temps que le fil soit relu ; absent hors navigateur. */
 const apercu = (fichier: File) => (typeof URL.createObjectURL === "function" ? URL.createObjectURL(fichier) : null);
@@ -72,6 +98,11 @@ export function ChampPublication({
   // Le lien de la vidéo ; null : le champ Vidéo est fermé.
   const [video, setVideo] = useState<string | null>(null);
   const [ouvert, setOuvert] = useState(false);
+  // Le sondage ou le quiz en cours ; l'heure de parution d'une publication programmée (ISO).
+  const [sondage, setSondage] = useState<EtatSondage | null>(null);
+  const [publieLe, setPublieLe] = useState<string | null>(null);
+  // Un ajout rempli que l'on remplace : confirmé d'abord.
+  const [remplacement, setRemplacement] = useState<{ actuel: Ajout; suite: () => void } | null>(null);
   // Ouvert par « Ajouter une vidéo » : le lien prend le focus, pas le texte.
   const [focusTexte, setFocusTexte] = useState(true);
   const [envoi, setEnvoi] = useState(false);
@@ -94,6 +125,8 @@ export function ChampPublication({
     setTexte("");
     setPiece(null);
     setVideo(null);
+    setSondage(null);
+    setPublieLe(null);
     setDestination(espace.id ?? "general");
     setErreur(null);
     setFocusTexte(true);
@@ -116,7 +149,44 @@ export function ChampPublication({
       return;
     }
     setErreur(null);
+    setSondage(null);
+    setVideo(null);
     setPiece({ fichier, type, extension });
+  }
+
+  /** L'ajout en cours (un seul par publication), et s'il est rempli. */
+  const actuel: Ajout | null = piece ? (piece.type === "application/pdf" ? "fichier" : "image") : video !== null ? "video" : sondage ? sondage.type : null;
+  const actuelRempli = piece !== null || (video ?? "").trim() !== "" || (sondage !== null && sondageRempli(sondage));
+
+  /** Choisir un ajout : un autre ajout rempli est remplacé après confirmation. */
+  function ajouter(cible: Ajout) {
+    const suite = () => {
+      if (cible === "image") return image.current?.click();
+      if (cible === "fichier") return pdf.current?.click();
+      setPiece(null);
+      if (cible === "video") {
+        setSondage(null);
+        setVideo((v) => v ?? "");
+        return;
+      }
+      setVideo(null);
+      setSondage((s) => (s?.type === cible ? s : sondageVide(cible)));
+    };
+    if (actuel && actuel !== cible && actuelRempli) setRemplacement({ actuel, suite });
+    else suite();
+  }
+
+  /** Le sondage tel que le serveur l'attend ; les images, déjà déposées. */
+  function sondageEnvoye(s: EtatSondage, images: (PieceEnvoyee | null)[]): SondageEnvoye {
+    return {
+      type: s.type,
+      choixMultiples: s.type !== "quiz" && s.choixMultiples,
+      dureeJours: s.type === "quiz" || !s.duree ? null : (Number(s.duree) as 1 | 3 | 7 | 14),
+      explication: s.type === "quiz" ? s.explication.trim() : "",
+      options: s.options.map((o, i) =>
+        s.type === "images" ? { texte: o.texte.trim(), image: images[i] } : s.type === "quiz" ? { texte: o.texte.trim(), correcte: o.correcte === true } : { texte: o.texte.trim() },
+      ),
+    };
   }
 
   /** Dépose le fichier dans le dossier du compte ; null si l'envoi échoue. */
@@ -134,7 +204,10 @@ export function ChampPublication({
   }
 
   async function publier() {
-    const refus = refusPublication(titre, texte) ?? (video?.trim() && !reconnaitreVideo(video) ? ADRESSE_VIDEO : null);
+    // Avant le dépôt, une image choisie tient lieu d'image déposée pour vérifier le sondage.
+    const essai = sondage ? sondageEnvoye(sondage, sondage.options.map((o) => (o.fichier ? { chemin: "", nom: o.fichier.name, type: o.type ?? "", taille: o.fichier.size } : null))) : null;
+    const refus =
+      refusPublication(titre, texte) ?? (video?.trim() && !reconnaitreVideo(video) ? ADRESSE_VIDEO : null) ?? (essai ? refusSondage(essai) : null);
     if (refus) {
       setErreur(refus);
       return;
@@ -147,16 +220,41 @@ export function ChampPublication({
         setErreur(ECHEC_ENVOI);
         return;
       }
+      // Les images d'un sondage : déposées une à une ; un échec retire celles déjà déposées.
+      const images: (PieceEnvoyee | null)[] = [];
+      for (const o of sondage?.type === "images" ? sondage.options : []) {
+        const extension = o.type ? formatParMime(o.type)?.extensions[0] : undefined;
+        const deposee = o.fichier && o.type && extension ? await deposer({ fichier: o.fichier, type: o.type, extension }) : null;
+        if (!deposee) {
+          const deja = images.flatMap((i) => (i ? [i.chemin] : []));
+          if (deja.length > 0) await createClient().storage.from("communaute").remove(deja).catch(() => undefined);
+          setErreur(ECHEC_ENVOI);
+          return;
+        }
+        images.push(deposee);
+      }
+      const envoyeSondage = sondage ? sondageEnvoye(sondage, images) : null;
+      const deposes = [...(envoyee ? [envoyee.chemin] : []), ...images.flatMap((i) => (i ? [i.chemin] : []))];
       let resultat: Awaited<ReturnType<typeof publierPublication>>;
       try {
-        resultat = await publierPublication(cible.id, titre.trim(), texte.trim(), envoyee, video?.trim() || null);
+        // Sans sondage ni programmation, l'appel d'avant la 0026.
+        resultat =
+          envoyeSondage || publieLe
+            ? await publierPublication(cible.id, titre.trim(), texte.trim(), envoyee, video?.trim() || null, { sondage: envoyeSondage, publieLe })
+            : await publierPublication(cible.id, titre.trim(), texte.trim(), envoyee, video?.trim() || null);
       } catch {
-        // L'action n'a pas répondu : le fichier ne reste pas sans publication.
-        if (envoyee) await createClient().storage.from("communaute").remove([envoyee.chemin]).catch(() => undefined);
+        // L'action n'a pas répondu : les fichiers ne restent pas sans publication.
+        if (deposes.length > 0) await createClient().storage.from("communaute").remove(deposes).catch(() => undefined);
         resultat = { ok: false, message: ECHEC };
       }
       if (!resultat.ok) {
         setErreur(resultat.message);
+        return;
+      }
+      // Programmée : pas encore dans le fil ; elle attend dans l'onglet « Programmées ».
+      if (publieLe) {
+        fermer();
+        toast({ tone: "reussite", title: "Publication programmée", description: `Elle paraîtra le ${phraseSession(publieLe)}. Retrouvez-la dans l’onglet « Programmées ».` });
         return;
       }
       const dansLeFil = onPubliee({
@@ -180,6 +278,7 @@ export function ChampPublication({
         enregistree: false,
         aimeePar: [],
         video: resultat.video,
+        ...("sondage" in resultat && resultat.sondage ? { sondage: resultat.sondage } : {}),
       });
       fermer();
       toast(
@@ -257,6 +356,7 @@ export function ChampPublication({
             onChange={setTexte}
           />
           {video !== null && <ChampVideo valeur={video} onChange={setVideo} desactive={envoi} />}
+          {sondage && <ChampSondage etat={sondage} onChange={setSondage} onRetirer={() => setSondage(null)} onErreur={setErreur} desactive={envoi} />}
           {piece && (
             <div className="flex min-w-0 items-center gap-3 rounded-[14px] border border-bordure-carte px-3.5 py-2.5">
               <IconTile icon={piece.type === "application/pdf" ? Pdf01Icon : Image01Icon} />
@@ -291,16 +391,13 @@ export function ChampPublication({
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:pl-14">
-        <div className="-ml-3 flex flex-wrap items-center gap-1 sm:ml-0">
-          <Button variant="discret" size="sm" iconLeft={Image01Icon} disabled={envoi} onClick={() => image.current?.click()}>
-            Image
-          </Button>
-          <Button variant="discret" size="sm" iconLeft={Video01Icon} disabled={envoi} onClick={() => setVideo((v) => v ?? "")}>
-            Vidéo
-          </Button>
-          <Button variant="discret" size="sm" iconLeft={Attachment01Icon} disabled={envoi} onClick={() => pdf.current?.click()}>
-            Fichier
-          </Button>
+        {/* Un seul ajout par publication : en choisir un autre remplace le premier (après confirmation s'il est rempli). */}
+        <div role="group" aria-label="Ajouter à la publication" className="-ml-3 flex flex-wrap items-center gap-1 sm:ml-0">
+          {AJOUTS.map(([cle, libelle, icone]) => (
+            <Button key={cle} variant="discret" size="sm" iconLeft={icone} disabled={envoi} onClick={() => ajouter(cle)}>
+              {libelle}
+            </Button>
+          ))}
           {fichiers}
         </div>
         <span className="text-xs leading-[18px] text-discret">
@@ -318,10 +415,20 @@ export function ChampPublication({
         >
           Annuler
         </Button>
-        <Button loading={envoi} onClick={() => void publier()}>
-          Publier
-        </Button>
+        <BoutonPublier envoi={envoi} publieLe={publieLe} onPublier={() => void publier()} onProgrammer={setPublieLe} />
       </div>
+      <ConfirmDialog
+        open={remplacement !== null}
+        onOpenChange={(ouverte) => !ouverte && setRemplacement(null)}
+        title={remplacement ? `Remplacer ${NOMS_AJOUT[remplacement.actuel]} ?` : ""}
+        description="Une publication porte un seul ajout : une image, un fichier, une vidéo, un sondage ou un quiz."
+        confirmLabel="Remplacer"
+        onConfirm={() => {
+          const suite = remplacement?.suite;
+          setRemplacement(null);
+          suite?.();
+        }}
+      />
     </div>
   );
 }
