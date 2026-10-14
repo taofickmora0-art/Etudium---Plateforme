@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ContenuNotifications } from "@/components/notifications/ContenuNotifications";
@@ -120,6 +120,27 @@ describe("La page Notifications", () => {
     vi.mocked(chargerNotifications).mockResolvedValueOnce({ ok: false, message: "Les notifications n’ont pas pu être chargées. Réessayez." });
     await user.click(screen.getByRole("button", { name: "Non lues" }));
     expect(await screen.findByText("Les notifications n’ont pas pu être chargées. Réessayez.")).toBeInTheDocument();
+  });
+
+  it("le premier affichage prend l'heure du serveur : aucun écart à l'hydratation, même si une minute bascule entre-temps", async () => {
+    const { renderToString } = await import("react-dom/server");
+    const { hydrateRoot } = await import("react-dom/client");
+    const unique: LotNotifications = { lignes: [notif({ id: "9", titre: "Récente", creeLe: "2026-10-14T14:55:30Z" })], suite: false, nonLues: 1 };
+    const page = <PageNotifications initial={unique} maintenant="2026-10-14T15:00:00Z" />;
+    // Le serveur rend à 15 h 00 (« Il y a 4 min ») ; l'appareil hydrate à 15 h 01 (« Il y a 5 min »).
+    const html = renderToString(page);
+    vi.setSystemTime(new Date("2026-10-14T15:01:00Z"));
+    const conteneur = document.createElement("div");
+    conteneur.innerHTML = html;
+    document.body.appendChild(conteneur);
+    const ecarts = vi.fn();
+    await act(async () => {
+      hydrateRoot(conteneur, page, { onRecoverableError: ecarts });
+    });
+    expect(ecarts).not.toHaveBeenCalled();
+    // Une fois affichée, la page passe à l'heure de l'appareil.
+    expect(conteneur.textContent).toContain("Il y a 5 min");
+    conteneur.remove();
   });
 
   it("avant la 0016 : le bandeau", async () => {

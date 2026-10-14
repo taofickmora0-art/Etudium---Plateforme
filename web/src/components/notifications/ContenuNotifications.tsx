@@ -17,5 +17,5 @@ export async function ContenuNotifications() {
       </div>
     );
   }
-  return <PageNotifications initial={lecture.donnees} />;
+  return <PageNotifications initial={lecture.donnees} maintenant={new Date().toISOString()} />;
 }

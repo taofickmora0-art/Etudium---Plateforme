@@ -13,6 +13,7 @@ import { EVENEMENT_NOTIFICATIONS } from "@/lib/notifications/regles";
 import { grouperParJour, heure, quand } from "@/lib/notifications/temps";
 import type { LotNotifications } from "@/lib/notifications/types";
 import { versPanneau } from "./affichage";
+import { useMaintenant } from "./horloge";
 
 type Filtre = "toutes" | "non_lues";
 const FILTRES = [
@@ -26,15 +27,17 @@ const signalerALaCloche = () => window.dispatchEvent(new Event(EVENEMENT_NOTIFIC
 /**
  * La page Notifications (design NdNotifications ; spec des notifications, §3) : toutes ou les non lues, groupées par
  * jour à l'heure du Bénin, 20 à la fois (« Voir plus »). Un clic marque la notification lue et mène à son lien.
+ * `maintenant` : l'heure du serveur, pour que le premier affichage du navigateur soit identique au sien (« Il y a 4 min »
+ * des deux côtés) ; une fois la page affichée, c'est l'heure de l'appareil.
  */
-export function PageNotifications({ initial }: { initial: LotNotifications }) {
+export function PageNotifications({ initial, maintenant: heureServeur }: { initial: LotNotifications; maintenant?: string }) {
   const [filtre, setFiltre] = useState<Filtre>("toutes");
   const [lot, setLot] = useState(initial);
   const [occupe, setOccupe] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   // Seule la dernière lecture compte : un filtre changé deux fois de suite ne mélange pas les réponses.
   const demande = useRef(0);
-  const maintenant = new Date();
+  const maintenant = useMaintenant(heureServeur);
 
   async function charger(nonLues: boolean, avant: string | null, ajouter: boolean) {
     const numero = ++demande.current;
