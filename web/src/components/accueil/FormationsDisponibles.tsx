@@ -19,9 +19,12 @@ export function FormationsDisponibles({ cartes }: { cartes: CarteCatalogue[] }) 
           <Icon icon={ArrowRight01Icon} size={16} />
         </Link>
       </div>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+      {/* Sur téléphone, une rangée qui défile en largeur : la page reste courte. */}
+      <div className="grid gap-5 sm:grid-cols-2 max-sm:-mx-4 max-sm:flex max-sm:snap-x max-sm:gap-3 max-sm:overflow-x-auto max-sm:px-4 max-sm:pb-1 max-sm:[scrollbar-width:none]">
         {cartes.map((carte) => (
-          <CarteFormation key={carte.id} carte={carte} variante="connecte" titleAs="h3" />
+          <div key={carte.id} className="flex min-w-0 max-sm:w-[248px] max-sm:flex-none max-sm:snap-start">
+            <CarteFormation carte={carte} variante="connecte" titleAs="h3" />
+          </div>
         ))}
       </div>
     </section>

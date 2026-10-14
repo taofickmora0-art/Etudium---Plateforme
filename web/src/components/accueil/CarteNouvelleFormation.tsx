@@ -20,10 +20,11 @@ export function CarteNouvelleFormation({ formation, maintenant }: { formation: C
   return (
     <article
       aria-label={`Nouvelle formation : ${formation.titre}`}
-      className="box-border flex min-w-0 flex-col overflow-hidden rounded-2xl border border-bordure-carte bg-panneau"
+      className="box-border flex min-w-0 flex-col gap-4 rounded-2xl border border-bordure-carte bg-panneau px-5 py-[18px] max-sm:gap-3 max-sm:px-4 max-sm:py-4 sm:flex-row sm:items-start"
     >
-      <Couverture src={urlCouverture(formation.couverture)} parcours={parcoursPrincipal(formation)} sizes="(max-width: 768px) 100vw, 720px" className="max-h-[260px]" />
-      <div className="flex min-w-0 flex-col px-5 pt-4 pb-4 max-sm:px-4">
+      {/* Sur ordinateur, la couverture à gauche : la carte garde la hauteur d'une publication. */}
+      <Couverture src={urlCouverture(formation.couverture)} parcours={parcoursPrincipal(formation)} sizes="(max-width: 640px) 100vw, 220px" className="rounded-[12px] sm:w-[220px] sm:flex-none" />
+      <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           <Tag tone="nouveau" icon={CourseIcon}>
             Nouvelle formation
@@ -32,7 +33,7 @@ export function CarteNouvelleFormation({ formation, maintenant }: { formation: C
             {[moment(formation.publieeLe, maintenant), parcours?.nomCourt].filter(Boolean).join(" · ")}
           </span>
         </div>
-        <h3 className="m-0 mt-2.5 text-[17px] leading-[25px] font-semibold wrap-anywhere text-encre max-sm:text-base max-sm:leading-6">{formation.titre}</h3>
+        <h3 className="m-0 mt-2 text-[17px] leading-[25px] font-semibold wrap-anywhere text-encre max-sm:text-base max-sm:leading-6">{formation.titre}</h3>
         {formation.resume && <p className="m-0 mt-1 line-clamp-2 text-[15px] leading-6 text-texte max-sm:text-sm max-sm:leading-[22px]">{formation.resume}</p>}
         <Link href={`/formations/${formation.slug}`} className={cn(buttonVariants({ variant: "contour", size: "sm" }), "mt-3.5 self-start")}>
           Découvrir la formation
