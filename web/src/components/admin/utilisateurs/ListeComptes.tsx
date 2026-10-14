@@ -28,6 +28,7 @@ import {
   rolePrincipal,
 } from "@/lib/utilisateurs/regles";
 import type { CompteResume, FiltreComptes, PageComptes } from "@/lib/utilisateurs/types";
+import { FenetreRole } from "./FenetreRole";
 import { FenetresSuspension, type FenetreSuspension } from "./FenetresSuspension";
 
 const DELAI_RECHERCHE_MS = 300;
@@ -51,8 +52,8 @@ export function ListeComptes({ initial, moi }: Props) {
   const [donnees, setDonnees] = useState(initial);
   const [erreur, setErreur] = useState<string | null>(null);
   const [chargement, demarrer] = useTransition();
-  const [cible, setCible] = useState<{ id: string; nomCourt: string }>({ id: "", nomCourt: "" });
-  const [fenetre, setFenetre] = useState<FenetreSuspension>(null);
+  const [cible, setCible] = useState<{ id: string; nomCourt: string; role: Role }>({ id: "", nomCourt: "", role: "etudiant" });
+  const [fenetre, setFenetre] = useState<FenetreSuspension | "role">(null);
   const minuterie = useRef<ReturnType<typeof setTimeout> | null>(null);
   const derniere = useRef(0);
   // Une entrée du menu ouvre une fenêtre : le menu, en se fermant, ne doit pas lui reprendre le focus.
@@ -76,13 +77,14 @@ export function ListeComptes({ initial, moi }: Props) {
 
   const actions = (c: CompteResume): MenuEntry[] => {
     const droits = droitsSurCompte(moi, c);
-    const ouvrir = (quoi: FenetreSuspension) => () => {
+    const ouvrir = (quoi: FenetreSuspension | "role") => () => {
       fenetreDemandee.current = true;
-      setCible({ id: c.id, nomCourt: nomCourt(c.prenom, c.nom, c.email) });
+      setCible({ id: c.id, nomCourt: nomCourt(c.prenom, c.nom, c.email), role: rolePrincipal(c.roles) });
       setFenetre(quoi);
     };
     return [
       { label: "Voir le profil", href: `/admin/utilisateurs/${c.id}` },
+      ...(droits.changerRole ? [{ label: "Changer le rôle", onSelect: ouvrir("role") }] : []),
       ...(droits.suspendre ? [{ label: "Suspendre le compte", danger: true, onSelect: ouvrir("suspendre") }] : []),
       ...(droits.reactiver ? [{ label: "Réactiver le compte", onSelect: ouvrir("reactiver") }] : []),
     ];
@@ -173,8 +175,15 @@ export function ListeComptes({ initial, moi }: Props) {
       </div>
       <FenetresSuspension
         compte={cible}
-        fenetre={fenetre}
+        fenetre={fenetre === "role" ? null : fenetre}
         onFenetreChange={setFenetre}
+        onTermine={() => charger(recherche, filtre, page)}
+        retourFocus={() => document.querySelector<HTMLElement>(`[data-actions-compte="${cible.id}"]`)}
+      />
+      <FenetreRole
+        compte={cible}
+        ouverte={fenetre === "role"}
+        onOuverteChange={(ouverte) => setFenetre(ouverte ? "role" : null)}
         onTermine={() => charger(recherche, filtre, page)}
         retourFocus={() => document.querySelector<HTMLElement>(`[data-actions-compte="${cible.id}"]`)}
       />

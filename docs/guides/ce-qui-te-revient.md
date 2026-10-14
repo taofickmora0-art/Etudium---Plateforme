@@ -305,7 +305,7 @@ Pas de migration pour cette tâche : il faut seulement que la 0003 à la 0009 so
    - le menu de gauche devient celui du back-office : Tableau de bord ; Contenus (Parcours, Formateurs, Formations, Avis) ; Plateforme (Utilisateurs, Abonnements et paiements, Modération) ;
    - le **Tableau de bord** montre les utilisateurs inscrits (et la croissance du mois), les nouveaux inscrits, les formations les plus suivies et la progression moyenne ;
    - les revenus, les abonnés et le taux de conversion affichent « Disponible au lot 2 », les sessions live « Disponible au lot 5 ».
-3. Rond de profil → **Espace formateur** : son propre menu (Tableau de bord, Mes formations, Apprenants, Corrections, Sessions live, Messages), en « Bientôt disponible » pour l’instant.
+3. Rond de profil → **Espace formateur** : son propre menu (Tableau de bord, Mes formations, Apprenants, Corrections, Sessions live, Messages), en « Bientôt disponible » pour l’instant. *Depuis la migration 0017 (section 22), un compte de l’équipe n’a plus cet espace : c’est le compte formateur qui le voit.*
 4. Rond de profil → **Espace étudiant** : le menu habituel revient.
 5. Sur téléphone, la barre du bas suit l’espace où tu te trouves.
 
@@ -337,7 +337,7 @@ Pas de migration pour cette tâche : il faut seulement que la 0003 à la 0009 so
    - sur ton téléphone, le tableau défile de côté dans son cadre ; le menu **⋮** d’une ligne propose « Voir le profil ».
 4. Ouvre le compte de test :
    - **Identité** et **Activité** s’affichent (« Aucune formation commencée. » s’il n’a rien suivi) ;
-   - **Rôles** : coche **Formateur**, choisis « Créer une fiche à son nom », puis **Enregistrer les rôles**. La confirmation dit « Donner : Formateur. », puis « Rôles enregistrés. » ;
+   - **Rôle** : **Changer le rôle** → **Formateur** → **Changer le rôle**, puis « Rôle changé ». Sa fiche formateur est créée à son nom (depuis la migration 0017 ; avant, il fallait choisir une fiche) ;
    - la fiche formateur apparaît avec son lien ; Back-office → **Formateurs** : elle y est ;
    - dans la fenêtre privée, rond de profil : **Espace formateur** apparaît ;
    - décoche **Formateur** et enregistre : la fiche reste dans Formateurs, sans compte relié.
@@ -353,7 +353,7 @@ Pas de migration pour cette tâche : il faut seulement que la 0003 à la 0009 so
 
 1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0014_espace_formateur.sql` (après la 0013).
    - Si un jour tu rejoues une migration plus ancienne, rejoue ensuite toutes les suivantes, dans l’ordre, jusqu’à la 0014.
-2. Back-office → **Utilisateurs** → le compte de test (section 18) : donne-lui le rôle **Formateur** avec « Créer une fiche à son nom ».
+2. Back-office → **Utilisateurs** → le compte de test (section 18) : donne-lui le rôle **Formateur** (menu ⋮ → **Changer le rôle**).
 3. Dans la fenêtre privée du compte de test, rond de profil → **Espace formateur** → **Mes formations** :
    - « Vous n’avez pas encore de formation… » ;
    - **Nouvelle formation** : un titre, puis l’éditeur s’ouvre.
@@ -414,3 +414,18 @@ Pas de migration pour cette tâche : il faut seulement que la 0003 à la 0009 so
    - Avec ton compte : Back-office → **Avis** → **Masquer** cet avis. Personne ne reçoit de notification.
    - Avec le troisième compte : la fiche de la formation montre toujours son avis, avec « Votre avis » et aucune autre mention ; la note et le nombre d’avis de la fiche ne changent pas pour lui.
    - Dans une fenêtre privée, sans compte : l’avis n’apparaît pas.
+
+## 22. Valider la règle « un seul rôle », 10 minutes
+
+Un compte a l’espace étudiant, plus soit l’espace formateur, soit le back-office, jamais les deux. Donner le rôle Formateur crée sa fiche formateur : il n’y a plus de fiche à choisir.
+
+1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0017_role_unique.sql` (après la 0016).
+   - Un compte qui avait Formateur et un rôle de l’équipe perd Formateur ; ses formations restent sur sa fiche.
+   - Un compte qui avait plusieurs rôles de l’équipe garde le plus élevé.
+2. Avec ton compte, rond de profil : **Espace étudiant** et **Back-office** seulement. L’espace formateur et son message « pas encore relié à une fiche formateur » ont disparu.
+3. Back-office → **Utilisateurs** → menu **⋮** du troisième compte (section 20) → **Changer le rôle** :
+   - la fenêtre propose un seul choix parmi Étudiant, Formateur, Modérateur, Admin et Super admin, chacun avec ses espaces ;
+   - choisis **Formateur**, puis **Changer le rôle** : « Rôle changé », et la colonne Rôle dit « Formateur ».
+4. Avec le troisième compte : la cloche dit « Vous êtes formateur ». Rond de profil → **Espace formateur** → **Mes formations** : crée une formation tout de suite, sans aucun message de fiche. Back-office → **Formateurs** : sa fiche est là, à son nom.
+5. Remets-lui le rôle **Étudiant** : l’espace formateur disparaît de son rond de profil, et sa formation reste (Back-office → Formations). S’il redevient formateur, il retrouve sa fiche et sa formation.
+6. Sur ta propre fiche (Utilisateurs → ton compte), choisis **Admin** : la base refuse, « Vous ne pouvez pas vous retirer le rôle super admin. ».

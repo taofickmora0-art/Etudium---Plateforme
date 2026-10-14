@@ -31,7 +31,6 @@ export type CompteDetail = Omit<CompteResume, "suspendu"> & {
 export type Lecture<T> = { migrationAbsente: true } | { migrationAbsente: false; donnees: T };
 
 /** La fiche formateur à relier en donnant le rôle Formateur : une fiche libre, ou une nouvelle à son nom. */
-export type ChoixFiche = { existante: string } | { nouvelle: true } | null;
 
 export type Resultat = { ok: boolean; message?: string };
 

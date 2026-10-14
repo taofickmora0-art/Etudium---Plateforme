@@ -9,12 +9,12 @@ import type { CompteDetail, PageComptes } from "@/lib/utilisateurs/types";
 // Page Utilisateurs du back-office (spec 2026-10-13-utilisateurs-roles, §2 et §3).
 
 const chercherComptes = vi.fn();
-const changerRoles = vi.fn();
+const changerRole = vi.fn();
 const suspendreCompte = vi.fn();
 const reactiverCompte = vi.fn();
 vi.mock("@/lib/utilisateurs/actions", () => ({
   chercherComptes: (...a: unknown[]) => chercherComptes(...a),
-  changerRoles: (...a: unknown[]) => changerRoles(...a),
+  changerRole: (...a: unknown[]) => changerRole(...a),
   suspendreCompte: (...a: unknown[]) => suspendreCompte(...a),
   reactiverCompte: (...a: unknown[]) => reactiverCompte(...a),
 }));
@@ -26,17 +26,15 @@ vi.mock("next/navigation", () => ({ useRouter: () => routeur, usePathname: () =>
 const getAuthUser = vi.fn();
 vi.mock("@/lib/auth/current-user", () => ({ getAuthUser: () => getAuthUser(), getShellUser: vi.fn(), demoModeActive: () => false }));
 const lireCompte = vi.fn();
-const lireFichesLibres = vi.fn();
 const lireRemarquesFormateurs = vi.fn(async () => ({ migrationAbsente: false, donnees: [] as unknown[] }));
 vi.mock("@/lib/utilisateurs/data", () => ({
   lireCompte: (...a: unknown[]) => lireCompte(...a),
-  lireFichesLibres: () => lireFichesLibres(),
   lireComptes: vi.fn(),
   lireRemarquesFormateurs: () => lireRemarquesFormateurs(),
 }));
 
 const { ListeComptes } = await import("@/components/admin/utilisateurs/ListeComptes");
-const { RolesCompte } = await import("@/components/admin/utilisateurs/RolesCompte");
+const { RoleCompte } = await import("@/components/admin/utilisateurs/RoleCompte");
 const { SuspensionCompte } = await import("@/components/admin/utilisateurs/SuspensionCompte");
 const { ActiviteCompte } = await import("@/components/admin/utilisateurs/ActiviteCompte");
 const { FicheUtilisateur } = await import("@/components/admin/utilisateurs/FicheUtilisateur");
@@ -70,9 +68,9 @@ const COMPTE: CompteDetail = {
 const avecToast = (enfant: React.ReactNode) => render(<ToastProvider>{enfant}</ToastProvider>);
 
 beforeEach(() => {
-  for (const f of [chercherComptes, changerRoles, suspendreCompte, reactiverCompte, routeur.push, routeur.replace, notFound, getAuthUser, lireCompte, lireFichesLibres]) f.mockClear();
+  for (const f of [chercherComptes, changerRole, suspendreCompte, reactiverCompte, routeur.push, routeur.replace, notFound, getAuthUser, lireCompte]) f.mockClear();
   chercherComptes.mockResolvedValue({ ok: true, page: { total: 0, comptes: [] } });
-  changerRoles.mockResolvedValue({ ok: true });
+  changerRole.mockResolvedValue({ ok: true });
   suspendreCompte.mockResolvedValue({ ok: true });
   reactiverCompte.mockResolvedValue({ ok: true });
 });
@@ -97,6 +95,29 @@ describe("Liste des comptes", () => {
     await user.click(screen.getByRole("button", { name: "Actions pour Fifamè Adjovi" }));
     expect(screen.getByRole("menuitem", { name: "Voir le profil" })).toHaveAttribute("href", `/admin/utilisateurs/${ID}`);
     expect(screen.getByRole("menuitem", { name: "Suspendre le compte" })).toBeInTheDocument();
+  });
+
+  it("le super admin change le rôle depuis le menu ⋮ : un seul choix, confirmé, puis la liste est relue", async () => {
+    const user = userEvent.setup();
+    const SUPER = { id: "moi", roles: ["etudiant", "super_admin"] as Role[] };
+    avecToast(<ListeComptes initial={{ total: 1, comptes: [{ ...PAGE.comptes[0], roles: ["etudiant"] }] }} moi={SUPER} />);
+    await user.click(screen.getByRole("button", { name: "Actions pour Fifamè Adjovi" }));
+    await user.click(screen.getByRole("menuitem", { name: "Changer le rôle" }));
+    const fenetre = await screen.findByRole("dialog", { name: "Changer le rôle de Fifamè A. ?" });
+    expect(within(fenetre).getAllByRole("radio").map((r) => (r as HTMLInputElement).value)).toEqual(["etudiant", "formateur", "moderateur", "admin", "super_admin"]);
+    expect(within(fenetre).getByRole("radio", { name: /Étudiant/ })).toBeChecked();
+    expect(within(fenetre).getByRole("button", { name: "Changer le rôle" })).toBeDisabled();
+    await user.click(within(fenetre).getByRole("radio", { name: /Formateur/ }));
+    await user.click(within(fenetre).getByRole("button", { name: "Changer le rôle" }));
+    expect(changerRole).toHaveBeenCalledWith(ID, "formateur");
+    await waitFor(() => expect(chercherComptes).toHaveBeenCalled());
+  });
+
+  it("un admin n'a pas « Changer le rôle » dans le menu", async () => {
+    const user = userEvent.setup();
+    avecToast(<ListeComptes initial={{ total: 1, comptes: [{ ...PAGE.comptes[0], roles: ["etudiant"] }] }} moi={ADMIN} />);
+    await user.click(screen.getByRole("button", { name: "Actions pour Fifamè Adjovi" }));
+    expect(screen.queryByRole("menuitem", { name: "Changer le rôle" })).not.toBeInTheDocument();
   });
 
   it("la fenêtre ouverte depuis le menu reçoit le focus (le menu ne le reprend pas en se fermant)", async () => {
@@ -180,67 +201,45 @@ describe("Liste des comptes", () => {
   });
 });
 
-describe("Rôles d'un compte", () => {
-  it("en lecture seule pour qui n'est pas super admin", () => {
-    avecToast(<RolesCompte compte={COMPTE} fichesLibres={[]} modifiable={false} />);
-    expect(screen.getByRole("checkbox", { name: "Étudiant" })).toBeDisabled();
-    expect(screen.getByRole("checkbox", { name: "Formateur" })).toBeDisabled();
+describe("Rôle d'un compte", () => {
+  it("en lecture seule pour qui n'est pas super admin : le rôle et ses espaces", () => {
+    avecToast(<RoleCompte compte={COMPTE} modifiable={false} />);
+    const section = screen.getByRole("region", { name: "Rôle" });
+    expect(section).toHaveTextContent("Étudiant");
+    expect(section).toHaveTextContent("Espace étudiant seulement.");
     expect(screen.getByText("Seul le super admin change les rôles.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Enregistrer les rôles" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Changer le rôle" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
-  it("cocher Formateur demande la fiche ; Enregistrer reste désactivé tant qu'elle n'est pas choisie", async () => {
+  it("le super admin choisit un seul rôle ; jamais de fiche formateur à choisir", async () => {
     const user = userEvent.setup();
-    avecToast(<RolesCompte compte={COMPTE} fichesLibres={[{ id: FICHE, nom: "Awa Houngbo" }]} modifiable />);
-    expect(screen.getByRole("checkbox", { name: "Étudiant" })).toBeChecked();
-    expect(screen.getByRole("checkbox", { name: "Étudiant" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Enregistrer les rôles" })).toBeDisabled();
-    await user.click(screen.getByRole("checkbox", { name: "Formateur" }));
-    const choix = screen.getByRole("combobox", { name: "Fiche formateur" });
-    expect(within(choix).getByRole("option", { name: "Créer une fiche à son nom" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Enregistrer les rôles" })).toBeDisabled();
-    await user.selectOptions(choix, FICHE);
-    expect(screen.getByRole("button", { name: "Enregistrer les rôles" })).toBeEnabled();
+    avecToast(<RoleCompte compte={COMPTE} modifiable />);
+    await user.click(screen.getByRole("button", { name: "Changer le rôle" }));
+    const fenetre = screen.getByRole("dialog", { name: "Changer le rôle de Fifamè A. ?" });
+    expect(within(fenetre).getByRole("radio", { name: /Formateur/ })).toHaveAccessibleName(/crée et suit ses formations/);
+    await user.click(within(fenetre).getByRole("radio", { name: /Formateur/ }));
+    expect(within(fenetre).queryByRole("combobox")).not.toBeInTheDocument();
+    await user.click(within(fenetre).getByRole("button", { name: "Changer le rôle" }));
+    expect(changerRole).toHaveBeenCalledWith(ID, "formateur");
+    expect(await screen.findByText("Rôle changé")).toBeInTheDocument();
   });
 
-  it("la confirmation résume le changement, puis transmet la fiche existante", async () => {
+  it("le refus de la base est affiché tel quel, dans la fenêtre", async () => {
+    changerRole.mockResolvedValue({ ok: false, message: "Vous ne pouvez pas vous retirer le rôle super admin." });
     const user = userEvent.setup();
-    avecToast(<RolesCompte compte={COMPTE} fichesLibres={[{ id: FICHE, nom: "Awa Houngbo" }]} modifiable />);
-    await user.click(screen.getByRole("checkbox", { name: "Formateur" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Fiche formateur" }), FICHE);
-    await user.click(screen.getByRole("button", { name: "Enregistrer les rôles" }));
+    avecToast(<RoleCompte compte={{ ...COMPTE, roles: ["etudiant", "super_admin"] }} modifiable />);
+    await user.click(screen.getByRole("button", { name: "Changer le rôle" }));
     const fenetre = screen.getByRole("dialog");
-    expect(fenetre).toHaveTextContent("Donner : Formateur.");
-    await user.click(within(fenetre).getByRole("button", { name: "Enregistrer" }));
-    expect(changerRoles).toHaveBeenCalledWith(ID, ["etudiant", "formateur"], { existante: FICHE });
-  });
-
-  it("« Créer une fiche à son nom » transmet { nouvelle: true }", async () => {
-    const user = userEvent.setup();
-    avecToast(<RolesCompte compte={COMPTE} fichesLibres={[]} modifiable />);
-    await user.click(screen.getByRole("checkbox", { name: "Formateur" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Fiche formateur" }), "Créer une fiche à son nom");
-    await user.click(screen.getByRole("button", { name: "Enregistrer les rôles" }));
-    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Enregistrer" }));
-    expect(changerRoles).toHaveBeenCalledWith(ID, ["etudiant", "formateur"], { nouvelle: true });
-  });
-
-  it("le refus de la base est affiché tel quel", async () => {
-    changerRoles.mockResolvedValue({ ok: false, message: "Vous ne pouvez pas vous retirer le rôle super admin." });
-    const user = userEvent.setup();
-    avecToast(<RolesCompte compte={{ ...COMPTE, roles: ["etudiant", "super_admin"] }} fichesLibres={[]} modifiable />);
-    await user.click(screen.getByRole("checkbox", { name: "Super admin" }));
-    await user.click(screen.getByRole("button", { name: "Enregistrer les rôles" }));
-    const fenetre = screen.getByRole("dialog");
-    expect(fenetre).toHaveTextContent("Retirer : Super admin.");
-    await user.click(within(fenetre).getByRole("button", { name: "Enregistrer" }));
+    await user.click(within(fenetre).getByRole("radio", { name: /Admin/ }));
+    await user.click(within(fenetre).getByRole("button", { name: "Changer le rôle" }));
     expect(await within(fenetre).findByText("Vous ne pouvez pas vous retirer le rôle super admin.")).toBeInTheDocument();
   });
 
-  it("une fiche déjà reliée est montrée, avec son lien", () => {
-    avecToast(<RolesCompte compte={{ ...COMPTE, roles: ["etudiant", "formateur"], ficheFormateur: { id: FICHE, nom: "Fifamè Adjovi" } }} fichesLibres={[]} modifiable />);
+  it("un formateur : sa fiche est montrée, avec son lien", () => {
+    avecToast(<RoleCompte compte={{ ...COMPTE, roles: ["etudiant", "formateur"], ficheFormateur: { id: FICHE, nom: "Fifamè Adjovi" } }} modifiable />);
+    expect(screen.getByRole("region", { name: "Rôle" })).toHaveTextContent("Formateur");
     expect(screen.getByRole("link", { name: "Fifamè Adjovi" })).toHaveAttribute("href", `/admin/formateurs/${FICHE}`);
-    expect(screen.queryByRole("combobox", { name: "Fiche formateur" })).not.toBeInTheDocument();
   });
 });
 
@@ -304,7 +303,6 @@ describe("Fiche d'un compte (page)", () => {
   const ADMIN: Role[] = ["etudiant", "admin"];
   beforeEach(() => {
     getAuthUser.mockResolvedValue({ id: ID2 });
-    lireFichesLibres.mockResolvedValue([]);
   });
 
   it("identifiant inconnu : page introuvable", async () => {
@@ -325,7 +323,7 @@ describe("Fiche d'un compte (page)", () => {
     expect(screen.getByText("fifame@exemple.com")).toBeInTheDocument();
     expect(screen.getByText("Seul le super admin change les rôles.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Suspendre le compte" })).toBeInTheDocument();
-    expect(lireFichesLibres).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Changer le rôle" })).not.toBeInTheDocument();
   });
 
   it("les remarques des formateurs, en lecture seule ; aucune ; rien avant la migration 0015", async () => {
@@ -354,6 +352,6 @@ describe("Fiche d'un compte (page)", () => {
     lireCompte.mockResolvedValue({ migrationAbsente: false, donnees: { ...COMPTE, roles: ["etudiant", "super_admin"] } });
     avecToast(await FicheUtilisateur({ params: Promise.resolve({ id: ID }), roles: ["etudiant", "super_admin"] }));
     expect(screen.queryByRole("button", { name: "Suspendre le compte" })).not.toBeInTheDocument();
-    expect(lireFichesLibres).toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Changer le rôle" })).toBeInTheDocument();
   });
 });

@@ -3,9 +3,10 @@
 import { refresh } from "next/cache";
 import { ACCES_EQUIPE, exigerEquipe } from "@/lib/admin/garde";
 import type { Role } from "@/lib/auth/permissions";
+import { estFonctionAbsente } from "@/lib/contenus/lecture";
 import { versPage } from "./data";
 import { estFiltre, estRole, MOTIF_MAX } from "./regles";
-import type { ChoixFiche, FiltreComptes, PageComptes, Resultat } from "./types";
+import type { FiltreComptes, PageComptes, Resultat } from "./types";
 
 // Actions de la page Utilisateurs (spec des utilisateurs, §2 à §4). Chacune commence par vérifier l'équipe ; la base
 // revérifie tout (migration 0013) et ses messages (code P0001) sont faits pour être affichés tels quels.
@@ -36,21 +37,18 @@ export async function chercherComptes(
   return { ok: true, page: versPage(data) };
 }
 
-/** Donne et retire des rôles, avec la fiche formateur choisie pour le rôle Formateur (super admin seul). */
-export async function changerRoles(compteId: string, roles: Role[], fiche: ChoixFiche): Promise<Resultat> {
+/**
+ * Le rôle d'un compte, un seul en plus d'étudiant (super admin seul ; migration 0017). Le rôle Formateur crée sa fiche
+ * formateur, ou lui rend la sienne : la base s'en charge.
+ */
+export async function changerRole(compteId: string, role: Role): Promise<Resultat> {
   const garde = await exigerEquipe();
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
-  const existante = fiche && "existante" in fiche ? fiche.existante : null;
-  if (!UUID.test(compteId) || !Array.isArray(roles) || !roles.every(estRole) || (existante !== null && !UUID.test(existante))) {
-    return { ok: false, message: ECHEC };
+  if (!UUID.test(compteId) || !estRole(role)) return { ok: false, message: ECHEC };
+  const { error } = await garde.supabase.rpc("changer_role", { p_compte: compteId, p_role: role });
+  if (error) {
+    return { ok: false, message: estFonctionAbsente(error) ? "Appliquez la migration 0017 (guide « Ce qui te revient », section 22)." : message(error) };
   }
-  const { error } = await garde.supabase.rpc("changer_roles", {
-    p_compte: compteId,
-    p_roles: roles,
-    p_fiche: existante,
-    p_nouvelle_fiche: fiche !== null && "nouvelle" in fiche,
-  });
-  if (error) return { ok: false, message: message(error) };
   refresh();
   return { ok: true };
 }

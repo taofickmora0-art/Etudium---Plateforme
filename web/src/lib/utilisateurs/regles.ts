@@ -62,14 +62,17 @@ export function initialesCompte(prenom: string, nom: string, email: string): str
   return (mots[0][0] + (mots.length > 1 ? mots[mots.length - 1][0] : "")).toUpperCase();
 }
 
-/** Le résumé d'un changement de rôles, pour la confirmation : « Donner : Formateur. Retirer : Admin. » */
-export function resumeChangement(avant: Role[], apres: Role[]): string {
-  const libelles = (roles: Role[]) => roles.map((r) => LIBELLES_ROLES[r]).join(", ");
-  const donner = ROLES_ORDONNES.filter((r) => r !== "etudiant" && apres.includes(r) && !avant.includes(r));
-  const retirer = ROLES_ORDONNES.filter((r) => r !== "etudiant" && avant.includes(r) && !apres.includes(r));
-  const parties = [donner.length > 0 && `Donner : ${libelles(donner)}.`, retirer.length > 0 && `Retirer : ${libelles(retirer)}.`].filter(Boolean);
-  return parties.length > 0 ? parties.join(" ") : "Aucun changement.";
-}
+/**
+ * Les espaces que donne chaque rôle (migration 0017) : un seul rôle en plus d'étudiant, donc deux espaces au plus ;
+ * l'équipe n'a jamais l'espace formateur, elle gère toutes les formations depuis le back-office.
+ */
+export const ESPACES_DU_ROLE: Record<Role, string> = {
+  etudiant: "Espace étudiant seulement.",
+  formateur: "Espace étudiant et espace formateur : crée et suit ses formations.",
+  moderateur: "Espace étudiant et back-office.",
+  admin: "Espace étudiant et back-office : formations, comptes et suspensions.",
+  super_admin: "Espace étudiant et back-office, avec le choix des rôles.",
+};
 
 const DATE_COURTE = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric", timeZone: "Africa/Porto-Novo" });
 
@@ -78,7 +81,7 @@ export const dateCourte = (iso: string) => DATE_COURTE.format(new Date(iso));
 
 /**
  * Ce que la personne connectée peut faire sur un compte :
- * - changer les rôles : le super admin seul ;
+ * - changer le rôle : le super admin seul ;
  * - suspendre : un admin ou le super admin ; un membre de l'équipe, le super admin seul ; jamais soi-même ni un
  *   compte super admin (retirer d'abord son rôle) ;
  * - réactiver : les mêmes droits, sur un compte suspendu.
@@ -86,13 +89,13 @@ export const dateCourte = (iso: string) => DATE_COURTE.format(new Date(iso));
 export function droitsSurCompte(
   moi: { id: string; roles: Role[] },
   compte: { id: string; roles: Role[]; suspendu: boolean },
-): { changerRoles: boolean; suspendre: boolean; reactiver: boolean } {
+): { changerRole: boolean; suspendre: boolean; reactiver: boolean } {
   const superAdmin = moi.roles.includes("super_admin");
   const admin = superAdmin || moi.roles.includes("admin");
   const cibleEquipe = compte.roles.some((r) => EQUIPE.includes(r));
   const peutAgir = admin && (!cibleEquipe || superAdmin);
   return {
-    changerRoles: superAdmin,
+    changerRole: superAdmin,
     suspendre: !compte.suspendu && peutAgir && moi.id !== compte.id && !compte.roles.includes("super_admin"),
     reactiver: compte.suspendu && peutAgir,
   };

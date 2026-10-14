@@ -80,14 +80,6 @@ export async function lireCompte(id: string): Promise<Lecture<CompteDetail | nul
   return { migrationAbsente: false, donnees: ligne ? versDetail(ligne) : null };
 }
 
-/** Les fiches formateur pas encore reliées à un compte, par nom (choix en donnant le rôle Formateur). */
-export async function lireFichesLibres(): Promise<{ id: string; nom: string }[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("formateurs").select("id, nom").is("compte_id", null).order("nom");
-  if (error) echec("des fiches formateur", error);
-  return liste(data).map((f) => ({ id: texte(f.id), nom: texte(f.nom) }));
-}
-
 /** Les remarques des formateurs sur un compte (migration 0015), pour la fiche du compte au back-office. */
 export async function lireRemarquesFormateurs(compteId: string): Promise<Lecture<RemarqueFormateur[]>> {
   if (!UUID.test(compteId)) return { migrationAbsente: false, donnees: [] };

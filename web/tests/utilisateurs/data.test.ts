@@ -6,7 +6,7 @@ import { fauxSupabase } from "../admin/faux-supabase";
 const faux = fauxSupabase();
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => faux.client }));
 
-const { lireComptes, lireCompte, lireFichesLibres, lireRemarquesFormateurs } = await import("@/lib/utilisateurs/data");
+const { lireComptes, lireCompte, lireRemarquesFormateurs } = await import("@/lib/utilisateurs/data");
 
 const ID = "11111111-1111-4111-8111-111111111111";
 const LIGNE = {
@@ -87,13 +87,6 @@ describe("Lecture des comptes", () => {
     expect(faux.appels).toEqual([]);
   });
 
-  it("les fiches formateur libres, par nom", async () => {
-    faux.repondre("formateurs.select", { data: [{ id: "f1", nom: "Awa" }] });
-    expect(await lireFichesLibres()).toEqual([{ id: "f1", nom: "Awa" }]);
-    const [appel] = faux.de("formateurs", "select");
-    expect(appel.filtres).toContainEqual(["is", "compte_id", null]);
-    expect(appel.filtres).toContainEqual(["order", "nom"]);
-  });
 
   it("les remarques des formateurs sur un compte (migration 0015)", async () => {
     faux.repondre("rpc.remarques_compte", { data: [{ formateur_nom: "Dr Mireille Adjovi", texte: "Progresse bien.", modifiee_le: "2026-10-13T09:00:00+00:00" }] });
