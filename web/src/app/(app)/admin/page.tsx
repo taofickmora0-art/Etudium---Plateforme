@@ -6,6 +6,7 @@ import { TableauDeBordAdmin } from "@/components/admin/TableauDeBordAdmin";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { lireStatistiques } from "@/lib/admin/statistiques";
 import { requireSpace } from "@/lib/auth/require-space";
+import { lireNombreAExaminer } from "@/lib/moderation/data";
 import { lireSessionsEquipe } from "@/lib/sessions/data";
 
 export const metadata: Metadata = { title: "Back-office · Étudium" };
@@ -23,12 +24,23 @@ async function sessionsAVenir(): Promise<number | null> {
   }
 }
 
+/** Les contenus de la file de modération (0020) ; null avant la migration ou si la lecture échoue. */
+async function aExaminer(): Promise<number | null> {
+  try {
+    return await lireNombreAExaminer();
+  } catch (erreur) {
+    unstable_rethrow(erreur);
+    console.error("Lecture de la file de modération impossible :", erreur instanceof Error ? erreur.message : erreur);
+    return null;
+  }
+}
+
 async function AccueilAdmin() {
   await requireSpace("admin");
-  const [stats, sessions] = await Promise.all([lireStatistiques(), sessionsAVenir()]);
+  const [stats, sessions, moderation] = await Promise.all([lireStatistiques(), sessionsAVenir(), aExaminer()]);
   return (
     <PageAdmin titre="Tableau de bord" description="Vue d’ensemble de la plateforme : inscriptions, apprentissage et, à partir du lot 2, revenus.">
-      <TableauDeBordAdmin stats={stats} sessionsAVenir={sessions} />
+      <TableauDeBordAdmin stats={stats} sessionsAVenir={sessions} aExaminer={moderation} />
     </PageAdmin>
   );
 }

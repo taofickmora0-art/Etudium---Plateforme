@@ -17,7 +17,6 @@ export const PAGES_A_VENIR = {
   admin: { titre: "Back-office", quand: "au lot 1, avec le back-office de saisie", description: "L’équipe Étudium y gérera les formations et les comptes." },
   // Back-office (menu de l'équipe)
   "admin/paiements": { titre: "Abonnements et paiements", quand: "au lot 2, Abonnements et paiement", description: "Les formules, les abonnements et les paiements s’afficheront ici." },
-  "admin/moderation": { titre: "Modération", quand: LOT_5, description: "Les publications et les signalements à examiner s’afficheront ici." },
   // Espace formateur (son propre menu)
   "formateur/corrections": { titre: "Corrections", quand: LOT_4, description: "Les exercices à corriger s’afficheront ici." },
   "formateur/messages": { titre: "Messages", quand: LOT_5, description: "Vous pourrez écrire à vos étudiants." },

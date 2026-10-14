@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   ArrowDataTransferHorizontalIcon,
   CrownIcon,
+  Shield01Icon,
   Target02Icon,
   UserAdd01Icon,
   UserMultipleIcon,
@@ -20,7 +21,16 @@ const chiffre = (n: number) => n.toLocaleString("fr-FR");
  * Inscriptions, apprentissage, formations les plus suivies, sessions live à venir (0018) ; revenus et abonnés (lot 2)
  * ont déjà leur place et s'afficheront avec leur lot.
  */
-export function TableauDeBordAdmin({ stats, sessionsAVenir = null }: { stats: StatistiquesBackOffice | null; sessionsAVenir?: number | null }) {
+export function TableauDeBordAdmin({
+  stats,
+  sessionsAVenir = null,
+  aExaminer = null,
+}: {
+  stats: StatistiquesBackOffice | null;
+  sessionsAVenir?: number | null;
+  /** Les contenus de la file de modération (migration 0020) ; null avant. */
+  aExaminer?: number | null;
+}) {
   if (!stats) {
     return (
       <Banner tone="attention" title="Les statistiques ne sont pas encore dans la base.">
@@ -104,6 +114,20 @@ export function TableauDeBordAdmin({ stats, sessionsAVenir = null }: { stats: St
             value={sessionsAVenir === null ? "—" : chiffre(sessionsAVenir)}
             hint={sessionsAVenir === null ? "Disponible au lot 5" : "Programmées"}
           />
+          {/* La file de modération (migration 0020) : son nombre et son lien ; avant, la tuile garde sa place. */}
+          <Tuile
+            icon={Shield01Icon}
+            tone="attention"
+            label="Contenus à examiner"
+            value={aExaminer === null ? "—" : chiffre(aExaminer)}
+            hint={aExaminer === null ? "Disponible au lot 5" : "Signalés par l’analyse ou par les membres"}
+          >
+            {aExaminer !== null && (
+              <Link href="/admin/moderation" className="focus-etudium mt-2 text-sm leading-[22px] font-medium text-bleu no-underline hover:underline">
+                Ouvrir la file
+              </Link>
+            )}
+          </Tuile>
         </div>
       </div>
     </div>

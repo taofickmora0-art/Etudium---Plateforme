@@ -74,6 +74,15 @@ describe("Tableau de bord du back-office : écran", () => {
     expect(within(tuile("Sessions live à venir")).getByText("Disponible au lot 5")).toBeInTheDocument();
   });
 
+  it("la tuile de la modération : le nombre à examiner (migration 0020) et le lien vers la file, sinon « Disponible au lot 5 »", () => {
+    const { unmount } = render(<TableauDeBordAdmin stats={STATS} aExaminer={4} />);
+    expect(within(tuile("Contenus à examiner")).getByText("4")).toBeInTheDocument();
+    expect(within(tuile("Contenus à examiner")).getByRole("link", { name: "Ouvrir la file" })).toHaveAttribute("href", "/admin/moderation");
+    unmount();
+    render(<TableauDeBordAdmin stats={STATS} aExaminer={null} />);
+    expect(within(tuile("Contenus à examiner")).getByText("Disponible au lot 5")).toBeInTheDocument();
+  });
+
   it("les formations les plus suivies et la progression moyenne", () => {
     render(<TableauDeBordAdmin stats={STATS} />);
     const top = screen.getByRole("region", { name: "Formations les plus suivies" });
