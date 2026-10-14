@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { useState } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { Editor, type JSONContent } from "@tiptap/react";
@@ -56,6 +56,8 @@ describe("L'éditeur", () => {
       "Liste à puces",
       "Liste numérotée",
       "Citation",
+      "Lien",
+      "Emoji",
     ]);
   });
 
@@ -110,6 +112,48 @@ describe("L'éditeur", () => {
     e.commands.setTextSelection(4);
     e.commands.toggleHeading({ level: 2 });
     fidele(e);
+    e.destroy();
+  });
+
+  it("Lien : sur le texte sélectionné, l'adresse saisie le rend cliquable ; une adresse qui n'est pas http(s) est refusée", async () => {
+    const user = userEvent.setup({ delay: null });
+    const surChangement = vi.fn();
+    render(<Essai initial="Bonjour" surChangement={surChangement} />);
+    const champ = await editeur();
+    await user.click(champ);
+    await user.keyboard("{Control>}a{/Control}");
+    await user.click(screen.getByRole("button", { name: "Lien" }));
+    const adresse = await screen.findByRole("textbox", { name: "Adresse du lien" });
+    await user.type(adresse, "javascript:alert(1)");
+    await user.click(screen.getByRole("button", { name: "Valider le lien" }));
+    expect(screen.getByText("Collez une adresse complète (https://…).")).toBeInTheDocument();
+    await user.clear(adresse);
+    await user.type(adresse, "https://exemple.com/page");
+    await user.click(screen.getByRole("button", { name: "Valider le lien" }));
+    await waitFor(() => expect(surChangement).toHaveBeenLastCalledWith("[Bonjour](https://exemple.com/page)"));
+  });
+
+  it("Emoji : la grille nommée en français ; un clic insère l'emoji", async () => {
+    const user = userEvent.setup({ delay: null });
+    const surChangement = vi.fn();
+    render(<Essai initial="Bravo" surChangement={surChangement} />);
+    const champ = await editeur();
+    await user.click(champ);
+    await user.keyboard("{Control>}a{/Control}");
+    await user.click(screen.getByRole("button", { name: "Emoji" }));
+    const grille = await screen.findByRole("group", { name: "Emojis" });
+    expect(within(grille).getAllByRole("button").length).toBeGreaterThanOrEqual(40);
+    await user.click(within(grille).getByRole("button", { name: "Applaudissements" }));
+    await waitFor(() => expect(surChangement).toHaveBeenLastCalledWith(expect.stringContaining("👏")));
+  });
+
+  it("le schéma refuse un lien qui n'est pas http(s)", () => {
+    const e = new Editor({ extensions: extensionsEditeur(), content: versDocument("Bonjour") });
+    e.commands.selectAll();
+    e.commands.setLink({ href: "javascript:alert(1)" });
+    expect(versMarkdown(e.getJSON())).toBe("Bonjour");
+    e.commands.setLink({ href: "https://exemple.com" });
+    expect(versMarkdown(e.getJSON())).toBe("[Bonjour](https://exemple.com)");
     e.destroy();
   });
 });

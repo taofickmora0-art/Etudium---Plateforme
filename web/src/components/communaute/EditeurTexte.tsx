@@ -1,24 +1,30 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Popover } from "radix-ui";
 import {
   Heading01Icon,
   Heading02Icon,
   Heading03Icon,
   LeftToRightListBulletIcon,
+  Link01Icon,
   LeftToRightListNumberIcon,
   QuoteDownIcon,
+  SmileIcon,
   TextBoldIcon,
   TextItalicIcon,
   TextStrikethroughIcon,
   TextUnderlineIcon,
 } from "@hugeicons/core-free-icons";
 import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/react";
+import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
+import { TextInput } from "@/components/ui/TextInput";
 import type { IconSvgElement } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
 import { extensionsEditeur } from "@/lib/communaute/editeur-schema";
-import { versDocument, versMarkdown } from "@/lib/communaute/mise-en-forme";
+import { adresseDeLien, versDocument, versMarkdown } from "@/lib/communaute/mise-en-forme";
+import { EMOJIS } from "./emojis";
 
 type Bouton = { nom: string; icone: IconSvgElement; actif: (e: Editor) => boolean; agir: (e: Editor) => void; groupe: number };
 
@@ -46,8 +52,123 @@ const CONTENU = cn(
   "[&_blockquote]:m-0 [&_blockquote]:border-l-[3px] [&_blockquote]:border-bleu-bord [&_blockquote]:pl-3 [&_blockquote]:text-ardoise",
 );
 
+const ADRESSE_INVALIDE = "Collez une adresse complète (https://…).";
+const FENETRE = "z-50 rounded-carte border border-bordure-carte bg-panneau p-3 shadow-menu outline-none";
+const actif = "bg-bleu-clair text-bleu enabled:hover:bg-bleu-clair";
+
+/** « Lien » : le texte sélectionné devient cliquable (http ou https) ; sans sélection, l'adresse est insérée comme lien. */
+function BoutonLien({ editor, estActif }: { editor: Editor | null; estActif: boolean }) {
+  const [ouvert, setOuvert] = useState(false);
+  const [adresse, setAdresse] = useState("");
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  function ouvrir(o: boolean) {
+    setOuvert(o);
+    if (o) {
+      setAdresse(editor?.getAttributes("link").href ?? "");
+      setErreur(null);
+    }
+  }
+
+  function valider(e: FormEvent) {
+    e.preventDefault();
+    const href = adresse.trim();
+    if (!editor || !adresseDeLien(href)) {
+      setErreur(ADRESSE_INVALIDE);
+      return;
+    }
+    if (editor.state.selection.empty && !editor.isActive("link")) {
+      editor.chain().focus().insertContent({ type: "text", text: href, marks: [{ type: "link", attrs: { href } }] }).run();
+    } else {
+      editor.chain().focus().extendMarkRange("link").setLink({ href }).run();
+    }
+    setOuvert(false);
+  }
+
+  return (
+    <Popover.Root open={ouvert} onOpenChange={ouvrir}>
+      <Popover.Trigger asChild>
+        <IconButton
+          icon={Link01Icon}
+          label="Lien"
+          aria-pressed={estActif}
+          variant="discret"
+          size="sm"
+          disabled={!editor}
+          className={cn(estActif && actif)}
+          onMouseDown={(e) => e.preventDefault()}
+        />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content align="start" sideOffset={6} className={cn(FENETRE, "w-[min(340px,calc(100vw-32px))]")}>
+          <form className="flex flex-col gap-2" onSubmit={valider}>
+            <TextInput aria-label="Adresse du lien" placeholder="https://…" inputMode="url" value={adresse} onChange={(e) => setAdresse(e.target.value)} className="h-10 text-sm" />
+            {erreur && (
+              <p role="alert" className="m-0 text-[13px] leading-5 text-erreur-texte">
+                {erreur}
+              </p>
+            )}
+            <div className="flex flex-wrap justify-end gap-2">
+              {estActif && (
+                <Button
+                  variant="contour"
+                  size="sm"
+                  onClick={() => {
+                    editor?.chain().focus().extendMarkRange("link").unsetLink().run();
+                    setOuvert(false);
+                  }}
+                >
+                  Retirer le lien
+                </Button>
+              )}
+              <Button type="submit" size="sm" aria-label="Valider le lien">
+                Valider
+              </Button>
+            </div>
+          </form>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+/** « Emoji » : une grille d'emojis courants ; un clic insère l'emoji à la place du curseur. */
+function BoutonEmoji({ editor }: { editor: Editor | null }) {
+  const [ouvert, setOuvert] = useState(false);
+  return (
+    <Popover.Root open={ouvert} onOpenChange={setOuvert}>
+      <Popover.Trigger asChild>
+        <IconButton icon={SmileIcon} label="Emoji" variant="discret" size="sm" disabled={!editor} onMouseDown={(e) => e.preventDefault()} />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content align="end" sideOffset={6} className={cn(FENETRE, "w-[min(296px,calc(100vw-32px))] p-2")}>
+          <div role="group" aria-label="Emojis" className="grid grid-cols-8 gap-0.5">
+            {EMOJIS.map(([emoji, nom]) => (
+              <button
+                key={nom}
+                type="button"
+                aria-label={nom}
+                title={nom}
+                className="focus-etudium flex size-8 items-center justify-center rounded-puce text-lg leading-none transition-colors hover:bg-coque"
+                onClick={() => {
+                  editor?.chain().focus().insertContent(emoji).run();
+                  setOuvert(false);
+                }}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
 function BarreMiseEnForme({ editor }: { editor: Editor | null }) {
-  const actifs = useEditorState({ editor, selector: ({ editor: e }) => BOUTONS.map((b) => (e ? b.actif(e) : false)) }) ?? BOUTONS.map(() => false);
+  const etats = useEditorState({ editor, selector: ({ editor: e }) => [...BOUTONS.map((b) => (e ? b.actif(e) : false)), e ? e.isActive("link") : false] });
+  const actifs = etats ?? BOUTONS.map(() => false);
+  const lienActif = etats?.[BOUTONS.length] ?? false;
   return (
     <div
       role="toolbar"
@@ -64,20 +185,25 @@ function BarreMiseEnForme({ editor }: { editor: Editor | null }) {
             variant="discret"
             size="sm"
             disabled={!editor}
-            className={cn(actifs[i] && "bg-bleu-clair text-bleu enabled:hover:bg-bleu-clair")}
+            className={cn(actifs[i] && actif)}
             // La sélection du texte reste en place quand on clique un bouton.
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => editor && b.agir(editor)}
           />
         </span>
       ))}
+      <span aria-hidden className="mx-1 h-5 w-px flex-none bg-bordure-champ" />
+      <span className="flex flex-none items-center gap-0.5">
+        <BoutonLien editor={editor} estActif={lienActif} />
+        <BoutonEmoji editor={editor} />
+      </span>
     </div>
   );
 }
 
 /**
- * L'éditeur visuel d'une publication (spec mise en forme et vidéo, §1) : la barre « Mise en forme » (titres 1 à 3, gras,
- * italique, souligné, barré, listes, citation) et le texte, montré comme il paraîtra. `valeur` et `onChange` portent le
+ * L'éditeur visuel d'une publication (spec mise en forme et vidéo, §1 ; communauté v3, §1) : la barre « Mise en forme »
+ * (titres 1 à 3, gras, italique, souligné, barré, listes, citation, lien, emoji) et le texte, montré comme il paraîtra. `valeur` et `onChange` portent le
  * texte enregistré (Markdown restreint) ; une valeur changée de l'extérieur (vidée après Publier) remplace le contenu.
  */
 export function EditeurTexte({

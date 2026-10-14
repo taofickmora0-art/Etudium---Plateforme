@@ -33,7 +33,21 @@ function avecMarques(marques: Marque[], contenu: ReactNode): ReactNode {
 
 function Segments({ segments }: { segments: Segment[] }) {
   return segments.map((s, i) => (
-    <Fragment key={i}>{"saut" in s ? <br /> : avecMarques(s.marques, <Liens texte={s.texte} />)}</Fragment>
+    <Fragment key={i}>
+      {"saut" in s ? (
+        <br />
+      ) : s.lien ? (
+        // Un texte rendu cliquable : son adresse a été vérifiée (http ou https) par la lecture du texte.
+        avecMarques(
+          s.marques,
+          <a href={s.lien} target="_blank" rel="noopener nofollow ugc" className="focus-etudium text-bleu underline underline-offset-2 hover:text-bleu-survol">
+            {s.texte}
+          </a>,
+        )
+      ) : (
+        avecMarques(s.marques, <Liens texte={s.texte} />)
+      )}
+    </Fragment>
   ));
 }
 

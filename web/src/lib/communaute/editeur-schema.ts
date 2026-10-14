@@ -3,6 +3,7 @@ import { Heading } from "@tiptap/extension-heading";
 import { ListItem } from "@tiptap/extension-list";
 import { Placeholder } from "@tiptap/extensions";
 import StarterKit from "@tiptap/starter-kit";
+import { adresseDeLien } from "./mise-en-forme";
 
 // Le schéma de l'éditeur visuel (spec mise en forme et vidéo, §1 et §2) : il ne crée que ce que le texte enregistré sait
 // ranger, pour que la publication s'affiche comme dans l'éditeur. Un élément de liste est un seul paragraphe (pas de
@@ -35,7 +36,14 @@ export function extensionsEditeur(placeholder = "") {
       code: false,
       codeBlock: false,
       horizontalRule: false,
-      link: false,
+      // Un texte rendu cliquable : http ou https seulement, ouvert dans un nouvel onglet ; pas de lien automatique.
+      link: {
+        openOnClick: false,
+        autolink: false,
+        linkOnPaste: false,
+        isAllowedUri: (adresse) => adresseDeLien(adresse),
+        HTMLAttributes: { target: "_blank", rel: "noopener nofollow ugc" },
+      },
       // Un paragraphe vide ajouté en fin de document n'est pas enregistré : rien à ajouter.
       trailingNode: false,
     }),

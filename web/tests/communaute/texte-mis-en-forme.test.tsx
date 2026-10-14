@@ -33,4 +33,14 @@ describe("Le texte mis en forme", () => {
     expect(screen.getByText(/Bonjour à tous/)).toBeInTheDocument();
     expect(screen.getByText("Merci 5 * 3")).toBeInTheDocument();
   });
+
+  it("un texte rendu cliquable : un lien vers son adresse, dans un nouvel onglet, même en gras", () => {
+    const { container } = render(<TexteMisEnForme texte={"Voir [le programme](https://etudium.bj/programme) et **[gras](https://a.com)**"} />);
+    const programme = screen.getByRole("link", { name: "le programme" });
+    expect(programme).toHaveAttribute("href", "https://etudium.bj/programme");
+    expect(programme).toHaveAttribute("target", "_blank");
+    expect(programme).toHaveAttribute("rel", "noopener nofollow ugc");
+    expect(screen.getByRole("link", { name: "gras" }).closest("strong")).not.toBeNull();
+    expect(container.querySelectorAll("a")).toHaveLength(2);
+  });
 });
