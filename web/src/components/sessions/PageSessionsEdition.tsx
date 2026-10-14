@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { PageAdmin } from "@/components/admin/PageAdmin";
+import { moiCommunaute } from "@/components/communaute/ContenuCommunaute";
 import { MigrationFormateurAbsente, SansFiche } from "@/components/formateur/cadre";
 import { Banner } from "@/components/ui/Banner";
 import { listFormateurs, listParcours } from "@/lib/admin/data";
@@ -39,10 +40,12 @@ export async function PageFormulaireSession({ espace, id }: { espace: EspaceEdit
   const cadre = { titre, racine: racineSessions(espace), fil: [filSessions(espace), { label: titre }] };
   const bandeau = await bandeauFormateur(espace);
   if (bandeau) return <PageAdmin {...cadre}>{bandeau}</PageAdmin>;
-  const [parcours, formateurs, detail] = await Promise.all([
+  const [parcours, formateurs, detail, moi] = await Promise.all([
     listParcours(),
     espace === "admin" ? listFormateurs() : Promise.resolve([]),
     id ? lireSessionDetail(id) : Promise.resolve(null),
+    // L'auteur de la publication de la session (aperçu) et le dossier de son affiche.
+    moiCommunaute(),
   ]);
   if (detail?.migrationAbsente) {
     return (
@@ -67,6 +70,7 @@ export async function PageFormulaireSession({ espace, id }: { espace: EspaceEdit
         parcours={parcours.map((p) => ({ id: p.id, nomCourt: p.nomCourt }))}
         formateurs={espace === "admin" ? formateurs.map((f) => ({ id: f.id, nom: f.nom })) : undefined}
         initial={initial ?? undefined}
+        moi={moi}
       />
     </PageAdmin>
   );

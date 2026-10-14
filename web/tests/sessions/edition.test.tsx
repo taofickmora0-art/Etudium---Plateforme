@@ -160,6 +160,9 @@ describe("Le formulaire", () => {
       lien: "https://meet.google.com/abc-defg-hij",
       parcoursId: P,
       formateurId: null,
+      // Sans visuel de promotion (spec promotion des sessions live, §1).
+      image: null,
+      video: null,
     });
     expect(routeur.push).toHaveBeenCalledWith(`/formateur/sessions/${ID}`);
   });
