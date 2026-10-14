@@ -7,6 +7,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { routeFor } from "@/lib/auth/routing";
 import { DEMO_PROFILE } from "@/lib/demo-user";
 import { PAGES_A_VENIR } from "@/lib/pages-a-venir";
+import { ongletProfil } from "@/lib/profile/onglets";
 import { updatePreferences } from "@/lib/profile/actions";
 
 vi.mock("@/lib/profile/actions", () => ({
@@ -25,6 +26,19 @@ describe("Page du profil", () => {
 
   it("le profil n'est plus une page à venir", () => {
     expect(PAGES_A_VENIR).not.toHaveProperty("profil");
+  });
+
+  it("?onglet=notifications ouvre l'onglet Notifications ; une autre valeur ouvre Informations", () => {
+    expect(ongletProfil("notifications")).toBe("notifications");
+    expect(ongletProfil("securite")).toBe("securite");
+    expect(ongletProfil("autre")).toBe("informations");
+    expect(ongletProfil(undefined)).toBe("informations");
+    render(
+      <ToastProvider>
+        <ProfileTabs profile={DEMO_PROFILE} ongletInitial="notifications" />
+      </ToastProvider>,
+    );
+    expect(screen.getByRole("tab", { name: "Notifications" })).toHaveAttribute("aria-selected", "true");
   });
 
   it("les trois sections du profil", async () => {

@@ -45,35 +45,57 @@ type NotificationsPanelProps = {
   allHref?: string;
 };
 
-const ITEM = "flex items-start gap-3 rounded-champ px-3 py-2.5 text-inherit no-underline transition-colors hover:bg-coque focus-etudium";
+const ITEM = {
+  panneau: "flex items-start gap-3 rounded-champ px-3 py-2.5 text-inherit no-underline transition-colors hover:bg-coque focus-etudium",
+  // Page Notifications (NdNotifications) : pastille de 44 px, moment à droite.
+  page: "flex min-h-12 items-center gap-3.5 px-1 py-3.5 text-inherit no-underline transition-colors hover:bg-page focus-etudium",
+} as const;
 
-/** Une notification : pastille de la catégorie, titre, texte, moment, point « Non lue ». Partagée avec la page. */
-export function ElementNotification({ notification: n, onSelect, className }: { notification: AppNotification; onSelect?: (id: string) => void; className?: string }) {
+/**
+ * Une notification : pastille de la catégorie, titre, texte, moment, point « Non lue ». Le panneau de la cloche et la
+ * page Notifications la dessinent chacun à leur façon (`variante`).
+ */
+export function ElementNotification({
+  notification: n,
+  onSelect,
+  variante = "panneau",
+  className,
+}: {
+  notification: AppNotification;
+  onSelect?: (id: string) => void;
+  variante?: keyof typeof ITEM;
+  className?: string;
+}) {
   const tone = TONES[n.tone];
+  const page = variante === "page";
   const content = (
     <>
-      <span className={cn("flex size-9 flex-none items-center justify-center rounded-puce", tone.tile)}>
-        <Icon icon={n.icon ?? tone.icon} size={17} />
+      <span className={cn("flex flex-none items-center justify-center", page ? "size-11 rounded-[13px]" : "size-9 rounded-puce", tone.tile)}>
+        <Icon icon={n.icon ?? tone.icon} size={page ? 20 : 17} />
       </span>
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="text-sm leading-5 font-semibold wrap-anywhere text-encre">{n.title}</span>
+      <span className={cn("flex min-w-0 flex-1 flex-col", page && "gap-0.5")}>
+        <span className={cn("wrap-anywhere text-encre", page ? "text-[15px] leading-[22px] font-medium" : "text-sm leading-5 font-semibold")}>{n.title}</span>
         {n.body && <span className="text-[13px] leading-5 wrap-anywhere text-discret">{n.body}</span>}
-        <span className="mt-0.5 text-xs leading-[18px] text-discret">{n.when}</span>
+        {!page && <span className="mt-0.5 text-xs leading-[18px] text-discret">{n.when}</span>}
       </span>
-      {n.unread && (
-        <>
-          <span aria-hidden="true" className="mt-1.5 size-2 flex-none rounded-full bg-bleu" />
-          <span className="sr-only">Non lue</span>
-        </>
-      )}
+      {page && <span className="flex-none text-xs leading-[18px] whitespace-nowrap text-discret">{n.when}</span>}
+      {n.unread &&
+        (page ? (
+          <span role="img" aria-label="Non lue" className="size-2 flex-none rounded-full bg-bleu" />
+        ) : (
+          <>
+            <span aria-hidden="true" className="mt-1.5 size-2 flex-none rounded-full bg-bleu" />
+            <span className="sr-only">Non lue</span>
+          </>
+        ))}
     </>
   );
   return n.href ? (
-    <Link href={n.href} className={cn(ITEM, className)} onClick={() => onSelect?.(n.id)}>
+    <Link href={n.href} className={cn(ITEM[variante], className)} onClick={() => onSelect?.(n.id)}>
       {content}
     </Link>
   ) : (
-    <div className={cn(ITEM, className)}>{content}</div>
+    <div className={cn(ITEM[variante], className)}>{content}</div>
   );
 }
 
