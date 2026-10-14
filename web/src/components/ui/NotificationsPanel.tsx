@@ -90,12 +90,15 @@ export function ElementNotification({
         ))}
     </>
   );
+  // Sans lien (une annonce sans page), la ligne reste un bouton : un clic la marque lue, comme les autres.
   return n.href ? (
     <Link href={n.href} className={cn(ITEM[variante], className)} onClick={() => onSelect?.(n.id)}>
       {content}
     </Link>
   ) : (
-    <div className={cn(ITEM[variante], className)}>{content}</div>
+    <button type="button" className={cn(ITEM[variante], "w-full cursor-pointer border-0 bg-transparent text-left font-[inherit]", className)} onClick={() => onSelect?.(n.id)}>
+      {content}
+    </button>
   );
 }
 

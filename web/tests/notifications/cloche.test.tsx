@@ -85,6 +85,14 @@ describe("La cloche", () => {
     expect(screen.getByRole("button", { name: "Notifications, 2 non lues" })).toBeInTheDocument();
   });
 
+  it("une annonce sans lien se marque lue d'un clic, elle aussi", async () => {
+    vi.mocked(chargerCloche).mockResolvedValue(lot([notif({ id: "9", categorie: "annonces", titre: "Nouveautés", lien: null })], 1));
+    const user = await ouvrir("Notifications, 1 non lue");
+    await user.click(screen.getByRole("button", { name: /Nouveautés/ }));
+    expect(marquerLues).toHaveBeenCalledWith(["9"]);
+    expect(screen.getByRole("button", { name: "Notifications" })).toBeInTheDocument();
+  });
+
   it("Tout marquer comme lu : marquerLues(null) ; le bouton disparaît", async () => {
     vi.mocked(chargerCloche).mockResolvedValue(lot([notif()], 3));
     const user = await ouvrir("Notifications, 3 non lues");

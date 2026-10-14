@@ -97,6 +97,15 @@ describe("La page Notifications", () => {
     window.removeEventListener(EVENEMENT_NOTIFICATIONS, evenements);
   });
 
+  it("une annonce sans lien se marque lue d'un clic, elle aussi", async () => {
+    const user = userEvent.setup();
+    render(<PageNotifications initial={{ lignes: [notif({ id: "9", categorie: "annonces", titre: "Nouveautés", lien: null })], suite: false, nonLues: 1 }} />);
+    const annonce = screen.getByRole("button", { name: /Nouveautés/ });
+    await user.click(annonce);
+    expect(marquerLues).toHaveBeenCalledWith(["9"]);
+    expect(within(annonce).queryByRole("img", { name: "Non lue" })).toBeNull();
+  });
+
   it("Préférences mène à l'onglet Notifications du profil", () => {
     render(<PageNotifications initial={LOT} />);
     expect(screen.getByRole("link", { name: "Préférences" })).toHaveAttribute("href", "/profil?onglet=notifications");
