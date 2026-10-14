@@ -3,7 +3,7 @@ import { estFonctionAbsente, liste, texte, un, type Ligne } from "@/lib/contenus
 import { createClient } from "@/lib/supabase/server";
 import type { Lecture } from "@/lib/utilisateurs/types";
 import { NOMBRE_FIL } from "./regles";
-import type { Curseur, Espace, FiltreFil, LotPublications, MembreActif, PieceJointe, Publication, PublicationDetail, Reponse, RoleAuteur } from "./types";
+import type { Curseur, Espace, FiltreFil, LotPublications, MembreActif, PieceJointe, Publication, PublicationDetail, Reponse, RoleAuteur, StatutPublication } from "./types";
 
 // Lectures de la communauté (migration 0019). La base ne rend que les espaces ouverts au compte, et jamais d'adresse
 // e-mail ; les fichiers joints reçoivent ici un lien temporaire (1 h), demandé en une fois pour tout le lot.
@@ -13,6 +13,8 @@ const DUREE_LIEN = 3600;
 const nombre = (valeur: unknown) => Number(valeur) || 0;
 const texteOuNull = (valeur: unknown) => (typeof valeur === "string" && valeur ? valeur : null);
 const role = (valeur: unknown): RoleAuteur => (valeur === "formateur" || valeur === "equipe" ? valeur : null);
+// Avant la 0020, la base ne dit rien du statut : tout est en ligne.
+const statut = (valeur: unknown): StatutPublication => (valeur === "en_attente" || valeur === "bloquee" ? valeur : "publiee");
 
 type Client = Awaited<ReturnType<typeof createClient>>;
 type Erreur = { code?: string; message?: string };
@@ -37,6 +39,7 @@ export function versReponse(l: Ligne): Reponse {
     texte: texte(l.texte),
     creeLe: texte(l.cree_le),
     peutSupprimer: l.peut_supprimer === true,
+    peutSignaler: l.peut_signaler === true,
   };
 }
 
@@ -59,11 +62,13 @@ export function versPublication(l: Ligne): Publication {
     pieceJointe: versPiece(l.piece_jointe),
     creeLe: texte(l.cree_le),
     modifiee: l.modifiee === true,
+    statut: statut(l.statut),
     reactions: nombre(l.reactions),
     jAime: l.j_aime === true,
     reponses: nombre(l.reponses),
     dernieresReponses: liste(l.dernieres_reponses).map(versReponse),
     peutSupprimer: l.peut_supprimer === true,
+    peutSignaler: l.peut_signaler === true,
   };
 }
 
@@ -127,6 +132,14 @@ export async function lirePublication(id: string): Promise<Lecture<PublicationDe
   if (!l) return { migrationAbsente: false, donnees: null };
   const [publication] = await avecLiens(supabase, [{ ...versPublication(l), toutesReponses: liste(l.toutes_reponses).map(versReponse) }]);
   return { migrationAbsente: false, donnees: publication };
+}
+
+/** L'analyse automatique est-elle active (migration 0020) ? Faux avant la 0020 ou si la lecture échoue : ce n'est qu'une mention. */
+export async function lireAnalyseActive(): Promise<boolean> {
+  if (demoModeActive()) return false;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("moderation_active");
+  return !error && data === true;
 }
 
 /** Les trois membres qui ont le plus écrit en 7 jours. */

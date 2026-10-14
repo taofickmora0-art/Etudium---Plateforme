@@ -154,7 +154,7 @@ export function CartePublication({
       setErreurEdition(reponse.message);
       return;
     }
-    setP((actuelle) => ({ ...actuelle, titre: edition.titre.trim(), texte: edition.texte.trim(), modifiee: true }));
+    setP((actuelle) => ({ ...actuelle, titre: edition.titre.trim(), texte: edition.texte.trim(), modifiee: true, statut: reponse.statut }));
     setEdition(null);
   }
 

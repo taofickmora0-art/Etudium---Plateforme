@@ -70,6 +70,8 @@ const pub = (o: Partial<Publication> = {}): Publication => ({
   reponses: 0,
   dernieresReponses: [],
   peutSupprimer: false,
+  statut: "publiee",
+  peutSignaler: false,
   ...o,
 });
 const rep = (id: string, texte: string, o: Partial<Reponse> = {}): Reponse => ({
@@ -79,6 +81,7 @@ const rep = (id: string, texte: string, o: Partial<Reponse> = {}): Reponse => ({
   texte,
   creeLe: "2026-10-14T14:00:00Z",
   peutSupprimer: false,
+  peutSignaler: false,
   ...o,
 });
 const lot = (publications: Publication[], suite = false): LotPublications => ({ publications, suite });
@@ -169,7 +172,7 @@ describe("La page Communauté", () => {
     await user.click(screen.getByRole("button", { name: "Publier" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Cet espace ne vous est pas ouvert.");
 
-    vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n1" });
+    vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n1", statut: "publiee" });
     await user.click(screen.getByRole("button", { name: "Publier" }));
     expect(actions.publierPublication).toHaveBeenLastCalledWith(null, "Salut", "Bonjour à tous", null);
     const nouvelle = await screen.findByRole("article", { name: "Publication de Koffi Dossou" });
@@ -196,7 +199,7 @@ describe("La page Communauté", () => {
     expect(await screen.findByText("affiche.png")).toBeInTheDocument();
     expect(screen.getByText("1 Ko")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
-    vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n2" });
+    vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n2", statut: "publiee" });
     await user.type(screen.getByRole("textbox", { name: "Nouvelle publication" }), "Mon affiche");
     await user.click(screen.getByRole("button", { name: "Publier" }));
     await waitFor(() => expect(actions.publierPublication).toHaveBeenCalled());
@@ -289,7 +292,7 @@ describe("La page Communauté", () => {
     await user.keyboard("{Escape}");
 
     // Modifier sur place.
-    vi.mocked(actions.modifierPublication).mockResolvedValueOnce({ ok: true });
+    vi.mocked(actions.modifierPublication).mockResolvedValueOnce({ ok: true, statut: "publiee" });
     await user.click(within(carte("Koffi Dossou")).getByRole("button", { name: "Actions sur la publication de Koffi Dossou" }));
     expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Modifier", "Copier le lien", "Supprimer"]);
     await user.click(screen.getByRole("menuitem", { name: "Modifier" }));

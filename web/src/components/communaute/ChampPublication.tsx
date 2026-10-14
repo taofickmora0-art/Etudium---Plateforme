@@ -108,11 +108,13 @@ export function ChampPublication({ espace, moi, onPubliee }: { espace: Espace; m
         pieceJointe: envoyee && piece ? { ...envoyee, url: apercu(piece.fichier) } : null,
         creeLe: new Date().toISOString(),
         modifiee: false,
+        statut: resultat.statut,
         reactions: 0,
         jAime: false,
         reponses: 0,
         dernieresReponses: [],
         peutSupprimer: true,
+        peutSignaler: false,
       });
       setTitre("");
       setTexte("");

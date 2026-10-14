@@ -23,7 +23,12 @@ export type Reponse = {
   texte: string;
   creeLe: string;
   peutSupprimer: boolean;
+  /** Ni l'auteur, ni l'équipe (migration 0020). */
+  peutSignaler: boolean;
 };
+
+/** « en_attente » : vue par son auteur (et l'équipe) seulement ; « bloquee » : par l'équipe seule (migration 0020). */
+export type StatutPublication = "publiee" | "en_attente" | "bloquee";
 
 export type RoleAuteur = "formateur" | "equipe" | null;
 
@@ -37,12 +42,14 @@ export type Publication = {
   pieceJointe: PieceJointe | null;
   creeLe: string;
   modifiee: boolean;
+  statut: StatutPublication;
   reactions: number;
   jAime: boolean;
   reponses: number;
   /** Les deux dernières, dans l'ordre chronologique. */
   dernieresReponses: Reponse[];
   peutSupprimer: boolean;
+  peutSignaler: boolean;
 };
 
 export type PublicationDetail = Publication & { toutesReponses: Reponse[] };

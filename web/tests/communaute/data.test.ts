@@ -7,7 +7,7 @@ const faux = fauxSupabase();
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => faux.client }));
 vi.mock("@/lib/auth/current-user", () => ({ demoModeActive: () => false }));
 
-const { lireEspaces, lireFil, lireMembresActifs, lirePublication } = await import("@/lib/communaute/data");
+const { lireAnalyseActive, lireEspaces, lireFil, lireMembresActifs, lirePublication } = await import("@/lib/communaute/data");
 
 const ID = "11111111-1111-4111-8111-111111111111";
 const P = "22222222-2222-4222-8222-222222222222";
@@ -38,11 +38,15 @@ const CONVERTIE = {
   pieceJointe: { chemin: CHEMIN, nom: "affiche.png", type: "image/png", taille: 245760, url: "https://stockage/affiche.png?jeton" },
   creeLe: "2026-10-14T10:00:00+00:00",
   modifiee: true,
+  statut: "publiee",
   reactions: 24,
   jAime: true,
   reponses: 2,
-  dernieresReponses: [{ id: "r1", auteur: { prenom: "Mireille", nomCourt: "Mireille A." }, estMoi: false, texte: "Très bon plan.", creeLe: "2026-10-14T11:00:00+00:00", peutSupprimer: false }],
+  dernieresReponses: [
+    { id: "r1", auteur: { prenom: "Mireille", nomCourt: "Mireille A." }, estMoi: false, texte: "Très bon plan.", creeLe: "2026-10-14T11:00:00+00:00", peutSupprimer: false, peutSignaler: false },
+  ],
   peutSupprimer: false,
+  peutSignaler: false,
 };
 
 beforeEach(() => faux.vider());
@@ -91,6 +95,18 @@ describe("Lectures de la communauté", () => {
     expect(faux.appels).toEqual([]);
     faux.repondre("rpc.membres_actifs", { data: [{ prenom: "Koffi", nom_court: "Koffi D.", initiales: "KD", espace: "Académique" }] });
     expect(await lireMembresActifs()).toEqual({ migrationAbsente: false, donnees: [{ prenom: "Koffi", nomCourt: "Koffi D.", initiales: "KD", espace: "Académique" }] });
+  });
+
+  it("modération (0020) : statut et peut_signaler convertis ; analyse active lue, fausse avant la 0020", async () => {
+    faux.repondre("rpc.fil_communaute", {
+      data: { publications: [{ ...BRUTE, piece_jointe: null, statut: "en_attente", peut_signaler: true, dernieres_reponses: [{ ...BRUTE.dernieres_reponses[0], peut_signaler: true }] }], suite: false },
+    });
+    const lecture = await lireFil("tous");
+    expect(lecture.migrationAbsente ? null : lecture.donnees.publications[0]).toMatchObject({ statut: "en_attente", peutSignaler: true, dernieresReponses: [{ peutSignaler: true }] });
+    faux.repondre("rpc.moderation_active", { data: true });
+    expect(await lireAnalyseActive()).toBe(true);
+    faux.repondre("rpc.moderation_active", { error: { code: "PGRST202" } });
+    expect(await lireAnalyseActive()).toBe(false);
   });
 
   it("avant la 0019 : migrationAbsente ; toute autre erreur est relancée", async () => {
