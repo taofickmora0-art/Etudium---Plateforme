@@ -18,6 +18,7 @@ import { FORMATS, formatDe, formatParMime, RESSOURCE_MAX_OCTETS, tailleLisible }
 import type { LeconAdmin, RessourceAdmin } from "@/lib/admin/types";
 import { createClient } from "@/lib/supabase/client";
 import { BoutonsOrdre } from "./BoutonsOrdre";
+import { identifiantAleatoire } from "@/lib/identifiant";
 
 const FORMAT_REFUSE = "Format non accepté : PDF, images, Excel, Word, PowerPoint, ZIP, CSV ou texte.";
 const ACCEPT = FORMATS.flatMap((f) => f.extensions.map((e) => `.${e}`)).join(",");
@@ -136,7 +137,7 @@ export function RessourcesEditor({ lecon }: { lecon: Pick<LeconAdmin, "id" | "fo
       toast({ tone: "erreur", title: `« ${fichier.name} » : ${FORMAT_REFUSE}` });
       return;
     }
-    const cle = crypto.randomUUID();
+    const cle = identifiantAleatoire();
     const chemin = `${lecon.formationId}/${cle}.${extension}`;
     setEnvois((liste) => [...liste, { cle, nom: fichier.name, taille: fichier.size }]);
     try {

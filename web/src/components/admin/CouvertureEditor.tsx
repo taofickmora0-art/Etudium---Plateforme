@@ -10,6 +10,7 @@ import { enregistrerCouverture, retirerCouverture } from "@/lib/admin/actions";
 import type { CouleurParcours } from "@/lib/contenus/libelles";
 import { verifierCouverture } from "@/lib/couvertures/regles";
 import { createClient } from "@/lib/supabase/client";
+import { identifiantAleatoire } from "@/lib/identifiant";
 
 const ECHEC_ENVOI = "L’image n’a pas pu être envoyée. Réessayez.";
 
@@ -41,7 +42,7 @@ export function CouvertureEditor({ formationId, parcours, couverture }: Props) {
       setErreur(controle.erreur);
       return;
     }
-    const chemin = `${formationId}/${crypto.randomUUID()}.${controle.extension}`;
+    const chemin = `${formationId}/${identifiantAleatoire()}.${controle.extension}`;
     setEnvoi(true);
     try {
       const stockage = createClient().storage.from("couvertures");

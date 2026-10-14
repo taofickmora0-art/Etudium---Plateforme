@@ -17,6 +17,7 @@ import type { Espace, MoiCommunaute, PieceEnvoyee, Publication } from "@/lib/com
 import { reconnaitreVideo } from "@/lib/communaute/video";
 import { createClient } from "@/lib/supabase/client";
 import { VideoIntegree } from "./VideoIntegree";
+import { identifiantAleatoire } from "@/lib/identifiant";
 
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 const ECHEC_ENVOI = "L’envoi du fichier n’a pas abouti. Réessayez.";
@@ -119,7 +120,7 @@ export function ChampPublication({
 
   /** Dépose le fichier dans le dossier du compte ; null si l'envoi échoue. */
   async function deposer(p: Piece): Promise<PieceEnvoyee | null> {
-    const chemin = `${moi.compteId}/${crypto.randomUUID()}.${p.extension}`;
+    const chemin = `${moi.compteId}/${identifiantAleatoire()}.${p.extension}`;
     try {
       // Une copie typée (sans recopier les octets) transmet le type vérifié, pas celui qu'annonce le navigateur.
       const { error } = await createClient()

@@ -22,6 +22,7 @@ import { idYoutube } from "@/lib/communaute/liens";
 import { tailleLisible } from "@/lib/communaute/regles";
 import type { AnnonceEquipe, DonneesAnnonce } from "@/lib/communaute/types";
 import { createClient } from "@/lib/supabase/client";
+import { identifiantAleatoire } from "@/lib/identifiant";
 
 const TITRE_MAX = 120;
 const TEXTE_MAX = 500;
@@ -85,7 +86,7 @@ export function FormulaireAnnonceCommunaute({ initial, parcours, compteId }: { i
 
   /** Dépose l'affiche choisie dans le dossier du compte ; null si l'envoi échoue. */
   async function deposer(a: Affiche & { fichier: File }): Promise<string | null> {
-    const chemin = `${compteId}/${crypto.randomUUID()}.${a.extension}`;
+    const chemin = `${compteId}/${identifiantAleatoire()}.${a.extension}`;
     try {
       const { error } = await createClient()
         .storage.from("communaute")
