@@ -166,19 +166,24 @@ export function PageCommunaute({
       />
       <div className="mt-5 h-px bg-separateur" />
       <div className="mt-7 flex min-w-0 flex-col gap-6 xl:flex-row xl:items-start">
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
+        {/* Sur ordinateur, une largeur fixe : les vidéos et les images ne grandissent pas avec l'écran. */}
+        <div className="flex w-full max-w-[720px] min-w-0 flex-1 flex-col gap-4">
           {!espace.ouvert ? (
             <EspaceVerrouille espace={espace} />
           ) : (
             <>
               {onglet === ACTUALITES && annonce && <CarteAnnonce annonce={annonce} equipe={moi.equipe === true} />}
               <ChampPublication
-                key={valeur(espace)}
+                key={onglet}
                 espace={espace}
+                espaces={liste.filter((e) => e.ouvert)}
                 moi={moi}
                 analyseActive={analyseActive}
-                // Une nouvelle publication n'est pas encore dans « Mes enregistrements ».
-                onPubliee={(p) => tri !== "enregistrees" && setLot((actuel) => ({ ...actuel, publications: [p, ...actuel.publications] }))}
+                // Une nouvelle publication s'ajoute au fil affiché s'il la contient (pas « Mes enregistrements », ni un autre espace).
+                onPubliee={(p) => {
+                  if (tri === "enregistrees" || (onglet !== ACTUALITES && (p.espace.id ?? "general") !== onglet)) return;
+                  setLot((actuel) => ({ ...actuel, publications: [p, ...actuel.publications] }));
+                }}
               />
               <MenuTri valeur={tri} onChange={changerTri} />
               {erreur && <Banner tone="erreur" title={erreur} />}

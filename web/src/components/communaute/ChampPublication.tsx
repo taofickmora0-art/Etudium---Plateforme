@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useId, useRef, useState, type ChangeEvent } from "react";
 import dynamic from "next/dynamic";
 import { Attachment01Icon, Cancel01Icon, Image01Icon, Pdf01Icon, Video01Icon } from "@hugeicons/core-free-icons";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { IconTile } from "@/components/ui/IconTile";
+import { Select } from "@/components/ui/Select";
 import { TextInput } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
 import { formatDe, formatParMime } from "@/lib/admin/fichiers";
@@ -43,17 +44,26 @@ const apercu = (fichier: File) => (typeof URL.createObjectURL === "function" ? U
  */
 export function ChampPublication({
   espace,
+  espaces = [],
   moi,
   analyseActive = false,
   onPubliee,
 }: {
+  /** L'espace proposé d'abord : celui de l'onglet (le général pour Actualités). */
   espace: Espace;
+  /** Les espaces ouverts au compte, pour « Publication dans » ; vide : l'espace proposé seul. */
+  espaces?: Espace[];
   moi: MoiCommunaute;
   /** Migration 0020 : les publications sont analysées par l'IA. */
   analyseActive?: boolean;
   onPubliee: (publication: Publication) => void;
 }) {
   const { toast } = useToast();
+  const idEspace = useId();
+  const choix = espaces.length > 0 ? espaces : [espace];
+  // L'espace choisi dans « Publication dans » (identifiant, ou « general »).
+  const [destination, setDestination] = useState(espace.id ?? "general");
+  const cible = choix.find((e) => (e.id ?? "general") === destination) ?? espace;
   const [titre, setTitre] = useState("");
   const [texte, setTexte] = useState("");
   const [piece, setPiece] = useState<Piece | null>(null);
@@ -82,6 +92,7 @@ export function ChampPublication({
     setTexte("");
     setPiece(null);
     setVideo(null);
+    setDestination(espace.id ?? "general");
     setErreur(null);
     setFocusTexte(true);
     setOuvert(false);
@@ -136,7 +147,7 @@ export function ChampPublication({
       }
       let resultat: Awaited<ReturnType<typeof publierPublication>>;
       try {
-        resultat = await publierPublication(espace.id, titre.trim(), texte.trim(), envoyee, video?.trim() || null);
+        resultat = await publierPublication(cible.id, titre.trim(), texte.trim(), envoyee, video?.trim() || null);
       } catch {
         // L'action n'a pas répondu : le fichier ne reste pas sans publication.
         if (envoyee) await createClient().storage.from("communaute").remove([envoyee.chemin]).catch(() => undefined);
@@ -150,7 +161,7 @@ export function ChampPublication({
         id: resultat.id,
         auteur: { prenom: moi.prenom, nom: moi.nom, role: null },
         estMoi: true,
-        espace: { id: espace.id, nom: espace.id ? espace.nomCourt : "général" },
+        espace: { id: cible.id, nom: cible.id ? cible.nomCourt : "général" },
         titre: titre.trim(),
         texte: texte.trim(),
         pieceJointe: envoyee && piece ? { ...envoyee, url: apercu(piece.fichier) } : null,
@@ -235,7 +246,7 @@ export function ChampPublication({
           <EditeurTexte
             etiquette="Nouvelle publication"
             autoFocus={focusTexte}
-            placeholder={`Partagez une question ou une réussite dans l’espace ${espace.nomCourt}…`}
+            placeholder={`Partagez une question ou une réussite dans l’espace ${cible.nomCourt}…`}
             valeur={texte}
             onChange={setTexte}
           />
@@ -255,6 +266,22 @@ export function ChampPublication({
               {erreur}
             </p>
           )}
+        </div>
+      </div>
+      {/* Toutes les publications paraissent dans Actualités ; l'espace dit à quel public elle s'adresse. */}
+      <div className="mt-3 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:pl-14">
+        <label htmlFor={idEspace} className="text-[13px] leading-5 font-medium text-discret">
+          Publication dans
+        </label>
+        <div className="w-[220px] max-w-full">
+          <Select
+            id={idEspace}
+            value={destination}
+            disabled={envoi}
+            onChange={(e) => setDestination(e.target.value)}
+            options={choix.map((e) => ({ value: e.id ?? "general", label: e.id ? e.nomCourt : "Général" }))}
+            className="h-10 text-sm"
+          />
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:pl-14">

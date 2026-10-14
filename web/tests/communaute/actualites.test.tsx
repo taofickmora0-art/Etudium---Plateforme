@@ -359,5 +359,38 @@ describe("La vidéo jointe", () => {
     page(lot([pub({ video: { plateforme: "vimeo", id: "76979871", url: "https://hameconnage.example" } })]));
     expect(within(carte()).getByRole("link", { name: "Regarder sur Vimeo" })).toHaveAttribute("href", "https://vimeo.com/76979871");
   });
+
+  it("« Publication dans » : les espaces ouverts, l'onglet par défaut ; publier dans Académique depuis Actualités ; depuis Général, elle n'entre pas dans ce fil", async () => {
+    const user = userEvent.setup({ delay: null });
+    vi.mocked(actions.chargerFil).mockResolvedValue({ ok: true, lot: lot([]) });
+    page(lot([]));
+    await user.click(screen.getByRole("button", { name: "Quoi de neuf, Koffi ?" }));
+    const choix = await screen.findByRole("combobox", { name: "Publication dans" });
+    expect(within(choix).getAllByRole("option").map((o) => o.textContent)).toEqual(["Général", "Académique"]);
+    expect(choix).toHaveValue("general");
+    await user.selectOptions(choix, P);
+    expect(screen.getByRole("textbox", { name: "Nouvelle publication" })).toHaveAttribute("placeholder", "Partagez une question ou une réussite dans l’espace Académique…");
+    vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n1", statut: "publiee", apercu: null, video: null });
+    await user.type(screen.getByRole("textbox", { name: "Nouvelle publication" }), "Pour les académiques");
+    await user.click(screen.getByRole("button", { name: "Publier" }));
+    expect(actions.publierPublication).toHaveBeenLastCalledWith(P, "", "Pour les académiques", null, null);
+    expect(await within(await screen.findByRole("article", { name: "Publication de Koffi Dossou" })).findByText("à l’instant · Publié dans Académique")).toBeInTheDocument();
+
+    await user.click(onglet("Général"));
+    await user.click(screen.getByRole("button", { name: "Quoi de neuf, Koffi ?" }));
+    expect(await screen.findByRole("combobox", { name: "Publication dans" })).toHaveValue("general");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Publication dans" }), P);
+    vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n2", statut: "publiee", apercu: null, video: null });
+    await user.type(screen.getByRole("textbox", { name: "Nouvelle publication" }), "Encore");
+    await user.click(screen.getByRole("button", { name: "Publier" }));
+    await waitFor(() => expect(actions.publierPublication).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getAllByText("Publication en ligne")).toHaveLength(2));
+    expect(screen.queryByRole("article", { name: "Publication de Koffi Dossou" })).toBeNull();
+  });
+
+  it("sur ordinateur, le fil a une largeur fixe (720 px au plus)", () => {
+    page(lot([pub()]));
+    expect(carte().parentElement).toHaveClass("max-w-[720px]");
+  });
 });
 
