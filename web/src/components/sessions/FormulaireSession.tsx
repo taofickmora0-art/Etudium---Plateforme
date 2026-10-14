@@ -50,6 +50,7 @@ const AFFICHE_MAX_OCTETS = 10 * 1024 * 1024;
 const REFUS_AFFICHE = "L’affiche doit être une image (JPG, PNG ou WebP), 10 Mo au plus.";
 const ECHEC_AFFICHE = "L’affiche n’a pas pu être envoyée. Réessayez.";
 const ADRESSE_VIDEO = "Collez l’adresse complète de la vidéo (https://…).";
+const LIEN_LIVE = "Le lien du live ne peut pas servir de vidéo de promotion.";
 
 /** L'affiche : déjà déposée (session modifiée) ou choisie dans le navigateur, à déposer à l'enregistrement. */
 type Affiche = { deposee: PieceSession | null; fichier: File | null; type: string; extension: string; url: string };
@@ -145,7 +146,8 @@ export function FormulaireSession({ espace, parcours, formateurs, initial, moi =
     // En modification, le début n'est revérifié que s'il change (corriger le lien d'une session en cours).
     const debut = debutDepuis(date, heure);
     const verifierDebut = !initial || debut === null || Date.parse(debut) !== Date.parse(initial.debut);
-    const refus = refusSession(d, new Date(), { verifierDebut }) ?? (adresseVideo && !reconnaitreVideo(adresseVideo) ? ADRESSE_VIDEO : null);
+    const refusVideo = !adresseVideo ? null : plateformeDepuisLien(adresseVideo) !== "En ligne" ? LIEN_LIVE : !reconnaitreVideo(adresseVideo) ? ADRESSE_VIDEO : null;
+    const refus = refusSession(d, new Date(), { verifierDebut }) ?? refusVideo;
     if (refus) {
       setErreur(refus);
       return;
@@ -164,6 +166,8 @@ export function FormulaireSession({ espace, parcours, formateurs, initial, moi =
     const reponse = initial ? await modifierSession(initial.id, d) : await creerSession(d);
     setEnvoi(false);
     if (!reponse.ok) {
+      // Une affiche nouvellement déposée a été retirée par le serveur : elle sera redéposée au prochain essai.
+      if (affiche?.fichier) setAffiche({ ...affiche, deposee: null });
       setErreur(reponse.message ?? "L’opération n’a pas abouti. Réessayez.");
       return;
     }
@@ -256,8 +260,7 @@ export function FormulaireSession({ espace, parcours, formateurs, initial, moi =
               type="file"
               accept="image/jpeg,image/png,image/webp"
               aria-label="Choisir l’affiche"
-              tabIndex={-1}
-              className="sr-only"
+              hidden
               onChange={(e) => void choisirAffiche(e)}
             />
           </div>

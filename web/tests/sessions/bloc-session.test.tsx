@@ -39,6 +39,12 @@ describe("Le bloc de session", () => {
     expect(screen.queryByRole("link")).toBeNull();
   });
 
+  it("dans l'aperçu du formulaire, « Voir la session » n'est pas un lien (la saisie n'est pas perdue)", () => {
+    render(<BlocSession session={S} maintenant={new Date("2026-10-14T15:00:00Z")} apercu />);
+    expect(screen.getByText("Voir la session")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
   it("Zoom et « En ligne » s'affichent aussi", () => {
     const { unmount } = render(<BlocSession session={{ ...S, plateforme: "Zoom" }} maintenant={new Date("2026-10-14T15:00:00Z")} />);
     expect(screen.getByText("Zoom")).toBeInTheDocument();

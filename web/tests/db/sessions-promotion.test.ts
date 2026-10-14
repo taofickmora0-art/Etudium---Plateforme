@@ -93,10 +93,10 @@ beforeEach(async () => {
 
 describe("La session paraît dans la communauté", () => {
   it("programmer publie : auteur, espace du parcours, titre, description, affiche", async () => {
-    const affiche = await deposer(F);
-    const id = await creer(F, { titre: "Excel avancé", description: "Tableaux croisés dynamiques.", parcours: P, image: affiche });
+    const affiche = await deposer(S);
+    const id = await creer(S, { titre: "Excel avancé", description: "Tableaux croisés dynamiques.", parcours: P, image: affiche });
     const pub = await publicationDe(id);
-    expect(pub).toMatchObject({ auteur: F, parcours_id: P, titre: "Excel avancé", texte: "Tableaux croisés dynamiques.", statut: "publiee", video: null });
+    expect(pub).toMatchObject({ auteur: S, parcours_id: P, titre: "Excel avancé", texte: "Tableaux croisés dynamiques.", statut: "publiee", video: null });
     expect(pub.piece_jointe?.chemin).toBe(affiche.chemin);
     const { pid } = await un<{ pid: string }>("select publication_id as pid from public.sessions_live where id = $1", [id]);
     expect(pid).toBe(pub.id);
@@ -118,16 +118,16 @@ describe("La session paraît dans la communauté", () => {
 
   it("modifier met à jour la publication ; la même affiche est gardée, une nouvelle la remplace", async () => {
     const affiche = await deposer(F);
-    const id = await creer(F, { image: affiche, parcours: P });
-    await modifier(F, id, { titre: "Excel expert", description: "Nouveau programme.", image: affiche, parcours: P });
+    const id = await creer(F, { image: affiche });
+    await modifier(F, id, { titre: "Excel expert", description: "Nouveau programme.", image: affiche });
     let pub = await publicationDe(id);
     expect(pub).toMatchObject({ titre: "Excel expert", texte: "Nouveau programme." });
     expect(pub.piece_jointe?.chemin).toBe(affiche.chemin);
     const autre = await deposer(F);
-    await modifier(F, id, { image: autre, parcours: P });
+    await modifier(F, id, { image: autre });
     pub = await publicationDe(id);
     expect(pub.piece_jointe?.chemin).toBe(autre.chemin);
-    await modifier(F, id, { video: VIDEO, parcours: P });
+    await modifier(F, id, { video: VIDEO });
     pub = await publicationDe(id);
     expect(pub.piece_jointe).toBeNull();
     expect(pub.video).toMatchObject({ plateforme: "youtube" });
@@ -154,6 +154,30 @@ describe("La session paraît dans la communauté", () => {
     const d = (await banc.en<{ d: Record<string, unknown> }>({ id: F }, "select public.session_detail($1) as d", [id]))[0].d;
     expect(d.promo_video).toMatchObject({ plateforme: "youtube" });
     expect(d.promo_image).toBeNull();
+  });
+});
+
+describe("Revue de la promotion des sessions", () => {
+  it("un formateur ne publie que dans un espace qui lui est ouvert ; un parcours inactif est refusé à tous", async () => {
+    await expect(creer(F, { parcours: P })).rejects.toThrow("Cet espace ne vous est pas ouvert.");
+    const inactif = (await un<{ id: string }>("insert into public.parcours (slug, nom, nom_court, couleur, actif) values ($1, 'Ancien', 'Ancien', 'business', false) returning id", [`p-${randomUUID()}`])).id;
+    await expect(creer(S, { parcours: inactif })).rejects.toThrow("Ce parcours n’est plus proposé.");
+    const id = await creer(F);
+    await expect(modifier(F, id, { parcours: P })).rejects.toThrow("Cet espace ne vous est pas ouvert.");
+  });
+
+  it("le lien d'un live (Google Meet, Zoom) ne sert pas de vidéo de promotion", async () => {
+    await expect(creer(S, { video: { plateforme: "autre", url: "https://meet.google.com/abc-defg-hij" } })).rejects.toThrow(
+      "Le lien du live ne peut pas servir de vidéo de promotion.",
+    );
+  });
+
+  it("la publication supprimée : l'affiche n'est plus celle de la session (le fichier part avec la publication)", async () => {
+    const id = await creer(F, { image: await deposer(F) });
+    const pub = await publicationDe(id);
+    await banc.en({ id: F }, "select public.supprimer_publication($1)", [pub.id]);
+    const { image } = await un<{ image: unknown }>("select promo_image as image from public.sessions_live where id = $1", [id]);
+    expect(image).toBeNull();
   });
 });
 

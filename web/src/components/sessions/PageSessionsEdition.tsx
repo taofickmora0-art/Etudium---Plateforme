@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageAdmin } from "@/components/admin/PageAdmin";
 import { moiCommunaute } from "@/components/communaute/ContenuCommunaute";
+import { lireEspaces } from "@/lib/communaute/data";
 import { MigrationFormateurAbsente, SansFiche } from "@/components/formateur/cadre";
 import { Banner } from "@/components/ui/Banner";
 import { listFormateurs, listParcours } from "@/lib/admin/data";
@@ -40,13 +41,18 @@ export async function PageFormulaireSession({ espace, id }: { espace: EspaceEdit
   const cadre = { titre, racine: racineSessions(espace), fil: [filSessions(espace), { label: titre }] };
   const bandeau = await bandeauFormateur(espace);
   if (bandeau) return <PageAdmin {...cadre}>{bandeau}</PageAdmin>;
-  const [parcours, formateurs, detail, moi] = await Promise.all([
+  const [tousParcours, formateurs, detail, moi, espaces] = await Promise.all([
     listParcours(),
     espace === "admin" ? listFormateurs() : Promise.resolve([]),
     id ? lireSessionDetail(id) : Promise.resolve(null),
     // L'auteur de la publication de la session (aperçu) et le dossier de son affiche.
     moiCommunaute(),
+    // Un formateur ne publie que dans les espaces qui lui sont ouverts (ceux de ses formations) ; la base le revérifie.
+    espace === "formateur" ? lireEspaces().catch(() => null) : Promise.resolve(null),
   ]);
+  const ouverts = espaces && !espaces.migrationAbsente ? new Set(espaces.donnees.filter((e) => e.ouvert && e.id).map((e) => e.id)) : null;
+  // Seulement les parcours proposés (actifs) ; pour un formateur, ceux de ses espaces ouverts.
+  const parcours = tousParcours.filter((p) => p.actif && (!ouverts || ouverts.has(p.id)));
   if (detail?.migrationAbsente) {
     return (
       <PageAdmin {...cadre}>

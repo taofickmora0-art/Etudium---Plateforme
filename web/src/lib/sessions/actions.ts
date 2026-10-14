@@ -7,7 +7,7 @@ import { reconnaitreVideo } from "@/lib/communaute/video";
 import { estFonctionAbsente, liste, un } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import { versCarte } from "./data";
-import { debutDepuis, refusSession } from "./regles";
+import { debutDepuis, plateformeDepuisLien, refusSession } from "./regles";
 import type { DonneesSession, SessionCarte, VueSessions } from "./types";
 
 // Actions des sessions live (spec, §1 et §4). La base revérifie tout (migration 0018) et ses messages (P0001) sont
@@ -18,6 +18,7 @@ const MIGRATION = "Appliquez la migration 0018 (guide « Ce qui te revient », s
 const MIGRATION_PROMOTION = "Appliquez la migration 0024 (guide « Ce qui te revient », section 29).";
 const DEUX_VISUELS = "Choisissez une affiche ou une vidéo, pas les deux.";
 const ADRESSE_VIDEO = "Collez l’adresse complète de la vidéo (https://…).";
+const LIEN_LIVE = "Le lien du live ne peut pas servir de vidéo de promotion.";
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 const VUES: VueSessions[] = ["a_venir", "inscriptions", "passees"];
 type Erreur = { code?: string; message?: string };
@@ -68,6 +69,8 @@ function visuel(d: DonneesSession): { refus: string } | { p_image?: DonneesSessi
   const adresse = d.video?.trim() || null;
   if (d.image && adresse) return { refus: DEUX_VISUELS };
   if (adresse) {
+    // Le lien d'un live (Google Meet, Zoom) reste réservé à sa fenêtre de 10 min.
+    if (plateformeDepuisLien(adresse) !== "En ligne") return { refus: LIEN_LIVE };
     const video = reconnaitreVideo(adresse);
     return video ? { p_video: video } : { refus: ADRESSE_VIDEO };
   }
@@ -97,7 +100,11 @@ export async function creerSession(d: DonneesSession): Promise<{ ok: true; id: s
   const promo = visuel(d);
   if ("refus" in promo) return { ok: false, message: promo.refus };
   const { data, error } = await garde.supabase.rpc("creer_session", { ...parametres(d, garde.equipe), ...promo });
-  if (error) return { ok: false, message: message(error, Object.keys(promo).length > 0) };
+  if (error) {
+    // L'affiche déposée pour cette session refusée ne reste pas dans le stockage (le formulaire la redéposera).
+    if (promo.p_image) await garde.supabase.storage.from("communaute").remove([promo.p_image.chemin]).catch(() => undefined);
+    return { ok: false, message: message(error, Object.keys(promo).length > 0) };
+  }
   refresh();
   return { ok: true, id: String(data) };
 }
@@ -114,7 +121,11 @@ export async function modifierSession(id: string, d: DonneesSession): Promise<Re
   // L'affiche d'avant : une fois remplacée ou retirée, elle n'est plus jointe à rien et quitte le stockage.
   const avant = await affichePrecedente(garde.supabase, id);
   const { error } = await garde.supabase.rpc("modifier_session", { p_session: id, ...parametres(d, garde.equipe), ...promo });
-  if (error) return { ok: false, message: message(error, Object.keys(promo).length > 0) };
+  if (error) {
+    // Une nouvelle affiche refusée quitte le stockage ; celle de la session reste.
+    if (promo.p_image && promo.p_image.chemin !== avant) await garde.supabase.storage.from("communaute").remove([promo.p_image.chemin]).catch(() => undefined);
+    return { ok: false, message: message(error, Object.keys(promo).length > 0) };
+  }
   if (avant && avant !== promo.p_image?.chemin) await garde.supabase.storage.from("communaute").remove([avant]).catch(() => undefined);
   refresh();
   return { ok: true };

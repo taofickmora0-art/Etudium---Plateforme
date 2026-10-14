@@ -41,9 +41,52 @@ begin
       v_image := public.verifier_piece(v_image);
     end if;
   end if;
+  -- Le lien d'un live (Google Meet, Zoom) reste réservé à sa fenêtre de 10 min : jamais en vidéo de promotion.
+  if v_video is not null and public.plateforme_session(coalesce(v_video ->> 'url', '')) <> 'En ligne' then
+    raise exception 'Le lien du live ne peut pas servir de vidéo de promotion.';
+  end if;
   return jsonb_build_object('image', v_image, 'video', public.verifier_video(v_video));
 end;
 $$;
+
+-- ─── L'espace de la publication d'une session ───────────────────────────────────────────────────────
+-- Un parcours actif, et un espace ouvert au compte : un formateur publie dans les espaces de ses formations.
+create or replace function public.verifier_espace_session(p_parcours uuid)
+returns void
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if p_parcours is not null and not exists (select 1 from public.parcours where id = p_parcours and actif) then
+    raise exception 'Ce parcours n’est plus proposé.';
+  end if;
+  if not public.peut_lire_espace(p_parcours) then
+    raise exception 'Cet espace ne vous est pas ouvert.' using errcode = '42501';
+  end if;
+end;
+$$;
+
+-- La publication d'une session supprimée : son affiche part avec elle (le fichier est retiré du stockage), la session
+-- ne la désigne plus.
+create or replace function public.apres_suppression_publication_session()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if old.session_id is not null then
+    update public.sessions_live set promo_image = null where id = old.session_id and promo_image is not null;
+  end if;
+  return null;
+end;
+$$;
+
+drop trigger if exists publications_session_supprimee on public.publications;
+create trigger publications_session_supprimee after delete on public.publications
+  for each row execute function public.apres_suppression_publication_session();
 
 -- ─── Programmer : la publication en plus ────────────────────────────────────────────────────────────
 drop function if exists public.creer_session(text, text, timestamptz, integer, text, uuid, uuid);
@@ -83,6 +126,7 @@ begin
   end if;
   perform public.verifier_session(v_titre, v_description, p_debut, p_duree, v_lien, true);
   v_promo := public.verifier_promotion(p_image, p_video, null);
+  perform public.verifier_espace_session(p_parcours);
 
   insert into public.sessions_live (titre, description, debut, duree_minutes, lien, parcours_id, formateur_id, cree_par, promo_image, promo_video)
   values (v_titre, v_description, p_debut, p_duree, v_lien, p_parcours, v_formateur, (select auth.uid()),
@@ -152,6 +196,9 @@ begin
   perform public.verifier_session(v_titre, v_description, p_debut, p_duree, v_lien, v_heure_changee);
   -- La même affiche que la session est gardée telle quelle (elle est déjà jointe à sa publication).
   v_promo := public.verifier_promotion(p_image, p_video, v.promo_image);
+  if p_parcours is distinct from v.parcours_id then
+    perform public.verifier_espace_session(p_parcours);
+  end if;
   if v_equipe and p_formateur is not null and not exists (select 1 from public.formateurs where id = p_formateur) then
     raise exception 'Cette fiche formateur n’existe plus.';
   end if;
@@ -313,6 +360,8 @@ $$;
 
 -- ─── Droits d'exécution ─────────────────────────────────────────────────────────────────────────────
 revoke execute on function public.verifier_promotion(jsonb, jsonb, jsonb) from public, anon, authenticated;
+revoke execute on function public.verifier_espace_session(uuid) from public, anon, authenticated;
+revoke execute on function public.apres_suppression_publication_session() from public, anon, authenticated;
 revoke execute on function public.creer_session(text, text, timestamptz, integer, text, uuid, uuid, jsonb, jsonb) from public, anon;
 grant execute on function public.creer_session(text, text, timestamptz, integer, text, uuid, uuid, jsonb, jsonb) to authenticated;
 revoke execute on function public.modifier_session(uuid, text, text, timestamptz, integer, text, uuid, uuid, jsonb, jsonb) from public, anon;

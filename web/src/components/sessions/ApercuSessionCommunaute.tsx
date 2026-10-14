@@ -58,7 +58,7 @@ export function ApercuSessionCommunaute({ moi, role, espaceNom, titre, descripti
       )}
       {video && <VideoIntegree video={video} className="mt-3.5 rounded-[14px]" />}
       {session ? (
-        <BlocSession session={session} maintenant={maintenant} />
+        <BlocSession session={session} maintenant={maintenant} apercu />
       ) : (
         <p className="m-0 mt-3.5 rounded-[14px] border border-dashed border-bordure-champ px-3.5 py-3 text-[13px] leading-5 text-discret">
           Choisissez la date et l’heure : le bloc de la session (date, plateforme, « Voir la session ») paraîtra ici.

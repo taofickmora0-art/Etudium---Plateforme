@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CheckmarkCircle02Icon, UserIcon, UserMultipleIcon, Video01Icon } from "@hugeicons/core-free-icons";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Tag } from "@/components/ui/Tag";
 import { cn } from "@/lib/cn";
@@ -18,7 +18,18 @@ const PLATEFORMES: Record<string, string> = {
  * « Session live », la date et l'heure, la plateforme, l'animateur, les inscriptions, et « Voir la session ». Jamais le
  * lien du live, réservé à sa fenêtre de 10 min sur la page Événements.
  */
-export function BlocSession({ session: s, maintenant, className }: { session: SessionPublication; maintenant: Date; className?: string }) {
+export function BlocSession({
+  session: s,
+  maintenant,
+  apercu = false,
+  className,
+}: {
+  session: SessionPublication;
+  maintenant: Date;
+  /** Dans l'aperçu du formulaire : « Voir la session » n'est pas un lien (la saisie n'est pas perdue). */
+  apercu?: boolean;
+  className?: string;
+}) {
   const { mois, jour } = jourCarte(s.debut);
   const annulee = s.statut === "annulee";
   const finie = terminee(s, maintenant);
@@ -72,9 +83,13 @@ export function BlocSession({ session: s, maintenant, className }: { session: Se
                 Inscription confirmée
               </span>
             )}
-            <Button asChild size="sm">
-              <Link href="/evenements">Voir la session</Link>
-            </Button>
+            {apercu ? (
+              <span className={buttonVariants({ size: "sm" })}>Voir la session</span>
+            ) : (
+              <Button asChild size="sm">
+                <Link href="/evenements">Voir la session</Link>
+              </Button>
+            )}
           </>
         )}
       </div>

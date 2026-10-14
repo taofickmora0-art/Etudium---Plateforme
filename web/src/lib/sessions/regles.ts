@@ -102,7 +102,6 @@ export function refusSession(d: DonneesSession, maintenant: Date, options: { ver
   return null;
 }
 
-/** « 1 inscription », « 128 inscriptions » : neutre. */
 /** La plateforme d'après le lien du live, comme la base (plateforme_session) : « Google Meet », « Zoom » ou « En ligne ». */
 export function plateformeDepuisLien(lien: string): string {
   const adresse = lien.trim();
@@ -111,4 +110,5 @@ export function plateformeDepuisLien(lien: string): string {
   return "En ligne";
 }
 
+/** « 1 inscription », « 128 inscriptions » : neutre. */
 export const libelleInscriptions = (n: number) => `${n.toLocaleString("fr-FR")} inscription${n > 1 ? "s" : ""}`;

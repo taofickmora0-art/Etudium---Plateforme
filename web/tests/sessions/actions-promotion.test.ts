@@ -55,6 +55,14 @@ describe("Le visuel de promotion", () => {
     expect(faux.appels).toEqual([]);
   });
 
+  it("le lien d'un live ne sert pas de vidéo (refusé sans appel) ; une affiche refusée par la base quitte le stockage", async () => {
+    expect(await creerSession({ ...D, video: "https://meet.google.com/abc-defg-hij" })).toEqual({ ok: false, message: "Le lien du live ne peut pas servir de vidéo de promotion." });
+    expect(faux.appels).toEqual([]);
+    faux.repondre("rpc.creer_session", { error: { code: "P0001", message: "Choisissez une date au moins 10 minutes dans le futur." } });
+    expect(await creerSession({ ...D, image: AFFICHE })).toMatchObject({ ok: false });
+    expect(faux.de("storage.communaute", "remove")[0].valeurs).toEqual([[AFFICHE.chemin]]);
+  });
+
   it("avant la 0024, avec un visuel : le message de la migration", async () => {
     faux.repondre("rpc.creer_session", { error: { code: "PGRST202" } });
     expect(await creerSession({ ...D, image: AFFICHE })).toEqual({ ok: false, message: MIGRATION_PROMOTION });
@@ -70,11 +78,11 @@ describe("Le visuel de promotion", () => {
     expect(faux.de("storage.communaute", "remove")).toEqual([]);
   });
 
-  it("modifier en échec : l'ancienne affiche reste", async () => {
+  it("modifier en échec : l'ancienne affiche reste ; la nouvelle, refusée, quitte le stockage (revue)", async () => {
     faux.repondre("rpc.session_detail", { data: { id: ID, promo_image: { chemin: `${MOI}/ancienne.png`, nom: "a", type: "image/png", taille: 1 } } });
     faux.repondre("rpc.modifier_session", { error: { code: "P0001", message: "Cette session est annulée." } });
     expect(await modifierSession(ID, { ...D, image: AFFICHE })).toEqual({ ok: false, message: "Cette session est annulée." });
-    expect(faux.de("storage.communaute", "remove")).toEqual([]);
+    expect(faux.de("storage.communaute", "remove").map((a) => a.valeurs)).toEqual([[[AFFICHE.chemin]]]);
   });
 });
 
