@@ -23,7 +23,7 @@ export function AppShell({ account, espace, children }: { account?: ReactNode; /
       </a>
       <AppHeader account={account} />
       <div className="flex flex-1 lg:items-stretch lg:rounded-coque lg:bg-coque">
-        <SidebarNav className="hidden lg:flex" espace={espace} />
+        <SidebarNav className="hidden lg:block" espace={espace} />
         <main
           id="contenu"
           tabIndex={-1}

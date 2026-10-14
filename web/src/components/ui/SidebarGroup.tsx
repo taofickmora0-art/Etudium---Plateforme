@@ -7,7 +7,8 @@ export function SidebarGroup({ title, children }: { title?: string; children: Re
     <div role={title ? "group" : undefined} aria-labelledby={title ? id : undefined} className="flex flex-col gap-3">
       {title && (
         <div className="flex h-12 items-center gap-2.5 pr-1 pl-3">
-          <span id={id} className="text-[13.5px] tracking-[0.04em] text-ardoise uppercase">
+          {/* Barre réduite : l'intertitre s'efface, le filet reste comme séparateur. */}
+          <span id={id} className="menu-lateral-intertitre text-[13.5px] tracking-[0.04em] whitespace-nowrap text-ardoise uppercase">
             {title}
           </span>
           <span aria-hidden="true" className="h-px flex-1 bg-filet" />

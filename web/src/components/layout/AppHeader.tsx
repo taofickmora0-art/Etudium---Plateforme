@@ -5,6 +5,7 @@ import { CounterPill, LogoButton, SearchButton } from "@/components/ui/TopBarBut
 import type { ShellUser } from "@/lib/auth/current-user";
 import { LIENS_ENTETE_TELEPHONE } from "@/lib/navigation";
 import { BoutonAjouterFormation } from "./BoutonAjouterFormation";
+import { BoutonMenuLateral } from "./BoutonMenuLateral";
 import { HeaderActions } from "./HeaderActions";
 
 /**
@@ -16,6 +17,8 @@ export function AppHeader({ account }: { account?: ReactNode }) {
   return (
     <header className="relative z-30 flex flex-none items-center justify-between gap-2 px-4 py-3 max-lg:sticky max-lg:top-0 max-lg:bg-page lg:flex-wrap lg:gap-3 lg:py-5 lg:pr-6 lg:pl-0">
       <div className="flex min-w-0 flex-wrap items-center gap-2 lg:gap-3">
+        {/* Grand écran : réduire la barre latérale à ses icônes, ou la rouvrir. */}
+        <BoutonMenuLateral className="hidden lg:inline-flex" />
         <LogoButton href="/accueil" />
         <SearchButton href="/recherche" className="hidden gap-1.5 pr-4 pl-3.5 lg:flex" />
         <BoutonAjouterFormation className="hidden lg:flex" />

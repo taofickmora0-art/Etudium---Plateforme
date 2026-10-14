@@ -19,14 +19,15 @@ export function SidebarItem({ href, icon, label, active = false, tag }: SidebarI
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "focus-etudium flex h-12 items-center gap-2.5 rounded-bouton px-3 text-base font-medium no-underline transition-colors",
+        // menu-lateral-* : la barre réduite n'en garde qu'un carré d'icône (globals.css).
+        "menu-lateral-entree focus-etudium flex h-12 items-center gap-2.5 rounded-bouton px-3 text-base font-medium no-underline transition-colors",
         active ? "bg-panneau text-bleu shadow-pastille" : "text-texte hover:bg-white/55",
       )}
     >
       <Icon icon={icon} size={20} />
-      <span className="truncate">{label}</span>
+      <span className="menu-lateral-libelle truncate">{label}</span>
       {tag && (
-        <span className="rounded-etiquette bg-bleu-pale pt-[3px] pr-[7px] pb-[5px] pl-[9px] text-xs leading-[17px] font-medium whitespace-nowrap text-bleu">
+        <span className="menu-lateral-etiquette rounded-etiquette bg-bleu-pale pt-[3px] pr-[7px] pb-[5px] pl-[9px] text-xs leading-[17px] font-medium whitespace-nowrap text-bleu">
           {tag}
         </span>
       )}

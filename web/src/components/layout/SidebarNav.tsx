@@ -8,7 +8,9 @@ import { spaceOf, type Espace } from "@/lib/auth/permissions";
 import { cn } from "@/lib/cn";
 import { MENUS, isActive, type NavEntry } from "@/lib/navigation";
 
-const NAV = "box-border flex shrink grow-0 basis-[337px] flex-col gap-3 pt-5 pr-[18px] pb-5 pl-5";
+// La barre garde toujours 337 px de contenu : réduite, sa place n'en montre que la colonne d'icônes (84 px), et elle se
+// déplie par-dessus la page au survol ou au clavier (règles « menu-lateral » de globals.css).
+const NAV = "box-border flex w-[337px] flex-col gap-3 pt-5 pr-[18px] pb-5 pl-5";
 
 /**
  * Les entrées de la barre latérale, celles de l'espace où l'on se trouve (étudiant, formateur, back-office).
@@ -17,19 +19,22 @@ const NAV = "box-border flex shrink grow-0 basis-[337px] flex-col gap-3 pt-5 pr-
  */
 export function SidebarNavLinks({ pathname, espace, className }: { pathname: string | null; espace?: Espace; className?: string }) {
   const actuel = pathname !== null ? spaceOf(pathname) : espace;
-  if (!actuel) return <nav aria-label="Navigation principale" className={cn(NAV, className)} />;
-  const menu = MENUS[actuel];
+  const menu = actuel ? MENUS[actuel] : null;
   const entree = (e: NavEntry) => (
     <SidebarItem key={e.href} href={e.href} icon={e.icon} label={e.label} active={pathname !== null && isActive(pathname, e.href, e.exact)} />
   );
   return (
-    <nav aria-label={menu.libelle} className={cn(NAV, className)}>
-      {menu.groupes.map((groupe, index) => (
-        <SidebarGroup key={groupe.titre ?? index} title={groupe.titre}>
-          {groupe.entrees.map(entree)}
-        </SidebarGroup>
-      ))}
-    </nav>
+    <div className={cn("menu-lateral-place relative shrink-0", className)}>
+      <div className="menu-lateral relative z-20 overflow-x-hidden rounded-l-coque bg-coque">
+        <nav id="menu-lateral" aria-label={menu?.libelle ?? "Navigation principale"} className={NAV}>
+          {menu?.groupes.map((groupe, index) => (
+            <SidebarGroup key={groupe.titre ?? index} title={groupe.titre}>
+              {groupe.entrees.map(entree)}
+            </SidebarGroup>
+          ))}
+        </nav>
+      </div>
+    </div>
   );
 }
 

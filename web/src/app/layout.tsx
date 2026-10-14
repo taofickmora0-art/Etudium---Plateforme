@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { SCRIPT_MENU } from "@/lib/menu-lateral";
 import "./globals.css";
 
 const inter = Inter({
@@ -22,7 +23,11 @@ export const viewport: Viewport = { themeColor: "#F2F6FD" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="fr" className={`${inter.variable} h-full`}>
+    // suppressHydrationWarning : le script ci-dessous pose data-menu sur <html> avant React (barre latérale réduite).
+    <html lang="fr" className={`${inter.variable} h-full`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_MENU }} />
+      </head>
       <body className="flex min-h-full flex-col font-sans">{children}</body>
     </html>
   );
