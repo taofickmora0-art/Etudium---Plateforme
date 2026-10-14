@@ -546,3 +546,22 @@ Le texte d'une publication se met en forme comme dans un traitement de texte, et
    - un texte qui n'est pas une adresse : « Collez l’adresse complète de la vidéo (https://…). » ; la croix **Retirer la vidéo** l'enlève.
 4. **Avec l'analyse automatique** (section 25) : l'adresse de la vidéo et l'aperçu d'un lien (titre, description) sont jugés avec le texte ; l'image de la vidéo n'est pas analysée.
 
+
+## 28. Valider l'onglet Formations et les rappels des sessions live, 20 minutes
+
+Un seul onglet **Formations** (juste après Accueil), « Ajouter à mon agenda » qui ouvre Google Agenda, un rappel 10 min avant, et une notification à tout le monde quand le live commence.
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0023_sessions_rappels.sql` (après la 0022). Si tu rejoues un jour la 0018, rejoue la 0023 juste après.
+   - La fin du fichier crée une **tâche planifiée** (pg_cron) qui envoie rappels et annonces **toutes les minutes**, même si personne n'est connecté.
+   - Si le résultat affiche « pg_cron indisponible » : Supabase → **Integrations** → **Cron** → **Enable**, puis relance seulement le dernier bloc du fichier (de `do $cron$` à la fin).
+   - Pour vérifier : **Integrations** → **Cron** → la tâche `etudium-sessions-live` (toutes les minutes) apparaît, et son historique se remplit.
+2. **Le menu.** Avec le compte étudiant, la barre latérale : Accueil, **Formations**, Communauté, Messages, Événements. « Mes formations » et « Toutes les formations » ne sont plus dans « Mon espace ». Communauté disparaîtra du menu quand l'Accueil deviendra le fil de la communauté.
+3. **La page Formations.**
+   - En haut, **Mes formations** : tes formations commencées sur une seule ligne (6 au plus), en petites cartes avec la progression ; **Voir plus** ouvre la liste complète.
+   - Dessous, **Toutes les formations** : la recherche, le tri, les parcours et « Gratuites », puis les cartes, 4 à 5 par ligne sur ordinateur.
+   - Sur téléphone, la rangée « Mes formations » défile du doigt ; l'onglet **Formations** de la barre du bas ouvre cette page.
+4. **Ajouter à mon agenda.** Page **Événements** → **Je m’inscris** → **Ajouter à mon agenda** : Google Agenda s'ouvre dans un nouvel onglet avec la session pré-remplie ; **Enregistrer** l'ajoute. Google y met le rappel par défaut de ton agenda (réglable dans Google Agenda). Le lien **Autre agenda (.ics)** sert pour Apple Calendar et Outlook, avec une alerte 10 min avant. Le bouton est aussi sur la carte d'une session où tu es inscrit.
+5. **Les rappels et l'annonce.** Au back-office, programme une session dans 15 minutes et inscris-y le compte étudiant.
+   - Vers 10 min avant : l'étudiant reçoit « Session live dans 10 minutes » (cloche). La cloche se met à jour seule toutes les minutes ; un message apparaît aussi en bas de l'écran.
+   - À l'heure du début : **tous les comptes** (étudiant non inscrit, formateur, admin) reçoivent « C’est l’heure du live : … ».
+   - Un compte qui a coupé « Sessions live » dans ses préférences de notification ne reçoit rien.
