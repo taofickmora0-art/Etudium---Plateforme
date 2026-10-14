@@ -33,7 +33,7 @@
 | Une leçon ajoutée à une formation publiée | Étudiants qui suivent la formation | Nouveaux contenus | « Nouvelle leçon dans <formation> » · « <leçon> » · la leçon |
 | Une formation archivée | Étudiants qui la suivent | service | « Formation archivée » · « <titre> n’est plus disponible. Votre progression est conservée. » · Mes formations |
 | Une formation renvoyée au formateur | Son formateur | service | « Votre formation est à corriger » · le début de la remarque (120 caractères) · son onglet Publication |
-| Une formation envoyée en relecture | L'équipe | service | « Formation à valider » · « <titre>, par <fiche formateur> » · son onglet Publication au back-office |
+| Une formation envoyée en relecture | L'équipe (admin, modérateur, super admin) | service | « Formation à valider » · « <titre>, par <fiche formateur> » · son onglet Publication au back-office |
 | Un nouvel avis (pas une modification) | Le formateur de la formation | service | « Nouvel avis sur <titre> » · « <prénom N.> : 4/5 » · la fiche |
 | Le rôle Formateur donné | Le compte | service | « Vous êtes formateur » · « Créez et suivez vos formations depuis l’espace formateur. » · `/formateur` |
 | Un rôle d'équipe donné (modérateur, admin, super admin) | Le compte | service | « Vous faites partie de l’équipe » · « Le back-office vous est ouvert. » · `/admin` |
