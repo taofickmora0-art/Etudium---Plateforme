@@ -45,6 +45,22 @@ export type StatutPublication = "publiee" | "en_attente" | "bloquee";
 
 export type RoleAuteur = "formateur" | "equipe" | null;
 
+/** Une option : ses votes et, pour un quiz, la bonne réponse, seulement quand le compte y a droit (après avoir voté…). */
+export type OptionSondage = { id: string; texte: string; image: PieceJointe | null; votes: number | null; moi: boolean; correcte?: boolean };
+
+export type Sondage = {
+  type: "texte" | "images" | "quiz";
+  choixMultiples: boolean;
+  finLe: string | null;
+  ferme: boolean;
+  aRepondu: boolean;
+  /** Null : les résultats ne sont pas encore visibles. */
+  votants: number | null;
+  options: OptionSondage[];
+  /** Un quiz, une fois répondu. */
+  explication?: string | null;
+};
+
 export type Publication = {
   id: string;
   auteur: { prenom: string; nom: string; role: RoleAuteur };
@@ -73,6 +89,10 @@ export type Publication = {
   video: Video | null;
   /** Le bloc de la session live qu'annonce la publication (migration 0024) ; absent sinon. */
   session?: SessionPublication | null;
+  /** Programmée : son heure (`creeLe`) n'est pas encore venue ; vue par son auteur et l'équipe seulement (0026). */
+  programmee?: boolean;
+  /** Le sondage ou le quiz de la publication (0026). */
+  sondage?: Sondage | null;
 };
 
 export type PublicationDetail = Publication & { toutesReponses: Reponse[] };
@@ -83,7 +103,8 @@ export type LotPublications = { publications: Publication[]; suite: boolean };
 export type FiltreFil = "tous" | "general" | string;
 
 /** Le tri du fil (0021) : les plus récentes, les plus aimées et commentées en 30 jours, ou les signets du compte. */
-export type TriFil = "recentes" | "populaires" | "enregistrees";
+/** « programmees » : les siennes, à venir (migration 0026). */
+export type TriFil = "recentes" | "populaires" | "enregistrees" | "programmees";
 
 export type Curseur = { avant: string; avantId: string };
 

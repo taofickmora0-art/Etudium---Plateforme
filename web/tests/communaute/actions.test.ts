@@ -16,7 +16,7 @@ vi.mock("@/lib/moderation/analyse", () => ({ configurationModeration: () => conf
 const lireApercu = vi.fn();
 vi.mock("@/lib/communaute/apercu", () => ({ lireApercu: (...a: unknown[]) => lireApercu(...a) }));
 
-const { aimer, aimerReponse, basculerEnregistrement, chargerEspaces, chargerFil, chargerReponses, modifierPublication, modifierReponse, publierPublication, repondre, signaler, supprimerPublication, supprimerReponse } = await import(
+const { aimer, aimerReponse, basculerEnregistrement, chargerEspaces, chargerFil, chargerReponses, modifierPublication, modifierReponse, publierPublication, repondre, reprogrammer, signaler, supprimerPublication, supprimerReponse, voter } = await import(
   "@/lib/communaute/actions"
 );
 const { messageBloquee } = await import("@/lib/moderation/regles");
@@ -455,5 +455,57 @@ describe("Les commentaires (communauté v3, étape 2)", () => {
     expect(faux.de("rpc", "basculer_reaction_commentaire")[0].valeurs).toEqual({ p_id: R });
     faux.repondre("rpc.basculer_reaction_commentaire", { error: { code: "PGRST202" } });
     expect(await aimerReponse(R)).toEqual({ ok: false, message: MIGRATION_COMMENTAIRES });
+  });
+});
+
+describe("Sondages, quiz et programmation (0026)", () => {
+  const MIGRATION_SONDAGES = "Appliquez la migration 0026 (guide « Ce qui te revient », section 31).";
+  const SONDAGE = { type: "texte" as const, choixMultiples: false, dureeJours: 7 as const, explication: "", options: [{ texte: "Oui" }, { texte: "Non" }] };
+  const BLOC = { type: "texte", choix_multiples: false, fin_le: null, ferme: false, a_repondu: false, votants: null, options: [{ id: "o1", texte: "Oui", image: null, votes: null, moi: false }] };
+
+  it("publier un sondage : le format de la base, le bloc relu pour la carte ; programmer : l'heure transmise", async () => {
+    faux.repondre("rpc.publier", { data: { id: ID, statut: "publiee", categorie: null } });
+    faux.repondre("rpc.publication_communaute", { data: { id: ID, sondage: BLOC } });
+    const reponse = await publierPublication(null, "", "Votre avis ?", null, null, { sondage: SONDAGE });
+    expect(faux.de("rpc", "publier")[0].valeurs).toMatchObject({
+      p_sondage: { type: "texte", choix_multiples: false, duree_jours: 7, options: [{ texte: "Oui" }, { texte: "Non" }] },
+    });
+    expect(reponse).toMatchObject({ ok: true, sondage: { type: "texte", options: [{ id: "o1", texte: "Oui", votes: null }] } });
+    const plus = new Date(Date.now() + 3_600_000).toISOString();
+    await publierPublication(null, "", "Plus tard", null, null, { publieLe: plus });
+    expect(faux.de("rpc", "publier")[1].valeurs).toMatchObject({ p_publie_le: plus });
+  });
+
+  it("un seul ajout ; une programmation trop proche ; refus sans appel ; avant la 0026 : le message", async () => {
+    expect(await publierPublication(null, "", "x", PIECE, null, { sondage: SONDAGE })).toEqual({
+      ok: false,
+      message: "Une publication porte un seul ajout : une image, un fichier, une vidéo, un sondage ou un quiz.",
+    });
+    expect(await publierPublication(null, "", "x", null, null, { publieLe: new Date(Date.now() + 60_000).toISOString() })).toEqual({
+      ok: false,
+      message: "Choisissez une heure au moins 10 minutes plus tard.",
+    });
+    expect(faux.appels.filter((a) => a.op === "publier")).toEqual([]);
+    faux.repondre("rpc.publier", { error: { code: "PGRST202" } });
+    expect(await publierPublication(null, "", "x", null, null, { sondage: SONDAGE })).toEqual({ ok: false, message: MIGRATION_SONDAGES });
+  });
+
+  it("voter : les options transmises, le bloc rendu ; reprogrammer ; le fil « programmees »", async () => {
+    faux.repondre("rpc.voter", { data: { ...BLOC, a_repondu: true, votants: 1, options: [{ id: "o1", texte: "Oui", image: null, votes: 1, moi: true }] } });
+    const vote = await voter(ID, [R]);
+    expect(faux.de("rpc", "voter")[0].valeurs).toEqual({ p_publication: ID, p_options: [R] });
+    expect(vote).toMatchObject({ ok: true, sondage: { aRepondu: true, votants: 1, options: [{ votes: 1, moi: true }] } });
+    expect(await reprogrammer(ID, null)).toEqual({ ok: true });
+    expect(faux.de("rpc", "reprogrammer")[0].valeurs).toEqual({ p_publication: ID, p_publie_le: null });
+    faux.repondre("rpc.fil_communaute", { data: { publications: [], suite: false } });
+    await chargerFil("tous", "programmees");
+    expect(faux.de("rpc", "fil_communaute")[0].valeurs).toMatchObject({ p_tri: "programmees" });
+  });
+
+  it("supprimer une publication à sondage d'images : ses images quittent le stockage", async () => {
+    faux.repondre("rpc.images_sondage", { data: ["moi/a.png", "moi/b.png"] });
+    faux.repondre("rpc.supprimer_publication", { data: null });
+    expect(await supprimerPublication(ID)).toEqual({ ok: true });
+    expect(faux.de("storage.communaute", "remove")[0].valeurs).toEqual([["moi/a.png", "moi/b.png"]]);
   });
 });

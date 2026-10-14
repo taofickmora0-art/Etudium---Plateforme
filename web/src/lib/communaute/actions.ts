@@ -10,12 +10,13 @@ import { messageBloquee, refusSignalement } from "@/lib/moderation/regles";
 import { MOTIFS, type ContenuAnalyse, type MotifSignalement, type Verdict } from "@/lib/moderation/types";
 import { createClient } from "@/lib/supabase/server";
 import { lireApercu } from "./apercu";
-import { lireLot, UUID, versApercu, versEspace, versReponse } from "./data";
+import { avecLiens, lireLot, UUID, versApercu, versEspace, versPublication, versReponse, versSondage } from "./data";
 import { apercuVisio, idYoutube } from "./liens";
 import { premiereAdresseDuTexte } from "./mise-en-forme";
 import { reconnaitreVideo, type Video } from "./video";
 import { nomCourt, refusPiece, refusPublication, refusReponse } from "./regles";
-import type { Apercu, Espace, FiltreFil, LotPublications, PieceEnvoyee, Reponse, SuiteFil, TriFil } from "./types";
+import { refusProgrammation, refusSondage, versBase, type SondageEnvoye } from "./sondage";
+import type { Apercu, Espace, FiltreFil, LotPublications, PieceEnvoyee, Reponse, Sondage, SuiteFil, TriFil } from "./types";
 
 // Actions de la communauté (spec, §2 à §4). La base revérifie tout (migration 0019) et ses messages (P0001, 42501)
 // sont faits pour être affichés tels quels.
@@ -24,6 +25,8 @@ const MIGRATION = "Appliquez la migration 0019 (guide « Ce qui te revient », s
 const MIGRATION_ACTUALITES = "Appliquez la migration 0021 (guide « Ce qui te revient », section 26).";
 const MIGRATION_VIDEO = "Appliquez la migration 0022 (guide « Ce qui te revient », section 27).";
 const MIGRATION_COMMENTAIRES = "Appliquez la migration 0025 (guide « Ce qui te revient », section 30).";
+const MIGRATION_SONDAGES = "Appliquez la migration 0026 (guide « Ce qui te revient », section 31).";
+const UN_SEUL_AJOUT = "Une publication porte un seul ajout : une image, un fichier, une vidéo, un sondage ou un quiz.";
 const ADRESSE_VIDEO = "Collez l’adresse complète de la vidéo (https://…).";
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 type Erreur = { code?: string; message?: string };
@@ -179,10 +182,23 @@ export async function publierPublication(
   texte: string,
   piece: PieceEnvoyee | null,
   adresseVideo: string | null = null,
-): Promise<{ ok: true; id: string; statut: StatutPublie; apercu: Apercu | null; video: Video | null } | Refus> {
+  /** Migration 0026 : un sondage ou un quiz (ses images déjà déposées), et l'heure de parution d'une programmée. */
+  extras: { sondage?: SondageEnvoye | null; publieLe?: string | null } = {},
+): Promise<{ ok: true; id: string; statut: StatutPublie; apercu: Apercu | null; video: Video | null; sondage?: Sondage | null } | Refus> {
   if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
-  const refus = refusPublication(titre, texte) ?? (piece ? refusPiece(piece.type, piece.taille) : null);
+  const { sondage = null, publieLe = null } = extras;
+  if (sondage && (piece || adresseVideo?.trim())) return { ok: false, message: UN_SEUL_AJOUT };
+  const refus =
+    refusPublication(titre, texte) ??
+    (piece ? refusPiece(piece.type, piece.taille) : null) ??
+    (sondage ? refusSondage(sondage) : null) ??
+    (publieLe ? refusProgrammation(publieLe, new Date()) : null);
   if (refus) return { ok: false, message: refus };
+  // Les fichiers déposés pour cette publication : retirés si elle est refusée.
+  const fichiers = [...(piece ? [piece.chemin] : []), ...(sondage?.options ?? []).flatMap((o) => (o.image ? [o.image.chemin] : []))];
+  const retirer = async (supabase: Client) => {
+    if (fichiers.length > 0) await supabase.storage.from("communaute").remove(fichiers).catch(() => undefined);
+  };
   const videoReconnue = adresseVideo?.trim() ? reconnaitreVideo(adresseVideo) : null;
   if (adresseVideo?.trim() && !videoReconnue) return { ok: false, message: ADRESSE_VIDEO };
   const supabase = await createClient();
@@ -190,7 +206,7 @@ export async function publierPublication(
   // La page d'un lien n'est lue qu'une fois les droits et les limites vérifiés par la base.
   const preparation = await preparerApercu(supabase, texte.trim(), { publication: null, parcours });
   if ("refus" in preparation) {
-    if (piece) await supabase.storage.from("communaute").remove([piece.chemin]);
+    await retirer(supabase);
     return { ok: false, message: preparation.refus };
   }
   const apercu = preparation.apercu;
@@ -198,7 +214,7 @@ export async function publierPublication(
   if (videoReconnue) {
     const prete = await preparerVideo(supabase, videoReconnue, parcours);
     if ("refus" in prete) {
-      if (piece) await supabase.storage.from("communaute").remove([piece.chemin]);
+      await retirer(supabase);
       return { ok: false, message: prete.refus };
     }
     video = prete.video;
@@ -216,7 +232,7 @@ export async function publierPublication(
       p_piece: pieceEnvoyee,
     });
     if (examen.error) {
-      if (piece) await supabase.storage.from("communaute").remove([piece.chemin]);
+      await retirer(supabase);
       return { ok: false, message: message(examen.error) };
     }
     const objet = texteOuNull(un(examen.data)?.objet);
@@ -232,7 +248,7 @@ export async function publierPublication(
       else fichier = relu;
     }
     verdict ??= await analyserPublication(
-      { titre: titre.trim(), texte: texte.trim(), espace: await nomDeLEspace(supabase, parcours), fichier, ...lienAnalyse(await apercu), ...videoAnalyse(video) },
+      { titre: titre.trim(), texte: texteAnalyse(texte, sondage), espace: await nomDeLEspace(supabase, parcours), fichier, ...lienAnalyse(await apercu), ...videoAnalyse(video) },
       reglage.config,
     );
     // Sans verdict (clé refusée, refus de l'IA), la base met la publication en attente de l'équipe.
@@ -240,18 +256,43 @@ export async function publierPublication(
   }
   const parametres = { p_parcours: parcours, p_titre: titre.trim(), p_texte: texte.trim(), p_piece: pieceEnvoyee, ...(reglage ? { p_analyse: analyse } : {}) };
   const apercuLu = await apercu;
-  // Avec une vidéo, la 0022 est nécessaire : pas de repli silencieux qui la perdrait.
-  const { data, error, apercu: apercuEnregistre } = video
-    ? { ...(await supabase.rpc("publier", { ...parametres, ...(apercuLu ? { p_apercu: apercuLu } : {}), p_video: video })), apercu: apercuLu }
+  // Avec une vidéo (0022), un sondage ou une heure de parution (0026) : pas de repli silencieux qui les perdrait.
+  const etendu = video !== null || sondage !== null || publieLe !== null;
+  const { data, error, apercu: apercuEnregistre } = etendu
+    ? {
+        ...(await supabase.rpc("publier", {
+          ...parametres,
+          ...(apercuLu ? { p_apercu: apercuLu } : {}),
+          ...(video ? { p_video: video } : {}),
+          ...(publieLe ? { p_publie_le: publieLe } : {}),
+          ...(sondage ? { p_sondage: versBase(sondage) } : {}),
+        })),
+        apercu: apercuLu,
+      }
     : await avecApercu(supabase, "publier", parametres, apercuLu);
   if (error) {
-    if (piece) await supabase.storage.from("communaute").remove([piece.chemin]);
+    await retirer(supabase);
+    if (estFonctionAbsente(error) && (sondage || publieLe)) return { ok: false, message: MIGRATION_SONDAGES };
     return { ok: false, message: video && estFonctionAbsente(error) ? MIGRATION_VIDEO : message(error) };
   }
   const resultat = lireResultat(data);
   if (resultat.statut === "bloquee") return { ok: false, message: messageBloquee(resultat.categorie) };
   refresh();
-  return { ok: true, id: resultat.id, statut: resultat.statut === "en_attente" ? "en_attente" : "publiee", apercu: apercuEnregistre, video };
+  // Un sondage : son bloc relu (les identifiants des options, pour voter aussitôt), images avec leurs liens.
+  let bloc: Sondage | null = null;
+  if (sondage) {
+    const relu = await supabase.rpc("publication_communaute", { p_id: resultat.id });
+    const lue = relu.error ? null : un(relu.data);
+    if (lue) bloc = (await avecLiens(supabase, [versPublication({ ...lue, id: resultat.id })]))[0]?.sondage ?? null;
+  }
+  return {
+    ok: true,
+    id: resultat.id,
+    statut: resultat.statut === "en_attente" ? "en_attente" : "publiee",
+    apercu: apercuEnregistre,
+    video,
+    ...(sondage ? { sondage: bloc } : {}),
+  };
 }
 
 /** Son auteur seulement : le titre et le texte, réanalysés si l'analyse est active ; bloquée, l'ancienne version reste. */
@@ -315,9 +356,15 @@ export async function supprimerPublication(id: string, options: { relire?: boole
   if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
   if (!UUID.test(id)) return { ok: false, message: ECHEC };
   const supabase = await createClient();
+  // Les images d'un sondage (0026), lues avant la suppression ; rien avant la 0026.
+  const images = await supabase.rpc("images_sondage", { p_publication: id }).then(
+    (r) => (Array.isArray(r.data) ? r.data.filter((c): c is string => typeof c === "string" && c !== "") : []),
+    () => [] as string[],
+  );
   const { data, error } = await supabase.rpc("supprimer_publication", { p_id: id });
   if (error) return { ok: false, message: message(error) };
   if (typeof data === "string" && data) await supabase.storage.from("communaute").remove([data]);
+  if (images.length > 0) await supabase.storage.from("communaute").remove(images).catch(() => undefined);
   if (options.relire !== false) refresh();
   return { ok: true };
 }
@@ -410,4 +457,34 @@ export async function basculerEnregistrement(publicationId: string): Promise<{ o
   const { data, error } = await supabase.rpc("basculer_enregistrement", { p_publication: publicationId });
   if (error) return { ok: false, message: estFonctionAbsente(error) ? MIGRATION_ACTUALITES : message(error) };
   return { ok: true, enregistree: data === true };
+}
+
+/** Le texte jugé par l'IA : la publication et, pour un sondage ou un quiz, ses options. */
+function texteAnalyse(texte: string, sondage: SondageEnvoye | null): string {
+  const options = (sondage?.options ?? []).map((o) => o.texte.trim()).filter(Boolean);
+  return options.length > 0 ? `${texte.trim()}\n\nOptions : ${options.join(" / ")}` : texte.trim();
+}
+
+/** Voter (sondage) ou répondre (quiz) : rend le sondage à jour (résultats, et pour un quiz la bonne réponse). */
+export async function voter(publicationId: string, optionIds: string[]): Promise<{ ok: true; sondage: Sondage } | Refus> {
+  if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
+  if (!UUID.test(publicationId) || optionIds.length === 0 || optionIds.some((o) => !UUID.test(o))) return { ok: false, message: ECHEC };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("voter", { p_publication: publicationId, p_options: optionIds });
+  if (error) return { ok: false, message: estFonctionAbsente(error) ? MIGRATION_SONDAGES : message(error) };
+  const sondage = versSondage(data);
+  return sondage ? { ok: true, sondage } : { ok: false, message: ECHEC };
+}
+
+/** Une publication programmée : une autre heure, ou maintenant (null). Son auteur ou l'équipe. */
+export async function reprogrammer(publicationId: string, publieLe: string | null): Promise<Resultat> {
+  if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
+  if (!UUID.test(publicationId)) return { ok: false, message: ECHEC };
+  const refus = publieLe ? refusProgrammation(publieLe, new Date()) : null;
+  if (refus) return { ok: false, message: refus };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("reprogrammer", { p_publication: publicationId, p_publie_le: publieLe });
+  if (error) return { ok: false, message: estFonctionAbsente(error) ? MIGRATION_SONDAGES : message(error) };
+  refresh();
+  return { ok: true };
 }

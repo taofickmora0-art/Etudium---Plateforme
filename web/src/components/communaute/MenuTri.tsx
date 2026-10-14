@@ -5,7 +5,8 @@ import { Icon } from "@/components/ui/Icon";
 import { Menu } from "@/components/ui/Menu";
 import type { TriFil } from "@/lib/communaute/types";
 
-const LIBELLES: Record<TriFil, string> = { recentes: "Les plus récentes", populaires: "Les plus populaires", enregistrees: "Mes enregistrements" };
+// « Programmées » est un onglet sous le champ de publication, pas un tri.
+const LIBELLES: Record<TriFil, string> = { recentes: "Les plus récentes", populaires: "Les plus populaires", enregistrees: "Mes enregistrements", programmees: "Mes programmées" };
 const TRIS: TriFil[] = ["recentes", "populaires", "enregistrees"];
 
 /** « Trier par : » (design NdCommunaute ; spec du fil « Actualités », §4). */

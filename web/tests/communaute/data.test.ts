@@ -177,3 +177,28 @@ describe("Lectures de la communauté", () => {
   });
 });
 
+
+describe("Le sondage d'une publication (0026)", () => {
+  it("la conversion, et un lien temporaire pour chaque image d'option, dans le même appel que les pièces jointes", async () => {
+    const { avecLiens, versPublication } = await import("@/lib/communaute/data");
+    const p = versPublication({
+      ...BRUTE,
+      piece_jointe: null,
+      programmee: true,
+      sondage: {
+        type: "images",
+        choix_multiples: false,
+        fin_le: null,
+        ferme: false,
+        a_repondu: true,
+        votants: 2,
+        options: [{ id: "o1", texte: "Rouge", image: { chemin: "c/r.png", nom: "r.png", type: "image/png", taille: 10 }, votes: 2, moi: true }],
+      },
+    });
+    expect(p).toMatchObject({ programmee: true, sondage: { type: "images", aRepondu: true, votants: 2, options: [{ id: "o1", votes: 2, moi: true }] } });
+    expect(p.sondage?.options[0]).not.toHaveProperty("correcte");
+    faux.repondre("storage.communaute.createSignedUrls", { data: [{ path: "c/r.png", signedUrl: "https://stockage/r.png?jeton", error: null }] });
+    const [lue] = await avecLiens(faux.client as never, [p]);
+    expect(lue.sondage?.options[0].image?.url).toBe("https://stockage/r.png?jeton");
+  });
+});

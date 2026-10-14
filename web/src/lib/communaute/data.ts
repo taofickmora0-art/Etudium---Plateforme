@@ -16,6 +16,7 @@ import type {
   Reponse,
   RoleAuteur,
   SessionPublication,
+  Sondage,
   StatutPublication,
   SuiteFil,
   Tendance,
@@ -80,6 +81,32 @@ export function versApercu(valeur: unknown): Apercu | null {
   return null;
 }
 
+/** Le sondage ou le quiz d'une publication (migration 0026) ; null sinon. Les images reçoivent leur lien dans avecLiens. */
+export function versSondage(valeur: unknown): Sondage | null {
+  const s = un(valeur);
+  if (!s || (s.type !== "texte" && s.type !== "images" && s.type !== "quiz")) return null;
+  return {
+    type: s.type,
+    choixMultiples: s.choix_multiples === true,
+    finLe: texteOuNull(s.fin_le),
+    ferme: s.ferme === true,
+    aRepondu: s.a_repondu === true,
+    votants: typeof s.votants === "number" ? s.votants : null,
+    options: liste(s.options).map((o) => {
+      const image = un(o.image);
+      return {
+        id: texte(o.id),
+        texte: texte(o.texte),
+        image: image && texteOuNull(image.chemin) ? { chemin: texte(image.chemin), nom: texte(image.nom), type: texte(image.type), taille: nombre(image.taille), url: null } : null,
+        votes: typeof o.votes === "number" ? o.votes : null,
+        moi: o.moi === true,
+        ...(typeof o.correcte === "boolean" ? { correcte: o.correcte } : {}),
+      };
+    }),
+    ...("explication" in s ? { explication: texteOuNull(s.explication) } : {}),
+  };
+}
+
 /** Le bloc de la session live d'une publication (migration 0024) ; null sinon. */
 export function versSessionPublication(valeur: unknown): SessionPublication | null {
   const s = un(valeur);
@@ -121,19 +148,28 @@ export function versPublication(l: Ligne): Publication {
     aimeePar: textes(l.aimee_par),
     video: videoRangee(l.video),
     session: versSessionPublication(l.session),
+    ...(l.programmee === true ? { programmee: true } : {}),
+    ...(l.sondage ? { sondage: versSondage(l.sondage) } : {}),
   };
 }
 
 /** Ajoute les liens temporaires des fichiers joints, en un seul appel ; un lien manquant reste null. */
 export async function avecLiens<T extends Publication>(supabase: Client, publications: T[]): Promise<T[]> {
-  const chemins = publications.flatMap((p) => (p.pieceJointe ? [p.pieceJointe.chemin] : []));
+  // Les pièces jointes et les images des sondages (0026).
+  const images = (p: Publication) => (p.sondage?.options ?? []).flatMap((o) => (o.image ? [o.image.chemin] : []));
+  const chemins = publications.flatMap((p) => [...(p.pieceJointe ? [p.pieceJointe.chemin] : []), ...images(p)]);
   if (chemins.length === 0) return publications;
   const { data, error } = await supabase.storage.from("communaute").createSignedUrls(chemins, DUREE_LIEN);
   const liens = new Map<string, string>();
   if (!error) {
     for (const lien of data ?? []) if (lien.path && lien.signedUrl && !lien.error) liens.set(lien.path, lien.signedUrl);
   }
-  return publications.map((p) => (p.pieceJointe ? { ...p, pieceJointe: { ...p.pieceJointe, url: liens.get(p.pieceJointe.chemin) ?? null } } : p));
+  return publications.map((p) => {
+    const avecPiece = p.pieceJointe ? { ...p, pieceJointe: { ...p.pieceJointe, url: liens.get(p.pieceJointe.chemin) ?? null } } : p;
+    if (!p.sondage) return avecPiece;
+    const options = p.sondage.options.map((o) => (o.image ? { ...o, image: { ...o.image, url: liens.get(o.image.chemin) ?? null } } : o));
+    return { ...avecPiece, sondage: { ...p.sondage, options } };
+  });
 }
 
 /** Rend la lecture, migrationAbsente sans la 0019, et relance toute autre erreur. */
@@ -151,7 +187,7 @@ export async function lireEspaces(): Promise<Lecture<Espace[]>> {
   return verifier("des espaces", error) ?? { migrationAbsente: false, donnees: liste(data).map(versEspace) };
 }
 
-const TRIS: TriFil[] = ["recentes", "populaires", "enregistrees"];
+const TRIS: TriFil[] = ["recentes", "populaires", "enregistrees", "programmees"];
 
 /** Lit un lot du fil ; sert aussi à l'action « Voir plus ». Avant la 0021, l'ancien fil (le plus récent d'abord). */
 export async function lireLot(supabase: Client, espace: FiltreFil, tri: TriFil = "recentes", suite: SuiteFil = {}) {
