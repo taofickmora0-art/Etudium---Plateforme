@@ -453,3 +453,26 @@ Un compte a l’espace étudiant, plus soit l’espace formateur, soit le back-o
    - Le **tableau de bord** du formateur montre sa prochaine session live.
 7. **Back-office.** Avec ton compte : **Sessions live** (groupe Contenus) liste toutes les sessions. **Nouvelle session** : choisis « Équipe Étudium » comme animateur. Le **tableau de bord** du back-office compte les sessions à venir.
 8. **Sur ton téléphone** (`http://192.168.0.3:3000`) : la page Événements et la carte de l’accueil.
+
+## 24. Valider la communauté, 20 minutes
+
+L’espace général est ouvert à tout compte connecté. L’espace d’un parcours est ouvert à qui a commencé une formation de ce parcours (il en a ouvert une leçon), au formateur d’une formation du parcours et à l’équipe. Le signalement et la vérification automatique des publications arrivent avec la partie Modération.
+
+1. Dans l’éditeur SQL de Supabase, applique `web/supabase/migrations/0019_communaute.sql` (après la 0018). Elle crée aussi l’espace de stockage privé « communaute » des fichiers joints : rien à faire dans le tableau de bord.
+2. **Publier.** Avec le compte étudiant : menu **Communauté**.
+   - Les onglets : **Général**, puis un par parcours ; un cadenas sur ceux dont il n’a commencé aucune formation.
+   - Dans **Général** : clique dans le champ (le titre facultatif apparaît), écris un titre et un texte, **Image** → une photo (JPEG, PNG ou WebP, 10 Mo au plus), puis **Publier**.
+   - « Publication en ligne » : elle apparaît en haut du fil, avec « Vous » et « Espace général · à l’instant ». Recharge la page : l’image est toujours là.
+   - Ouvre l’onglet du parcours de la formation qu’il suit, et publie avec **Fichier** → un PDF : le nom et la taille s’affichent, le bouton à droite l’ouvre dans un nouvel onglet.
+3. **Un espace fermé.** Clique un onglet à cadenas : « Espace … verrouillé », « Commencez une formation du parcours … ». **Voir les formations du parcours** ouvre Mes parcours sur ce parcours.
+4. **Répondre.** Avec le compte formateur : **Communauté** → la publication de l’étudiant → écris dans « Répondre… », puis Entrée.
+   - Le compte étudiant reçoit « Nouvelle réponse » dans la cloche ; le clic ouvre la page de la publication, avec toutes ses réponses.
+   - Au-delà de deux réponses, le fil n’en montre que les deux dernières : **Voir les N réponses** les déplie toutes.
+5. **Les actions.** Avec le compte étudiant, sur sa publication :
+   - **J’aime** : le compteur passe à 1 et devient bleu ; un second clic le retire ;
+   - **⋮** → **Copier le lien** : « Lien copié ». Colle l’adresse dans un nouvel onglet : la page de la publication s’ouvre ;
+   - **⋮** → **Modifier** : change le texte, **Enregistrer** ; la publication porte « modifiée » ;
+   - **⋮** → **Supprimer**, puis confirme : « Publication supprimée », avec son fichier et ses réponses.
+6. **L’équipe.** Avec ton compte : tous les onglets sont ouverts. Sur la publication d’un autre compte, **⋮** propose **Supprimer** (pas Modifier) ; la corbeille d’une réponse la supprime aussi.
+7. **La colonne de droite** (sur un grand écran ; sous le fil sinon) : « Prochaine session » avec **Voir la session**, et « Membres actifs », les trois comptes qui ont le plus écrit cette semaine.
+8. **Sur ton téléphone** (`http://192.168.0.3:3000`) : publie avec une photo prise sur le moment. **Copier le lien** peut y dire « Le lien n’a pas pu être copié. » : sur une adresse en `http://` autre que `localhost`, le navigateur bloque le presse-papiers ; en ligne (`https://`), il fonctionnera.
