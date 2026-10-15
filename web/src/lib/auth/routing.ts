@@ -17,6 +17,9 @@ export const PAGES_PUBLIQUES = [
   "/auth",
   // Catalogue et fiches des formations (lot 1, spec §2) : la même adresse pour le visiteur et l'étudiant.
   "/formations",
+  // La vérification d'un certificat, sans compte (lot 3, R23) : la page du formulaire et celle du QR Code.
+  "/verifier",
+  "/c",
 ];
 /** En-tête de requête où le proxy note la page demandée (les pages n'ont pas d'autre moyen de la connaître). */
 export const EN_TETE_CHEMIN = "x-etudium-chemin";

@@ -35,7 +35,7 @@ export function DeleteAccountCard() {
         icon={Delete02Icon}
         iconTone="danger"
         title="Supprimer votre compte ?"
-        description="Cette action est définitive. Vos informations, vos formations et votre progression seront supprimées."
+        description="Cette action est définitive. Vos informations, vos formations et votre progression seront supprimées. Vos certificats déjà délivrés restent vérifiables, à votre nom."
         confirmLabel="Supprimer mon compte"
         onConfirm={supprimer}
       />

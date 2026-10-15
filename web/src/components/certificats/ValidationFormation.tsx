@@ -31,8 +31,11 @@ function Condition({ remplie, libelle, detail, lien }: { remplie: boolean; libel
       <span className={cn("mt-px flex flex-none", remplie ? "text-reussite-texte" : "text-discret")}>
         <Icon icon={remplie ? CheckmarkCircle02Icon : Clock01Icon} size={20} label={remplie ? "Condition remplie" : "Condition à remplir"} />
       </span>
-      <span className="min-w-0 flex-1 text-sm leading-[22px] font-medium text-encre">{texte}</span>
-      <span className={cn("flex-none text-[13px] leading-5", remplie ? "text-reussite-texte" : "text-discret")}>{detail}</span>
+      {/* Au téléphone, le détail passe sous le libellé (sinon il l'écraserait sur plusieurs lignes). */}
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+        <span className="min-w-0 text-sm leading-[22px] font-medium text-encre">{texte}</span>
+        <span className={cn("text-[13px] leading-5 sm:flex-none sm:text-right", remplie ? "text-reussite-texte" : "text-discret")}>{detail}</span>
+      </span>
     </li>
   );
 }

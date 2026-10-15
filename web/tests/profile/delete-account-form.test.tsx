@@ -17,6 +17,8 @@ describe("Carte « Supprimer mon compte »", () => {
     expect(screen.getByText("Cette action est définitive. Vos formations et votre progression seront supprimées ; vos certificats restent vérifiables.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Supprimer mon compte" }));
     const fenetre = screen.getByRole("dialog", { name: "Supprimer votre compte ?" });
+    // La fenêtre de confirmation dit la même chose que la carte.
+    expect(fenetre).toHaveTextContent("Vos certificats déjà délivrés restent vérifiables, à votre nom.");
     const confirmer = [...fenetre.querySelectorAll("button")].find((b) => b.textContent === "Supprimer mon compte")!;
     await user.type(screen.getByLabelText("Pour confirmer, saisissez SUPPRIMER"), "supprimer");
     expect(confirmer).toBeDisabled();

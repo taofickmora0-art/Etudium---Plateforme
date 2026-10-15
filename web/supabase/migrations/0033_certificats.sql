@@ -161,7 +161,8 @@ begin
     ), ''),
     (now() at time zone 'Africa/Porto-Novo')::date
   );
-  perform public.notifier(array[p_profil], 'service', 'Votre certificat est prêt', v_f.titre, '/formations/' || v_f.slug || '/validation');
+  -- Version à 6 paramètres : l'étudiant qui remplit lui-même la dernière condition est prévenu aussi.
+  perform public.notifier(array[p_profil], 'service', 'Votre certificat est prêt', v_f.titre, '/formations/' || v_f.slug || '/validation', true);
 end;
 $$;
 
@@ -267,48 +268,68 @@ begin
 end;
 $$;
 
--- La page « Certificats » : les certificats obtenus, et les formations commencées encore « en préparation ».
+-- La page « Certificats » : les certificats obtenus, et les formations commencées encore « en préparation ». Un
+-- certificat devenu dû (un réglage changé depuis : score, exercices facultatifs) y est délivré au passage.
 create or replace function public.mes_certificats()
 returns jsonb
-language sql
-stable
+language plpgsql
 security definer
 set search_path = ''
 as $$
-  with moi as (select (select auth.uid()) as id),
-  commencees as (
+declare
+  v_uid uuid := (select auth.uid());
+  v_formation uuid;
+begin
+  if v_uid is null then
+    return jsonb_build_object('obtenus', '[]'::jsonb, 'en_preparation', '[]'::jsonb);
+  end if;
+  for v_formation in
     select distinct m.formation_id
     from public.progression_lecons p
     join public.lecons l on l.id = p.lecon_id
     join public.modules m on m.id = l.module_id
-    where p.profil_id = (select id from moi)
-  ),
-  etats as (
-    select f.id, f.titre, f.slug, public.etat_validation((select id from moi), f.id) as etat
-    from commencees c
-    join public.formations f on f.id = c.formation_id
-    where f.statut = 'publiee'
-      and not exists (select 1 from public.certificats x where x.profil_id = (select id from moi) and x.formation_id = f.id)
-  )
-  select jsonb_build_object(
-    'obtenus', coalesce((
-      select jsonb_agg(public.certificat_json(c) || jsonb_build_object('slug', f.slug) order by c.delivre_le desc, c.cree_le desc)
-      from public.certificats c
-      left join public.formations f on f.id = c.formation_id
-      where c.profil_id = (select id from moi)
-    ), '[]'::jsonb),
-    'en_preparation', coalesce((
-      select jsonb_agg(jsonb_build_object(
-        'formation_id', e.id, 'titre', e.titre, 'slug', e.slug,
-        'terminees', (e.etat -> 'lecons' ->> 'terminees')::integer,
-        'total', (e.etat -> 'lecons' ->> 'total')::integer,
-        'quiz_restants', (select count(*) from jsonb_array_elements(e.etat -> 'quiz') q where not (q ->> 'reussi')::boolean),
-        'exercices_restants', case when (e.etat ->> 'exercices_obligatoires')::boolean
-          then (select count(*) from jsonb_array_elements(e.etat -> 'exercices') x where not (x ->> 'valide')::boolean) else 0 end
-      ) order by e.titre)
-      from etats e
-    ), '[]'::jsonb)
+    where p.profil_id = v_uid
+  loop
+    perform public.delivrer_si_complet(v_uid, v_formation);
+  end loop;
+  return (
+    with commencees as (
+      select distinct m.formation_id
+      from public.progression_lecons p
+      join public.lecons l on l.id = p.lecon_id
+      join public.modules m on m.id = l.module_id
+      where p.profil_id = v_uid
+    ),
+    etats as (
+      select f.id, f.titre, f.slug, public.etat_validation(v_uid, f.id) as etat
+      from commencees c
+      join public.formations f on f.id = c.formation_id
+      where f.statut = 'publiee'
+        and not exists (select 1 from public.certificats x where x.profil_id = v_uid and x.formation_id = f.id)
+    )
+    select jsonb_build_object(
+      -- La fiche n'est liée que si la formation est encore publiée (archivée, elle ne s'ouvre plus).
+      'obtenus', coalesce((
+        select jsonb_agg(public.certificat_json(c) || jsonb_build_object('slug', case when f.statut = 'publiee' then f.slug end)
+          order by c.delivre_le desc, c.cree_le desc)
+        from public.certificats c
+        left join public.formations f on f.id = c.formation_id
+        where c.profil_id = v_uid
+      ), '[]'::jsonb),
+      'en_preparation', coalesce((
+        select jsonb_agg(jsonb_build_object(
+          'formation_id', e.id, 'titre', e.titre, 'slug', e.slug,
+          'terminees', (e.etat -> 'lecons' ->> 'terminees')::integer,
+          'total', (e.etat -> 'lecons' ->> 'total')::integer,
+          'quiz_restants', (select count(*) from jsonb_array_elements(e.etat -> 'quiz') q where not (q ->> 'reussi')::boolean),
+          'exercices_restants', case when (e.etat ->> 'exercices_obligatoires')::boolean
+            then (select count(*) from jsonb_array_elements(e.etat -> 'exercices') x where not (x ->> 'valide')::boolean) else 0 end
+        ) order by e.titre)
+        from etats e
+      ), '[]'::jsonb)
+    )
   );
+end;
 $$;
 
 -- Le certificat à télécharger (image, PDF) : pour son titulaire seulement.

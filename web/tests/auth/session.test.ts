@@ -64,6 +64,12 @@ describe("Pages protégées", () => {
     }
   });
 
+  it("la vérification d'un certificat est ouverte sans compte (QR Code) ; la page Certificats ne l'est pas", () => {
+    for (const pathname of ["/verifier", "/c/ET-2026-K7Q2-M9XD"]) expect(routeFor({ pathname, signedIn: false, hadSession: false }), pathname).toEqual({});
+    expect(routeFor({ pathname: "/certificats", signedIn: false, hadSession: false })).not.toEqual({});
+    expect(routeFor({ pathname: "/certificats/ET-2026-K7Q2-M9XD/pdf", signedIn: false, hadSession: false })).not.toEqual({});
+  });
+
   it("une redirection ne mène jamais vers une page elle-même protégée", () => {
     for (const pathname of ["/", "/accueil", "/admin", "/nouvelle-page"]) {
       for (const hadSession of [false, true]) {

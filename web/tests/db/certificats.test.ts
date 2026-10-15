@@ -123,6 +123,31 @@ describe("Migration 0033 : la validation et les certificats", () => {
     await banc.db.query("update public.formations set titre = 'Excel' where id = $1", [FORMATION]);
   });
 
+  it("l'étudiant qui remplit lui-même la dernière condition est notifié ; la page Certificats délivre aussi un certificat devenu dû", async () => {
+    const E4 = randomUUID();
+    const E5 = randomUUID();
+    await banc.creerCompte(E4, []);
+    await banc.creerCompte(E5, []);
+    await banc.db.query("update public.formations set exercices_obligatoires = false where id = $1", [FORMATION]);
+    await terminer(E4, L1);
+    await passerQuiz(E4, true);
+    expect(await certificats(E4)).toEqual([]);
+    // La dernière leçon, terminée par l'étudiant lui-même (sa session) : la cloche le prévient.
+    await banc.en({ id: E4 }, "select public.terminer_lecon($1)", [L2]);
+    expect(await certificats(E4)).toHaveLength(1);
+    const titres = (await banc.db.query<{ titre: string }>("select titre from public.notifications where destinataire = $1", [E4])).rows.map((n) => n.titre);
+    expect(titres).toContain("Votre certificat est prêt");
+    await banc.db.query("update public.formations set exercices_obligatoires = true where id = $1", [FORMATION]);
+    // E5 a tout fini sauf l'exercice ; les exercices deviennent facultatifs : la page Certificats délivre.
+    await terminer(E5, L1);
+    await terminer(E5, L2);
+    await passerQuiz(E5, true);
+    await banc.db.query("update public.formations set exercices_obligatoires = false where id = $1", [FORMATION]);
+    const page = (await banc.en<{ p: { obtenus: { formation: string }[]; en_preparation: unknown[] } }>({ id: E5 }, "select public.mes_certificats() as p"))[0].p;
+    expect(page).toMatchObject({ obtenus: [{ formation: "Excel" }], en_preparation: [] });
+    await banc.db.query("update public.formations set exercices_obligatoires = true where id = $1", [FORMATION]);
+  });
+
   it("« Exercices obligatoires » désactivé : l'exercice ne compte plus, et la page de validation délivre", async () => {
     await terminer(E2, L1);
     await terminer(E2, L2);
@@ -172,15 +197,19 @@ describe("Migration 0033 : la validation et les certificats", () => {
     await terminer(E3, L1);
     const page = async (qui: string) =>
       (await banc.en<{ p: { obtenus: { formation: string }[]; en_preparation: { titre: string; terminees: number; total: number; quiz_restants: number; exercices_restants: number }[] } }>({ id: qui }, "select public.mes_certificats() as p"))[0].p;
-    expect(await page(E)).toMatchObject({ obtenus: [{ formation: "Excel" }], en_preparation: [] });
+    expect(await page(E)).toMatchObject({ obtenus: [{ formation: "Excel", slug: expect.any(String) }], en_preparation: [] });
+    // La formation archivée : le certificat reste, sans lien vers une fiche qui n'est plus ouverte.
+    await banc.db.query("update public.formations set statut = 'archivee' where id = $1", [FORMATION]);
+    expect((await page(E)).obtenus[0]).toMatchObject({ formation: "Excel", slug: null });
+    await banc.db.query("update public.formations set statut = 'publiee' where id = $1", [FORMATION]);
     expect(await page(E3)).toEqual({ obtenus: [], en_preparation: [expect.objectContaining({ titre: "Excel", terminees: 1, total: 2, quiz_restants: 1, exercices_restants: 1 })] });
   });
 
   it("le formateur : ses certificats délivrés, et la fiche d'un étudiant (scores, exercices, certificat)", async () => {
     const nombre = async (qui: string) => (await banc.en<{ n: number }>({ id: qui }, "select public.certificats_formateur() as n"))[0].n;
-    expect(await nombre(F)).toBe(2);
+    expect(await nombre(F)).toBe(4);
     expect(await nombre(G)).toBe(0);
-    expect(await nombre(S)).toBe(2);
+    expect(await nombre(S)).toBe(4);
     const fiche = async (qui: string) => (await banc.en<{ f: unknown[] }>({ id: qui }, "select public.lot3_etudiant($1) as f", [E]))[0].f;
     expect(await fiche(F)).toEqual([
       expect.objectContaining({
