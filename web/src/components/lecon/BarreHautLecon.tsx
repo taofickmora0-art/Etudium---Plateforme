@@ -33,12 +33,13 @@ type Props = {
 
 /**
  * La barre du haut de la leçon, sur ordinateur (refonte des formations, spec §1.1, d'après izimentor) : « ‹ Titre de la
- * formation » à gauche ; « Mode lecture » et « Terminer la leçon › » à droite. Elle reste en haut du panneau qui défile.
+ * formation » à gauche ; « Mode lecture » et « Terminer la leçon › » à droite. Elle reste en haut du panneau qui défile
+ * (-top-8 : le collage compte à partir du rembourrage du panneau).
  */
 export function BarreHautLecon({ titreFormation, adresseFormation, leconId, suivante }: Props) {
   const lecture = useSyncExternalStore(abonner, enLecture, () => false);
   return (
-    <div className="sticky top-0 z-10 -mx-8 -mt-8 mb-6 flex items-start justify-between gap-4 border-b border-separateur bg-panneau px-8 pt-5 pb-4 max-lg:hidden">
+    <div className="sticky -top-8 z-10 -mx-8 -mt-8 mb-6 flex items-start justify-between gap-4 border-b border-separateur bg-panneau px-8 pt-5 pb-4 max-lg:hidden">
       <Link
         href={adresseFormation}
         className="focus-etudium flex min-h-10 min-w-0 items-center gap-1.5 rounded-champ text-sm leading-[22px] font-medium text-texte no-underline hover:text-bleu"

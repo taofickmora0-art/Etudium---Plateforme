@@ -57,7 +57,7 @@ export function CadreLecon({ connecte, titreFormation, retour, programme, haut, 
         <Link
           href={retour}
           aria-label="Retour"
-          className="focus-etudium flex size-12 flex-none items-center justify-center rounded-bouton bg-coque text-texte no-underline transition-colors hover:bg-coque-survol"
+          className="focus-etudium flex size-12 flex-none items-center justify-center rounded-bouton bg-coque text-texte no-underline transition-colors hover:bg-coque-survol max-sm:size-10 max-sm:rounded-champ"
         >
           <Icon icon={ArrowLeft02Icon} size={20} />
         </Link>

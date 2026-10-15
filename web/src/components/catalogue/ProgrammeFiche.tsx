@@ -50,12 +50,15 @@ function LeconConnectee({ slug, lecon, terminee = false, ici = false }: { slug: 
       <span className={cn("flex flex-none", !lecon.accessible ? "text-discret" : terminee ? "text-reussite-texte" : "text-texte")}>
         <Icon icon={icone} size={20} />
       </span>
-      <span className={cn("min-w-0 flex-1 text-sm leading-5", lecon.accessible ? "text-encre" : "text-discret", ici && "font-semibold")}>
-        {lecon.titre}
-        {terminee && <span className="sr-only"> (terminée)</span>}
+      {/* Les étiquettes passent sous le titre quand la ligne est étroite (320 px), au lieu de le recouvrir. */}
+      <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
+        <span className={cn("min-w-0 text-sm leading-5", lecon.accessible ? "text-encre" : "text-discret", ici && "font-semibold")}>
+          {lecon.titre}
+          {terminee && <span className="sr-only"> (terminée)</span>}
+        </span>
+        {ici && <Tag tone="nouveau">Vous êtes ici</Tag>}
+        {lecon.publiee === false && <Tag tone="enAttente">Brouillon</Tag>}
       </span>
-      {ici && <Tag tone="nouveau">Vous êtes ici</Tag>}
-      {lecon.publiee === false && <Tag tone="enAttente">Brouillon</Tag>}
       <span className="min-w-14 flex-none text-right text-[13px] leading-5 text-discret">{formatDuree(lecon.dureeSecondes)}</span>
     </>
   );
