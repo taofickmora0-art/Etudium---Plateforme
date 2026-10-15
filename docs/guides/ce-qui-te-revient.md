@@ -762,3 +762,21 @@ Aucune migration. Ouvre le site **sans être connecté** (fenêtre de navigation
    - donne-moi **l'adresse e-mail de contact** pour ajouter « Contact » ;
    - dis-moi si tu gardes les personnes inventées des illustrations : « Koffi D. », « Dr Mireille Adjovi ».
 7. **La page Aide** (espace connecté, menu « Aide ») reprend les 7 questions fréquentes, puis « Une autre question ? » vers la communauté.
+
+## 41. Finitions du lot 3 et recette, 30 minutes
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0034_finitions_lot_3.sql` (après la 0033). Elle ne crée rien de nouveau :
+   - un quiz ou un exercice ne peut plus être marqué « terminé » comme une leçon ;
+   - la notification de publication dit « Nouveau quiz » ou « Nouvel exercice » ;
+   - deux garde-fous : réponses de quiz de 300 caractères au plus, un fichier pour un seul rendu.
+   Avant elle, l'appli marche comme aujourd'hui.
+2. **La recette du lot 3 (tâche 3.7), partie faisable dès maintenant.** Fais-la dans une fenêtre de navigation privée, comme un nouveau venu :
+   - **visiteur** : la page d'accueil, le catalogue, la fiche d'une formation gratuite ;
+   - **compte gratuit** : « Créer mon compte gratuit », la vérification de l'e-mail, la connexion ;
+   - **la formation gratuite de bout en bout** : les leçons, un quiz (rate-le puis réussis-le), un exercice avec rendu (fais-le corriger par ton compte formateur, d'abord « À corriger » puis « Validé ») ;
+   - **le certificat** : la page « Validation et certificat » (lien sur la fiche et en bas du programme de la page leçon), la fenêtre « Félicitations », le PDF ;
+   - **la vérification** : scanne le QR Code du PDF, ou ouvre `/verifier` sans compte.
+3. **Ce qui manque à la recette** :
+   - l'étape « abonné » arrivera avec le lot 2 (abonnements et paiement) ;
+   - le test complet sur téléphone se fera une fois le site en ligne (le QR Code mène aujourd'hui à `localhost`).
+   Tu donneras le feu vert du lancement à ce moment-là.
