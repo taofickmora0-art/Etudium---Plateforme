@@ -18,6 +18,9 @@ vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ storage: { from
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
 vi.mock("@/components/communaute/EditeurTexte", () => import("../communaute/editeur-simule"));
+// Le lecteur officiel de l'aperçu : il livre la vraie durée de la vidéo (7:42).
+const creerAdaptateur = vi.fn();
+vi.mock("@/lib/video/adaptateurs", () => ({ creerAdaptateur: (...a: unknown[]) => creerAdaptateur(...a) }));
 const actions = await import("@/lib/admin/actions");
 const { EditeurLecon } = await import("@/components/admin/EditeurLecon");
 
@@ -56,6 +59,11 @@ describe("L'éditeur de leçon", () => {
     for (const f of Object.values(actions)) vi.mocked(f as (...a: unknown[]) => unknown).mockReset();
     push.mockReset();
     vi.mocked(actions.saveLecon).mockResolvedValue({ status: "success" });
+    creerAdaptateur.mockReset();
+    creerAdaptateur.mockImplementation(async (_v: unknown, _c: HTMLElement, ev: { pret(): void }) => {
+      queueMicrotask(() => ev.pret());
+      return { duree: async () => 462.4, detruire: vi.fn() };
+    });
   });
 
   it("la barre du haut : retour aux leçons, position, voisines, statut, voir comme un étudiant", () => {
@@ -182,6 +190,33 @@ describe("L'éditeur de leçon", () => {
     const fenetre = screen.getByRole("dialog", { name: "Quitter sans enregistrer ?" });
     await user.click(within(fenetre).getByRole("button", { name: "Quitter" }));
     expect(push).toHaveBeenCalledWith("/accueil");
+  });
+
+  it("la durée saisie (12:40) ne correspond pas à la vidéo (7:42) : l'éditeur le dit et propose de la reprendre", async () => {
+    const user = userEvent.setup();
+    afficher();
+    expect(await screen.findByText("La vidéo dure 7:42 ; la durée saisie est 12:40.")).toBeInTheDocument();
+    expect(screen.getByText("Plus longue que la vidéo, elle empêche l’étudiant d’atteindre le seuil de validation.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Utiliser 7:42" }));
+    expect(screen.getByRole("spinbutton", { name: "Minutes" })).toHaveValue(7);
+    expect(screen.getByRole("spinbutton", { name: "Secondes" })).toHaveValue(42);
+    expect(screen.queryByText(/La vidéo dure/)).toBeNull();
+    await user.click(screen.getAllByRole("button", { name: "Enregistrer" })[0]);
+    expect(envoye().get("duree")).toBe("7:42");
+  });
+
+  it("une leçon vidéo sans durée : celle de la vidéo est reprise toute seule", async () => {
+    afficher({ ...LECON, dureeSecondes: 0 });
+    await waitFor(() => expect(screen.getByRole("spinbutton", { name: "Minutes" })).toHaveValue(7));
+    expect(screen.getByRole("spinbutton", { name: "Secondes" })).toHaveValue(42);
+    expect(screen.getByText("Durée lue sur la vidéo.")).toBeInTheDocument();
+  });
+
+  it("le lecteur officiel ne se charge pas : l'aperçu reste, sans message sur la durée", async () => {
+    creerAdaptateur.mockRejectedValue(new Error("script bloqué"));
+    afficher();
+    expect(await screen.findByTitle("Vidéo : Les formules")).toBeInTheDocument();
+    expect(screen.queryByText(/La vidéo dure/)).toBeNull();
   });
 
   it("la première leçon n'a pas de précédente ; espace formateur : ses adresses", () => {

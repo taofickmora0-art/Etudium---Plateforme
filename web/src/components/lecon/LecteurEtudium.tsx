@@ -117,6 +117,9 @@ export function LecteurEtudium({
   const enLectureRef = useRef(false);
   const vitesseRef = useRef(1);
   const dureeRef = useRef(reference);
+  // La vraie durée de la vidéo, lue sur le lecteur officiel (0 tant qu'elle est inconnue) : comparée à la durée de la
+  // leçon, elle dit si le seuil peut être atteint.
+  const dureeLueRef = useRef(0);
 
   const [pret, setPret] = useState(false);
   const [echec, setEchec] = useState(false);
@@ -135,6 +138,7 @@ export function LecteurEtudium({
   const [vus, setVus] = useState<Intervalle[]>(() => fusionner(passagesInitiaux));
   const [referenceServeur, setReferenceServeur] = useState(reference);
   const [terminee, setTerminee] = useState(termineeInitiale);
+  const [dureeVideo, setDureeVideo] = useState(0);
 
   /** Ouvre le visionnage (une fois). Un échec (coupure réseau, refus) sera retenté au prochain envoi. */
   const commencer = useCallback((): Promise<boolean> => {
@@ -211,20 +215,24 @@ export function LecteurEtudium({
     marquerRef.current = etatLecon?.marquerTerminee;
   }, [envoyer, commencer, titre, etatLecon]);
 
+  /** Une durée lue sur le lecteur officiel : la vraie durée de la vidéo, affichée dans la barre. */
+  const dureeConnue = (d: number) => {
+    if (d <= 0 || dureeLueRef.current > 0) return;
+    dureeLueRef.current = d;
+    setDureeVideo(d);
+    dureeRef.current = d;
+    setDuree(d);
+  };
   /** Relit la durée tant qu'elle est inconnue (YouTube la donne parfois à 0 avant la lecture). */
   const relireDuree = (a: Adaptateur) => {
-    if (dureeRef.current > 0) return;
+    if (dureeLueRef.current > 0) return;
     void a
       .duree()
-      .then((d) => {
-        if (d > 0 && dureeRef.current <= 0) {
-          dureeRef.current = d;
-          setDuree(d);
-        }
-      })
+      .then(dureeConnue)
       .catch(() => undefined);
   };
   const relireDureeRef = useRef(relireDuree);
+  const dureeConnueRef = useRef(dureeConnue);
 
   useEffect(() => {
     if (positionInitiale > repriseRef.current) repriseRef.current = positionInitiale;
@@ -271,10 +279,7 @@ export function LecteurEtudium({
         void a
           .duree()
           .then((d) => {
-            if (!annule && d > 0) {
-              dureeRef.current = d;
-              setDuree(d);
-            }
+            if (!annule) dureeConnueRef.current(d);
           })
           .catch(() => undefined);
         // Reprise là où on l'avait laissée : pas pour quelques secondes, ni à quelques secondes de la fin.
@@ -375,6 +380,22 @@ export function LecteurEtudium({
     a.lire();
   };
   const basculer = () => (enLecture ? adaptateur.current?.pause() : lire());
+
+  // Le seuil se mesure sur la durée de la leçon : absente, ou plus longue que la vidéo, il ne peut pas être atteint.
+  // On le dit au lieu de laisser « Terminer la leçon » grisé sans raison.
+  const blocage =
+    !suivre || terminee
+      ? null
+      : referenceServeur <= 0
+        ? "La durée de cette vidéo n’est pas indiquée dans la leçon : elle ne peut pas encore être validée. Prévenez le formateur."
+        : dureeVideo > 0 && Math.min(Math.floor(dureeVideo), referenceServeur) * 100 < seuil * referenceServeur
+          ? `La vidéo dure ${chrono(dureeVideo)}, mais la leçon indique ${chrono(referenceServeur)} : le seuil de ${seuil} % ne peut pas être atteint. Prévenez le formateur.`
+          : null;
+  const avertissement = blocage && (
+    <p role="status" className="m-0 rounded-champ bg-attention-fond px-3 py-2 text-xs leading-[18px] text-attention-texte">
+      {blocage}
+    </p>
+  );
 
   const ligne = suivre && !echec && (
     <div className="flex flex-wrap items-center gap-[7px] text-xs leading-[18px] text-discret">
@@ -504,6 +525,7 @@ export function LecteurEtudium({
         </div>
       </div>
       {ligne}
+      {avertissement}
     </div>
   );
 }

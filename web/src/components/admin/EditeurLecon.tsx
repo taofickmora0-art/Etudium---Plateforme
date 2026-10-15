@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, InformationCircleIcon, ViewIcon } from "@hugeicons/core-free-icons";
 import { LecteurVideo } from "@/components/lecon/LecteurVideo";
+import { SondeDureeVideo } from "./SondeDureeVideo";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -35,6 +36,10 @@ const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 const DUREE_ENTIERE = "Minutes et secondes : des nombres entiers (secondes de 0 à 59).";
 // Des chiffres seulement : « 12.40 » dans les minutes serait lu « 12:4:00 » (12 h 04) et la leçon ne se terminerait plus.
 const ENTIER = /^\d*$/;
+/** « 7:42 », « 75:00 » : la forme des champs de durée. */
+const minutesSecondes = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+/** Un écart de quelques secondes ne gêne pas la validation. */
+const TOLERANCE_S = 2;
 
 /** Ce que l'on sait du lien pendant la frappe : reconnu (fournisseur · identifiant) ou non. */
 function aideVideo(lien: string) {
@@ -75,10 +80,24 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
   const [modifie, setModifie] = useState(false);
   const [depart, setDepart] = useState<string | null>(null);
   const [erreurDuree, setErreurDuree] = useState<string | null>(null);
+  // La vraie durée, lue sur la vidéo par le lecteur officiel ; null tant qu'elle est inconnue.
+  const [dureeVideo, setDureeVideo] = useState<number | null>(null);
   const video = parseVideoUrl(lien);
   // Envoyée au format « 12:40 » (une durée de plus d'une heure s'écrit « 75:00 »).
   const duree = `${Number(minutes) || 0}:${String(Number(secondes) || 0).padStart(2, "0")}`;
   const changer = () => setModifie(true);
+  const saisie = (Number(minutes) || 0) * 60 + (Number(secondes) || 0);
+  const ecart = dureeVideo !== null && saisie > 0 && Math.abs(saisie - dureeVideo) > TOLERANCE_S;
+  const reprendre = (s: number) => {
+    setMinutes(String(Math.floor(s / 60)));
+    setSecondes(String(s % 60));
+    changer();
+  };
+  // Sans durée saisie, celle de la vidéo est reprise ; sinon un écart est signalé (« Utiliser 7:42 »).
+  const dureeLue = (s: number) => {
+    setDureeVideo(s);
+    if (saisie === 0) reprendre(s);
+  };
   const dureeValide = ENTIER.test(minutes.trim()) && ENTIER.test(secondes.trim()) && (Number(secondes) || 0) < 60;
   // Une erreur dans « Dans cette leçon » : la section s'ouvre pour la montrer.
   const deplie = details || Boolean(e.resume || e.points_cles || e.titre_court);
@@ -208,6 +227,7 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
                 value={lien}
                 onChange={(evenement) => {
                   setLien(evenement.target.value);
+                  setDureeVideo(null);
                   changer();
                 }}
                 autoCapitalize="none"
@@ -215,6 +235,7 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
               />
             </Field>
             {video && <LecteurVideo video={video} titre={lecon.titre} />}
+            {video && <SondeDureeVideo key={`${video.fournisseur}:${video.id}`} video={video} onDuree={dureeLue} />}
           </div>
           <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0">
             <legend className="mb-1.5 p-0 text-sm leading-5 font-semibold text-encre">Durée de la vidéo</legend>
@@ -259,7 +280,22 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
                 {erreurDuree ?? e.duree}
               </p>
             )}
-            <p className="m-0 text-xs leading-[18px] text-discret">Elle sert à mesurer le temps réellement regardé.</p>
+            {ecart && dureeVideo !== null && (
+              <div role="status" className="flex flex-col items-start gap-2 rounded-champ bg-attention-fond px-3 py-2.5 text-[13px] leading-5 text-attention-texte">
+                <p className="m-0 font-medium">{`La vidéo dure ${minutesSecondes(dureeVideo)} ; la durée saisie est ${minutesSecondes(saisie)}.`}</p>
+                <p className="m-0">
+                  {saisie > dureeVideo
+                    ? "Plus longue que la vidéo, elle empêche l’étudiant d’atteindre le seuil de validation."
+                    : "Plus courte que la vidéo, elle valide la leçon avant la fin."}
+                </p>
+                <Button type="button" size="sm" variant="contour" onClick={() => reprendre(dureeVideo)}>
+                  {`Utiliser ${minutesSecondes(dureeVideo)}`}
+                </Button>
+              </div>
+            )}
+            <p className="m-0 text-xs leading-[18px] text-discret">
+              {dureeVideo !== null && !ecart ? "Durée lue sur la vidéo." : "Elle sert à mesurer le temps réellement regardé."}
+            </p>
           </fieldset>
           <div className="flex flex-col gap-1">
             <Checkbox form={formulaire} name="commentaires_actifs" label="Activer les commentaires" defaultChecked={lecon.commentairesActifs} onChange={changer} />

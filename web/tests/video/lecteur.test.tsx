@@ -200,6 +200,24 @@ describe("Lecteur aux couleurs d'Étudium", () => {
     expect(refresh).toHaveBeenCalled();
   });
 
+  it("une durée indiquée plus longue que la vidéo : le seuil ne peut pas être atteint, et le lecteur le dit", async () => {
+    const f = fauxLecteur({ durees: [462] });
+    await monter({ creer: f.creer, reference: 600 });
+    expect(screen.getByText("La vidéo dure 07:42, mais la leçon indique 10:00 : le seuil de 90 % ne peut pas être atteint. Prévenez le formateur.")).toBeInTheDocument();
+  });
+
+  it("une leçon vidéo sans durée indiquée ne peut pas être validée, et le lecteur le dit", async () => {
+    const f = fauxLecteur({ durees: [462] });
+    await monter({ creer: f.creer, reference: 0 });
+    expect(screen.getByText("La durée de cette vidéo n’est pas indiquée dans la leçon : elle ne peut pas encore être validée. Prévenez le formateur.")).toBeInTheDocument();
+  });
+
+  it("une durée indiquée juste : pas de message", async () => {
+    const f = fauxLecteur({ durees: [370] });
+    await monter({ creer: f.creer, reference: 370 });
+    expect(screen.queryByText(/Prévenez le formateur/)).toBeNull();
+  });
+
   it("une leçon déjà validée l'annonce dès l'ouverture", async () => {
     const f = fauxLecteur();
     await monter({ creer: f.creer, termineeInitiale: true });
