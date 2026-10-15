@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Cancel01Icon, Menu01Icon } from "@hugeicons/core-free-icons";
-import { LogoMark } from "@/components/brand/Logo";
+import { LogoComplet } from "@/components/brand/Logo";
 import { IconButton } from "@/components/ui/IconButton";
 import { cn } from "@/lib/cn";
 
@@ -57,10 +57,9 @@ export function EnTetePublic() {
         <Link
           href="/"
           aria-label="Étudium, accueil"
-          className="focus-etudium flex h-[49px] items-center gap-2.5 rounded-[14px] bg-coque pr-4 pl-[9px] text-[17px] font-bold tracking-[-0.02em] text-bleu no-underline max-sm:h-10 max-sm:gap-2 max-sm:pr-3 max-sm:pl-[5px] max-sm:text-base"
+          className="focus-etudium flex h-[49px] items-center rounded-[14px] bg-coque px-3.5 no-underline max-sm:h-10 max-sm:px-3 max-sm:[&_svg]:h-6 max-sm:[&_svg]:w-auto"
         >
-          <LogoMark />
-          <span>Étudium</span>
+          <LogoComplet hauteur={30} />
         </Link>
         <nav aria-label="Site Étudium" className="flex flex-wrap items-center gap-3 max-sm:hidden">
           {LIENS_PUBLICS.map((lien) => (

@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { LOGO_COMPLET } from "@/components/brand/traces";
 import { adresseVerification } from "@/lib/certificats/adresse";
 import { matriceQr } from "@/lib/certificats/qr";
 import type { Certificat } from "@/lib/certificats/types";
@@ -11,7 +12,6 @@ export const TAILLE_CERTIFICAT = { width: 1754, height: 1240 } as const;
 const BLEU = "#0B18C9";
 const ENCRE = "#1D1D1F";
 const DISCRET = "#667085";
-const HEXAGONE = "15,4 24.5,9.5 24.5,20.5 15,26 5.5,20.5 5.5,9.5";
 
 /** Le QR Code en un seul tracé (une case = un carré), avec sa marge blanche de 4 cases. */
 function QrCode({ adresse, taille }: { adresse: string; taille: number }) {
@@ -47,12 +47,10 @@ export function imageCertificat(c: Certificat): ImageResponse {
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-              <svg width={64} height={64} viewBox="0 0 30 30">
-                <polygon points={HEXAGONE} fill={BLEU} stroke={BLEU} strokeWidth={5} strokeLinejoin="round" />
-              </svg>
-              <div style={{ fontSize: 44, fontWeight: 700, color: BLEU, letterSpacing: -1 }}>Étudium</div>
-            </div>
+            {/* Le logo complet, en bleu. */}
+            <svg width={Math.round((76 * LOGO_COMPLET.largeur) / LOGO_COMPLET.hauteur)} height={76} viewBox={`0 0 ${LOGO_COMPLET.largeur} ${LOGO_COMPLET.hauteur}`}>
+              <path d={LOGO_COMPLET.d} fill={BLEU} fillRule="evenodd" />
+            </svg>
             <div style={{ fontSize: 28, color: DISCRET }}>{`N° ${c.identifiant}`}</div>
           </div>
 

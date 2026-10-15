@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LogoMark } from "@/components/brand/Logo";
+import { Logo } from "@/components/brand/Logo";
 
 /**
  * Colonnes du pied de page (NdLanding §16). Les ancres mènent aux sections de la landing (« Tarifs » : les formules,
@@ -36,10 +36,7 @@ export function PiedDePagePublic() {
   return (
     <footer className="box-border flex flex-wrap gap-x-12 gap-y-8 rounded-panneau bg-[#060F75] trame-points p-[clamp(28px,4.5vw,56px)] text-[#C2C8FF]">
       <div className="flex max-w-[360px] flex-[1_1_280px] flex-col gap-3.5">
-        <span className="flex items-center gap-2.5 text-[22px] font-bold tracking-[-0.02em] text-white">
-          <LogoMark inverse />
-          Étudium
-        </span>
+        <Logo hauteur={36} inverse className="self-start" />
         <span className="text-[15px] leading-6">Formation, compétences digitales et accompagnement pour les étudiants et les jeunes diplômés.</span>
       </div>
       {COLONNES.map((colonne) => (

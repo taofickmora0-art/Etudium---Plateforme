@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import sharp from "sharp";
+import { LOGO_COMPLET } from "@/components/brand/traces";
 import { PALETTES, PLAQUES } from "@/components/ui/CourseIllustration";
 import { getFiche } from "@/lib/catalogue/data";
 import { urlCouverture } from "@/lib/couvertures/adresse";
@@ -32,8 +33,6 @@ async function couverturePartagee(url: string | null): Promise<Buffer | null> {
 }
 
 const enJpeg = (octets: Buffer) => new Response(new Uint8Array(octets), { headers: { "content-type": contentType } });
-
-const HEXAGONE = "15,4 24.5,9.5 24.5,20.5 15,26 5.5,20.5 5.5,9.5";
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -69,20 +68,10 @@ export default async function Image({ params }: { params: Promise<{ slug: string
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ display: "flex", position: "relative", width: 60, height: 60 }}>
-            <svg width="60" height="60" viewBox="0 0 30 30">
-              <polygon points={HEXAGONE} fill="#FFFFFF" stroke="#FFFFFF" strokeWidth="5" strokeLinejoin="round" />
-            </svg>
-            {/* Satori n'applique pas « inset » : boîte posée explicitement sur l'hexagone. */}
-            <div
-              style={{ position: "absolute", top: 0, left: 0, width: 60, height: 60, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, color: "#0B18C9" }}
-            >
-              É
-            </div>
-          </div>
-          <div style={{ fontSize: 36, letterSpacing: -0.5 }}>Étudium</div>
-        </div>
+        {/* Le logo complet, en blanc. */}
+        <svg width={Math.round((64 * LOGO_COMPLET.largeur) / LOGO_COMPLET.hauteur)} height={64} viewBox={`0 0 ${LOGO_COMPLET.largeur} ${LOGO_COMPLET.hauteur}`}>
+          <path d={LOGO_COMPLET.d} fill="#FFFFFF" fillRule="evenodd" />
+        </svg>
         {parcours && (
           <div style={{ display: "flex", padding: "10px 24px", borderRadius: 999, backgroundColor: "rgba(255, 255, 255, 0.14)", fontSize: 26 }}>{parcours.nom}</div>
         )}

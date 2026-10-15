@@ -29,17 +29,28 @@ describe("Icônes de l'appli", () => {
     expect(proche(await pixel("public/icons/icone-masquable-512.png", 2, 2), [0x0b, 0x18, 0xc9, 255])).toBe(true);
   });
 
-  it("l'icône iOS n'a pas de transparence", async () => {
-    expect(proche(await pixel("src/app/apple-icon.png", 2, 2), [0xf2, 0xf6, 0xfd, 255])).toBe(true);
+  it("l'icône iOS n'a pas de transparence : le symbole blanc sur le bleu", async () => {
+    expect(proche(await pixel("src/app/apple-icon.png", 2, 2), [0x0b, 0x18, 0xc9, 255])).toBe(true);
   });
 
-  it("le logo est au centre de l'icône", async () => {
-    // À mi-hauteur, à gauche de la lettre : l'hexagone bleu ; au centre de la lettre : du blanc.
-    expect(proche(await pixel("public/icons/icone-512.png", 160, 256), [0x0b, 0x18, 0xc9, 255])).toBe(true);
+  it("le symbole (le « e » au chapeau) est blanc sur une tuile bleue arrondie", async () => {
+    // Coin : transparent (tuile arrondie) ; bord gauche à mi-hauteur : la tuile bleue ; ailleurs, une part de blanc.
+    expect((await pixel("public/icons/icone-512.png", 2, 2))[3]).toBe(0);
+    expect(proche(await pixel("public/icons/icone-512.png", 30, 256), [0x0b, 0x18, 0xc9, 255])).toBe(true);
+    const { data } = await sharp(fichier("public/icons/icone-512.png")).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    let blancs = 0;
+    for (let i = 0; i < data.length; i += 4) if (data[i] > 240 && data[i + 1] > 240 && data[i + 2] > 240 && data[i + 3] === 255) blancs++;
+    const part = blancs / (512 * 512);
+    expect(part).toBeGreaterThan(0.08);
+    expect(part).toBeLessThan(0.4);
   });
 
   it("l'onglet montre le logo Étudium", () => {
     expect(existsSync(fichier("src/app/favicon.ico"))).toBe(false);
-    expect(readFileSync(fichier("src/app/icon.svg"), "utf8").toLowerCase()).toContain("#0b18c9");
+    const icone = readFileSync(fichier("src/app/icon.svg"), "utf8").toLowerCase();
+    expect(icone).toContain("#0b18c9");
+    // Le nouveau symbole : un tracé, plus l'hexagone ni la lettre « É ».
+    expect(icone).toContain("<path");
+    expect(icone).not.toMatch(/<polygon|<text/);
   });
 });

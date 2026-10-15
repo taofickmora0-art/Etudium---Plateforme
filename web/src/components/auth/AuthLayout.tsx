@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
-import { LogoMark } from "@/components/brand/Logo";
+import { LogoComplet } from "@/components/brand/Logo";
 import { Icon, type IconSvgElement } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
 import { AuthAside, type AuthAsideVariant } from "./AuthAside";
@@ -25,14 +25,10 @@ export function AuthLayout({ aside, back, children }: AuthLayoutProps) {
           <Link
             href="/"
             aria-label="Étudium, accueil"
-            className="focus-etudium flex h-[49px] w-12 flex-none items-center justify-center gap-2.5 rounded-bouton bg-coque text-[17px] font-bold tracking-[-0.02em] text-bleu no-underline lg:w-auto lg:justify-start lg:pr-4 lg:pl-[9px]"
+            className="focus-etudium flex h-[49px] flex-none items-center rounded-bouton bg-coque px-3.5 no-underline max-lg:h-12 max-lg:px-3 max-lg:[&_svg]:h-6 max-lg:[&_svg]:w-auto"
           >
-            <LogoMark />
-            <span className="hidden lg:inline">Étudium</span>
+            <LogoComplet hauteur={30} />
           </Link>
-          <span aria-hidden="true" className="truncate text-lg leading-[26px] font-semibold text-encre lg:hidden">
-            Étudium
-          </span>
         </div>
         {back && (
           <Link
