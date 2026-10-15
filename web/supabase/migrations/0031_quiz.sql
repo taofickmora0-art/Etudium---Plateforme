@@ -350,6 +350,24 @@ as $$
   ) s;
 $$;
 
+-- Le nombre de questions de chaque quiz d'une formation, pour le programme du back-office : { "<leçon>": 4, … }.
+-- Vide hors de l'équipe et du formateur de la formation.
+create or replace function public.questions_par_quiz(p_formation uuid)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(jsonb_object_agg(l.id::text, (select count(*) from public.questions_quiz q where q.lecon_id = l.id)), '{}'::jsonb)
+  from public.lecons l
+  join public.modules m on m.id = l.module_id
+  where m.formation_id = p_formation
+    and l.type = 'quiz'
+    and not public.compte_suspendu()
+    and (public.equipe_contenus() or public.formateur_de(p_formation));
+$$;
+
 -- ─── Les comptages de leçons ignorent les quiz et les exercices (0027, 0029 reprises) ─────────────────
 create or replace function public.peut_donner_avis(p_formation uuid)
 returns boolean
@@ -681,5 +699,7 @@ revoke execute on function public.envoyer_quiz(uuid, jsonb) from public, anon;
 grant execute on function public.envoyer_quiz(uuid, jsonb) to authenticated;
 revoke execute on function public.mes_scores_quiz(uuid) from public, anon;
 grant execute on function public.mes_scores_quiz(uuid) to authenticated;
+revoke execute on function public.questions_par_quiz(uuid) from public, anon;
+grant execute on function public.questions_par_quiz(uuid) to authenticated;
 
 commit;

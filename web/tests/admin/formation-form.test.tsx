@@ -60,6 +60,15 @@ describe("Fiche d'une formation au back-office", () => {
     expect(screen.getByRole("checkbox", { name: "Compétences digitales" })).not.toBeChecked();
   });
 
+  it("le score minimal aux quiz : réglé par l'équipe comme par le formateur (lot 3)", () => {
+    const { unmount } = avecNotifications(<FormationInfosForm formation={{ ...FORMATION, scoreQuiz: 80 }} parcours={PARCOURS} formateurs={[]} />);
+    expect(screen.getByLabelText("Score minimal aux quiz (%)")).toHaveValue(80);
+    expect(screen.getByLabelText("Score minimal aux quiz (%)")).toHaveAttribute("name", "score_quiz");
+    unmount();
+    avecNotifications(<FormationInfosForm formation={FORMATION} parcours={PARCOURS} formateurs={[]} espace="formateur" />);
+    expect(screen.getByLabelText("Score minimal aux quiz (%)")).toHaveValue(70);
+  });
+
   it("l'adresse d'un brouillon reste modifiable", () => {
     avecNotifications(<FormationInfosForm formation={{ ...FORMATION, statut: "brouillon", publieeLe: null }} parcours={PARCOURS} formateurs={[]} />);
     expect(screen.getByLabelText("Adresse")).not.toHaveAttribute("readonly");

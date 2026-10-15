@@ -9,7 +9,7 @@ vi.mock("@/lib/auth/current-user", () => ({ getShellUser: () => getShellUser(), 
 vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 
 const { addLecon, saveLecon, saveFormationInfos } = await import("@/lib/admin/actions");
-const { getFormationAdmin, getLeconAdmin } = await import("@/lib/admin/data");
+const { getFormationAdmin, getLeconAdmin, listFormations } = await import("@/lib/admin/data");
 const { IDLE } = await import("@/lib/auth/schemas");
 
 const F = "11111111-1111-4111-8111-111111111111";
@@ -107,8 +107,13 @@ describe("Les lectures du back-office", () => {
           }
         : { error: { code: "42703", message: "column lecons.type does not exist" } },
     );
+    faux.repondre("rpc.questions_par_quiz", { data: { [L]: 4 } });
     const formation = await getFormationAdmin(F);
-    expect(formation).toMatchObject({ scoreQuiz: 80, modules: [{ lecons: [{ id: L, type: "quiz" }] }] });
+    expect(formation).toMatchObject({ scoreQuiz: 80, nbLecons: 0, modules: [{ lecons: [{ id: L, type: "quiz", nbQuestions: 4 }] }] });
+    expect(faux.de("rpc", "questions_par_quiz")[0].valeurs).toEqual({ p_formation: F });
+    // Avant la 0031 (ou sans droit) : le nombre de questions n'est pas affiché.
+    faux.repondre("rpc.questions_par_quiz", { error: { code: "PGRST202", message: "Could not find the function" } });
+    expect((await getFormationAdmin(F))?.modules[0].lecons[0]).not.toHaveProperty("nbQuestions");
     faux.vider();
     faux.repondre("lecons.select", (appel) =>
       JSON.stringify(appel.valeurs).includes("type")
@@ -116,5 +121,21 @@ describe("Les lectures du back-office", () => {
         : { data: { id: L, module_id: M, titre: "Leçon", modules: { formation_id: F, formations: { titre: "Excel", slug: "excel", modules: [] } } } },
     );
     expect(await getLeconAdmin(L)).toMatchObject({ id: L, type: "lecon" });
+  });
+
+  it("la liste des formations compte les leçons sans les quiz ; avant la 0031, toutes", async () => {
+    faux.repondre("formations.select", (appel) =>
+      JSON.stringify(appel.valeurs).includes("type")
+        ? { data: [{ id: F, slug: "excel", titre: "Excel", statut: "brouillon", niveau: "debutant", modules: [{ lecons: [{ id: L, type: "lecon" }, { id: M, type: "quiz" }] }] }] }
+        : { data: [{ id: F, slug: "excel", titre: "Excel", statut: "brouillon", niveau: "debutant", modules: [{ lecons: [{ id: L }, { id: M }] }] }] },
+    );
+    expect(await listFormations()).toMatchObject([{ nbLecons: 1 }]);
+    faux.vider();
+    faux.repondre("formations.select", (appel) =>
+      JSON.stringify(appel.valeurs).includes("type")
+        ? { error: { code: "42703", message: "column lecons.type does not exist" } }
+        : { data: [{ id: F, slug: "excel", titre: "Excel", statut: "brouillon", niveau: "debutant", modules: [{ lecons: [{ id: L }, { id: M }] }] }] },
+    );
+    expect(await listFormations()).toMatchObject([{ nbLecons: 2 }]);
   });
 });

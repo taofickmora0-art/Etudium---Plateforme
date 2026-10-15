@@ -139,4 +139,14 @@ describe("Migration 0031 : les quiz", () => {
     const page = (await banc.en<{ r: { lignes: { terminees: number; total: number }[] } }>({ id: F }, "select public.apprenants_formation($1) as r", [FORMATION]))[0].r;
     expect(page.lignes[0]).toMatchObject({ terminees: 1, total: 1 });
   });
+
+  it("le programme du back-office compte les questions de chaque quiz ; un autre formateur ou un étudiant, rien", async () => {
+    const compte = async (qui: string) => (await banc.en<{ n: Record<string, number> }>({ id: qui }, "select public.questions_par_quiz($1) as n", [FORMATION]))[0].n;
+    const m = (await un<{ module_id: string }>("select module_id from public.lecons where id = $1", [QUIZ])).module_id;
+    const vide = (await un<{ id: string }>("insert into public.lecons (module_id, titre, type, ordre) values ($1, 'Quiz vide', 'quiz', 4) returning id", [m])).id;
+    expect(await compte(F)).toEqual({ [QUIZ]: 4, [BROUILLON]: 4, [vide]: 0 });
+    expect(await compte(S)).toEqual({ [QUIZ]: 4, [BROUILLON]: 4, [vide]: 0 });
+    expect(await compte(G)).toEqual({});
+    expect(await compte(E)).toEqual({});
+  });
 });

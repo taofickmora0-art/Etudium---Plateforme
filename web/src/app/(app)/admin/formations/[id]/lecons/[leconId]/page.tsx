@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { getLeconAdmin } from "@/lib/admin/data";
 import type { LeconAdmin } from "@/lib/admin/types";
 import { requireSpace } from "@/lib/auth/require-space";
+import { lireQuizEditeur } from "@/lib/quiz/data";
 
 export const metadata: Metadata = { title: "Leçon · Back-office · Étudium" };
 
@@ -23,11 +24,13 @@ async function FicheLecon({ params }: Params) {
   }
   // Une leçon n'est ouverte que sous sa propre formation.
   if (!lecon || lecon.formationId !== id) notFound();
+  // Un quiz : ses questions, avec les bonnes réponses (lot 3).
+  const quiz = lecon.type === "quiz" ? await lireQuizEditeur(lecon.id) : undefined;
   // L'éditeur en deux colonnes (refonte des formations, §3.4) : sa barre du haut ramène aux leçons.
   return (
     <div className="flex flex-col">
-      <h1 className="sr-only">{`Modifier la leçon : ${lecon.titre}`}</h1>
-      <EditeurLecon lecon={lecon} />
+      <h1 className="sr-only">{`${quiz ? "Modifier le quiz" : "Modifier la leçon"} : ${lecon.titre}`}</h1>
+      <EditeurLecon lecon={lecon} quiz={quiz} />
     </div>
   );
 }

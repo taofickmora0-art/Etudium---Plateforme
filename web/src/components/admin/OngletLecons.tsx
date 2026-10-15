@@ -39,6 +39,7 @@ import { Field } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { IconButton } from "@/components/ui/IconButton";
 import { Menu, type MenuEntry } from "@/components/ui/Menu";
+import { RadioGroup } from "@/components/ui/RadioGroup";
 import { Select } from "@/components/ui/Select";
 import { Heading } from "@/components/ui/Text";
 import { TextInput } from "@/components/ui/TextInput";
@@ -55,8 +56,20 @@ import { useFormulaireAdmin } from "./useFormulaireAdmin";
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? "s" : ""}`;
 
-/** « 06:10 · Vidéo · Aperçu » : ce qu'il reste à compléter se voit d'un coup d'œil. */
-const resumeLecon = (l: LeconResume) => [formatDuree(l.dureeSecondes) || "Durée à saisir", l.aVideo ? "Vidéo" : "Sans vidéo", l.apercu && "Aperçu"].filter(Boolean).join(" · ");
+/** « 06:10 · Vidéo · Aperçu », « Quiz · 4 questions » : ce qu'il reste à compléter se voit d'un coup d'œil. */
+const resumeLecon = (l: LeconResume) =>
+  (l.type === "quiz"
+    ? ["Quiz", l.nbQuestions !== undefined && pluriel(l.nbQuestions, "question"), l.apercu && "Aperçu"]
+    : [formatDuree(l.dureeSecondes) || "Durée à saisir", l.aVideo ? "Vidéo" : "Sans vidéo", l.apercu && "Aperçu"]
+  )
+    .filter(Boolean)
+    .join(" · ");
+
+/** « 3 leçons · 1 quiz » : les quiz sont comptés à part (lot 3). */
+const compteLecons = (lecons: LeconResume[]) => {
+  const quiz = lecons.filter((l) => l.type === "quiz").length;
+  return pluriel(lecons.length - quiz, "leçon") + (quiz > 0 ? ` · ${quiz} quiz` : "");
+};
 
 /** « Ses 2 leçons… », « Sa leçon… », « Cette section est vide. » */
 const consequenceSuppression = (n: number) =>
@@ -73,6 +86,7 @@ function FenetreTitre({
   champs,
   valeurInitiale = "",
   succes,
+  avecType = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -83,10 +97,14 @@ function FenetreTitre({
   champs: Record<string, string>;
   valeurInitiale?: string;
   succes: string;
+  /** « Nouvelle leçon » : une leçon de contenu ou un quiz (lot 3). */
+  avecType?: boolean;
 }) {
   const id = useId();
   const formulaire = `${id}-formulaire`;
-  const { state, envoyer, pending, erreurs, valeur } = useFormulaireAdmin(action, { succes });
+  const [type, setType] = useState("lecon");
+  const quiz = avecType && type === "quiz";
+  const { state, envoyer, pending, erreurs, valeur } = useFormulaireAdmin(action, { succes: quiz ? "Quiz créé" : succes });
   // Une fois enregistré, la fenêtre se ferme (une leçon créée ouvre aussi sa page).
   useEffect(() => {
     if (state.status === "success") onOpenChange(false);
@@ -112,7 +130,20 @@ function FenetreTitre({
         {Object.entries(champs).map(([nom, v]) => (
           <input key={nom} type="hidden" name={nom} value={v} />
         ))}
-        <Field label={label} htmlFor={`${id}-titre`} error={erreurs.titre}>
+        {avecType && (
+          <RadioGroup
+            label="Type"
+            showLabel
+            name="type"
+            value={type}
+            onValueChange={setType}
+            options={[
+              { value: "lecon", label: "Leçon" },
+              { value: "quiz", label: "Quiz" },
+            ]}
+          />
+        )}
+        <Field label={quiz ? "Titre du quiz" : label} htmlFor={`${id}-titre`} error={erreurs.titre}>
           <TextInput id={`${id}-titre`} name="titre" defaultValue={valeur("titre", valeurInitiale)} maxLength={120} autoFocus />
         </Field>
       </form>
@@ -235,7 +266,7 @@ function Section({
             className="focus-etudium inline-flex h-7 items-center gap-1 rounded-puce bg-coque px-2 text-xs leading-[18px] font-medium text-texte hover:bg-coque-survol"
           >
             <Icon icon={replie ? UnfoldMoreIcon : UnfoldLessIcon} size={14} />
-            {pluriel(module.lecons.length, "leçon")}
+            {compteLecons(module.lecons)}
           </button>
           <Button variant="contour" size="sm" iconLeft={Add01Icon} aria-label={`Ajouter une leçon à « ${module.titre} »`} onClick={onAjouter} className="max-sm:px-2">
             Ajouter
@@ -299,7 +330,6 @@ export function OngletLecons({ formation, base = "/admin/formations" }: OngletLe
   const [erreurSuppression, setErreurSuppression] = useState<string>();
   const fermer = (open: boolean) => !open && setFenetre(null);
 
-  const nbLecons = programme.reduce((n, m) => n + m.lecons.length, 0);
   const toutReplie = programme.length > 0 && programme.every((m) => replies.has(m.id));
 
   async function appliquer(d: Deplacement | null) {
@@ -369,7 +399,7 @@ export function OngletLecons({ formation, base = "/admin/formations" }: OngletLe
     );
   } else if (fenetre?.type === "lecon") {
     fenetreActive = (
-      <FenetreTitre open onOpenChange={fermer} titre="Nouvelle leçon" label="Titre de la leçon" bouton="Ajouter" action={addLecon} champs={{ module_id: fenetre.module.id, espace }} succes="Leçon créée" />
+      <FenetreTitre open onOpenChange={fermer} titre="Nouvelle leçon" label="Titre de la leçon" bouton="Ajouter" action={addLecon} champs={{ module_id: fenetre.module.id, espace }} succes="Leçon créée" avecType />
     );
   } else if (fenetre?.type === "renommer") {
     fenetreActive = (
@@ -404,7 +434,7 @@ export function OngletLecons({ formation, base = "/admin/formations" }: OngletLe
       <div className="overflow-hidden rounded-carte border border-bordure-carte bg-panneau">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-bordure-carte px-5 py-4 max-sm:px-3.5 max-sm:py-3">
           <Heading level="section" className="max-sm:text-lg">
-            {`${pluriel(programme.length, "section")} · ${pluriel(nbLecons, "leçon")}`}
+            {`${pluriel(programme.length, "section")} · ${compteLecons(programme.flatMap((m) => m.lecons))}`}
           </Heading>
           <span className="flex flex-wrap items-center gap-2">
             {programme.length > 0 && (
@@ -512,11 +542,15 @@ export function OngletLecons({ formation, base = "/admin/formations" }: OngletLe
         tone="danger"
         icon={Delete02Icon}
         iconTone="danger"
-        title="Supprimer cette leçon ?"
-        description={`« ${supprimeeLecon?.titre ?? ""} » : sa vidéo, son texte et ses documents seront supprimés.`}
+        title={supprimeeLecon?.type === "quiz" ? "Supprimer ce quiz ?" : "Supprimer cette leçon ?"}
+        description={
+          supprimeeLecon?.type === "quiz"
+            ? `« ${supprimeeLecon.titre} » : ses questions et les résultats des étudiants seront supprimés.`
+            : `« ${supprimeeLecon?.titre ?? ""} » : sa vidéo, son texte et ses documents seront supprimés.`
+        }
         confirmLabel="Supprimer"
         errorMessage={erreurSuppression}
-        onConfirm={supprimer(() => (supprimeeLecon ? deleteLecon(supprimeeLecon.id) : Promise.resolve({ ok: true })), "Leçon supprimée")}
+        onConfirm={supprimer(() => (supprimeeLecon ? deleteLecon(supprimeeLecon.id) : Promise.resolve({ ok: true })), supprimeeLecon?.type === "quiz" ? "Quiz supprimé" : "Leçon supprimée")}
       />
     </div>
   );

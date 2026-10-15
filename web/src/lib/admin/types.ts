@@ -43,6 +43,8 @@ export type LeconResume = {
   publiee: boolean;
   /** Leçon de contenu, quiz ou exercice (0031) ; « lecon » avant la 0031. */
   type: TypeLecon;
+  /** Le nombre de questions d'un quiz (0031), pour l'onglet Leçons ; absent s'il n'a pas pu être lu. */
+  nbQuestions?: number;
 };
 
 export type ModuleAdmin = { id: string; titre: string; ordre: number; lecons: LeconResume[] };

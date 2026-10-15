@@ -1,9 +1,10 @@
+import { estLeconDeContenu } from "@/lib/catalogue/regles";
 import type { TypeLecon } from "@/lib/catalogue/types";
 import { estFournisseur } from "@/lib/video/plateformes";
 import { demoModeActive } from "@/lib/auth/current-user";
 import { etatFormation } from "@/lib/contenus/etat";
 import type { Badge, CouleurParcours, Niveau, StatutFormation } from "@/lib/contenus/libelles";
-import { estTablesAbsentes, lireAvecRepli, liste, parOrdre, TablesAbsentesError, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
+import { estFonctionAbsente, estTablesAbsentes, lireAvecRepli, liste, parOrdre, TablesAbsentesError, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import type {
   FormateurAdmin,
@@ -126,8 +127,11 @@ function relecture(f: Ligne) {
 export async function listFormations(filtre?: { formateurId: string }): Promise<FormationResume[]> {
   if (demoModeActive()) return [];
   const supabase = await createClient();
-  const lignes = await lireAvecRepli([", envoyee_le, renvoyee_le, modifiee_par_formateur_le", ""], (colonnes) => {
-    const requete = supabase.from("formations").select(`id, slug, titre, statut, niveau${colonnes}, formations_parcours(parcours(nom_court)), modules(lecons(id))`);
+  // Le type des leçons (0031) : « n leçons » ne compte pas les quiz. « colonnes de la formation|colonnes des leçons ».
+  const relue = ", envoyee_le, renvoyee_le, modifiee_par_formateur_le";
+  const lignes = await lireAvecRepli([`${relue}|, type`, `${relue}|`, "|"], (variante) => {
+    const [colonnes, lecons] = variante.split("|");
+    const requete = supabase.from("formations").select(`id, slug, titre, statut, niveau${colonnes}, formations_parcours(parcours(nom_court)), modules(lecons(id${lecons}))`);
     return filtre ? requete.eq("formateur_id", filtre.formateurId).order("modifie_le", { ascending: false }) : requete.order("titre");
   });
   return liste(lignes).map((f) => {
@@ -138,12 +142,22 @@ export async function listFormations(filtre?: { formateurId: string }): Promise<
       titre: texte(f.titre),
       statut,
       niveau: f.niveau as Niveau,
-      nbLecons: liste(f.modules).reduce((total, m) => total + liste(m.lecons).length, 0),
+      nbLecons: liste(f.modules).reduce((total, m) => total + liste(m.lecons).filter((l) => estLeconDeContenu({ type: texte(l.type) || undefined })).length, 0),
       parcours: nomsDesParcours(f),
       etat,
       modifieeParFormateurLe,
     };
   });
+}
+
+/** Le nombre de questions de chaque quiz d'une formation (0031) ; vide avant elle. */
+async function questionsParQuiz(supabase: Awaited<ReturnType<typeof createClient>>, formationId: string): Promise<Record<string, number>> {
+  const { data, error } = await supabase.rpc("questions_par_quiz", { p_formation: formationId });
+  if (error) {
+    if (estFonctionAbsente(error)) return {};
+    throw new Error(`Lecture des quiz impossible : ${error.message ?? error.code}`);
+  }
+  return Object.fromEntries(Object.entries(un(data) ?? {}).map(([cle, valeur]) => [cle, Number(valeur) || 0]));
 }
 
 export async function getFormationAdmin(id: string): Promise<FormationAdmin | null> {
@@ -172,7 +186,11 @@ export async function getFormationAdmin(id: string): Promise<FormationAdmin | nu
       .maybeSingle();
   })) as Ligne | null;
   if (!f) return null;
-  const modules = liste(f.modules).map(versModule).sort(parOrdre);
+  const questions = await questionsParQuiz(supabase, id);
+  const modules = liste(f.modules)
+    .map(versModule)
+    .sort(parOrdre)
+    .map((m) => ({ ...m, lecons: m.lecons.map((l) => (l.type === "quiz" && l.id in questions ? { ...l, nbQuestions: questions[l.id] } : l)) }));
   const { statut, etat, envoyeeLe, renvoyeeLe, modifieeParFormateurLe } = relecture(f);
   return {
     id: String(f.id),
@@ -185,7 +203,7 @@ export async function getFormationAdmin(id: string): Promise<FormationAdmin | nu
     remarqueRelecture: texte(f.remarque_relecture) || null,
     modifieeParFormateurLe,
     niveau: f.niveau as Niveau,
-    nbLecons: modules.reduce((total, m) => total + m.lecons.length, 0),
+    nbLecons: modules.reduce((total, m) => total + m.lecons.filter(estLeconDeContenu).length, 0),
     parcours: nomsDesParcours(f),
     resume: texte(f.resume),
     description: texte(f.description),
