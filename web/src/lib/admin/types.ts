@@ -65,6 +65,8 @@ export type FormationAdmin = FormationResume & {
   seuilVideo: number;
   /** Score minimal aux quiz (0031) ; null avant la 0031 (le champ n'est pas affiché). */
   scoreQuiz: number | null;
+  /** « Exercices obligatoires » pour le certificat (0033) ; null avant la 0033 (le réglage n'est pas affiché). */
+  exercicesObligatoires: boolean | null;
   publieeLe: string | null;
   parcoursIds: string[];
   modules: ModuleAdmin[];

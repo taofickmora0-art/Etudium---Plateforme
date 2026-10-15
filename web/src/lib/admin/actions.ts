@@ -16,6 +16,7 @@ import { estMesuree, messageLienCourt } from "@/lib/video/plateformes";
 import { parseVideoUrl } from "./video";
 import { MIGRATION_QUIZ } from "@/lib/quiz/conversion";
 import { MIGRATION_EXERCICES } from "@/lib/exercices/conversion";
+import { MIGRATION_CERTIFICATS } from "@/lib/certificats/conversion";
 import { estLeconDeContenu } from "@/lib/catalogue/regles";
 
 // Actions serveur du back-office (spec du lot 1, §10). Chacune revérifie qui demande : l'équipe (exigerEquipe) ou,
@@ -238,6 +239,8 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
   // Le score minimal aux quiz (0031) : un réglage pédagogique, du formateur comme de l'équipe ; envoyé s'il est saisi.
   const scoreSaisi = fd.has("score_quiz") ? texte(fd, "score_quiz").trim() : null;
   const scoreQuiz = scoreSaisi === null ? null : Number(scoreSaisi);
+  // « Exercices obligatoires » (0033) : une case à cocher, envoyée seulement si la carte « Certification » l'affiche.
+  const obligatoires = fd.has("certification") ? coche(fd, "exercices_obligatoires") : null;
   const values = {
     ...enTextes({ ...saisie, prix_fcfa: texte(fd, "prix_fcfa"), seuil_video: texte(fd, "seuil_video") }),
     objectifs: saisie.objectifs.join("\n"),
@@ -264,10 +267,16 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
   if (!estUuid(id)) return { status: "error", message: ECHEC, values };
 
   let scoreAbsent = false;
+  let obligatoiresAbsent = false;
   try {
     const { supabase } = garde;
-    let { error } = await supabase.from("formations").update(scoreQuiz === null ? parsed.data : { ...parsed.data, score_quiz: scoreQuiz }).eq("id", id);
-    // Avant la 0031 : le reste s'enregistre, et le champ du score le dit.
+    const avecScore = scoreQuiz === null ? parsed.data : { ...parsed.data, score_quiz: scoreQuiz };
+    let { error } = await supabase.from("formations").update(obligatoires === null ? avecScore : { ...avecScore, exercices_obligatoires: obligatoires }).eq("id", id);
+    // Avant la 0033, puis avant la 0031 : le reste s'enregistre, et le champ concerné le dit.
+    if (obligatoires !== null && colonneAbsente(error)) {
+      obligatoiresAbsent = true;
+      ({ error } = await supabase.from("formations").update(avecScore).eq("id", id));
+    }
     if (scoreQuiz !== null && colonneAbsente(error)) {
       scoreAbsent = true;
       ({ error } = await supabase.from("formations").update(parsed.data).eq("id", id));
@@ -297,7 +306,13 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
     return { status: "error", message: ECHEC, values };
   }
   refresh();
-  if (scoreAbsent) return { status: "error", fieldErrors: { score_quiz: MIGRATION_QUIZ }, values };
+  if (scoreAbsent || obligatoiresAbsent) {
+    return {
+      status: "error",
+      fieldErrors: { ...(scoreAbsent ? { score_quiz: MIGRATION_QUIZ } : {}), ...(obligatoiresAbsent ? { exercices_obligatoires: MIGRATION_CERTIFICATS } : {}) },
+      values,
+    };
+  }
   return { status: "success", values };
 }
 

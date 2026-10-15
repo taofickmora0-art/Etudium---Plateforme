@@ -33,6 +33,7 @@ const FORMATION: FormationAdmin = {
   badge: "populaire",
   seuilVideo: 90,
   scoreQuiz: 70,
+  exercicesObligatoires: true,
   publieeLe: "2026-08-13T00:00:00Z",
   parcoursIds: ["p1"],
   modules: [],

@@ -172,7 +172,8 @@ export async function getFormationAdmin(id: string): Promise<FormationAdmin | nu
   // Le statut des leçons (0027) aussi : sans lui, les leçons sont toutes visibles, comme avant.
   // Le score minimal aux quiz et le type des leçons (0031) aussi.
   const variantes = [
-    // Le genre des exercices (0032) aussi.
+    // Le genre des exercices (0032) et « Exercices obligatoires » (0033) aussi.
+    [", couverture, envoyee_le, renvoyee_le, remarque_relecture, modifiee_par_formateur_le, score_quiz, exercices_obligatoires", ", publiee, type, genre_exercice"],
     [", couverture, envoyee_le, renvoyee_le, remarque_relecture, modifiee_par_formateur_le, score_quiz", ", publiee, type, genre_exercice"],
     [", couverture, envoyee_le, renvoyee_le, remarque_relecture, modifiee_par_formateur_le, score_quiz", ", publiee, type"],
     [", couverture, envoyee_le, renvoyee_le, remarque_relecture, modifiee_par_formateur_le", ", publiee"],
@@ -223,6 +224,7 @@ export async function getFormationAdmin(id: string): Promise<FormationAdmin | nu
     badge: (f.badge as Badge | null) ?? null,
     seuilVideo: Number(f.seuil_video ?? 90),
     scoreQuiz: f.score_quiz === undefined ? null : Number(f.score_quiz ?? 70),
+    exercicesObligatoires: f.exercices_obligatoires === undefined ? null : f.exercices_obligatoires !== false,
     publieeLe: typeof f.publiee_le === "string" ? f.publiee_le : null,
     parcoursIds: liste(f.formations_parcours).map((lien) => String(lien.parcours_id)),
     modules,

@@ -81,6 +81,7 @@ const FORMATION: FormationAdmin = {
   badge: null,
   seuilVideo: 90,
   scoreQuiz: 70,
+  exercicesObligatoires: true,
   publieeLe: null,
   parcoursIds: [],
   modules: [],
