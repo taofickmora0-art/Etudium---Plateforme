@@ -59,6 +59,14 @@ describe("Les lectures des quiz", () => {
     faux.repondre("rpc.mes_scores_quiz", ABSENTE);
     expect(await lireMesScores(F)).toEqual({});
   });
+
+  it("une lecture des scores qui échoue cache seulement les scores (la page s'affiche), avec une trace", async () => {
+    const espion = vi.spyOn(console, "error").mockImplementation(() => {});
+    faux.repondre("rpc.mes_scores_quiz", { error: { code: "XX000", message: "base injoignable" } });
+    expect(await lireMesScores(F)).toEqual({});
+    expect(espion).toHaveBeenCalled();
+    espion.mockRestore();
+  });
 });
 
 describe("Envoyer un quiz", () => {

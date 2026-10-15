@@ -26,6 +26,32 @@ const module1 = EXCEL_OUVERTE.modules[0].lecons;
 const toutes = new Set(contenu.map((l) => l.id));
 const SCORES = { [QUIZ]: 75 };
 
+describe("Finitions du lot 3 : aperçu et comptes", () => {
+  it("un quiz coché « aperçu » n'est pas une leçon d'aperçu : ni compté, ni lien « Aperçu » pour le visiteur", async () => {
+    const { leconsApercu } = await import("@/lib/catalogue/regles");
+    const avecQuizApercu: FicheFormation = {
+      ...FICHE,
+      modules: FICHE.modules.map((m) => ({ ...m, lecons: m.lecons.map((l) => ({ ...l, apercu: l.id === QUIZ })) })),
+    };
+    expect(leconsApercu(avecQuizApercu)).toEqual([]);
+    render(<ProgrammeFiche fiche={avecQuizApercu} variante="public" />);
+    expect(screen.queryByRole("link", { name: "Aperçu" })).toBeNull();
+  });
+
+  it("une section qui n'a que des quiz n'affiche pas « 0 leçon »", () => {
+    const quizSeul: FicheFormation = {
+      ...FICHE,
+      nbLecons: 0,
+      dureeSecondes: 0,
+      modules: [{ id: "m-quiz", titre: "Évaluation", lecons: [{ id: QUIZ, titre: "Quiz final", titreCourt: null, dureeSecondes: 0, apercu: false, accessible: true, type: "quiz" as const }] }],
+    };
+    expect(resumeProgramme(quizSeul)).toBe("1 module · 1 quiz");
+    render(<ProgrammeFiche fiche={quizSeul} variante="public" />);
+    expect(screen.queryByText(/0 leçon/)).toBeNull();
+    expect(screen.getAllByText("1 quiz").length).toBeGreaterThan(0);
+  });
+});
+
 describe("Un quiz dans le programme", () => {
   it("la fiche : « 1 quiz » à côté des leçons, le meilleur score ; la progression l'ignore", () => {
     expect(resumeProgramme(FICHE)).toBe(`${FICHE.modules.length} modules · ${contenu.length} leçons · 1 quiz · ${resumeProgramme(EXCEL_OUVERTE).split(" · ").at(-1)}`);

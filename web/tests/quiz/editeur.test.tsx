@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -99,6 +99,26 @@ describe("L'éditeur d'un quiz", () => {
     await waitFor(() => expect(actions.saveLecon).toHaveBeenCalled());
     expect(questionsEnvoyees()).toEqual(ENVOYEES);
     expect(await screen.findByText("Le quiz a bien été mis à jour.")).toBeInTheDocument();
+  });
+
+  it("pas de case « Leçon d’aperçu gratuite » pour un quiz (l'aperçu concerne les leçons)", () => {
+    afficher();
+    expect(screen.queryByRole("checkbox", { name: "Leçon d’aperçu gratuite" })).toBeNull();
+  });
+
+  it("la touche Entrée dans une réponse n'enregistre pas le quiz", () => {
+    // Le bouton « Enregistrer » est hors du formulaire (attribut form) : un navigateur l'actionne quand même sur Entrée
+    // dans un champ ; jsdom ne simule pas ce cas, d'où le contrôle de l'action par défaut de la touche.
+    afficher();
+    for (const champ of [
+      within(question(1)).getByRole("textbox", { name: "Réponse 1" }),
+      within(question(1)).getByRole("textbox", { name: "Énoncé" }),
+      within(question(2)).getByRole("textbox", { name: "Réponse acceptée 1" }),
+    ]) {
+      const entree = createEvent.keyDown(champ, { key: "Enter" });
+      fireEvent(champ, entree);
+      expect(entree.defaultPrevented, champ.getAttribute("aria-label") ?? champ.id).toBe(champ.tagName === "INPUT");
+    }
   });
 
   it("ajouter et modifier des questions des quatre types", async () => {

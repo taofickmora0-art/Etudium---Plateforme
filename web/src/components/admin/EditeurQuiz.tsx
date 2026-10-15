@@ -91,7 +91,15 @@ export function EditeurQuiz({ questions, form, erreur, onChange }: EditeurQuizPr
   };
 
   return (
-    <section aria-labelledby={`${id}-titre`} className="flex min-w-0 flex-col gap-4">
+    <section
+      aria-labelledby={`${id}-titre`}
+      className="flex min-w-0 flex-col gap-4"
+      // Entrée dans un champ d'une ligne (une réponse) n'enregistre pas tout le formulaire ; les zones de texte gardent
+      // leur retour à la ligne.
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && e.target instanceof HTMLInputElement) e.preventDefault();
+      }}
+    >
       <input type="hidden" form={form} name="questions" value={JSON.stringify(lignes.map((l) => versEnvoi(l.question)))} />
       <div className="flex items-baseline justify-between gap-3">
         <h2 id={`${id}-titre`} className="m-0 text-lg leading-7 font-semibold text-encre max-sm:text-base">

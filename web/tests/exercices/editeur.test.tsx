@@ -82,6 +82,17 @@ describe("L'éditeur d'un exercice", () => {
   });
 });
 
+describe("Finitions du lot 3", () => {
+  it("pas de case « Leçon d’aperçu gratuite » pour un exercice (l'aperçu concerne les leçons)", () => {
+    render(
+      <ToastProvider>
+        <EditeurLecon lecon={EXERCICE} />
+      </ToastProvider>,
+    );
+    expect(screen.queryByRole("checkbox", { name: "Leçon d’aperçu gratuite" })).toBeNull();
+  });
+});
+
 describe("Les exercices dans l'onglet Leçons", () => {
   const FORMATION = {
     id: "f1",

@@ -55,14 +55,17 @@ const lecons = (fiche: Pick<FicheFormation, "modules">): LeconFiche[] => fiche.m
  */
 export function etatAcces(fiche: Pick<FicheFormation, "gratuite" | "modules">, connecte: boolean): "gratuite" | "apercu" | "verrouillee" {
   if (fiche.gratuite && connecte) return "gratuite";
-  return lecons(fiche).some((l) => l.apercu) ? "apercu" : "verrouillee";
+  return leconsApercu(fiche).length > 0 ? "apercu" : "verrouillee";
 }
 
 /** Première leçon que la personne peut ouvrir (règle de la base), dans l'ordre du programme. */
 export const premiereLeconOuverte = (fiche: Pick<FicheFormation, "modules">): LeconFiche | null => lecons(fiche).find((l) => l.accessible) ?? null;
 
-/** Leçons d'aperçu, dans l'ordre du programme. */
-export const leconsApercu = (fiche: Pick<FicheFormation, "modules">): LeconFiche[] => lecons(fiche).filter((l) => l.apercu);
+/**
+ * Leçons d'aperçu, dans l'ordre du programme. L'aperçu concerne les leçons de contenu : un quiz ou un exercice resté
+ * coché (avant que la case disparaisse de leur éditeur) n'en est pas un.
+ */
+export const leconsApercu = (fiche: Pick<FicheFormation, "modules">): LeconFiche[] => lecons(fiche).filter((l) => l.apercu && estLeconDeContenu(l));
 
 /** Une leçon de contenu (vidéo, texte) : les quiz et les exercices ne comptent pas dans la progression (R17). */
 export const estLeconDeContenu = (l: { type?: string }) => (l.type ?? "lecon") === "lecon";

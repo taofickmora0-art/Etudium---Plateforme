@@ -31,13 +31,16 @@ export async function lireQuizEditeur(leconId: string): Promise<Lecture<Question
   return { migrationAbsente: false, donnees: liste(un(data)?.questions).map(versQuestionQuiz) };
 }
 
-/** Le meilleur score du compte à chaque quiz d'une formation ; vide avant la 0031 ou pour un visiteur. */
+/**
+ * Le meilleur score du compte à chaque quiz d'une formation ; vide avant la 0031 ou pour un visiteur. Une lecture qui
+ * échoue cache seulement les scores (la page de la formation ou de la leçon s'affiche), avec une trace.
+ */
 export async function lireMesScores(formationId: string): Promise<Record<string, number>> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("mes_scores_quiz", { p_formation: formationId });
   if (error) {
-    if (estFonctionAbsente(error)) return {};
-    throw new Error(`Lecture des scores impossible : ${error.message ?? error.code}`);
+    if (!estFonctionAbsente(error)) console.error(`Lecture des scores impossible : ${error.message ?? error.code}`);
+    return {};
   }
   const brut = un(data) ?? {};
   return Object.fromEntries(Object.entries(brut).map(([cle, valeur]) => [cle, Number(valeur) || 0]));

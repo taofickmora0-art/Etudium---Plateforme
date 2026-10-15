@@ -366,12 +366,15 @@ export function EditeurLecon({ lecon, base = "/admin/formations", quiz }: Editeu
           )}
           <div className="flex flex-col gap-1">
             <Checkbox form={formulaire} name="commentaires_actifs" label="Activer les commentaires" defaultChecked={lecon.commentairesActifs} onChange={changer} />
-            <div className="flex items-start gap-1">
-              <Checkbox form={formulaire} name="apercu" label="Leçon d’aperçu gratuite" defaultChecked={lecon.apercu} onChange={changer} />
-              <span title="Visible sans compte, même si la formation est payante." className="mt-3 flex-none text-discret">
-                <Icon icon={InformationCircleIcon} size={16} label="Visible sans compte, même si la formation est payante." />
-              </span>
-            </div>
+            {/* L'aperçu gratuit concerne les leçons : un quiz se passe et un exercice se rend avec un compte. */}
+            {!sansVideo && (
+              <div className="flex items-start gap-1">
+                <Checkbox form={formulaire} name="apercu" label="Leçon d’aperçu gratuite" defaultChecked={lecon.apercu} onChange={changer} />
+                <span title="Visible sans compte, même si la formation est payante." className="mt-3 flex-none text-discret">
+                  <Icon icon={InformationCircleIcon} size={16} label="Visible sans compte, même si la formation est payante." />
+                </span>
+              </div>
+            )}
           </div>
           {/* Un quiz : pas de documents (la page du quiz ne les montre pas). */}
           {!estQuiz && <RessourcesEditor lecon={lecon} variante="colonne" />}

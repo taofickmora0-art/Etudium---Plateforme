@@ -16,7 +16,8 @@ export const adresseLecon = (slug: string, leconId: string) => `/formations/${sl
 /** « 4 modules · 12 leçons · 2 quiz · 2 h 20 ». */
 export function resumeProgramme(fiche: FicheFormation) {
   const n = fiche.modules.length;
-  return [`${n} ${n > 1 ? "modules" : "module"}`, nombreDeLecons(fiche.nbLecons), nombreDeQuiz(fiche.nbQuiz), nombreDExercices(fiche.nbExercices), dureeLisible(fiche.dureeSecondes)]
+  // Pas de « 0 leçon » : une formation (ou une section) peut n'avoir que des quiz.
+  return [`${n} ${n > 1 ? "modules" : "module"}`, fiche.nbLecons > 0 && nombreDeLecons(fiche.nbLecons), nombreDeQuiz(fiche.nbQuiz), nombreDExercices(fiche.nbExercices), dureeLisible(fiche.dureeSecondes)]
     .filter(Boolean)
     .join(" · ");
 }
@@ -26,7 +27,7 @@ const metaModule = (lecons: LeconFiche[]) => {
   const contenu = lecons.filter(estLeconDeContenu);
   const quiz = lecons.filter((l) => l.type === "quiz").length;
   const exercices = lecons.filter((l) => l.type === "exercice").length;
-  return [nombreDeLecons(contenu.length), nombreDeQuiz(quiz), nombreDExercices(exercices), dureeLisible(contenu.reduce((t, l) => t + l.dureeSecondes, 0))]
+  return [contenu.length > 0 && nombreDeLecons(contenu.length), nombreDeQuiz(quiz), nombreDExercices(exercices), dureeLisible(contenu.reduce((t, l) => t + l.dureeSecondes, 0))]
     .filter(Boolean)
     .join(" · ");
 };
@@ -39,7 +40,7 @@ function LeconPublique({ slug, lecon, premiere }: { slug: string; lecon: LeconFi
         <Icon icon={lecon.type === "quiz" ? Quiz01Icon : lecon.type === "exercice" ? AssignmentsIcon : PlayCircleIcon} size={18} />
       </span>
       <span className="min-w-0 flex-1">{lecon.titre}</span>
-      {lecon.apercu && (
+      {lecon.apercu && estLeconDeContenu(lecon) && (
         <Link href={adresseLecon(slug, lecon.id)} aria-label="Aperçu" className="focus-etudium font-medium text-bleu no-underline hover:underline">
           Aperçu
         </Link>
