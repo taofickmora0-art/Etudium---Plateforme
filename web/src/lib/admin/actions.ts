@@ -14,6 +14,7 @@ import { parseDuree } from "./duree";
 import { slugify } from "./slug";
 import { estMesuree, messageLienCourt } from "@/lib/video/plateformes";
 import { parseVideoUrl } from "./video";
+import { MIGRATION_QUIZ } from "@/lib/quiz/conversion";
 
 // Actions serveur du back-office (spec du lot 1, §10). Chacune revérifie qui demande : l'équipe (exigerEquipe) ou,
 // pour le contenu des formations, l'équipe ou un formateur (exigerEditeur, spec de l'espace formateur) ; puis la base
@@ -208,6 +209,8 @@ export async function createFormation(_prev: FormState, fd: FormData): Promise<F
 /** Ce que le formateur remplit dans l'onglet Informations (spec de l'espace formateur, §1). */
 const CHAMPS_DU_CONTENU = { titre: true, slug: true, resume: true, description: true, objectifs: true, competences: true, niveau: true } as const;
 
+const SCORE_QUIZ = "Score minimal entre 0 et 100 %.";
+
 const nombreOuNull = (saisie: string) => (saisie.trim() === "" ? null : Number(saisie.replace(/\s/g, "").replace(",", ".")));
 
 /** Onglet « Informations » d'une formation, puis ses parcours (ajoutés en fin de liste, retirés s'ils sont décochés). */
@@ -230,6 +233,9 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
     badge: texte(fd, "badge") || null,
     seuil_video: Number(texte(fd, "seuil_video")),
   };
+  // Le score minimal aux quiz (0031) : un réglage pédagogique, du formateur comme de l'équipe ; envoyé s'il est saisi.
+  const scoreSaisi = fd.has("score_quiz") ? texte(fd, "score_quiz").trim() : null;
+  const scoreQuiz = scoreSaisi === null ? null : Number(scoreSaisi);
   const values = {
     ...enTextes({ ...saisie, prix_fcfa: texte(fd, "prix_fcfa"), seuil_video: texte(fd, "seuil_video") }),
     objectifs: saisie.objectifs.join("\n"),
@@ -247,12 +253,23 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
   // attribué reviennent à l'équipe, et ce formulaire ne les envoie pas (un membre de l'équipe peut aussi être formateur).
   const complet = garde.equipe && espaceDe(fd) === "admin";
   const parsed = complet ? formationInfosSchema.safeParse(saisie) : formationInfosSchema.pick(CHAMPS_DU_CONTENU).safeParse(saisie);
-  if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values };
+  const scoreInvalide = scoreQuiz !== null && (scoreSaisi === "" || !Number.isInteger(scoreQuiz) || scoreQuiz < 0 || scoreQuiz > 100);
+  if (!parsed.success || scoreInvalide) {
+    const erreurs = parsed.success ? {} : fieldErrorsFrom(parsed.error);
+    if (scoreInvalide) erreurs.score_quiz = SCORE_QUIZ;
+    return { status: "error", fieldErrors: erreurs, values: { ...values, score_quiz: scoreSaisi ?? "" } };
+  }
   if (!estUuid(id)) return { status: "error", message: ECHEC, values };
 
+  let scoreAbsent = false;
   try {
     const { supabase } = garde;
-    const { error } = await supabase.from("formations").update(parsed.data).eq("id", id);
+    let { error } = await supabase.from("formations").update(scoreQuiz === null ? parsed.data : { ...parsed.data, score_quiz: scoreQuiz }).eq("id", id);
+    // Avant la 0031 : le reste s'enregistre, et le champ du score le dit.
+    if (scoreQuiz !== null && colonneAbsente(error)) {
+      scoreAbsent = true;
+      ({ error } = await supabase.from("formations").update(parsed.data).eq("id", id));
+    }
     if (error) {
       // Règle de la base : l'adresse d'une formation publiée ne change plus.
       if (error.code === "P0001" && /adresse/i.test(error.message ?? "")) {
@@ -278,6 +295,7 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
     return { status: "error", message: ECHEC, values };
   }
   refresh();
+  if (scoreAbsent) return { status: "error", fieldErrors: { score_quiz: MIGRATION_QUIZ }, values };
   return { status: "success", values };
 }
 
@@ -404,6 +422,8 @@ export async function deleteModule(id: string): Promise<Resultat> {
 export async function addLecon(_prev: FormState, fd: FormData): Promise<FormState> {
   const espace = espaceDe(fd);
   const moduleId = texte(fd, "module_id");
+  // Une leçon de contenu, ou un quiz (lot 3, 0031) ; une leçon ordinaire ne précise pas son type (avant la 0031).
+  const type = texte(fd, "type") === "quiz" ? "quiz" : null;
   const values = { titre: texte(fd, "titre") };
   const parsed = leconSchema.pick({ titre: true }).safeParse(values);
   if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values };
@@ -418,10 +438,13 @@ export async function addLecon(_prev: FormState, fd: FormData): Promise<FormStat
     if (!formationId) return { status: "error", message: ECHEC, values };
     const formation = Array.isArray(ligne?.formations) ? ligne.formations[0] : ligne?.formations;
     const ordre = await rangSuivant(supabase, "lecons", ["module_id", moduleId]);
-    const nouvelle = { module_id: moduleId, titre: parsed.data.titre, ordre };
+    const nouvelle = { module_id: moduleId, titre: parsed.data.titre, ordre, ...(type ? { type } : {}) };
     let reponse = await supabase.from("lecons").insert({ ...nouvelle, publiee: !formation?.publiee_le }).select("id").single();
-    // Avant la 0027 : sans statut, la leçon est visible comme avant.
-    if (colonneAbsente(reponse.error)) reponse = await supabase.from("lecons").insert(nouvelle).select("id").single();
+    if (colonneAbsente(reponse.error)) {
+      // Un quiz demande la 0031 ; une leçon, avant la 0027, s'ajoute sans statut (visible comme avant).
+      if (type) return { status: "error", message: MIGRATION_QUIZ, values };
+      reponse = await supabase.from("lecons").insert(nouvelle).select("id").single();
+    }
     const { data, error } = reponse;
     if (error || !data) return erreurEnregistrement(error ?? {}, values);
     const leconId = (data as { id: string }).id;
@@ -471,6 +494,7 @@ export async function deleteLecon(id: string): Promise<Resultat> {
 const LIEN_INCONNU = "Ce lien n’est pas une vidéo YouTube, Vimeo, TikTok, Tella, Loom, ScreenPal ou Google Drive.";
 const DUREE_INVALIDE = "Durée au format 12:40.";
 // Le temps réellement regardé se mesure par rapport à cette durée (migration 0007) : sans elle, la leçon ne se valide pas.
+const QUESTIONS_ILLISIBLES = "Les questions n’ont pas pu être lues. Réessayez.";
 const DUREE_REQUISE = "Saisissez la durée de la vidéo : elle sert à mesurer le temps regardé.";
 
 /** Page d'une leçon : informations, vidéo (fournisseur + identifiant, jamais le lien), « Dans cette leçon », texte. */
@@ -500,6 +524,15 @@ export async function saveLecon(_prev: FormState, fd: FormData): Promise<FormSta
   // Sans mesure (Loom, ScreenPal, Google Drive), la durée est facultative : elle ne sert qu'à l'affichage.
   else if (video && estMesuree(video.fournisseur) && duree === 0) erreurs.duree = DUREE_REQUISE;
   if (lien && !video) erreurs.video = messageLienCourt(lien) ?? LIEN_INCONNU;
+  // Un quiz (0031) : ses questions viennent avec la leçon, en JSON ; la base les vérifie une à une.
+  let questions: unknown = undefined;
+  if (fd.has("questions")) {
+    try {
+      questions = JSON.parse(texte(fd, "questions"));
+    } catch {
+      erreurs.questions = QUESTIONS_ILLISIBLES;
+    }
+  }
   if (!parsed.success || Object.keys(erreurs).length > 0) return { status: "error", fieldErrors: erreurs, values };
   if (!estUuid(id)) return { status: "error", message: ECHEC, values };
 
@@ -523,6 +556,18 @@ export async function saveLecon(_prev: FormState, fd: FormData): Promise<FormSta
       texte: contenuTexte,
     });
     if (erreurContenu) return erreurEnregistrement(erreurContenu, values);
+    if (questions !== undefined) {
+      const { error: erreurQuiz } = await supabase.rpc("enregistrer_quiz", { p_lecon: id, p_questions: questions });
+      if (erreurQuiz) {
+        refresh();
+        const message = estFonctionAbsente(erreurQuiz)
+          ? MIGRATION_QUIZ
+          : (erreurQuiz.code === "P0001" || erreurQuiz.code === "42501") && erreurQuiz.message
+            ? typographie(erreurQuiz.message)
+            : ECHEC;
+        return { status: "error", fieldErrors: { questions: message }, values };
+      }
+    }
   } catch {
     return { status: "error", message: ECHEC, values };
   }

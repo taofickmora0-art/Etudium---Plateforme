@@ -41,6 +41,7 @@ const LECON: LeconAdmin = {
   ressources: [],
   publiee: false,
   commentairesActifs: true,
+  type: "lecon",
   position: { rang: 2, total: 5, module: { rang: 1, titre: "Les bases" } },
   voisines: { precedente: "l1", suivante: "l3" },
 };

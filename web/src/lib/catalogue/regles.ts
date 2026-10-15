@@ -50,3 +50,6 @@ export const premiereLeconOuverte = (fiche: Pick<FicheFormation, "modules">): Le
 
 /** Leçons d'aperçu, dans l'ordre du programme. */
 export const leconsApercu = (fiche: Pick<FicheFormation, "modules">): LeconFiche[] => lecons(fiche).filter((l) => l.apercu);
+
+/** Une leçon de contenu (vidéo, texte) : les quiz et les exercices ne comptent pas dans la progression (R17). */
+export const estLeconDeContenu = (l: { type?: string }) => (l.type ?? "lecon") === "lecon";

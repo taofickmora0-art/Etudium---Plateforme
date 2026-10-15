@@ -26,6 +26,8 @@ export type CarteCatalogue = {
   /** Somme des durées des leçons. */
   dureeSecondes: number;
   nbLecons: number;
+  /** Les quiz du programme (0031), comptés à part ; absent : aucun. */
+  nbQuiz?: number;
   /** Parcours de la formation, avec sa position dans chacun. */
   parcours: (ParcoursCatalogue & { position: number })[];
   /** Moyenne des avis visibles, au dixième ; null sans avis ou sans la migration 0010. */
@@ -34,6 +36,9 @@ export type CarteCatalogue = {
   /** Chemin de l'image de couverture (espace « couvertures ») ; null : couverture par défaut du parcours. */
   couverture: string | null;
 };
+
+/** Un élément du programme : une leçon de contenu, un quiz ou un exercice (lot 3, 0031). */
+export type TypeLecon = "lecon" | "quiz" | "exercice";
 
 export type LeconFiche = {
   id: string;
@@ -46,6 +51,8 @@ export type LeconFiche = {
   accessible: boolean;
   /** Statut (0027) : une leçon en brouillon n'est lue que par l'équipe et le formateur ; vrai avant la 0027. */
   publiee?: boolean;
+  /** Quiz ou exercice (0031) : hors de la progression et des comptes de leçons ; « lecon » si absent. */
+  type?: TypeLecon;
 };
 
 export type ModuleFiche = { id: string; titre: string; lecons: LeconFiche[] };

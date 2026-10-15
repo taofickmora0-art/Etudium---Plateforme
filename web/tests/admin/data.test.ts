@@ -98,8 +98,8 @@ describe("Lecture des contenus du back-office", () => {
     const formation = await getFormationAdmin("00000000-0000-4000-8000-000000000001");
     expect(formation?.modules.map((m) => m.titre)).toEqual(["Premier", "Second"]);
     expect(formation?.modules[0].lecons).toEqual([
-      { id: "l1", titre: "Un", dureeSecondes: 370, apercu: true, aVideo: true, publiee: true },
-      { id: "l2", titre: "Deux", dureeSecondes: 60, apercu: false, aVideo: false, publiee: true },
+      { id: "l1", titre: "Un", dureeSecondes: 370, apercu: true, aVideo: true, publiee: true, type: "lecon" },
+      { id: "l2", titre: "Deux", dureeSecondes: 60, apercu: false, aVideo: false, publiee: true, type: "lecon" },
     ]);
     expect(formation).toMatchObject({ seuilVideo: 90, parcoursIds: ["p1"], parcours: ["Académique"], nbLecons: 2, objectifs: ["A"] });
   });

@@ -1,3 +1,4 @@
+import { estLeconDeContenu } from "@/lib/catalogue/regles";
 import type { CarteCatalogue, FicheFormation, LeconFiche, ModuleFiche } from "@/lib/catalogue/types";
 import type { LigneProgression } from "./types";
 
@@ -32,7 +33,8 @@ function oReprendre(lecons: LeconFiche[], terminees: Set<string>, lignes: LigneP
 
 /** La progression d'une formation, d'après les lignes du compte (celles des autres formations sont ignorées). */
 export function etatFormation(fiche: Pick<FicheFormation, "id" | "modules">, lignes: LigneProgression[]): EtatProgression {
-  const lecons = fiche.modules.flatMap((m) => m.lecons);
+  // Les quiz et les exercices ne comptent pas dans la progression (R17).
+  const lecons = fiche.modules.flatMap((m) => m.lecons).filter(estLeconDeContenu);
   const ids = new Set(lecons.map((l) => l.id));
   const siennes = lignes.filter((l) => l.formationId === fiche.id && ids.has(l.leconId));
   const terminees = new Set(siennes.filter((l) => l.termineeLe).map((l) => l.leconId));
@@ -50,9 +52,10 @@ export function etatFormation(fiche: Pick<FicheFormation, "id" | "modules">, lig
 
 /** Badge d'un module : « Terminé » si toutes ses leçons le sont, « En cours » s'il est entamé ou contient la leçon où reprendre. */
 export function etatModule(module: ModuleFiche, terminees: ReadonlySet<string>, aReprendre: LeconFiche | null): "termine" | "en-cours" | null {
-  if (module.lecons.length === 0) return null;
-  const faites = module.lecons.filter((l) => terminees.has(l.id)).length;
-  if (faites === module.lecons.length) return "termine";
+  const contenu = module.lecons.filter(estLeconDeContenu);
+  if (contenu.length === 0) return null;
+  const faites = contenu.filter((l) => terminees.has(l.id)).length;
+  if (faites === contenu.length) return "termine";
   if (faites > 0 || module.lecons.some((l) => l.id === aReprendre?.id)) return "en-cours";
   return null;
 }

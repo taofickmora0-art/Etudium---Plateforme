@@ -1,3 +1,4 @@
+import type { TypeLecon } from "@/lib/catalogue/types";
 import { estFournisseur } from "@/lib/video/plateformes";
 import { demoModeActive } from "@/lib/auth/current-user";
 import { etatFormation } from "@/lib/contenus/etat";
@@ -42,6 +43,8 @@ const versFormateur = (f: Ligne): FormateurAdmin => ({
   presentation: texte(f.presentation),
 });
 
+const versTypeLecon = (valeur: unknown): TypeLecon => (valeur === "quiz" || valeur === "exercice" ? valeur : "lecon");
+
 const versLeconResume = (l: Ligne): LeconResume & { ordre: number } => ({
   id: String(l.id),
   titre: texte(l.titre),
@@ -49,6 +52,7 @@ const versLeconResume = (l: Ligne): LeconResume & { ordre: number } => ({
   apercu: l.apercu === true,
   aVideo: Boolean(un(l.lecons_contenus)?.video_id),
   publiee: l.publiee !== false,
+  type: versTypeLecon(l.type),
   ordre: Number(l.ordre ?? 0),
 });
 
@@ -59,6 +63,7 @@ const sansOrdre = (lecon: LeconResume & { ordre: number }): LeconResume => ({
   apercu: lecon.apercu,
   aVideo: lecon.aVideo,
   publiee: lecon.publiee,
+  type: lecon.type,
 });
 
 const versModule = (m: Ligne): ModuleAdmin => ({
@@ -146,7 +151,9 @@ export async function getFormationAdmin(id: string): Promise<FormationAdmin | nu
   const supabase = await createClient();
   // La couverture (0012) et la relecture (0014) sont facultatives : sans elles, le back-office s'ouvre quand même.
   // Le statut des leçons (0027) aussi : sans lui, les leçons sont toutes visibles, comme avant.
+  // Le score minimal aux quiz et le type des leçons (0031) aussi.
   const variantes = [
+    [", couverture, envoyee_le, renvoyee_le, remarque_relecture, modifiee_par_formateur_le, score_quiz", ", publiee, type"],
     [", couverture, envoyee_le, renvoyee_le, remarque_relecture, modifiee_par_formateur_le", ", publiee"],
     [", couverture, envoyee_le, renvoyee_le, remarque_relecture, modifiee_par_formateur_le", ""],
     [", couverture", ""],
@@ -190,6 +197,7 @@ export async function getFormationAdmin(id: string): Promise<FormationAdmin | nu
     prixFcfa: typeof f.prix_fcfa === "number" ? f.prix_fcfa : null,
     badge: (f.badge as Badge | null) ?? null,
     seuilVideo: Number(f.seuil_video ?? 90),
+    scoreQuiz: Number(f.score_quiz ?? 70),
     publieeLe: typeof f.publiee_le === "string" ? f.publiee_le : null,
     parcoursIds: liste(f.formations_parcours).map((lien) => String(lien.parcours_id)),
     modules,
@@ -211,7 +219,7 @@ export async function getLeconAdmin(id: string): Promise<LeconAdmin | null> {
   if (demoModeActive() || !estUuid(id)) return null;
   const supabase = await createClient();
   // Le statut et « Activer les commentaires » (0027) ; le programme de la formation donne la position et les voisines.
-  const l = (await lireAvecRepli([", publiee, commentaires_actifs", ""], (colonnes) =>
+  const l = (await lireAvecRepli([", publiee, commentaires_actifs, type", ", publiee, commentaires_actifs", ""], (colonnes) =>
     supabase
       .from("lecons")
       .select(
@@ -244,6 +252,7 @@ export async function getLeconAdmin(id: string): Promise<LeconAdmin | null> {
     formationSlug: texte(formation?.slug),
     publiee: l.publiee !== false,
     commentairesActifs: l.commentaires_actifs !== false,
+    type: versTypeLecon(l.type),
     position: { rang: Math.max(rang, 1), total: Math.max(suite.length, 1), module: { rang: rangModule + 1 || 1, titre: programme[rangModule]?.titre ?? "" } },
     voisines: { precedente: rang > 1 ? suite[rang - 2] : null, suivante: rang > 0 && rang < suite.length ? suite[rang] : null },
     titre: texte(l.titre),

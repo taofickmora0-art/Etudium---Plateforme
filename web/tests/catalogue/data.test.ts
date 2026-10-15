@@ -104,8 +104,8 @@ describe("Lecture du catalogue", () => {
     const reponse = (appel: { valeurs?: unknown }) => (String(appel.valeurs).includes("note_moyenne") ? { error: { code: "42703" } } : { data: [LIGNE] });
     faux.repondre("formations.select", reponse);
     expect(await listCatalogue()).toMatchObject([{ slug: "maitriser-microsoft-excel", note: null, nbAvis: 0, couverture: null }]);
-    // Avec la couverture (0012), puis avec les seules notes (0010), puis sans colonne facultative.
-    expect(faux.de("formations", "select")).toHaveLength(3);
+    // Avec le type des leçons (0031) et la couverture, puis la couverture (0012), puis les seules notes (0010), puis rien.
+    expect(faux.de("formations", "select")).toHaveLength(4);
     faux.vider();
     faux.repondre("formations.select", (appel) => (String(appel.valeurs).includes("note_moyenne") ? { error: { code: "42703" } } : { data: LIGNE }));
     expect(await getFiche("maitriser-microsoft-excel")).toMatchObject({ slug: "maitriser-microsoft-excel", note: null, nbAvis: 0 });

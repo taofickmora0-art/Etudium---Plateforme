@@ -80,6 +80,7 @@ const FORMATION: FormationAdmin = {
   prixFcfa: null,
   badge: null,
   seuilVideo: 90,
+  scoreQuiz: 70,
   publieeLe: null,
   parcoursIds: [],
   modules: [],

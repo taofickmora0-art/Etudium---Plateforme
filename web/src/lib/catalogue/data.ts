@@ -3,6 +3,7 @@ import { demoModeActive } from "@/lib/auth/current-user";
 import type { Badge, CouleurParcours, Niveau } from "@/lib/contenus/libelles";
 import { lireAvecRepli, liste, parOrdre, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
+import { estLeconDeContenu } from "./regles";
 import type { CarteCatalogue, FicheFormation, LeconFiche, ModuleFiche, ParcoursCatalogue } from "./types";
 
 // Lecture du catalogue : formations publiées seulement, même pour l'équipe (les brouillons se voient au back-office).
@@ -18,9 +19,10 @@ const COLONNES_CARTE =
 // Colonnes des migrations récentes : note et nombre d'avis (0010), couverture (0012). Une colonne absente (42703)
 // fait relire sans elle : le catalogue s'affiche avant que les migrations soient appliquées.
 const COLONNES_FACULTATIVES = [", note_moyenne, nb_avis, couverture", ", note_moyenne, nb_avis", ""];
-const avecNotes = (lire: Parameters<typeof lireAvecRepli>[1]) => lireAvecRepli(COLONNES_FACULTATIVES, lire);
-// La fiche lit aussi le statut des leçons (0027) : « colonnes de la formation|colonnes des leçons ».
-const VARIANTES_FICHE = [`${COLONNES_FACULTATIVES[0]}|, publiee`, ...COLONNES_FACULTATIVES.map((c) => `${c}|`)];
+// La fiche lit aussi le statut (0027) et le type (0031) des leçons : « colonnes de la formation|colonnes des leçons ».
+const VARIANTES_FICHE = [`${COLONNES_FACULTATIVES[0]}|, publiee, type`, `${COLONNES_FACULTATIVES[0]}|, publiee`, ...COLONNES_FACULTATIVES.map((c) => `${c}|`)];
+// Les cartes lisent le type des leçons (0031) : un quiz ne compte ni dans « n leçons » ni dans la durée.
+const VARIANTES_CARTES = [`${COLONNES_FACULTATIVES[0]}|, type`, ...COLONNES_FACULTATIVES.map((c) => `${c}|`)];
 const avecFiche = (lire: Parameters<typeof lireAvecRepli>[1]) => lireAvecRepli(VARIANTES_FICHE, lire);
 
 const versParcours = (p: Ligne): ParcoursCatalogue => ({
@@ -31,8 +33,9 @@ const versParcours = (p: Ligne): ParcoursCatalogue => ({
   ordre: Number(p.ordre ?? 0),
 });
 
-/** Les champs communs à la carte et à la fiche ; `lecons` donne la durée et le nombre de leçons. */
+/** Les champs communs à la carte et à la fiche ; `lecons` donne la durée et le nombre de leçons (sans les quiz). */
 function versCarte(f: Ligne, lecons: Ligne[]): CarteCatalogue {
+  const contenu = lecons.filter((l) => estLeconDeContenu({ type: typeof l.type === "string" ? l.type : undefined }));
   const parcours = liste(f.formations_parcours)
     .map((lien) => ({ lien, p: un(lien.parcours) }))
     .filter(({ p }) => p && p.actif !== false)
@@ -48,8 +51,9 @@ function versCarte(f: Ligne, lecons: Ligne[]): CarteCatalogue {
     achatSepare: f.achat_separe === true,
     badge: (f.badge as Badge | null) ?? null,
     publieeLe: texte(f.publiee_le),
-    dureeSecondes: lecons.reduce((total, l) => total + Number(l.duree_secondes ?? 0), 0),
-    nbLecons: lecons.length,
+    dureeSecondes: contenu.reduce((total, l) => total + Number(l.duree_secondes ?? 0), 0),
+    nbLecons: contenu.length,
+    nbQuiz: lecons.filter((l) => l.type === "quiz").length,
     parcours,
     note: f.note_moyenne === null || f.note_moyenne === undefined ? null : Number(f.note_moyenne),
     nbAvis: Number(f.nb_avis ?? 0),
@@ -60,9 +64,10 @@ function versCarte(f: Ligne, lecons: Ligne[]): CarteCatalogue {
 export async function listCatalogue(): Promise<CarteCatalogue[]> {
   if (demoModeActive()) return [];
   const supabase = await createClient();
-  const lignes = (await avecNotes((notes) =>
-    supabase.from("formations").select(`${COLONNES_CARTE}${notes}, modules(lecons(duree_secondes))`).eq("statut", "publiee"),
-  )) as Ligne[] | null;
+  const lignes = (await lireAvecRepli(VARIANTES_CARTES, (variante) => {
+    const [notes, lecons = ""] = variante.split("|");
+    return supabase.from("formations").select(`${COLONNES_CARTE}${notes}, modules(lecons(duree_secondes${lecons}))`).eq("statut", "publiee");
+  })) as Ligne[] | null;
   return (lignes ?? []).map((f) => versCarte(f, liste(f.modules).flatMap((m) => liste(m.lecons))));
 }
 
@@ -81,6 +86,7 @@ const versLecon = (l: Ligne): LeconFiche & { ordre: number } => ({
   apercu: l.apercu === true,
   accessible: l.accessible === true,
   publiee: l.publiee !== false,
+  type: l.type === "quiz" || l.type === "exercice" ? l.type : "lecon",
   ordre: Number(l.ordre ?? 0),
 });
 
@@ -101,7 +107,7 @@ function versFiche(f: Ligne): FicheFormation {
   return {
     ...versCarte(
       f,
-      modules.flatMap((m) => m.lecons.map((l) => ({ duree_secondes: l.dureeSecondes }))),
+      modules.flatMap((m) => m.lecons.map((l) => ({ duree_secondes: l.dureeSecondes, type: l.type }))),
     ),
     description: texte(f.description),
     seuilVideo: Number(f.seuil_video ?? 90),
@@ -114,7 +120,16 @@ function versFiche(f: Ligne): FicheFormation {
       (m): ModuleFiche => ({
         id: m.id,
         titre: m.titre,
-        lecons: m.lecons.map((l) => ({ id: l.id, titre: l.titre, titreCourt: l.titreCourt, dureeSecondes: l.dureeSecondes, apercu: l.apercu, accessible: l.accessible, publiee: l.publiee })),
+        lecons: m.lecons.map((l) => ({
+          id: l.id,
+          titre: l.titre,
+          titreCourt: l.titreCourt,
+          dureeSecondes: l.dureeSecondes,
+          apercu: l.apercu,
+          accessible: l.accessible,
+          publiee: l.publiee,
+          type: l.type,
+        })),
       }),
     ),
   };

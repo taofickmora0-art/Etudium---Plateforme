@@ -1,3 +1,4 @@
+import type { TypeLecon } from "@/lib/catalogue/types";
 import type { EtatFormation } from "@/lib/contenus/etat";
 import type { Badge, CouleurParcours, Niveau, StatutFormation } from "@/lib/contenus/libelles";
 import type { Video } from "./video";
@@ -33,7 +34,16 @@ export type FormationResume = {
 };
 
 /** `publiee` : statut de la leçon (0027) ; vrai avant la 0027. */
-export type LeconResume = { id: string; titre: string; dureeSecondes: number; apercu: boolean; aVideo: boolean; publiee: boolean };
+export type LeconResume = {
+  id: string;
+  titre: string;
+  dureeSecondes: number;
+  apercu: boolean;
+  aVideo: boolean;
+  publiee: boolean;
+  /** Leçon de contenu, quiz ou exercice (0031) ; « lecon » avant la 0031. */
+  type: TypeLecon;
+};
 
 export type ModuleAdmin = { id: string; titre: string; ordre: number; lecons: LeconResume[] };
 
@@ -48,6 +58,8 @@ export type FormationAdmin = FormationResume & {
   prixFcfa: number | null;
   badge: Badge | null;
   seuilVideo: number;
+  /** Score minimal aux quiz (0031) ; 70 avant la 0031. */
+  scoreQuiz: number;
   publieeLe: string | null;
   parcoursIds: string[];
   modules: ModuleAdmin[];
@@ -80,6 +92,8 @@ export type LeconAdmin = {
   publiee: boolean;
   /** « Activer les commentaires » (0027) ; vrai avant la 0027. */
   commentairesActifs: boolean;
+  /** Leçon de contenu, quiz ou exercice (0031) ; « lecon » avant la 0031. */
+  type: TypeLecon;
   /** « Leçon 2 sur 5 · Module 1 : titre » : son rang dans toute la formation, et sa section. */
   position: { rang: number; total: number; module: { rang: number; titre: string } };
   /** Les leçons voisines dans l'ordre de la formation (flèches ‹ › de l'éditeur). */
