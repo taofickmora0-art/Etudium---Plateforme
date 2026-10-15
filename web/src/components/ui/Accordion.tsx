@@ -11,13 +11,17 @@ type AccordionProps = {
   items: { question: ReactNode; answer: ReactNode; cle?: string }[];
   /** Questions ouvertes au départ (indices). */
   defaultOpen?: number[];
+  /** Questions ouvertes, tenues par le parent (« Tout déplier ») ; sinon, l'accordéon les tient seul. */
+  ouvertes?: number[];
+  onOuvertesChange?: (ouvertes: number[]) => void;
   className?: string;
 };
 
 /** Questions dépliables (planche « Navigation ») : plusieurs peuvent être ouvertes, filet sous chacune. */
-export function Accordion({ items, defaultOpen = [], className }: AccordionProps) {
+export function Accordion({ items, defaultOpen = [], ouvertes, onOuvertesChange, className }: AccordionProps) {
+  const pilote = ouvertes ? { value: ouvertes.map(String), onValueChange: (v: string[]) => onOuvertesChange?.(v.map(Number)) } : {};
   return (
-    <RadixAccordion.Root type="multiple" defaultValue={defaultOpen.map(String)} className={cn("flex min-w-0 flex-col", className)}>
+    <RadixAccordion.Root type="multiple" defaultValue={defaultOpen.map(String)} {...pilote} className={cn("flex min-w-0 flex-col", className)}>
       {items.map((item, index) => (
         <RadixAccordion.Item key={item.cle ?? (typeof item.question === "string" ? item.question : index)} value={String(index)} className="border-b border-bordure-carte">
           <RadixAccordion.Header className="m-0">

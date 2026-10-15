@@ -22,15 +22,27 @@ export async function ficheApercu(slug: string): Promise<FicheFormation | null> 
 }
 
 /**
- * « Modifier la leçon », au-dessus du titre de la leçon (refonte des formations, spec §1.3) : l'éditeur du back-office
- * pour l'équipe, celui de l'espace formateur pour le formateur de la formation ; null pour tout autre compte.
+ * L'éditeur d'une formation : celui du back-office pour l'équipe, celui de l'espace formateur pour le formateur de la
+ * formation ; null pour tout autre compte (refonte des formations, §1.3 et §2).
  */
-export async function lienModifierLecon(formationId: string, leconId: string): Promise<string | null> {
+async function editeurFormation(formationId: string): Promise<string | null> {
   const compte = await getShellUser();
   if (!compte) return null;
-  if (canAccess("admin", compte.roles)) return `/admin/formations/${formationId}/lecons/${leconId}`;
+  if (canAccess("admin", compte.roles)) return `/admin/formations/${formationId}`;
   if (!canAccess("formateur", compte.roles)) return null;
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("formateur_de", { p_formation: formationId });
-  return !error && data === true ? `/formateur/formations/${formationId}/lecons/${leconId}` : null;
+  return !error && data === true ? `/formateur/formations/${formationId}` : null;
+}
+
+/** « Modifier la leçon », au-dessus du titre de la leçon. */
+export async function lienModifierLecon(formationId: string, leconId: string): Promise<string | null> {
+  const editeur = await editeurFormation(formationId);
+  return editeur && `${editeur}/lecons/${leconId}`;
+}
+
+/** « Modifier les leçons », sur la page du cours : l'onglet « Leçons » de l'éditeur. */
+export async function lienModifierLecons(formationId: string): Promise<string | null> {
+  const editeur = await editeurFormation(formationId);
+  return editeur && `${editeur}?onglet=programme`;
 }

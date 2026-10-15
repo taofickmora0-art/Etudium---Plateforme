@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight01Icon, ArrowRight02Icon, Clock01Icon, SquareLock02Icon, StarIcon } from "@hugeicons/core-free-icons";
 import { SectionAvis } from "@/components/avis/SectionAvis";
+import { buttonVariants } from "@/components/ui/Button";
 import { Couverture } from "@/components/ui/Couverture";
 import { urlCouverture } from "@/lib/couvertures/adresse";
 import { BoutonFavori } from "@/components/favoris/BoutonFavori";
@@ -11,7 +12,8 @@ import { Heading, Lead } from "@/components/ui/Text";
 import { dureeLisible, etatAcces, leconsApercu, nombreDeLecons, parcoursPrincipal, premiereLeconOuverte } from "@/lib/catalogue/regles";
 import { formatNote, libelleNombreAvis, peutDonnerAvis } from "@/lib/avis/regles";
 import type { AvisFormation } from "@/lib/avis/types";
-import type { FicheFormation } from "@/lib/catalogue/types";
+import type { FicheFormation, LeconFiche } from "@/lib/catalogue/types";
+import { cn } from "@/lib/cn";
 import { formatDuree } from "@/lib/admin/duree";
 import { libelleNiveau } from "@/lib/contenus/libelles";
 import type { EtatProgression } from "@/lib/progression/regles";
@@ -33,27 +35,49 @@ function EnTeteSection({ titre, id, suite }: { titre: string; id?: string; suite
   );
 }
 
-/** « Votre progression » (NdFormation §6.4) : pourcentage, barre, temps restant. */
-function EnTeteProgression({ progression }: { progression: EtatProgression }) {
+/**
+ * « Progression du cours » (NdFormation §6.4 ; refonte des formations, §2) : pourcentage, barre, « Terminé 3 sur 22 » et
+ * temps restant.
+ */
+function EnTeteProgression({ fiche, progression }: { fiche: FicheFormation; progression: EtatProgression }) {
   const restant = dureeLisible(progression.restantSecondes);
+  const lecons = fiche.modules.flatMap((m) => m.lecons);
+  const faites = lecons.filter((l) => progression.terminees.has(l.id)).length;
   return (
     <>
       <div className="flex items-end justify-between gap-3">
-        <span className="text-sm leading-[22px] font-medium text-discret">Votre progression</span>
+        <span className="text-sm leading-[22px] font-medium text-discret">Progression du cours</span>
         <span className="flex-none text-[28px] leading-8 font-medium tracking-[-0.01em] whitespace-nowrap text-titre">{progression.pourcentage} %</span>
       </div>
       <ProgressBar value={progression.pourcentage} label="Progression de la formation" className="mt-3" />
-      {restant && (
-        <div className="mt-2 flex items-center gap-1 text-xs leading-[18px] text-discret">
-          <Icon icon={Clock01Icon} size={18} className="-mx-[1.5px]" />
-          <span>{restant} restantes</span>
-        </div>
-      )}
+      <div className="mt-2 flex flex-wrap items-center gap-[7px] text-xs leading-[18px] text-discret">
+        <span>{`Terminé ${faites} sur ${lecons.length}`}</span>
+        {restant && (
+          <>
+            <MetaDot />
+            <span className="flex items-center gap-1">
+              <Icon icon={Clock01Icon} size={18} className="-mx-[1.5px]" />
+              <span>{restant} restantes</span>
+            </span>
+          </>
+        )}
+      </div>
     </>
   );
 }
 
-/** « Prochaine leçon » et « Continuer », ou « Formation terminée » et « Revoir la formation ». */
+/**
+ * Le bouton du haut de la page, à droite du titre sur ordinateur (refonte des formations, §2) : « Poursuivre le cours »
+ * vers la leçon où reprendre, ou « Commencer le cours » d'une formation ouverte pas encore commencée.
+ */
+function appelDuHaut(fiche: FicheFormation, progression: EtatProgression | null): { libelle: string; lecon: LeconFiche } | null {
+  const suivie = progression?.commencee ? progression : null;
+  if (suivie) return suivie.aReprendre ? { libelle: "Poursuivre le cours", lecon: suivie.aReprendre } : null;
+  const premiere = premiereLeconOuverte(fiche);
+  return etatAcces(fiche, true) === "gratuite" && premiere ? { libelle: "Commencer le cours", lecon: premiere } : null;
+}
+
+/** « Prochaine leçon » et « Poursuivre le cours », ou « Formation terminée » et « Revoir la formation ». */
 function Reprise({ fiche, progression }: { fiche: FicheFormation; progression: EtatProgression }) {
   const lecon = progression.aReprendre;
   const rang = lecon ? fiche.modules.findIndex((m) => m.lecons.some((l) => l.id === lecon.id)) : -1;
@@ -74,7 +98,7 @@ function Reprise({ fiche, progression }: { fiche: FicheFormation; progression: E
         )}
       </div>
       <Link href={adresseLecon(fiche.slug, cible.id)} className={BOUTON_PRINCIPAL}>
-        <span>{lecon ? "Continuer" : "Revoir la formation"}</span>
+        <span>{lecon ? "Poursuivre le cours" : "Revoir la formation"}</span>
         <Icon icon={ArrowRight02Icon} size={20} />
       </Link>
     </>
@@ -82,7 +106,7 @@ function Reprise({ fiche, progression }: { fiche: FicheFormation; progression: E
 }
 
 /**
- * Carte d'accès (à droite). Formation commencée (1.7) : la progression, puis « Continuer ». Sinon : commencer une
+ * Carte d'accès (à droite). Formation commencée (1.7) : la progression, puis « Poursuivre le cours ». Sinon : commencer une
  * formation ouverte, voir l'aperçu, ou savoir qu'elle est verrouillée. Les favoris arrivent en 1.9, les formules au lot 2.
  */
 function CarteAcces({ fiche, progression, favori }: { fiche: FicheFormation; progression: EtatProgression | null; favori: boolean | null }) {
@@ -94,7 +118,7 @@ function CarteAcces({ fiche, progression, favori }: { fiche: FicheFormation; pro
   const reprise = suivie && (suivie.aReprendre || suivie.terminee);
   return (
     <div className={CARTE}>
-      {suivie && <EnTeteProgression progression={suivie} />}
+      {suivie && <EnTeteProgression fiche={fiche} progression={suivie} />}
       {reprise && <Reprise fiche={fiche} progression={suivie} />}
       {!reprise && etat === "gratuite" && (
         <>
@@ -145,13 +169,15 @@ function CarteAcces({ fiche, progression, favori }: { fiche: FicheFormation; pro
 
 /**
  * Fiche formation pour un compte connecté (NdFormation) : en-tête, programme avec cadenas, carte d'accès. Avec la
- * progression du compte (1.7) : « Votre progression », « Continuer », leçons terminées et « Vous êtes ici ».
+ * progression du compte (1.7) : « Progression du cours », « Poursuivre le cours », leçons terminées et « Vous êtes ici ».
+ * Pour l'équipe et le formateur de la formation : « Modifier les leçons » (refonte des formations, §2).
  */
 export function FicheConnectee({
   fiche,
   progression = null,
   favori = null,
   avis = null,
+  lienModifier = null,
 }: {
   fiche: FicheFormation;
   progression?: EtatProgression | null;
@@ -159,6 +185,8 @@ export function FicheConnectee({
   favori?: boolean | null;
   /** Avis de la formation ; null sans la migration 0010. */
   avis?: AvisFormation | null;
+  /** L'onglet « Leçons » de l'éditeur, pour l'équipe et le formateur de la formation. */
+  lienModifier?: string | null;
 }) {
   const parcours = [...fiche.parcours].sort((a, b) => a.ordre - b.ordre)[0];
   const duree = dureeLisible(fiche.dureeSecondes);
@@ -173,6 +201,7 @@ export function FicheConnectee({
     fiche.nbLecons > 0 && { texte: nombreDeLecons(fiche.nbLecons) },
     fiche.formateur && { texte: fiche.formateur.nom },
   ].filter(Boolean) as { icone?: IconSvgElement; marge?: string; texte: string }[];
+  const appel = appelDuHaut(fiche, progression);
 
   return (
     <div className="flex flex-col">
@@ -197,9 +226,17 @@ export function FicheConnectee({
           {fiche.titre}
         </span>
       </nav>
-      <div className="min-w-0">
-        <Heading level="page">{fiche.titre}</Heading>
-        {(fiche.description || fiche.resume) && <Lead className="mt-2.5">{fiche.description || fiche.resume}</Lead>}
+      <div className="flex items-start justify-between gap-6">
+        <div className="min-w-0">
+          <Heading level="page">{fiche.titre}</Heading>
+          {(fiche.description || fiche.resume) && <Lead className="mt-2.5">{fiche.description || fiche.resume}</Lead>}
+        </div>
+        {appel && (
+          <Link href={adresseLecon(fiche.slug, appel.lecon.id)} className={cn(buttonVariants({ size: "lg" }), "flex-none max-lg:hidden")}>
+            <span>{appel.libelle}</span>
+            <Icon icon={ArrowRight02Icon} size={20} />
+          </Link>
+        )}
       </div>
       <div className="mt-[21px] flex flex-wrap items-center gap-3">
         {parcours && <Tag tone={parcoursPrincipal(fiche) as TagTone}>{parcours.nomCourt}</Tag>}
@@ -247,7 +284,7 @@ export function FicheConnectee({
           )}
           <section aria-labelledby="programme-titre" className="flex min-w-0 flex-col gap-4">
             <EnTeteSection titre="Programme" id="programme-titre" suite={fiche.modules.length > 0 ? resumeProgramme(fiche) : undefined} />
-            <ProgrammeFiche fiche={fiche} variante="connecte" progression={progression?.commencee ? progression : null} />
+            <ProgrammeFiche fiche={fiche} variante="connecte" progression={progression?.commencee ? progression : null} lienModifier={lienModifier} />
           </section>
           <SectionAvis
             variante="connecte"

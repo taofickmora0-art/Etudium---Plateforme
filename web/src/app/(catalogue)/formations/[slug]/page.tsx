@@ -7,7 +7,7 @@ import { FichePublique } from "@/components/catalogue/FichePublique";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { lireAvis } from "@/lib/avis/data";
 import { BandeauApercu } from "@/components/lecon/BandeauApercu";
-import { ficheApercu } from "@/lib/catalogue/apercu";
+import { ficheApercu, lienModifierLecons } from "@/lib/catalogue/apercu";
 import { getFiche } from "@/lib/catalogue/data";
 import { metadonneesFiche } from "@/lib/catalogue/partage";
 import type { FicheFormation } from "@/lib/catalogue/types";
@@ -46,13 +46,14 @@ async function Fiche({ params }: Params) {
   if (!fiche) notFound();
   // Avis (1.11), progression (1.7) et favoris (1.9) : absents tant que leurs migrations ne sont pas appliquées.
   if (!compte) return <FichePublique fiche={fiche} avis={await lireAvis(fiche.id)} />;
-  const [lignes, favoris, avis] = await Promise.all([lireProgression(), lireFavoris(), lireAvis(fiche.id)]);
+  const [lignes, favoris, avis, lienModifier] = await Promise.all([lireProgression(), lireFavoris(), lireAvis(fiche.id), lienModifierLecons(fiche.id)]);
   const page = (
     <FicheConnectee
       fiche={fiche}
       progression={lignes ? etatFormation(fiche, lignes) : null}
       favori={favoris ? favoris.some((f) => f.formationId === fiche.id) : null}
       avis={avis}
+      lienModifier={lienModifier}
     />
   );
   return apercu ? (

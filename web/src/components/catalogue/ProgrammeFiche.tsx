@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CheckmarkCircle02Icon, PlayCircleIcon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import { Accordion } from "@/components/ui/Accordion";
+import { AccordeonProgramme } from "./AccordeonProgramme";
 import { Icon } from "@/components/ui/Icon";
 import { formatDuree } from "@/lib/admin/duree";
 import { dureeLisible, nombreDeLecons } from "@/lib/catalogue/regles";
@@ -73,53 +74,55 @@ function LeconConnectee({ slug, lecon, terminee = false, ici = false }: { slug: 
   );
 }
 
-/** Programme en accordéon : un module par ligne, le premier ouvert (NdFormationPublic §5.3, NdFormation §6.3 b). */
+/**
+ * Programme en accordéon : un module par ligne, le premier ouvert (NdFormationPublic §5.3, NdFormation §6.3 b). Connecté :
+ * « Tout déplier / Tout replier » et, pour l'équipe et le formateur, « Modifier les leçons » (refonte des formations, §2).
+ */
 export function ProgrammeFiche({
   fiche,
   variante,
   progression = null,
+  lienModifier = null,
 }: {
   fiche: FicheFormation;
   variante: "public" | "connecte";
   /** Progression du compte connecté (1.7) ; null avant la première leçon ou sans progression en base. */
   progression?: EtatProgression | null;
+  /** « Modifier les leçons », pour l'équipe et le formateur de la formation (refonte des formations, §2). */
+  lienModifier?: string | null;
 }) {
   if (fiche.modules.length === 0) return <p className="m-0 text-sm leading-[22px] text-discret">Le programme arrive bientôt.</p>;
   const terminees = progression?.terminees ?? new Set<string>();
   const aReprendre = progression?.aReprendre ?? null;
-  return (
-    <Accordion
-      defaultOpen={[0]}
-      className="border-t border-bordure-carte"
-      items={fiche.modules.map((module, rang) => ({
-        cle: module.id,
-        question: (
-          <span className="flex flex-col gap-0.5">
-            <span className="flex flex-wrap items-center gap-2">
-              <span>
-                Module {rang + 1} : {module.titre}
-              </span>
-              {progression && etatModule(module, terminees, aReprendre) === "termine" && <Tag tone="valide">Terminé</Tag>}
-              {progression && etatModule(module, terminees, aReprendre) === "en-cours" && <Tag tone="nouveau">En cours</Tag>}
-            </span>
-            <span className="block text-[13px] leading-5 font-normal text-discret">{metaModule(module.lecons)}</span>
+  const items = fiche.modules.map((module, rang) => ({
+    cle: module.id,
+    question: (
+      <span className="flex flex-col gap-0.5">
+        <span className="flex flex-wrap items-center gap-2">
+          <span>
+            Module {rang + 1} : {module.titre}
           </span>
-        ),
-        answer:
-          module.lecons.length === 0 ? (
-            <span>Les leçons de ce module arrivent bientôt.</span>
-          ) : (
-            <span className="flex flex-col">
-              {module.lecons.map((lecon, index) =>
-                variante === "public" ? (
-                  <LeconPublique key={lecon.id} slug={fiche.slug} lecon={lecon} premiere={index === 0} />
-                ) : (
-                  <LeconConnectee key={lecon.id} slug={fiche.slug} lecon={lecon} terminee={terminees.has(lecon.id)} ici={aReprendre?.id === lecon.id} />
-                ),
-              )}
-            </span>
-          ),
-      }))}
-    />
-  );
+          {progression && etatModule(module, terminees, aReprendre) === "termine" && <Tag tone="valide">Terminé</Tag>}
+          {progression && etatModule(module, terminees, aReprendre) === "en-cours" && <Tag tone="nouveau">En cours</Tag>}
+        </span>
+        <span className="block text-[13px] leading-5 font-normal text-discret">{metaModule(module.lecons)}</span>
+      </span>
+    ),
+    answer:
+      module.lecons.length === 0 ? (
+        <span>Les leçons de ce module arrivent bientôt.</span>
+      ) : (
+        <span className="flex flex-col">
+          {module.lecons.map((lecon, index) =>
+            variante === "public" ? (
+              <LeconPublique key={lecon.id} slug={fiche.slug} lecon={lecon} premiere={index === 0} />
+            ) : (
+              <LeconConnectee key={lecon.id} slug={fiche.slug} lecon={lecon} terminee={terminees.has(lecon.id)} ici={aReprendre?.id === lecon.id} />
+            ),
+          )}
+        </span>
+      ),
+  }));
+  if (variante === "connecte") return <AccordeonProgramme items={items} lienModifier={lienModifier} />;
+  return <Accordion defaultOpen={[0]} className="border-t border-bordure-carte" items={items} />;
 }

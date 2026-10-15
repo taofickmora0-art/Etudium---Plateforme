@@ -91,7 +91,7 @@ describe("Fiche d'une formation, pour un compte connecté", () => {
     const programme = screen.getByRole("region", { name: "Programme" });
     // Module 1 ouvert par défaut : ses 3 leçons sont des liens (le module 2 se déplie au clic).
     expect(within(programme).getAllByRole("link")).toHaveLength(3);
-    expect(screen.getByRole("link", { name: /Commencer/ })).toHaveAttribute("href", `${ADRESSE}/l1`);
+    expect(screen.getByRole("link", { name: "Commencer" })).toHaveAttribute("href", `${ADRESSE}/l1`);
     expect(screen.getByText("Formation gratuite : toutes les leçons sont ouvertes.")).toBeInTheDocument();
   });
 

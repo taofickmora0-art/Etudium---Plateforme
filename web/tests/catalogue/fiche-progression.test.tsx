@@ -19,16 +19,16 @@ const ligne = (n: number, terminee: boolean, ilYa: number): LigneProgression => 
 });
 
 describe("Fiche connectée : progression", () => {
-  it("formation commencée : pourcentage, temps restant, prochaine leçon et « Continuer »", () => {
+  it("formation commencée : pourcentage, temps restant, prochaine leçon et « Poursuivre le cours »", () => {
     const progression = etatFormation(EXCEL_OUVERTE, [ligne(1, true, 40), ligne(2, true, 30), ligne(3, true, 20), ligne(4, false, 10)]);
     render(<FicheConnectee fiche={EXCEL_OUVERTE} progression={progression} />);
-    expect(screen.getByText("Votre progression")).toBeInTheDocument();
+    expect(screen.getByText("Progression du cours")).toBeInTheDocument();
     expect(screen.getByText("25 %")).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Progression de la formation" })).toHaveAttribute("aria-valuenow", "25");
     expect(screen.getByText("1 h 47 restantes")).toBeInTheDocument();
     expect(screen.getByText("Prochaine leçon")).toBeInTheDocument();
     expect(screen.getByText("Module 1 · 10:40")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Continuer" })).toHaveAttribute("href", `${ADRESSE}/${id(4)}`);
+    expect(screen.getAllByRole("link", { name: "Poursuivre le cours" })[0]).toHaveAttribute("href", `${ADRESSE}/${id(4)}`);
     expect(screen.queryByRole("link", { name: "Commencer" })).toBeNull();
   });
 
@@ -53,7 +53,7 @@ describe("Fiche connectée : progression", () => {
 
   it("formation non commencée, ou sans progression en base : la carte de départ", () => {
     const { unmount } = render(<FicheConnectee fiche={{ ...EXCEL_OUVERTE, gratuite: true }} progression={etatFormation(EXCEL_OUVERTE, [])} />);
-    expect(screen.queryByText("Votre progression")).toBeNull();
+    expect(screen.queryByText("Progression du cours")).toBeNull();
     expect(screen.getByRole("link", { name: "Commencer" })).toBeInTheDocument();
     unmount();
     render(<FicheConnectee fiche={{ ...EXCEL_OUVERTE, gratuite: true }} progression={null} />);
