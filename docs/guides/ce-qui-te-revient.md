@@ -636,3 +636,23 @@ L'onglet « Programme » devient « Leçons » (sections et leçons au glisser-d
    - Modifie quelque chose, puis clique « Retour aux leçons » : « Quitter sans enregistrer ? ».
 5. **Voir comme un étudiant.** Sur une formation en brouillon, l'œil ouvre la vraie page de la leçon avec le bandeau « Aperçu : pas encore visible des étudiants » (ta progression n'y est pas enregistrée). Un compte étudiant, lui, a « page introuvable ».
 
+## 34. Valider le suivi des formations (étape B), 20 minutes
+
+La page d'une leçon prend une barre du haut et des discussions, le programme se replie, et la page du cours est retouchée.
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0028_discussions_lecons.sql` (après la 0027).
+2. **La barre du haut** (ordinateur). Ouvre une leçon avec un compte étudiant : à gauche « ‹ Titre de la formation » (retour à la page du cours) ; à droite **Mode lecture** (le programme s'efface, reclique pour le remettre) et **Terminer la leçon ›**.
+   - Leçon sans vidéo : « Terminer la leçon » la termine et ouvre la suivante.
+   - Leçon avec vidéo : le bouton reste grisé avec « Regardez au moins 90 % de la vidéo » ; au seuil, il devient « Leçon suivante › ».
+   - Sur la dernière leçon : « Dernière leçon terminée ! » et « Voir la formation ».
+   - La barre reste en haut quand tu fais défiler la leçon ; le programme, à gauche, défile de son côté.
+3. **Au-dessus du titre** : « Leçon 6 sur 12 » et les flèches ‹ ›. Avec ton compte de l'équipe (ou celui du formateur de la formation), le lien **Modifier la leçon** ouvre l'éditeur ; un compte étudiant ne le voit pas.
+4. **Le programme** (à gauche) : les modules se replient (celui de la leçon ouverte est déplié), chaque leçon a sa durée, la progression (barre, %, temps restant) est en bas.
+5. **Sur téléphone** : le bouton **Leçons** en haut à droite ouvre le programme dans un tiroir ; choisir une leçon le referme. L'onglet « Programme » sous la leçon a disparu.
+6. **Les discussions**, sous la leçon : « Discussions de la leçon », écris un commentaire puis **Publier le commentaire**.
+   - Avec un deuxième compte : Répondre, J'aime, le menu ⋮ (Copier le lien, Signaler). Ton compte formateur porte l'étiquette « Formateur ».
+   - Notifications : le formateur reçoit « Nouveau commentaire sur votre leçon », l'auteur reçoit « Nouvelle réponse à votre commentaire ».
+   - Signale un commentaire : il arrive dans la file de modération du back-office comme « Commentaire de leçon » (Garder ou Supprimer ; « Ouvrir la leçon »).
+   - Dans l'éditeur de leçon, décoche « Activer les commentaires » : la section disparaît de la leçon.
+   - Un visiteur sans compte ne voit pas les discussions, même sur une leçon d'aperçu gratuit.
+7. **La page du cours** (compte qui a commencé la formation) : **Poursuivre le cours** en haut à droite, la carte « Progression du cours » (« Terminé 3 sur 12 », %), **Tout déplier / Tout replier** au-dessus du programme. Avec ton compte de l'équipe : **Modifier les leçons** mène à l'onglet Leçons de l'éditeur.
