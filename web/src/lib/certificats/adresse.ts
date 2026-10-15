@@ -9,6 +9,20 @@ export function normaliserIdentifiant(saisie: string): string | null {
   return IDENTIFIANT.test(identifiant) ? identifiant : null;
 }
 
+/**
+ * L'identifiant lu dans une adresse /c/… : décodé si possible (un QR Code abîmé ou une adresse recopiée peut porter un
+ * « % » invalide, qui ferait échouer le décodage), 200 caractères au plus.
+ */
+export function identifiantDeLAdresse(brut: string): string {
+  let texte = brut;
+  try {
+    texte = decodeURIComponent(brut);
+  } catch {
+    texte = brut;
+  }
+  return texte.slice(0, 200);
+}
+
 /** L'adresse publique qui montre directement le résultat de la vérification. */
 export function adresseVerification(identifiant: string): string {
   const site = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/+$/, "");

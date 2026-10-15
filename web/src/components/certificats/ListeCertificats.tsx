@@ -19,6 +19,8 @@ const pluriel = (n: number, singulier: string, pluriel: string) => `${n} ${n > 1
 function manque(f: EnPreparation): string {
   const lecons = f.total - f.terminees;
   return [
+    // Aucune leçon publiée : la formation reste à 0 %, et le certificat ne peut pas encore être délivré.
+    f.total === 0 && "Les leçons de cette formation ne sont pas encore publiées.",
     lecons > 0 && pluriel(lecons, "leçon restante", "leçons restantes"),
     f.quizRestants > 0 && `${f.quizRestants} quiz à réussir`,
     f.exercicesRestants > 0 && pluriel(f.exercicesRestants, "exercice à valider", "exercices à valider"),

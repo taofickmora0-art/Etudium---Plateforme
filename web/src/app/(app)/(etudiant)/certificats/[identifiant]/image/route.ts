@@ -16,7 +16,8 @@ export async function GET(requete: Request, { params }: Contexte): Promise<Respo
   return new Response(png, {
     headers: {
       "content-type": "image/png",
-      "cache-control": "private, no-store",
+      // Privée (titulaire seul) ; gardée un jour : le certificat est figé, inutile de le refaire à chaque visite.
+      "cache-control": "private, max-age=86400",
       ...(telecharger ? { "content-disposition": `attachment; filename="certificat-${certificat.identifiant}.png"` } : {}),
     },
   });

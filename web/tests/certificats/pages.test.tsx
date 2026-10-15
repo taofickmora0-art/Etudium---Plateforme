@@ -51,6 +51,24 @@ describe("La page Certificats", () => {
     expect(within(preparation).getByRole("progressbar", { name: "Progression : Microsoft Word" })).toHaveAttribute("aria-valuenow", "75");
   });
 
+  it("une formation sans leçon publiée explique pourquoi elle reste à 0 %", () => {
+    render(
+      <ToastProvider>
+        <ListeCertificats page={{ obtenus: [], enPreparation: [{ formationId: "f3", titre: "PowerPoint", slug: "ppt", terminees: 0, total: 0, quizRestants: 1, exercicesRestants: 0 }] }} />
+      </ToastProvider>,
+    );
+    const preparation = screen.getByRole("region", { name: "En préparation" });
+    expect(preparation).toHaveTextContent("Les leçons de cette formation ne sont pas encore publiées. · 1 quiz à réussir");
+  });
+
+  it("l'adresse d'un QR Code abîmé (pourcentage invalide, très longue) se lit sans erreur", async () => {
+    const { identifiantDeLAdresse } = await import("@/lib/certificats/adresse");
+    expect(identifiantDeLAdresse("ET-2026-K7Q2-M9XD")).toBe("ET-2026-K7Q2-M9XD");
+    expect(identifiantDeLAdresse("et%2D2026%2Dk7q2%2Dm9xd")).toBe("et-2026-k7q2-m9xd");
+    expect(identifiantDeLAdresse("%E0%A4%A")).toBe("%E0%A4%A");
+    expect(identifiantDeLAdresse("x".repeat(5000))).toHaveLength(200);
+  });
+
   it("rien encore : deux messages", () => {
     render(
       <ToastProvider>

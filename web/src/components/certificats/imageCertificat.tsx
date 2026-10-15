@@ -70,9 +70,9 @@ export function imageCertificat(c: Certificat): ImageResponse {
                 <div style={{ fontSize: 34, fontWeight: 600 }}>{dateLongue(c.delivreLe)}</div>
               </div>
               {c.formateur && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 560 }}>
                   <div style={{ fontSize: 26, color: DISCRET }}>Formation animée par</div>
-                  <div style={{ fontSize: 34, fontWeight: 600 }}>{c.formateur}</div>
+                  <div style={{ fontSize: c.formateur.length > 28 ? 28 : 34, fontWeight: 600, lineHeight: 1.25 }}>{c.formateur}</div>
                 </div>
               )}
             </div>

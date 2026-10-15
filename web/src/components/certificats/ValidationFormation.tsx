@@ -17,6 +17,9 @@ import { PartagerCertificat } from "./PartagerCertificat";
 
 const CARTE = "flex min-w-0 flex-col gap-4 rounded-carte border border-bordure-carte bg-panneau p-6 max-sm:p-4";
 
+/** « d’Aïcha », « d’Hervé », mais « de Kossi » : l'élision devant une voyelle ou un h seulement. */
+const deNom = (nom: string) => (/^[aeiouyhàâäéèêëîïôöùûüÿœæ]/i.test(nom.trim()) ? `d’${nom}` : `de ${nom}`);
+
 /** Une condition : remplie (coche verte) ou non (horloge), son libellé, son détail ; un lien vers ce qui manque. */
 function Condition({ remplie, libelle, detail, lien }: { remplie: boolean; libelle: string; detail: string; lien?: string }) {
   const texte = lien && !remplie ? (
@@ -112,7 +115,7 @@ export function ValidationFormation({ etat, formation, prenom }: { etat: EtatVal
             {/* eslint-disable-next-line @next/next/no-img-element -- image générée à la demande, privée, sans optimisation */}
             <img
               src={`/certificats/${certificat.identifiant}/image`}
-              alt={`Certificat de réussite d’${certificat.titulaire} pour la formation ${certificat.formation}`}
+              alt={`Certificat de réussite ${deNom(certificat.titulaire)} pour la formation ${certificat.formation}`}
               width={1754}
               height={1240}
               className="h-auto w-full rounded-champ border border-bordure-carte"

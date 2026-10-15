@@ -5,6 +5,7 @@ import { ResultatVerification } from "@/components/certificats/ResultatVerificat
 import { Banner } from "@/components/ui/Banner";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Heading, Lead } from "@/components/ui/Text";
+import { identifiantDeLAdresse } from "@/lib/certificats/adresse";
 import { MIGRATION_CERTIFICATS, verifierCertificat } from "@/lib/certificats/data";
 
 // La page du résultat ne s'indexe pas : un identifiant n'a rien à faire dans un moteur de recherche.
@@ -14,7 +15,7 @@ type Params = { params: Promise<{ identifiant: string }> };
 
 async function Resultat({ params }: Params) {
   const { identifiant } = await params;
-  const saisie = decodeURIComponent(identifiant);
+  const saisie = identifiantDeLAdresse(identifiant);
   let lecture: Awaited<ReturnType<typeof verifierCertificat>>;
   try {
     lecture = await verifierCertificat(saisie);

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft02Icon, AssignmentsIcon, CheckmarkCircle02Icon, Clock01Icon, PlayCircleIcon, Quiz01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft02Icon, AssignmentsIcon, Certificate01Icon, CheckmarkCircle02Icon, Clock01Icon, PlayCircleIcon, Quiz01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
 import { Couverture } from "@/components/ui/Couverture";
 import { Icon } from "@/components/ui/Icon";
@@ -67,7 +67,10 @@ function Ligne({ fiche, lecon, etat, meilleur, statut }: { fiche: FicheFormation
   );
 }
 
-/** La progression du cours : la barre, « 8 % terminé » et le temps restant (bas du programme, bas du tiroir). */
+/**
+ * La progression du cours : la barre, « 8 % terminé », le temps restant, et le lien vers ce qui reste pour le
+ * certificat (bas du programme, bas du tiroir ; compte connecté seulement).
+ */
 export function ProgressionCours({ fiche, terminees }: { fiche: FicheFormation; terminees: ReadonlySet<string> }) {
   // Les quiz ne comptent pas dans la progression (R17).
   const lecons = fiche.modules.flatMap((m) => m.lecons).filter(estLeconDeContenu);
@@ -89,6 +92,13 @@ export function ProgressionCours({ fiche, terminees }: { fiche: FicheFormation; 
           </>
         )}
       </div>
+      <Link
+        href={`/formations/${fiche.slug}/validation`}
+        className="focus-etudium mt-3 flex items-center gap-2 self-start rounded-champ text-[13px] leading-5 font-medium text-bleu no-underline hover:underline"
+      >
+        <Icon icon={Certificate01Icon} size={16} />
+        <span>Validation et certificat</span>
+      </Link>
     </div>
   );
 }

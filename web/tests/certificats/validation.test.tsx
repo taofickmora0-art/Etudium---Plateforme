@@ -15,6 +15,7 @@ vi.mock("@/lib/admin/actions", () => ({ saveFormationInfos: vi.fn(), setStatutFo
 const { marquerCertificatVu } = await import("@/lib/certificats/actions");
 const { ValidationFormation } = await import("@/components/certificats/ValidationFormation");
 const { FicheConnectee } = await import("@/components/catalogue/FicheConnectee");
+const { ProgrammeLecon } = await import("@/components/lecon/ProgrammeLecon");
 
 const ID = "ET-2026-K7Q2-M9XD";
 const INCOMPLET: EtatValidation = {
@@ -78,6 +79,21 @@ describe("La validation de la formation", () => {
     expect(screen.getByRole("img", { name: "Certificat de réussite d’Aïcha Kpadé pour la formation Maîtriser Microsoft Excel" })).toHaveAttribute("src", `/certificats/${ID}/image`);
     expect(screen.getByRole("link", { name: "Télécharger le PDF" })).toHaveAttribute("href", `/certificats/${ID}/pdf`);
     expect(screen.getByRole("link", { name: "Vérifier" })).toHaveAttribute("href", `/c/${ID}`);
+  });
+
+  it("le texte de l'image élide seulement devant une voyelle : « de Kossi », « d’Aïcha »", () => {
+    afficher({ ...DELIVRE, certificat: { ...DELIVRE.certificat!, titulaire: "Kossi Agbo", vu: true } });
+    expect(screen.getByRole("img", { name: "Certificat de réussite de Kossi Agbo pour la formation Maîtriser Microsoft Excel" })).toBeInTheDocument();
+  });
+
+  it("le programme de la page leçon mène aussi à « Validation et certificat » (compte connecté)", () => {
+    const premiere = EXCEL_OUVERTE.modules[0].lecons[0];
+    const lignes = [{ leconId: premiere.id, formationId: EXCEL_OUVERTE.id, termineeLe: "2026-10-15T08:00:00Z", vueLe: "2026-10-15T08:00:00Z", positionSecondes: 0 }];
+    const { unmount } = render(<ProgrammeLecon fiche={EXCEL_OUVERTE} leconId={premiere.id} connecte terminees={etatFormation(EXCEL_OUVERTE, lignes).terminees} />);
+    expect(screen.getByRole("link", { name: "Validation et certificat" })).toHaveAttribute("href", `/formations/${EXCEL_OUVERTE.slug}/validation`);
+    unmount();
+    render(<ProgrammeLecon fiche={EXCEL_OUVERTE} leconId={premiere.id} connecte={false} terminees={new Set()} />);
+    expect(screen.queryByRole("link", { name: "Validation et certificat" })).toBeNull();
   });
 
   it("déjà vu : pas de fenêtre ; « Partager » : le lien de vérification à copier", async () => {

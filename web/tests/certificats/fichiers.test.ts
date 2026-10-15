@@ -27,7 +27,8 @@ describe("Le fichier du certificat", () => {
     const reponse = await image(...appel());
     expect(reponse.status).toBe(200);
     expect(reponse.headers.get("content-type")).toBe("image/png");
-    expect(reponse.headers.get("cache-control")).toContain("private");
+    // Privé, gardé un jour par le navigateur : le certificat est figé, inutile de le refaire à chaque visite.
+    expect(reponse.headers.get("cache-control")).toBe("private, max-age=86400");
     const meta = await sharp(Buffer.from(await reponse.arrayBuffer())).metadata();
     expect([meta.width, meta.height]).toEqual([1754, 1240]);
     const telechargee = await image(...appel(`http://localhost/certificats/${ID}/image?telecharger=1`));
