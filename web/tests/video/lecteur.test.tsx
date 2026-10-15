@@ -218,6 +218,13 @@ describe("Lecteur aux couleurs d'Étudium", () => {
     expect(screen.queryByText(/Prévenez le formateur/)).toBeNull();
   });
 
+  it("une plateforme à vitesse fixe (TikTok, Tella) : pas de bouton de vitesse", async () => {
+    const f = fauxLecteur();
+    f.adaptateur.vitesseFixe = true;
+    await monter({ creer: f.creer });
+    expect(screen.queryByRole("button", { name: /Vitesse de lecture/ })).toBeNull();
+  });
+
   it("une leçon déjà validée l'annonce dès l'ouverture", async () => {
     const f = fauxLecteur();
     await monter({ creer: f.creer, termineeInitiale: true });

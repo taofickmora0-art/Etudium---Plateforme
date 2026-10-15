@@ -16,7 +16,7 @@ import { Icon, type IconSvgElement } from "@/components/ui/Icon";
 import { MetaDot } from "@/components/ui/Progress";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
-import { dureeLecon } from "@/lib/lecon/regles";
+import { dureeLecon, formatVideo } from "@/lib/lecon/regles";
 import type { VideoLecon } from "@/lib/lecon/types";
 import { creerAdaptateur, type Adaptateur, type Evenements } from "@/lib/video/adaptateurs";
 import { ajouter, fusionner, observer, pourcentageVu, type EtatSuivi, type Intervalle } from "@/lib/video/suivi";
@@ -132,6 +132,8 @@ export function LecteurEtudium({
   const [muet, setMuet] = useState(false);
   const [vitesse, setVitesse] = useState(1);
   const [sousTitresDispo, setSousTitresDispo] = useState(false);
+  // TikTok, Tella : la vitesse ne se règle pas, le bouton n'apparaît pas.
+  const [vitesseFixe, setVitesseFixe] = useState(false);
   const [sousTitres, setSousTitres] = useState(false);
   const [pleinEcranPossible, setPleinEcranPossible] = useState(false);
   const [pleinEcran, setPleinEcran] = useState(false);
@@ -271,6 +273,7 @@ export function LecteurEtudium({
         if (annule) return a.detruire();
         adaptateur.current = a;
         setPleinEcranPossible(Boolean(document.fullscreenEnabled));
+        setVitesseFixe(Boolean(a.vitesseFixe));
         // L'iframe officielle ne prend ni les clics ni le clavier : les commandes Étudium sont au-dessus.
         conteneur.current?.querySelectorAll("iframe").forEach((f) => {
           f.tabIndex = -1;
@@ -428,7 +431,7 @@ export function LecteurEtudium({
   const avance = duree > 0 ? Math.min(100, (100 * position) / duree) : 0;
   return (
     <div className="flex min-w-0 flex-col gap-2.5">
-      <div ref={cadre} className="relative aspect-video overflow-hidden rounded-carte bg-encre text-white">
+      <div ref={cadre} className={cn("relative overflow-hidden rounded-carte bg-encre text-white", formatVideo(video))}>
         <div ref={conteneur} aria-hidden="true" className="absolute inset-0 [&_iframe]:pointer-events-none [&_iframe]:absolute [&_iframe]:inset-0 [&_iframe]:size-full [&_iframe]:border-0" />
         {/* Toute la surface lance ou arrête la vidéo, comme sur un lecteur ordinaire (les boutons restent l'accès clavier). */}
         <div aria-hidden="true" onClick={basculer} className="absolute inset-0 cursor-pointer" />
@@ -489,19 +492,21 @@ export function LecteurEtudium({
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3.5">
-              <button
-                type="button"
-                aria-label={`Vitesse de lecture : ${libelleVitesse(vitesse)}`}
-                onClick={() => {
-                  const suivante = VITESSES[(VITESSES.indexOf(vitesse) + 1) % VITESSES.length];
-                  adaptateur.current?.setVitesse(suivante);
-                  vitesseRef.current = suivante;
-                  setVitesse(suivante);
-                }}
-                className={cn(BOUTON, "w-auto min-w-9 px-1.5 text-xs leading-[18px] font-medium")}
-              >
-                {libelleVitesse(vitesse)}
-              </button>
+              {!vitesseFixe && (
+                <button
+                  type="button"
+                  aria-label={`Vitesse de lecture : ${libelleVitesse(vitesse)}`}
+                  onClick={() => {
+                    const suivante = VITESSES[(VITESSES.indexOf(vitesse) + 1) % VITESSES.length];
+                    adaptateur.current?.setVitesse(suivante);
+                    vitesseRef.current = suivante;
+                    setVitesse(suivante);
+                  }}
+                  className={cn(BOUTON, "w-auto min-w-9 px-1.5 text-xs leading-[18px] font-medium")}
+                >
+                  {libelleVitesse(vitesse)}
+                </button>
+              )}
               {sousTitresDispo && (
                 <BoutonLecteur
                   label="Sous-titres"

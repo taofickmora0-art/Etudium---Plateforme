@@ -19,7 +19,7 @@ import { getFiche } from "@/lib/catalogue/data";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { compteConnecte } from "@/lib/catalogue/visiteur";
 import { getLeconDans } from "@/lib/lecon/data";
-import { voisines } from "@/lib/lecon/regles";
+import { videoMesuree, voisines } from "@/lib/lecon/regles";
 import { lireProgression } from "@/lib/progression/data";
 import { etatFormation } from "@/lib/progression/regles";
 import type { DonneesLecon } from "@/lib/lecon/types";
@@ -77,7 +77,7 @@ async function Lecon({ params }: Params) {
   // Bouton de fin : compte connecté, leçon ouverte, progression disponible en base (0007, 0008), et pas en aperçu.
   const actif = connecte && lecon.accessible && lignes !== null && !apercu;
   return (
-    <EtatLeconProvider key={leconId} termineeInitiale={terminees.has(leconId)} avecVideo={lecon.video !== null} seuil={donnees.fiche.seuilVideo} actif={actif}>
+    <EtatLeconProvider key={leconId} termineeInitiale={terminees.has(leconId)} avecVideo={videoMesuree(lecon)} seuil={donnees.fiche.seuilVideo} actif={actif}>
       <CadreLecon
         connecte={connecte}
         titreFormation={donnees.fiche.titre}

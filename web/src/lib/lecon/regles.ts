@@ -1,4 +1,4 @@
-import { urlIntegration as integrationPlateforme } from "@/lib/video/plateformes";
+import { estMesuree, estVertical, urlIntegration as integrationPlateforme } from "@/lib/video/plateformes";
 import { formatParMime, tailleLisible } from "@/lib/admin/fichiers";
 import { leconsApercu } from "@/lib/catalogue/regles";
 import type { FicheFormation, LeconFiche, ModuleFiche } from "@/lib/catalogue/types";
@@ -48,6 +48,16 @@ export function situation(modules: ModuleFiche[], leconId: string): { numero: nu
 export function urlIntegration(video: VideoLecon): string {
   return integrationPlateforme(video);
 }
+
+/**
+ * Le temps regardé de la vidéo se mesure (YouTube, Vimeo, TikTok, Tella) : « Terminer la leçon » attend le seuil.
+ * Sans vidéo, ou sur une plateforme sans mesure (Loom, ScreenPal, Google Drive), la leçon se termine d'un clic.
+ */
+export const videoMesuree = (lecon: { video: VideoLecon | null }) => lecon.video !== null && estMesuree(lecon.video.fournisseur);
+
+/** Le cadre de la vidéo : 16/9, ou vertical (TikTok) sans dépasser la hauteur de l'écran. */
+export const FORMAT_VIDEO = { paysage: "aspect-video w-full", vertical: "aspect-[9/16] mx-auto w-[min(100%,calc(80dvh*9/16))]" } as const;
+export const formatVideo = (video: VideoLecon) => (estVertical(video.fournisseur) ? FORMAT_VIDEO.vertical : FORMAT_VIDEO.paysage);
 
 const deuxChiffres = (n: number) => String(n).padStart(2, "0");
 

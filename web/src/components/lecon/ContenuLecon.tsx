@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
-import { situation } from "@/lib/lecon/regles";
+import { situation, videoMesuree } from "@/lib/lecon/regles";
 import type { DonneesLecon } from "@/lib/lecon/types";
 import { DansCetteLecon } from "./DansCetteLecon";
 import { EnTeteLecon } from "./EnTeteLecon";
@@ -11,6 +11,7 @@ import type { MoiCommunaute } from "@/lib/communaute/types";
 import { BandeauApercu, type Apercu } from "./BandeauApercu";
 import { DiscussionsLecon } from "./DiscussionsLecon";
 import { LecteurEtudium } from "./LecteurEtudium";
+import { LecteurVideo } from "./LecteurVideo";
 import { NavigationLecon } from "./NavigationLecon";
 import { NoteProvider, NotesLecon } from "./NotesLecon";
 import { OngletsLecon } from "./OngletsLecon";
@@ -57,7 +58,11 @@ export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lie
       {!ouverte ? (
         <LeconVerrouillee fiche={fiche} leconId={lecon.id} connecte={connecte} />
       ) : (
-        lecon.video && (
+        lecon.video &&
+        (!videoMesuree(lecon) ? (
+          // Loom, ScreenPal, Google Drive : le lecteur de la plateforme ; la leçon se termine d'un clic.
+          <LecteurVideo video={lecon.video} titre={lecon.titre} />
+        ) : (
           <LecteurEtudium
             video={lecon.video}
             titre={lecon.titre}
@@ -71,7 +76,7 @@ export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lie
             termineeInitiale={lecon.visionnage?.terminee ?? false}
             positionInitiale={lecon.visionnage?.positionSecondes ?? 0}
           />
-        )
+        ))
       )}
       <EnTeteLecon fiche={fiche} lecon={lecon} lienModifier={lienModifier} />
       {/* Le texte mis en forme dans l'éditeur de leçon (titres, gras, listes, liens), comme les publications. */}
