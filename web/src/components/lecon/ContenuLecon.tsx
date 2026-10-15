@@ -7,7 +7,9 @@ import { DansCetteLecon } from "./DansCetteLecon";
 import { EnTeteLecon } from "./EnTeteLecon";
 import { LeconVerrouillee } from "./LeconVerrouillee";
 import { TexteMisEnForme } from "@/components/communaute/TexteMisEnForme";
+import type { MoiCommunaute } from "@/lib/communaute/types";
 import { BandeauApercu, type Apercu } from "./BandeauApercu";
+import { DiscussionsLecon } from "./DiscussionsLecon";
 import { LecteurEtudium } from "./LecteurEtudium";
 import { NavigationLecon } from "./NavigationLecon";
 import { NoteProvider, NotesLecon } from "./NotesLecon";
@@ -22,13 +24,15 @@ type Props = {
   terminees: ReadonlySet<string>;
   /** L'équipe ou le formateur en aperçu (formation non publiée, leçon en brouillon) : rien n'est enregistré. */
   apercu?: Apercu | null;
+  /** Le compte connecté, pour les discussions (0028). */
+  moi?: MoiCommunaute | null;
 };
 
 /**
  * Le contenu de la page leçon (NdLecon, NdMobLecon) : vidéo, en-tête, navigation, onglets et « Dans cette leçon ».
  * Une leçon fermée n'affiche que son verrou, son en-tête et son résumé : jamais la vidéo, le texte ni les fichiers.
  */
-export function ContenuLecon({ donnees, connecte, terminees, apercu = null }: Props) {
+export function ContenuLecon({ donnees, connecte, terminees, apercu = null, moi = null }: Props) {
   const { fiche, lecon, note, notesDisponibles } = donnees;
   const ouverte = lecon.accessible;
   const ou = situation(fiche.modules, lecon.id);
@@ -99,6 +103,10 @@ export function ContenuLecon({ donnees, connecte, terminees, apercu = null }: Pr
           <DansCetteLecon resume={lecon.resume} pointsCles={lecon.pointsCles} />
         </div>
       </div>
+      {/* Les discussions, sous le contenu et visibles sans clic (refonte des formations, §1.6). */}
+      {ouverte && donnees.discussion && moi && (
+        <DiscussionsLecon key={lecon.id} leconId={lecon.id} slug={fiche.slug} initial={donnees.discussion} moi={moi} maintenant={new Date()} />
+      )}
     </div>
   );
 }

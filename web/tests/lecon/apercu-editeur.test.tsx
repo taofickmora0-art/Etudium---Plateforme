@@ -58,6 +58,15 @@ describe("La page leçon", () => {
     expect(screen.queryByText(/Temps réellement regardé/)).toBeNull();
   });
 
+  it("les discussions sous le contenu quand la base les donne ; sinon, pas de section (étape B)", () => {
+    const moi = { compteId: "moi", prenom: "Koffi", nom: "Dossou", initiales: "KD", photoUrl: null };
+    const { unmount } = render(<ContenuLecon donnees={{ ...donnees(), discussion: { total: 0, reponses: [] } }} connecte terminees={new Set()} moi={moi} />);
+    expect(screen.getByRole("region", { name: "Discussions de la leçon" })).toBeInTheDocument();
+    unmount();
+    render(<ContenuLecon donnees={{ ...donnees(), discussion: null }} connecte terminees={new Set()} moi={moi} />);
+    expect(screen.queryByRole("region", { name: "Discussions de la leçon" })).toBeNull();
+  });
+
   it("aperçu d'une leçon en brouillon : le bandeau le dit", () => {
     render(<ContenuLecon donnees={donnees()} connecte terminees={new Set()} apercu="lecon" />);
     expect(within(screen.getByRole("status", { name: "Aperçu : pas encore visible des étudiants" })).getByText("Cette leçon est en brouillon.")).toBeInTheDocument();

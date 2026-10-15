@@ -105,8 +105,12 @@ export async function getLeconDans(fiche: FicheFormation, leconId: string, conne
 
   const lecon = versLecon(ligne);
   if (!connecte) return { fiche, lecon, note: null, notesDisponibles: true };
-  const [notes, visionnage] = await Promise.all([lireNote(leconId), lecon.accessible ? lireVisionnage(leconId) : null]);
-  return { fiche, lecon: { ...lecon, visionnage }, ...notes };
+  const [notes, visionnage, discussion] = await Promise.all([
+    lireNote(leconId),
+    lecon.accessible ? lireVisionnage(leconId) : null,
+    lecon.accessible ? lireDiscussion(leconId) : null,
+  ]);
+  return { fiche, lecon: { ...lecon, visionnage }, ...notes, discussion };
 }
 
 /**

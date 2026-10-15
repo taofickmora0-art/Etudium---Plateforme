@@ -1,3 +1,4 @@
+import type { Reponse } from "@/lib/communaute/types";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import type { Intervalle } from "@/lib/video/suivi";
 
@@ -41,4 +42,6 @@ export type DonneesLecon = {
   note: string | null;
   /** Faux tant que la table des notes (migration 0006) n'est pas dans la base. */
   notesDisponibles: boolean;
+  /** Les discussions de la leçon (0028) : la première page ; null sans accès, commentaires fermés ou avant la 0028. */
+  discussion?: { total: number; reponses: Reponse[] } | null;
 };

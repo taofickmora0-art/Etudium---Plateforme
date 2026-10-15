@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
+import { moiCommunaute } from "@/components/communaute/ContenuCommunaute";
 import { CadreLecon } from "@/components/lecon/CadreLecon";
 import { EtatLeconProvider } from "@/components/lecon/EtatLecon";
 import { ContenuLecon } from "@/components/lecon/ContenuLecon";
@@ -43,6 +44,7 @@ async function Lecon({ params }: Params) {
   let apercuFormation = false;
   let donnees: DonneesLecon | null;
   let lignes: Awaited<ReturnType<typeof lireProgression>>;
+  let moi: Awaited<ReturnType<typeof moiCommunaute>> | null = null;
   try {
     // Une formation non publiée ne s'ouvre qu'en aperçu, pour l'équipe et son formateur (refonte des formations, §3.5).
     fiche = await getFiche(slug);
@@ -51,6 +53,7 @@ async function Lecon({ params }: Params) {
       apercuFormation = fiche !== null;
     }
     [donnees, lignes] = fiche ? await Promise.all([getLeconDans(fiche, leconId, connecte), connecte ? lireProgression() : null]) : [null, null];
+    moi = connecte && donnees?.discussion ? await moiCommunaute() : null;
   } catch (erreur) {
     return siTablesAbsentes(erreur);
   }
@@ -74,7 +77,7 @@ async function Lecon({ params }: Params) {
         programme={<ProgrammeLecon fiche={donnees.fiche} leconId={leconId} connecte={connecte} terminees={terminees} />}
         barre={precedente || suivante || actif ? <BarreLecon fiche={donnees.fiche} leconId={leconId} /> : undefined}
       >
-        <ContenuLecon donnees={donnees} connecte={connecte} terminees={terminees} apercu={apercu} />
+        <ContenuLecon donnees={donnees} connecte={connecte} terminees={terminees} apercu={apercu} moi={moi} />
       </CadreLecon>
     </EtatLeconProvider>
   );

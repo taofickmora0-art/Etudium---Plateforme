@@ -21,10 +21,13 @@ export function FenetreSignalement({
   cible,
   open,
   onOpenChange,
+  envoi,
 }: {
   cible: { publicationId: string } | { reponseId: string };
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Un autre envoi que celui de la communauté (un commentaire de leçon, 0028). */
+  envoi?: (motif: MotifSignalement, precisions: string) => Promise<{ ok: true } | { ok: false; message: string }>;
 }) {
   const { toast } = useToast();
   const [motif, setMotif] = useState<MotifSignalement>("inapproprie");
@@ -44,7 +47,9 @@ export function FenetreSignalement({
 
   async function envoyer() {
     const refus = refusSignalement(motif, precisions);
-    const reponse = refus ? { ok: false as const, message: refus } : await signaler(cible, motif, precisions).catch(() => ({ ok: false as const, message: ECHEC }));
+    const reponse = refus
+      ? { ok: false as const, message: refus }
+      : await (envoi ? envoi(motif, precisions) : signaler(cible, motif, precisions)).catch(() => ({ ok: false as const, message: ECHEC }));
     if (!reponse.ok) {
       setErreur(reponse.message);
       // La fenêtre reste ouverte et affiche le message.

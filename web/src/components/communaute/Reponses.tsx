@@ -3,6 +3,7 @@
 import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import { Cancel01Icon, Delete02Icon, Flag02Icon, FavouriteIcon, Link01Icon, MoreHorizontalIcon, PencilEdit02Icon, SentIcon } from "@hugeicons/core-free-icons";
 import { Avatar } from "@/components/ui/Avatar";
+import { Tag } from "@/components/ui/Tag";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Icon } from "@/components/ui/Icon";
@@ -14,11 +15,39 @@ import { aimerReponse, chargerReponses, modifierReponse, repondre, supprimerRepo
 import { cn } from "@/lib/cn";
 import { moment, refusReponse, REPONSE_MAX } from "@/lib/communaute/regles";
 import type { MoiCommunaute, Reponse } from "@/lib/communaute/types";
+import type { MotifSignalement } from "@/lib/moderation/types";
 import { FenetreSignalement } from "./FenetreSignalement";
 import { initiales, lienPublication, tonAvatar } from "./outils";
 import { TexteAvecLiens } from "./TexteAvecLiens";
 
 export type EtatReponses = { reponses: Reponse[]; total: number; completes: boolean };
+
+type Refus = { ok: false; message: string };
+/**
+ * Ce que font les commentaires : ceux d'une publication (par défaut), ou ceux d'une leçon (discussions, 0028), avec les
+ * mêmes réponses.
+ */
+export type ActionsReponses = {
+  charger: () => Promise<{ ok: true; reponses: Reponse[] } | Refus>;
+  repondre: (texte: string, parentId: string | null) => Promise<{ ok: true; reponse: Reponse } | Refus>;
+  modifier: (id: string, texte: string) => Promise<{ ok: boolean; message?: string }>;
+  aimer: (id: string) => Promise<{ ok: true; jAime: boolean; reactions: number } | Refus>;
+  supprimer: (id: string) => Promise<{ ok: true; supprimes: number } | Refus>;
+  /** Absent : le signalement de la communauté. */
+  signaler?: (id: string, motif: MotifSignalement, precisions: string) => Promise<{ ok: true } | Refus>;
+  /** L'adresse d'un commentaire, pour « Copier le lien ». */
+  lien: (id: string) => string;
+};
+
+/** Les commentaires d'une publication de la communauté. */
+const actionsPublication = (publicationId: string): ActionsReponses => ({
+  charger: () => chargerReponses(publicationId),
+  repondre: (texte, parentId) => (parentId ? repondre(publicationId, texte, parentId) : repondre(publicationId, texte)),
+  modifier: (id, texte) => modifierReponse(id, texte),
+  aimer: (id) => aimerReponse(id),
+  supprimer: (id) => supprimerReponse(id),
+  lien: (id) => `${lienPublication(publicationId)}#commentaire-${id}`,
+});
 
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 const ACTION = "focus-etudium inline-flex items-center gap-1 rounded-sm p-0 text-xs leading-[18px] font-medium text-discret transition-colors hover:text-encre disabled:opacity-50";
@@ -37,14 +66,19 @@ function initialesReponse(nomCourt: string) {
  * le nombre. (La base les appelle encore « réponses ».)
  */
 export function Reponses({
-  publicationId,
+  publicationId = "",
+  actions,
   etat,
   onChange,
   moi,
   maintenant,
   idChamp,
+  champ = { etiquette: "Écrire un commentaire", indication: "Écrire un commentaire…", envoyer: "Envoyer le commentaire" },
 }: {
-  publicationId: string;
+  /** Les commentaires d'une publication… */
+  publicationId?: string;
+  /** …ou d'autre chose (une leçon) : ses actions. */
+  actions?: ActionsReponses;
   etat: EtatReponses;
   /** Toujours une mise à jour fonctionnelle : plusieurs envois et suppressions peuvent se croiser. */
   onChange: Dispatch<SetStateAction<EtatReponses>>;
@@ -52,8 +86,11 @@ export function Reponses({
   maintenant: Date;
   /** L'identifiant du champ, que le bouton « Commenter » de la carte rejoint. */
   idChamp?: string;
+  /** Les libellés du champ du bas (« Rédiger un commentaire » sous une leçon). */
+  champ?: { etiquette: string; indication: string; envoyer: string };
 }) {
   const { toast } = useToast();
+  const a = actions ?? actionsPublication(publicationId);
   const [texte, setTexte] = useState("");
   const [envoi, setEnvoi] = useState(false);
   const [chargement, setChargement] = useState(false);
@@ -81,7 +118,7 @@ export function Reponses({
 
   async function toutVoir() {
     setChargement(true);
-    const lu = await chargerReponses(publicationId).catch(() => ({ ok: false as const, message: ECHEC }));
+    const lu = await a.charger().catch(() => ({ ok: false as const, message: ECHEC }));
     setChargement(false);
     if (!lu.ok) {
       setErreur(lu.message);
@@ -105,7 +142,7 @@ export function Reponses({
       return;
     }
     setEnvoi(true);
-    const envoye = await repondre(publicationId, texte.trim()).catch(() => ({ ok: false as const, message: ECHEC }));
+    const envoye = await a.repondre(texte.trim(), null).catch(() => ({ ok: false as const, message: ECHEC }));
     setEnvoi(false);
     if (!envoye.ok) {
       setErreur(envoye.message);
@@ -125,7 +162,7 @@ export function Reponses({
       return;
     }
     setEnvoiReponse(true);
-    const envoye = await repondre(publicationId, reponse.texte.trim(), reponse.parentId).catch(() => ({ ok: false as const, message: ECHEC }));
+    const envoye = await a.repondre(reponse.texte.trim(), reponse.parentId).catch(() => ({ ok: false as const, message: ECHEC }));
     setEnvoiReponse(false);
     if (!envoye.ok) {
       setErreur(envoye.message);
@@ -138,7 +175,7 @@ export function Reponses({
 
   async function aimer(r: Reponse) {
     occuper(r.id, true);
-    const resultat = await aimerReponse(r.id).catch(() => ({ ok: false as const, message: ECHEC }));
+    const resultat = await a.aimer(r.id).catch(() => ({ ok: false as const, message: ECHEC }));
     occuper(r.id, false);
     if (!resultat.ok) {
       setErreur(resultat.message);
@@ -162,7 +199,7 @@ export function Reponses({
       return;
     }
     setSauvegarde(true);
-    const resultat = await modifierReponse(edition.id, edition.texte.trim()).catch(() => ({ ok: false as const, message: ECHEC }));
+    const resultat = await a.modifier(edition.id, edition.texte.trim()).catch(() => ({ ok: false as const, message: ECHEC }));
     setSauvegarde(false);
     if (!resultat.ok) {
       setErreur(resultat.message ?? ECHEC);
@@ -176,7 +213,7 @@ export function Reponses({
   async function supprimer(r: Reponse) {
     if (occupes.includes(r.id)) return;
     occuper(r.id, true);
-    const resultat = await supprimerReponse(r.id).catch(() => ({ ok: false as const, message: ECHEC }));
+    const resultat = await a.supprimer(r.id).catch(() => ({ ok: false as const, message: ECHEC }));
     occuper(r.id, false);
     if (!resultat.ok) {
       setErreur(resultat.message ?? ECHEC);
@@ -195,7 +232,7 @@ export function Reponses({
 
   async function copier(r: Reponse) {
     try {
-      await navigator.clipboard.writeText(`${lienPublication(publicationId)}#commentaire-${r.id}`);
+      await navigator.clipboard.writeText(a.lien(r.id));
       toast({ tone: "reussite", title: "Lien copié" });
     } catch {
       toast({ tone: "erreur", title: "Le lien n’a pas pu être copié." });
@@ -244,6 +281,7 @@ export function Reponses({
             <div className="min-w-0 self-start rounded-[14px] bg-page px-3 py-2.5">
               <div className="flex flex-wrap items-baseline gap-x-1.5">
                 <span className="text-sm leading-5 font-semibold text-encre max-sm:text-[13px]">{nom}</span>
+                {r.formateur && <Tag tone="complementaire">Formateur</Tag>}
                 <span className="text-xs leading-[18px] text-discret">
                   {moment(r.creeLe, maintenant)}
                   {r.modifie && " · modifié"}
@@ -334,14 +372,14 @@ export function Reponses({
         <Avatar initials={moi.initiales} src={moi.photoUrl} size={32} className="max-sm:size-7 max-sm:text-[11px]" />
         <TextInput
           id={idChamp}
-          aria-label="Écrire un commentaire"
-          placeholder="Écrire un commentaire…"
+          aria-label={champ.etiquette}
+          placeholder={champ.indication}
           value={texte}
           maxLength={REPONSE_MAX}
           onChange={(e) => setTexte(e.target.value)}
           className={CHAMP}
         />
-        <IconButton type="submit" icon={SentIcon} label="Envoyer le commentaire" variant="discret" disabled={envoi} aria-busy={envoi || undefined} />
+        <IconButton type="submit" icon={SentIcon} label={champ.envoyer} variant="discret" disabled={envoi} aria-busy={envoi || undefined} />
       </form>
       <ConfirmDialog
         open={aSupprimer !== null}
@@ -355,7 +393,15 @@ export function Reponses({
           if (aSupprimer) void supprimer(aSupprimer);
         }}
       />
-      {aSignaler && <FenetreSignalement key={aSignaler} cible={{ reponseId: aSignaler }} open onOpenChange={(ouvert) => !ouvert && setASignaler(null)} />}
+      {aSignaler && (
+        <FenetreSignalement
+          key={aSignaler}
+          cible={{ reponseId: aSignaler }}
+          open
+          onOpenChange={(ouvert) => !ouvert && setASignaler(null)}
+          envoi={a.signaler ? (motif, precisions) => a.signaler!(aSignaler, motif, precisions) : undefined}
+        />
+      )}
     </div>
   );
 }
