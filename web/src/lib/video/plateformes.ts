@@ -6,7 +6,16 @@
 export type Fournisseur = "youtube" | "vimeo" | "tiktok" | "tella" | "loom" | "screenpal" | "drive";
 export type Video = { fournisseur: Fournisseur; id: string };
 
-type Plateforme = { nom: string; mesuree: boolean; verticale?: boolean; format: RegExp; lien: (id: string) => string; integration: (id: string) => string };
+type Plateforme = {
+  nom: string;
+  mesuree: boolean;
+  /** Lecteur piloté par messages, pas encore éprouvé : s'il ne répond pas, la leçon se termine d'un clic (0030). */
+  secours?: boolean;
+  verticale?: boolean;
+  format: RegExp;
+  lien: (id: string) => string;
+  integration: (id: string) => string;
+};
 
 const PLATEFORMES: Record<Fournisseur, Plateforme> = {
   youtube: {
@@ -30,6 +39,7 @@ const PLATEFORMES: Record<Fournisseur, Plateforme> = {
   tiktok: {
     nom: "TikTok",
     mesuree: true,
+    secours: true,
     verticale: true,
     format: /^\d{15,21}$/,
     lien: (id) => `https://www.tiktok.com/player/v1/${id}`,
@@ -38,6 +48,7 @@ const PLATEFORMES: Record<Fournisseur, Plateforme> = {
   tella: {
     nom: "Tella",
     mesuree: true,
+    secours: true,
     format: /^[A-Za-z0-9-]{4,120}$/,
     lien: (id) => `https://www.tella.tv/video/${id}`,
     integration: (id) => `https://www.tella.tv/video/${id}/embed`,
@@ -69,6 +80,8 @@ export const FOURNISSEURS = Object.keys(PLATEFORMES) as Fournisseur[];
 export const estFournisseur = (valeur: unknown): valeur is Fournisseur => typeof valeur === "string" && valeur in PLATEFORMES;
 /** Le lecteur de la plateforme donne la position et la durée : temps regardé, seuil, durée lue dans l'éditeur. */
 export const estMesuree = (f: Fournisseur) => PLATEFORMES[f].mesuree;
+/** Si le lecteur ne répond pas, la leçon se termine d'un clic (TikTok, Tella) : jamais d'impasse. */
+export const aSecoursManuel = (f: Fournisseur) => Boolean(PLATEFORMES[f].secours);
 /** Une vidéo verticale (9:16), comme sur TikTok. */
 export const estVertical = (f: Fournisseur) => Boolean(PLATEFORMES[f].verticale);
 export const nomPlateforme = (f: Fournisseur) => PLATEFORMES[f].nom;

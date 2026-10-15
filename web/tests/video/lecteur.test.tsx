@@ -218,6 +218,61 @@ describe("Lecteur aux couleurs d'Étudium", () => {
     expect(screen.queryByText(/Prévenez le formateur/)).toBeNull();
   });
 
+  it("TikTok ou Tella : si leur lecteur ne répond pas, « Terminer la leçon » se débloque (jamais d'impasse, revue)", async () => {
+    const creer = vi.fn(async () => {
+      throw new Error("lecteur muet");
+    });
+    const { BoutonFin } = await import("@/components/lecon/BoutonFin");
+    render(
+      <ToastProvider>
+        <EtatLeconProvider termineeInitiale={false} avecVideo seuil={90} actif>
+          <LecteurEtudium
+            video={{ fournisseur: "tiktok", id: "7234567890123456789" }}
+            titre="Découvrir l’interface"
+            legende="Module 1"
+            leconId={id(1)}
+            suivre
+            passagesInitiaux={[]}
+            reference={61}
+            seuil={90}
+            termineeInitiale={false}
+            creer={creer as never}
+          />
+          <BoutonFin leconId={id(1)} variante="ordinateur" />
+        </EtatLeconProvider>
+      </ToastProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByText("Le temps regardé ne peut pas être mesuré avec ce lecteur : terminez la leçon avec « Terminer la leçon ».")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Terminer la leçon" })).toBeEnabled();
+  });
+
+  it("la dernière seconde compte : à la fin de la vidéo, le passage jusqu'au bout est envoyé (seuil à 100 %, revue)", async () => {
+    const f = fauxLecteur({ durees: [61] });
+    await monter({ creer: f.creer, reference: 61, seuil: 100 });
+    fireEvent.click(screen.getByRole("button", { name: "Lire la vidéo" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    f.etat.position = 59.6;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    f.etat.position = 60.4;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+    });
+    await act(async () => {
+      f.evenements().etat(false);
+      f.evenements().fin();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    const envoyes = reponses.filter((r) => r.action === "enregistrer").flatMap((r) => r.corps.passages as [number, number][]);
+    expect(Math.max(...envoyes.map(([, fin]) => fin))).toBe(61);
+  });
+
   it("une plateforme à vitesse fixe (TikTok, Tella) : pas de bouton de vitesse", async () => {
     const f = fauxLecteur();
     f.adaptateur.vitesseFixe = true;

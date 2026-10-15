@@ -35,7 +35,8 @@ describe("Le lecteur TikTok", () => {
     recevoir(TIKTOK, cadre.contentWindow, msg("onStateChange", 1));
     expect(ev.etat).toHaveBeenLastCalledWith(true);
     recevoir(TIKTOK, cadre.contentWindow, msg("onCurrentTime", { currentTime: 12.5, duration: 61.2 }));
-    expect(await a.position()).toBe(12.5);
+    // Pendant la lecture, la position avance avec le temps écoulé depuis le message.
+    expect(await a.position()).toBeCloseTo(12.5, 1);
     expect(await a.duree()).toBe(61.2);
     recevoir(TIKTOK, cadre.contentWindow, msg("onStateChange", 2));
     expect(ev.etat).toHaveBeenLastCalledWith(false);
@@ -115,6 +116,49 @@ describe("Le lecteur Tella", () => {
     recevoir("https://evil.example", iframe(c).contentWindow, { type: "ready" });
     await attendre();
     expect(ev.pret).not.toHaveBeenCalled();
+  });
+});
+
+describe("Revue : erreurs et cadence des messages", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("TikTok : une erreur du lecteur avant « prêt » (vidéo supprimée, privée) fait échouer la création", async () => {
+    const c = conteneur();
+    const promesse = creerAdaptateur({ fournisseur: "tiktok", id: "7234567890123456789" }, c, evenements());
+    recevoir("https://www.tiktok.com", iframe(c).contentWindow, { "x-tiktok-player": true, type: "onPlayerError", value: 1001 });
+    await expect(promesse).rejects.toThrow();
+    expect(c.querySelector("iframe")).toBeNull();
+  });
+
+  it("entre deux messages, la position avance avec le temps pendant la lecture (TikTok et Tella), jamais au-delà de la durée", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const c = conteneur();
+    const promesse = creerAdaptateur({ fournisseur: "tiktok", id: "7234567890123456789" }, c, evenements());
+    const cadre = iframe(c);
+    const tt = (type: string, value?: unknown) => recevoir("https://www.tiktok.com", cadre.contentWindow, { "x-tiktok-player": true, type, value });
+    tt("onPlayerReady");
+    const a = await promesse;
+    tt("onStateChange", 1);
+    tt("onCurrentTime", { currentTime: 10, duration: 11 });
+    vi.advanceTimersByTime(600);
+    expect(await a.position()).toBeCloseTo(10.6, 5);
+    vi.advanceTimersByTime(5000);
+    expect(await a.position()).toBe(11);
+    tt("onStateChange", 2);
+    tt("onCurrentTime", { currentTime: 10.8, duration: 11 });
+    vi.advanceTimersByTime(3000);
+    expect(await a.position()).toBe(10.8);
+
+    const c2 = conteneur();
+    const p2 = creerAdaptateur({ fournisseur: "tella", id: "mon-cours-excel-a1b2" }, c2, evenements());
+    const cadre2 = iframe(c2);
+    recevoir("https://www.tella.tv", cadre2.contentWindow, { type: "ready" });
+    const b = await p2;
+    recevoir("https://www.tella.tv", cadre2.contentWindow, { type: "playbackState", state: "playing", currentTime: 4, duration: 120 });
+    vi.advanceTimersByTime(2000);
+    expect(await b.position()).toBeCloseTo(6, 5);
   });
 });
 

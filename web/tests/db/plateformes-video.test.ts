@@ -63,7 +63,7 @@ describe("Migration 0030 : les vidéos sur d'autres plateformes", () => {
     }
   });
 
-  it("une vidéo sans mesure (Drive, Loom, ScreenPal) se termine d'un clic ; une vidéo mesurée (TikTok), non", async () => {
+  it("une vidéo sans mesure (Drive, Loom, ScreenPal) se termine d'un clic ; YouTube et Vimeo, non ; TikTok et Tella aussi, en secours quand leur lecteur ne répond pas (revue)", async () => {
     for (const [fournisseur, id] of [
       ["drive", "1AbCdEfGhIjKlMnOpQrStUvWxYz012345"],
       ["loom", "0123456789abcdef0123456789abcdef"],
@@ -74,8 +74,11 @@ describe("Migration 0030 : les vidéos sur d'autres plateformes", () => {
       expect((await un<{ fin: string | null }>("select terminee_le as fin from public.progression_lecons where profil_id = $1 and lecon_id = $2", [E, l])).fin).not.toBeNull();
       await expect(banc.en({ id: E }, "select public.commencer_visionnage($1)", [l])).rejects.toThrow("Le temps regardé ne se mesure pas sur cette plateforme.");
     }
+    const youtube = await lecon("youtube", "dQw4w9WgXcQ");
+    await expect(banc.en({ id: E }, "select public.terminer_lecon($1)", [youtube])).rejects.toThrow("Une leçon vidéo se termine en la regardant.");
+    const tella = await lecon("tella", "mon-cours-excel-a1b2");
+    await banc.en({ id: E }, "select public.terminer_lecon($1)", [tella]);
     const tiktok = await lecon("tiktok", "7234567890123456789");
-    await expect(banc.en({ id: E }, "select public.terminer_lecon($1)", [tiktok])).rejects.toThrow("Une leçon vidéo se termine en la regardant.");
     await banc.en({ id: E }, "select public.commencer_visionnage($1)", [tiktok]);
     // 10 s écoulées depuis le début du visionnage : 5 s regardées sont plausibles.
     await banc.db.query("update public.progression_lecons set dernier_envoi = now() - interval '10 seconds' where profil_id = $1 and lecon_id = $2", [E, tiktok]);

@@ -34,19 +34,34 @@ export function SondeDureeVideo({ video, onDuree, onEchec }: { video: VideoLecon
         if (annule) return a.detruire();
         adaptateur = a;
         let essais = 0;
+        const fermer = () => {
+          a.detruire();
+          adaptateur = null;
+        };
+        const abandon = () => {
+          fermer();
+          abandonner.current?.();
+        };
         const lire = () => {
           void a
             .duree()
             .then((d) => {
               if (annule) return;
               if (d > 0) {
-                signaler.current(Math.round(d));
-                a.detruire();
-                adaptateur = null;
-              } else if (++essais < ESSAIS) minuteur = window.setTimeout(lire, 1000);
-              else abandonner.current?.();
+                // Vers le bas : une durée de leçon plus longue que la vidéo rendrait le seuil de 100 % impossible.
+                signaler.current(Math.floor(d));
+                fermer();
+                return;
+              }
+              // TikTok, Tella : la durée n'arrive qu'en lecture ; on lance la vidéo, sans le son.
+              if (essais === 0) {
+                a.setMuet(true);
+                a.lire();
+              }
+              if (++essais < ESSAIS) minuteur = window.setTimeout(lire, 1000);
+              else abandon();
             })
-            .catch(() => !annule && abandonner.current?.());
+            .catch(() => !annule && abandon());
         };
         lire();
       })
@@ -58,5 +73,6 @@ export function SondeDureeVideo({ video, onDuree, onEchec }: { video: VideoLecon
     };
   }, [fournisseur, id]);
 
-  return <div ref={conteneur} aria-hidden="true" className="pointer-events-none fixed top-0 -left-[9999px] h-[180px] w-[320px] overflow-hidden opacity-0" />;
+  // « inert » : le lecteur caché ne prend jamais le focus du clavier.
+  return <div ref={conteneur} inert aria-hidden="true" className="pointer-events-none fixed top-0 -left-[9999px] h-[180px] w-[320px] overflow-hidden opacity-0" />;
 }

@@ -18,6 +18,7 @@ import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
 import { dureeLecon, formatVideo } from "@/lib/lecon/regles";
 import type { VideoLecon } from "@/lib/lecon/types";
+import { aSecoursManuel } from "@/lib/video/plateformes";
 import { creerAdaptateur, type Adaptateur, type Evenements } from "@/lib/video/adaptateurs";
 import { ajouter, fusionner, observer, pourcentageVu, type EtatSuivi, type Intervalle } from "@/lib/video/suivi";
 import { useEtatLecon } from "./EtatLecon";
@@ -114,6 +115,7 @@ export function LecteurEtudium({
   // Le bouton de fin (page leçon) apprend ainsi que la leçon est validée.
   const etatLecon = useEtatLecon();
   const marquerRef = useRef(etatLecon?.marquerTerminee);
+  const marquerSansMesureRef = useRef(etatLecon?.mesureImpossible);
   const enLectureRef = useRef(false);
   const vitesseRef = useRef(1);
   const dureeRef = useRef(reference);
@@ -215,6 +217,7 @@ export function LecteurEtudium({
     commencerRef.current = commencer;
     titreRef.current = titre;
     marquerRef.current = etatLecon?.marquerTerminee;
+    marquerSansMesureRef.current = etatLecon?.mesureImpossible;
   }, [envoyer, commencer, titre, etatLecon]);
 
   /** Une durée lue sur le lecteur officiel : la vraie durée de la vidéo, affichée dans la barre. */
@@ -266,7 +269,15 @@ export function LecteurEtudium({
           }
         } else void envoyerRef.current();
       },
-      fin: () => void envoyerRef.current(),
+      fin: () => {
+        // La dernière seconde compte : la dernière observation précède la fin d'au plus une seconde (seuil à 100 %).
+        const bout = dureeLueRef.current || dureeRef.current;
+        if (bout > 0) {
+          const avant = suivi.current;
+          suivi.current = observer(avant, { position: bout, instant: Date.now(), vitesse: vitesseRef.current, enLecture: true });
+        }
+        void envoyerRef.current();
+      },
     };
     creer({ fournisseur, id }, conteneur.current!, evenements)
       .then((a) => {
@@ -305,7 +316,10 @@ export function LecteurEtudium({
           .catch(() => undefined);
       })
       .catch(() => {
-        if (!annule) setEchec(true);
+        if (annule) return;
+        setEchec(true);
+        // TikTok, Tella : sans leur lecteur, la leçon se termine d'un clic plutôt que de rester impossible.
+        if (aSecoursManuel(fournisseur)) marquerSansMesureRef.current?.();
       });
     return () => {
       annule = true;
@@ -422,7 +436,11 @@ export function LecteurEtudium({
       <div className="flex min-w-0 flex-col gap-2.5">
         <LecteurVideo video={video} titre={titre} />
         {suivre && (
-          <p className="m-0 text-xs leading-[18px] text-discret">Le temps regardé ne peut pas être mesuré avec ce lecteur. Rechargez la page pour réessayer.</p>
+          <p className="m-0 text-xs leading-[18px] text-discret">
+            {aSecoursManuel(video.fournisseur)
+              ? "Le temps regardé ne peut pas être mesuré avec ce lecteur : terminez la leçon avec « Terminer la leçon »."
+              : "Le temps regardé ne peut pas être mesuré avec ce lecteur. Rechargez la page pour réessayer."}
+          </p>
         )}
       </div>
     );

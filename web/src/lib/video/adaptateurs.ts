@@ -218,6 +218,40 @@ function lireMessage(data: unknown): Message | null {
 const nombre = (valeur: unknown) => (typeof valeur === "number" && Number.isFinite(valeur) ? valeur : null);
 
 /**
+ * La position d'un lecteur par messages : la dernière reçue, avancée du temps écoulé pendant la lecture (une
+ * plateforme peut n'envoyer sa position que toutes les quelques secondes), jamais au-delà de la durée.
+ */
+function horloge() {
+  let position = 0;
+  let instant = Date.now();
+  let enLecture = false;
+  let duree = 0;
+  return {
+    recue(p: number | null, d: number | null) {
+      if (p !== null) {
+        position = p;
+        instant = Date.now();
+      }
+      if (d !== null) duree = d;
+    },
+    lecture(oui: boolean) {
+      position = this.position();
+      instant = Date.now();
+      enLecture = oui;
+    },
+    aller(s: number) {
+      position = s;
+      instant = Date.now();
+    },
+    position() {
+      const p = enLecture ? position + (Date.now() - instant) / 1000 : position;
+      return duree > 0 ? Math.min(p, duree) : p;
+    },
+    duree: () => duree,
+  };
+}
+
+/**
  * L'iframe officielle et l'écoute de ses messages : seuls ceux de son origine et de sa fenêtre comptent. `pret`
  * (appelée par `traiter` au message « prêt ») résout l'adaptateur ; au-delà du délai, tout est retiré.
  */
@@ -225,7 +259,7 @@ function lecteurParMessages(
   cible: HTMLElement,
   adresse: string,
   origine: string,
-  traiter: (message: Message, pret: () => void) => void,
+  traiter: (message: Message, pret: () => void, echouer: () => void) => void,
   construire: (envoyer: (message: Message) => void, detruire: () => void) => Adaptateur,
 ): Promise<Adaptateur> {
   const iframe = document.createElement("iframe");
@@ -240,17 +274,26 @@ function lecteurParMessages(
   const envoyer = (message: Message) => iframe.contentWindow?.postMessage(message, origine);
   const adaptateur = construire(envoyer, detruire);
   return avantDelai(
-    new Promise<Adaptateur>((resoudre) => {
+    new Promise<Adaptateur>((resoudre, rejeter) => {
       let resolu = false;
       ecouter = (e: MessageEvent) => {
         if (e.origin !== origine || e.source !== iframe.contentWindow) return;
         const message = lireMessage(e.data);
         if (!message) return;
-        traiter(message, () => {
-          if (resolu) return;
-          resolu = true;
-          resoudre(adaptateur);
-        });
+        traiter(
+          message,
+          () => {
+            if (resolu) return;
+            resolu = true;
+            resoudre(adaptateur);
+          },
+          () => {
+            // Une erreur avant « prêt » (vidéo supprimée, privée) : la page montre le lecteur officiel et son message.
+            if (resolu) return;
+            resolu = true;
+            rejeter(new Error("Lecteur en erreur"));
+          },
+        );
       };
       window.addEventListener("message", ecouter);
     }),
@@ -264,29 +307,34 @@ function lecteurParMessages(
 function tiktok(id: string, cible: HTMLElement, ev: Evenements): Promise<Adaptateur> {
   const ORIGINE = "https://www.tiktok.com";
   const sansCommandes = "controls=0&progress_bar=0&play_button=0&volume_control=0&fullscreen_button=0&timestamp=0&rel=0&music_info=0&description=0&native_context_menu=0&closed_caption=0";
-  let position = 0;
-  let duree = 0;
+  const temps = horloge();
   return lecteurParMessages(
     cible,
     `${ORIGINE}/player/v1/${id}?${sansCommandes}`,
     ORIGINE,
-    (m, pret) => {
+    (m, pret, echouer) => {
       if (m["x-tiktok-player"] !== true) return;
       if (m.type === "onPlayerReady") {
         pret();
         ev.pret();
+      } else if (m.type === "onPlayerError") {
+        echouer();
       } else if (m.type === "onStateChange") {
         // 1 : lecture ; 2 : pause ; 0 : fin (-1 : départ, 3 : chargement).
-        if (m.value === 1) ev.etat(true);
-        else if (m.value === 2) ev.etat(false);
-        else if (m.value === 0) {
+        if (m.value === 1) {
+          temps.lecture(true);
+          ev.etat(true);
+        } else if (m.value === 2) {
+          temps.lecture(false);
+          ev.etat(false);
+        } else if (m.value === 0) {
+          temps.lecture(false);
           ev.etat(false);
           ev.fin();
         }
       } else if (m.type === "onCurrentTime") {
         const valeur = lireMessage(m.value);
-        position = nombre(valeur?.currentTime) ?? position;
-        duree = nombre(valeur?.duration) ?? duree;
+        temps.recue(nombre(valeur?.currentTime), nombre(valeur?.duration));
       }
     },
     (envoyer, detruire) => {
@@ -296,10 +344,10 @@ function tiktok(id: string, cible: HTMLElement, ev: Evenements): Promise<Adaptat
         pause: () => commande("pause"),
         aller: (s) => {
           commande("seekTo", s);
-          position = s;
+          temps.aller(s);
         },
-        position: async () => position,
-        duree: async () => duree,
+        position: async () => temps.position(),
+        duree: async () => temps.duree(),
         setMuet: (muet) => commande(muet ? "mute" : "unMute"),
         setVitesse: () => undefined,
         sousTitres: async () => false,
@@ -314,8 +362,7 @@ function tiktok(id: string, cible: HTMLElement, ev: Evenements): Promise<Adaptat
 /** Tella (lecteur intégré, messages « ready », « playbackState », « timeUpdate »). */
 function tella(id: string, cible: HTMLElement, ev: Evenements): Promise<Adaptateur> {
   const ORIGINE = "https://www.tella.tv";
-  let position = 0;
-  let duree = 0;
+  const temps = horloge();
   let enLecture = false;
   return lecteurParMessages(
     cible,
@@ -328,19 +375,20 @@ function tella(id: string, cible: HTMLElement, ev: Evenements): Promise<Adaptate
         return;
       }
       if (m.type !== "playbackState" && m.type !== "timeUpdate") return;
-      position = nombre(m.currentTime) ?? position;
-      duree = nombre(m.duration) ?? duree;
+      temps.recue(nombre(m.currentTime), nombre(m.duration));
       if (m.type !== "playbackState") return;
       if (m.state === "playing" && !enLecture) {
         enLecture = true;
+        temps.lecture(true);
         ev.etat(true);
       } else if (m.state !== "playing" && m.state !== "seeking" && m.state !== "stalled") {
         if (enLecture) {
           enLecture = false;
+          temps.lecture(false);
           ev.etat(false);
         }
         // « stopped » au bout de la vidéo : la fin (Tella n'a pas d'événement « ended »).
-        if (m.state === "stopped" && duree > 0 && position >= duree - 1) ev.fin();
+        if (m.state === "stopped" && temps.duree() > 0 && temps.position() >= temps.duree() - 1) ev.fin();
       }
     },
     (envoyer, detruire) => ({
@@ -348,10 +396,10 @@ function tella(id: string, cible: HTMLElement, ev: Evenements): Promise<Adaptate
       pause: () => envoyer({ type: "pause" }),
       aller: (s) => {
         envoyer({ type: "seek", time: s });
-        position = s;
+        temps.aller(s);
       },
-      position: async () => position,
-      duree: async () => duree,
+      position: async () => temps.position(),
+      duree: async () => temps.duree(),
       setMuet: (muet) => envoyer({ type: muet ? "mute" : "unmute" }),
       setVitesse: () => undefined,
       sousTitres: async () => false,

@@ -205,6 +205,23 @@ describe("L'éditeur de leçon", () => {
     expect(envoye().get("duree")).toBe("7:42");
   });
 
+  it("retoucher le lien de la même vidéo (?t=5) ne relance rien et garde l'avertissement (revue)", async () => {
+    const user = userEvent.setup();
+    afficher();
+    expect(await screen.findByText("La vidéo dure 7:42 ; la durée saisie est 12:40.")).toBeInTheDocument();
+    await user.click(screen.getByRole("textbox", { name: "Lien de la vidéo" }));
+    await user.keyboard("{End}?t=5");
+    expect(screen.getByText("La vidéo dure 7:42 ; la durée saisie est 12:40.")).toBeInTheDocument();
+    expect(screen.queryByText("Lecture de la durée de la vidéo…")).toBeNull();
+    expect(creerAdaptateur).toHaveBeenCalledTimes(1);
+  });
+
+  it("la durée n'a pas pu être lue : l'éditeur demande de la saisir à la main", async () => {
+    creerAdaptateur.mockRejectedValue(new Error("lecteur muet"));
+    afficher({ ...LECON, dureeSecondes: 0 });
+    expect(await screen.findByText("Durée non lue sur la vidéo : saisissez-la à la main.")).toBeInTheDocument();
+  });
+
   it("une leçon vidéo sans durée : celle de la vidéo est reprise toute seule", async () => {
     afficher({ ...LECON, dureeSecondes: 0 });
     await waitFor(() => expect(screen.getByRole("spinbutton", { name: "Minutes" })).toHaveValue(7));
@@ -217,13 +234,14 @@ describe("L'éditeur de leçon", () => {
     afficher({ ...LECON, video: null, dureeSecondes: 600 });
     creerAdaptateur.mockImplementation(async (_v: unknown, _c: HTMLElement, ev: { pret(): void }) => {
       queueMicrotask(() => ev.pret());
-      return { duree: async () => 128.6, detruire: vi.fn() };
+      return { duree: async () => 128.6, detruire: vi.fn(), setMuet: vi.fn(), lire: vi.fn() };
     });
     const champ = screen.getByRole("textbox", { name: "Lien de la vidéo" });
     await user.click(champ);
     await user.paste("https://www.youtube.com/watch?v=abcdefghijk");
     await waitFor(() => expect(screen.getByRole("spinbutton", { name: "Minutes" })).toHaveValue(2));
-    expect(screen.getByRole("spinbutton", { name: "Secondes" })).toHaveValue(9);
+    // Arrondie vers le bas : une durée de leçon plus longue que la vidéo rendrait le seuil de 100 % impossible.
+    expect(screen.getByRole("spinbutton", { name: "Secondes" })).toHaveValue(8);
     expect(screen.queryByText(/La vidéo dure/)).toBeNull();
     expect(screen.getByText("Durée lue sur la vidéo.")).toBeInTheDocument();
   });

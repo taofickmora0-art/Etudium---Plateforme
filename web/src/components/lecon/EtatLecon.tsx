@@ -10,6 +10,8 @@ type EtatLecon = {
   seuil: number;
   /** Compte connecté, leçon ouverte et progression disponible en base : le bouton de fin s'affiche. */
   actif: boolean;
+  /** Le lecteur TikTok ou Tella ne répond pas : la leçon se termine d'un clic (jamais d'impasse). */
+  mesureImpossible: () => void;
 };
 
 const Contexte = createContext<EtatLecon | null>(null);
@@ -32,7 +34,14 @@ export function EtatLeconProvider({
   children: ReactNode;
 }) {
   const [terminee, setTerminee] = useState(termineeInitiale);
-  return <Contexte value={{ terminee, marquerTerminee: () => setTerminee(true), avecVideo, seuil, actif }}>{children}</Contexte>;
+  const [sansMesure, setSansMesure] = useState(false);
+  return (
+    <Contexte
+      value={{ terminee, marquerTerminee: () => setTerminee(true), avecVideo: avecVideo && !sansMesure, seuil, actif, mesureImpossible: () => setSansMesure(true) }}
+    >
+      {children}
+    </Contexte>
+  );
 }
 
 /** L'état de la leçon, ou null hors d'une page leçon. */

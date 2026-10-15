@@ -675,6 +675,7 @@ La page d'une leçon prend une barre du haut et des discussions, le programme se
    - colle le lien complet d'une vidéo TikTok (`tiktok.com/@nom/video/123…`) ; un lien court (`vm.tiktok.com/…`) affiche « Lien court TikTok : ouvrez-le, puis copiez le lien complet » ;
    - la durée se lit toute seule ; enregistre, puis ouvre la leçon avec un compte étudiant : la vidéo TikTok s'affiche en vertical, avec les commandes Étudium ;
    - regarde-la jusqu'au bout : « Temps réellement regardé » monte, puis « Terminer la leçon » devient « Leçon suivante ».
-   - **Important :** dis-moi si une vidéo TikTok ou Tella reste sur « Le temps regardé ne peut pas être mesuré avec ce lecteur » : je n'ai pas pu essayer leurs lecteurs dans mon navigateur.
+   - **Important :** je n'ai pas pu essayer leurs lecteurs dans mon navigateur. Si le lecteur ne répond pas, la page dit « Le temps regardé ne peut pas être mesuré avec ce lecteur : terminez la leçon avec « Terminer la leçon » » et le bouton se débloque (une leçon ne reste jamais impossible à terminer). Dis-moi si tu vois ce message : il faudra ajuster le lecteur.
+   - Dans l'éditeur, la durée d'une vidéo TikTok ou Tella se lit en lançant la vidéo sans le son, en arrière-plan ; si elle n'arrive pas, « Durée non lue sur la vidéo : saisissez-la à la main ».
 4. **Loom, ScreenPal, Google Drive** (sans mesure) : colle le lien ; l'éditeur dit « la leçon se terminera d'un clic sur « Terminer la leçon » » et la durée devient facultative. Côté étudiant, le lecteur de la plateforme s'affiche, et « Terminer la leçon » marche tout de suite.
    - Google Drive : partage la vidéo avec « Tous les utilisateurs disposant du lien », sinon l'étudiant voit « Accès refusé ».

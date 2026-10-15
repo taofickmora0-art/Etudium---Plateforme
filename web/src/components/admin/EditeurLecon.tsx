@@ -236,10 +236,15 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
                 inputMode="url"
                 value={lien}
                 onChange={(evenement) => {
+                  const avant = parseVideoUrl(lien);
+                  const apres = parseVideoUrl(evenement.target.value);
                   setLien(evenement.target.value);
-                  setDureeVideo(null);
-                  setSondeMuette(false);
-                  lienChange.current = true;
+                  // Une autre vidéo (pas le même lien retouché, « ?t=5 ») : sa durée sera relue.
+                  if (apres?.fournisseur !== avant?.fournisseur || apres?.id !== avant?.id) {
+                    setDureeVideo(null);
+                    setSondeMuette(false);
+                    lienChange.current = true;
+                  }
                   changer();
                 }}
                 autoCapitalize="none"
@@ -320,7 +325,9 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
                   ? "Durée lue sur la vidéo."
                   : mesuree && dureeVideo === null && !sondeMuette
                     ? "Lecture de la durée de la vidéo…"
-                    : "Elle sert à mesurer le temps réellement regardé."}
+                    : mesuree && sondeMuette
+                      ? "Durée non lue sur la vidéo : saisissez-la à la main."
+                      : "Elle sert à mesurer le temps réellement regardé."}
             </p>
           </fieldset>
           <div className="flex flex-col gap-1">

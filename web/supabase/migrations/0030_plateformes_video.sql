@@ -157,10 +157,12 @@ begin
   if (select auth.uid()) is null or not public.acces_lecon(p_lecon) then
     raise exception 'Leçon inaccessible.' using errcode = '42501';
   end if;
-  -- Une vidéo mesurée se termine en la regardant (seuil) ; une vidéo sans mesure (Drive, Loom, ScreenPal), d'un clic.
+  -- YouTube et Vimeo se terminent en les regardant (seuil). Une vidéo sans mesure (Drive, Loom, ScreenPal) se
+  -- termine d'un clic ; TikTok et Tella aussi, en secours quand leur lecteur ne répond pas (leur protocole de
+  -- messages n'est pas encore éprouvé : une leçon ne doit jamais devenir impossible à terminer).
   if exists (
     select 1 from public.lecons_contenus c
-    where c.lecon_id = p_lecon and c.video_id is not null and public.video_mesuree(c.video_fournisseur)
+    where c.lecon_id = p_lecon and c.video_id is not null and c.video_fournisseur::text in ('youtube', 'vimeo')
   ) then
     raise exception 'Une leçon vidéo se termine en la regardant.' using errcode = '22023';
   end if;
