@@ -49,6 +49,13 @@ describe("Une vidéo d'une autre plateforme", () => {
     expect(container.querySelector('[class~="aspect-video"]')).toBeNull();
   });
 
+  it("sur ordinateur, la vidéo tient entière à l'écran sous la barre du haut : sa largeur suit la hauteur de l'écran (retour du 15 octobre)", () => {
+    const { container } = afficher(avec({ fournisseur: "youtube", id: "dQw4w9WgXcQ" }));
+    const cadre = container.querySelector('[class~="aspect-video"]')!;
+    expect(cadre.className).toContain("lg:w-[min(100%,calc((100dvh-330px)*16/9))]");
+    expect(cadre.className).toContain("mx-auto");
+  });
+
   it("le bouton de fin attend la vidéo seulement si elle est mesurée", () => {
     expect(videoMesuree(LECON)).toBe(false);
     expect(videoMesuree({ ...LECON, video: { fournisseur: "loom", id: "0123456789abcdef0123456789abcdef" } })).toBe(false);

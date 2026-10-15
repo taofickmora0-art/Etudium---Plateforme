@@ -56,7 +56,12 @@ export function urlIntegration(video: VideoLecon): string {
 export const videoMesuree = (lecon: { video: VideoLecon | null }) => lecon.video !== null && estMesuree(lecon.video.fournisseur);
 
 /** Le cadre de la vidéo : 16/9, ou vertical (TikTok) sans dépasser la hauteur de l'écran. */
-export const FORMAT_VIDEO = { paysage: "aspect-video w-full", vertical: "aspect-[9/16] mx-auto w-[min(100%,calc(80dvh*9/16))]" } as const;
+// Sur ordinateur, le panneau de la leçon défile seul sous l'en-tête et la barre du haut : la vidéo tient entière dans ce
+// qu'il reste de l'écran (environ 330 px pris au-dessus et en dessous), sa largeur suit donc la hauteur de l'écran.
+export const FORMAT_VIDEO = {
+  paysage: "aspect-video mx-auto w-full lg:w-[min(100%,calc((100dvh-330px)*16/9))]",
+  vertical: "aspect-[9/16] mx-auto w-[min(100%,calc(80dvh*9/16))] lg:w-[min(100%,calc((100dvh-330px)*9/16))]",
+} as const;
 export const formatVideo = (video: VideoLecon) => (estVertical(video.fournisseur) ? FORMAT_VIDEO.vertical : FORMAT_VIDEO.paysage);
 
 const deuxChiffres = (n: number) => String(n).padStart(2, "0");
