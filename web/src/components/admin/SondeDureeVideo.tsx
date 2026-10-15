@@ -11,14 +11,17 @@ const ESSAIS = 20;
  * Lit la vraie durée d'une vidéo dans l'éditeur de leçon, avec le lecteur officiel (YouTube, Vimeo), invisible et
  * détruit aussitôt la durée connue. Le temps regardé se mesure par rapport à la durée de la leçon : saisie à la main,
  * elle peut manquer ou dépasser la vidéo, et l'étudiant ne peut alors jamais atteindre le seuil. L'aperçu visible reste
- * le lecteur intégré, avec ses commandes. Un lecteur qui ne se charge pas (réseau, bloqueur) ne dit rien.
+ * le lecteur intégré, avec ses commandes. Un lecteur qui ne se charge pas (réseau, bloqueur) le signale (onEchec) : la
+ * durée reste alors à saisir à la main.
  */
-export function SondeDureeVideo({ video, onDuree }: { video: VideoLecon; onDuree: (secondes: number) => void }) {
+export function SondeDureeVideo({ video, onDuree, onEchec }: { video: VideoLecon; onDuree: (secondes: number) => void; onEchec?: () => void }) {
   const conteneur = useRef<HTMLDivElement>(null);
   const signaler = useRef(onDuree);
+  const abandonner = useRef(onEchec);
   useEffect(() => {
     signaler.current = onDuree;
-  }, [onDuree]);
+    abandonner.current = onEchec;
+  }, [onDuree, onEchec]);
 
   const { fournisseur, id } = video;
   useEffect(() => {
@@ -41,12 +44,13 @@ export function SondeDureeVideo({ video, onDuree }: { video: VideoLecon; onDuree
                 a.detruire();
                 adaptateur = null;
               } else if (++essais < ESSAIS) minuteur = window.setTimeout(lire, 1000);
+              else abandonner.current?.();
             })
-            .catch(rien);
+            .catch(() => !annule && abandonner.current?.());
         };
         lire();
       })
-      .catch(rien);
+      .catch(() => !annule && abandonner.current?.());
     return () => {
       annule = true;
       window.clearTimeout(minuteur);

@@ -212,6 +212,34 @@ describe("L'éditeur de leçon", () => {
     expect(screen.getByText("Durée lue sur la vidéo.")).toBeInTheDocument();
   });
 
+  it("coller un nouveau lien : la durée exacte de la vidéo remplace celle saisie (10 minutes tapées pour une vidéo de 2)", async () => {
+    const user = userEvent.setup();
+    afficher({ ...LECON, video: null, dureeSecondes: 600 });
+    creerAdaptateur.mockImplementation(async (_v: unknown, _c: HTMLElement, ev: { pret(): void }) => {
+      queueMicrotask(() => ev.pret());
+      return { duree: async () => 128.6, detruire: vi.fn() };
+    });
+    const champ = screen.getByRole("textbox", { name: "Lien de la vidéo" });
+    await user.click(champ);
+    await user.paste("https://www.youtube.com/watch?v=abcdefghijk");
+    await waitFor(() => expect(screen.getByRole("spinbutton", { name: "Minutes" })).toHaveValue(2));
+    expect(screen.getByRole("spinbutton", { name: "Secondes" })).toHaveValue(9);
+    expect(screen.queryByText(/La vidéo dure/)).toBeNull();
+    expect(screen.getByText("Durée lue sur la vidéo.")).toBeInTheDocument();
+  });
+
+  it("pendant la lecture de la durée, l'éditeur le dit ; si le lecteur ne répond pas, la saisie reste à la main", async () => {
+    let livrer: (d: number) => void = () => undefined;
+    creerAdaptateur.mockImplementation(async (_v: unknown, _c: HTMLElement, ev: { pret(): void }) => {
+      queueMicrotask(() => ev.pret());
+      return { duree: () => new Promise<number>((r) => (livrer = r)), detruire: vi.fn() };
+    });
+    afficher();
+    expect(await screen.findByText("Lecture de la durée de la vidéo…")).toBeInTheDocument();
+    livrer(760);
+    expect(await screen.findByText("Durée lue sur la vidéo.")).toBeInTheDocument();
+  });
+
   it("le lecteur officiel ne se charge pas : l'aperçu reste, sans message sur la durée", async () => {
     creerAdaptateur.mockRejectedValue(new Error("script bloqué"));
     afficher();

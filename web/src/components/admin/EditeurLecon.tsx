@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type FormEvent, type MouseEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -82,6 +82,10 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
   const [erreurDuree, setErreurDuree] = useState<string | null>(null);
   // La vraie durée, lue sur la vidéo par le lecteur officiel ; null tant qu'elle est inconnue.
   const [dureeVideo, setDureeVideo] = useState<number | null>(null);
+  // Le lecteur officiel n'a pas livré la durée (réseau, bloqueur) : la saisie reste à la main.
+  const [sondeMuette, setSondeMuette] = useState(false);
+  // Un lien collé ou tapé : la durée de cette vidéo remplacera celle saisie.
+  const lienChange = useRef(false);
   const video = parseVideoUrl(lien);
   // Envoyée au format « 12:40 » (une durée de plus d'une heure s'écrit « 75:00 »).
   const duree = `${Number(minutes) || 0}:${String(Number(secondes) || 0).padStart(2, "0")}`;
@@ -93,10 +97,12 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
     setSecondes(String(s % 60));
     changer();
   };
-  // Sans durée saisie, celle de la vidéo est reprise ; sinon un écart est signalé (« Utiliser 7:42 »).
+  // Un nouveau lien, ou rien de saisi : la durée exacte de la vidéo est reprise. Une leçon déjà enregistrée garde la
+  // sienne, et un écart est signalé (« Utiliser 7:42 ») : rien ne change sans qu'on le voie.
   const dureeLue = (s: number) => {
     setDureeVideo(s);
-    if (saisie === 0) reprendre(s);
+    if (saisie === 0 || lienChange.current) reprendre(s);
+    lienChange.current = false;
   };
   const dureeValide = ENTIER.test(minutes.trim()) && ENTIER.test(secondes.trim()) && (Number(secondes) || 0) < 60;
   // Une erreur dans « Dans cette leçon » : la section s'ouvre pour la montrer.
@@ -228,6 +234,8 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
                 onChange={(evenement) => {
                   setLien(evenement.target.value);
                   setDureeVideo(null);
+                  setSondeMuette(false);
+                  lienChange.current = true;
                   changer();
                 }}
                 autoCapitalize="none"
@@ -235,7 +243,7 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
               />
             </Field>
             {video && <LecteurVideo video={video} titre={lecon.titre} />}
-            {video && <SondeDureeVideo key={`${video.fournisseur}:${video.id}`} video={video} onDuree={dureeLue} />}
+            {video && <SondeDureeVideo key={`${video.fournisseur}:${video.id}`} video={video} onDuree={dureeLue} onEchec={() => setSondeMuette(true)} />}
           </div>
           <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0">
             <legend className="mb-1.5 p-0 text-sm leading-5 font-semibold text-encre">Durée de la vidéo</legend>
@@ -294,7 +302,11 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
               </div>
             )}
             <p className="m-0 text-xs leading-[18px] text-discret">
-              {dureeVideo !== null && !ecart ? "Durée lue sur la vidéo." : "Elle sert à mesurer le temps réellement regardé."}
+              {dureeVideo !== null && !ecart
+                ? "Durée lue sur la vidéo."
+                : video && dureeVideo === null && !sondeMuette
+                  ? "Lecture de la durée de la vidéo…"
+                  : "Elle sert à mesurer le temps réellement regardé."}
             </p>
           </fieldset>
           <div className="flex flex-col gap-1">
