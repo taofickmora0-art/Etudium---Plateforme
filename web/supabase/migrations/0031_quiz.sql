@@ -100,7 +100,9 @@ begin
 end;
 $$;
 
--- Remplace toutes les questions, après les avoir vérifiées (rien n'est remplacé si l'une est mal formée).
+-- Remplace les questions, après les avoir toutes vérifiées (rien ne change si l'une est mal formée). Une question
+-- envoyée avec son identifiant est mise à jour et le garde : une tentative commencée reste valable. L'éditeur donne
+-- aussi un identifiant aux nouvelles questions ; il est repris s'il n'est pas déjà pris.
 create or replace function public.enregistrer_quiz(p_lecon uuid, p_questions jsonb)
 returns integer
 language plpgsql
@@ -115,6 +117,8 @@ declare
   v_choix jsonb;
   v_nb integer;
   v_bonnes integer;
+  v_id uuid;
+  v_ord integer;
 begin
   if not public.editeur_de_lecon(p_lecon) then
     raise exception 'Cette formation n’est pas l’une de vos formations.' using errcode = '42501';
@@ -176,22 +180,52 @@ begin
     end if;
   end loop;
 
-  delete from public.questions_quiz where lecon_id = p_lecon;
-  insert into public.questions_quiz (lecon_id, ordre, genre, enonce, choix, reponses, explication)
-  select
-    p_lecon,
-    e.ord,
-    e.q ->> 'genre',
-    btrim(e.q ->> 'enonce'),
-    case when e.q ->> 'genre' = 'courte' then '[]'::jsonb else (
+  if exists (
+    select 1 from jsonb_array_elements(p_questions) e(q)
+    where e.q ->> 'id' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    group by lower(e.q ->> 'id') having count(*) > 1
+  ) then
+    raise exception 'Deux questions ont le même identifiant.';
+  end if;
+
+  -- Les questions qui ne sont plus envoyées partent.
+  delete from public.questions_quiz q
+  where q.lecon_id = p_lecon
+    and q.id not in (
+      select (e.q ->> 'id')::uuid from jsonb_array_elements(p_questions) e(q) where e.q ->> 'id' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    );
+  for v_q, v_ord in select e.q, e.ord from jsonb_array_elements(p_questions) with ordinality as e(q, ord) loop
+    v_id := case when v_q ->> 'id' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then (v_q ->> 'id')::uuid end;
+    v_choix := case when v_q ->> 'genre' = 'courte' then '[]'::jsonb else (
       select jsonb_agg(jsonb_build_object('texte', btrim(c ->> 'texte'), 'correcte', c ->> 'correcte' = 'true') order by o)
-      from jsonb_array_elements(e.q -> 'choix') with ordinality as t(c, o)
-    ) end,
-    case when e.q ->> 'genre' = 'courte' then array(
-      select btrim(x) from jsonb_array_elements_text(e.q -> 'reponses') x where btrim(x) <> ''
-    ) else '{}'::text[] end,
-    btrim(coalesce(e.q ->> 'explication', ''))
-  from jsonb_array_elements(p_questions) with ordinality as e(q, ord);
+      from jsonb_array_elements(v_q -> 'choix') with ordinality as t(c, o)
+    ) end;
+    update public.questions_quiz
+    set ordre = v_ord,
+        genre = v_q ->> 'genre',
+        enonce = btrim(v_q ->> 'enonce'),
+        choix = v_choix,
+        reponses = case when v_q ->> 'genre' = 'courte' then array(
+          select btrim(x) from jsonb_array_elements_text(v_q -> 'reponses') x where btrim(x) <> ''
+        ) else '{}'::text[] end,
+        explication = btrim(coalesce(v_q ->> 'explication', ''))
+    where id = v_id and lecon_id = p_lecon;
+    if not found then
+      insert into public.questions_quiz (id, lecon_id, ordre, genre, enonce, choix, reponses, explication)
+      values (
+        case when v_id is not null and not exists (select 1 from public.questions_quiz where id = v_id) then v_id else gen_random_uuid() end,
+        p_lecon,
+        v_ord,
+        v_q ->> 'genre',
+        btrim(v_q ->> 'enonce'),
+        v_choix,
+        case when v_q ->> 'genre' = 'courte' then array(
+          select btrim(x) from jsonb_array_elements_text(v_q -> 'reponses') x where btrim(x) <> ''
+        ) else '{}'::text[] end,
+        btrim(coalesce(v_q ->> 'explication', ''))
+      );
+    end if;
+  end loop;
   return jsonb_array_length(p_questions);
 end;
 $$;
@@ -282,6 +316,13 @@ begin
   if p_reponses is null or jsonb_typeof(p_reponses) <> 'object' then
     p_reponses := '{}'::jsonb;
   end if;
+  -- Le formateur a modifié le quiz pendant la tentative : rien n'est enregistré, l'étudiant recharge la page.
+  if exists (
+    select 1 from jsonb_object_keys(p_reponses) k
+    where not exists (select 1 from public.questions_quiz q where q.lecon_id = p_lecon and q.id::text = lower(k))
+  ) then
+    raise exception 'Ce quiz vient d’être modifié : rechargez la page pour le recommencer.';
+  end if;
 
   for v_q in select * from public.questions_quiz where lecon_id = p_lecon order by ordre loop
     v_rep := p_reponses -> v_q.id::text;
@@ -367,6 +408,27 @@ as $$
     and not public.compte_suspendu()
     and (public.equipe_contenus() or public.formateur_de(p_formation));
 $$;
+
+-- Un quiz sans question ne se publie pas (l'étudiant n'aurait rien à passer). Les questions ne s'effacent pas toutes :
+-- enregistrer_quiz en exige au moins une.
+create or replace function public.quiz_publiable()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.publiee and new.type = 'quiz' and not exists (select 1 from public.questions_quiz where lecon_id = new.id) then
+    raise exception 'Ajoutez au moins une question avant de publier ce quiz.';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists lecons_quiz_publiable on public.lecons;
+create trigger lecons_quiz_publiable
+  before insert or update of publiee, type on public.lecons
+  for each row execute function public.quiz_publiable();
 
 -- ─── Les comptages de leçons ignorent les quiz et les exercices (0027, 0029 reprises) ─────────────────
 create or replace function public.peut_donner_avis(p_formation uuid)
@@ -689,6 +751,7 @@ $$;
 -- ─── Droits d'exécution ─────────────────────────────────────────────────────────────────────────────
 revoke execute on function public.editeur_de_lecon(uuid) from public, anon, authenticated;
 revoke execute on function public.normaliser_reponse(text) from public, anon, authenticated;
+revoke execute on function public.quiz_publiable() from public, anon, authenticated;
 revoke execute on function public.quiz_editeur(uuid) from public, anon;
 grant execute on function public.quiz_editeur(uuid) to authenticated;
 revoke execute on function public.enregistrer_quiz(uuid, jsonb) from public, anon;

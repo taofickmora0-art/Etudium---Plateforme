@@ -215,7 +215,7 @@ export async function getFormationAdmin(id: string): Promise<FormationAdmin | nu
     prixFcfa: typeof f.prix_fcfa === "number" ? f.prix_fcfa : null,
     badge: (f.badge as Badge | null) ?? null,
     seuilVideo: Number(f.seuil_video ?? 90),
-    scoreQuiz: Number(f.score_quiz ?? 70),
+    scoreQuiz: f.score_quiz === undefined ? null : Number(f.score_quiz ?? 70),
     publieeLe: typeof f.publiee_le === "string" ? f.publiee_le : null,
     parcoursIds: liste(f.formations_parcours).map((lien) => String(lien.parcours_id)),
     modules,

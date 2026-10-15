@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithRef } from "react";
 import { Slot } from "radix-ui";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/cn";
@@ -30,7 +30,8 @@ export const buttonVariants = cva(
 
 const ICON_SIZE = { lg: 20, md: 18, sm: 16 } as const;
 
-type ButtonProps = ComponentPropsWithoutRef<"button"> &
+// La ref (React 19) passe au <button> avec le reste : un bouton peut recevoir le focus (quiz).
+type ButtonProps = ComponentPropsWithRef<"button"> &
   VariantProps<typeof buttonVariants> & {
     iconLeft?: IconSvgElement;
     iconRight?: IconSvgElement;

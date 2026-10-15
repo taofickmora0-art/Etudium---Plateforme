@@ -62,8 +62,11 @@ beforeAll(async () => {
   const lecon = async (titre: string, type: string, publiee: boolean, ordre: number) =>
     (await un<{ id: string }>("insert into public.lecons (module_id, titre, type, publiee, ordre) values ($1, $2, $3, $4, $5) returning id", [m, titre, type, publiee, ordre])).id;
   LECON = await lecon("Saisir des données", "lecon", true, 1);
-  QUIZ = await lecon("Quiz du module 1", "quiz", true, 2);
+  // Un quiz naît en brouillon et ne se publie qu'avec au moins une question.
+  QUIZ = await lecon("Quiz du module 1", "quiz", false, 2);
   BROUILLON = await lecon("Quiz en préparation", "quiz", false, 3);
+  await enregistrer(F, QUIZ, QUESTIONS);
+  await banc.db.query("update public.lecons set publiee = true where id = $1", [QUIZ]);
   await banc.db.query("update public.formations set statut = 'publiee' where id = $1", [FORMATION]);
 });
 
@@ -143,10 +146,46 @@ describe("Migration 0031 : les quiz", () => {
   it("le programme du back-office compte les questions de chaque quiz ; un autre formateur ou un étudiant, rien", async () => {
     const compte = async (qui: string) => (await banc.en<{ n: Record<string, number> }>({ id: qui }, "select public.questions_par_quiz($1) as n", [FORMATION]))[0].n;
     const m = (await un<{ module_id: string }>("select module_id from public.lecons where id = $1", [QUIZ])).module_id;
-    const vide = (await un<{ id: string }>("insert into public.lecons (module_id, titre, type, ordre) values ($1, 'Quiz vide', 'quiz', 4) returning id", [m])).id;
+    const vide = (await un<{ id: string }>("insert into public.lecons (module_id, titre, type, ordre, publiee) values ($1, 'Quiz vide', 'quiz', 4, false) returning id", [m])).id;
     expect(await compte(F)).toEqual({ [QUIZ]: 4, [BROUILLON]: 4, [vide]: 0 });
     expect(await compte(S)).toEqual({ [QUIZ]: 4, [BROUILLON]: 4, [vide]: 0 });
     expect(await compte(G)).toEqual({});
     expect(await compte(E)).toEqual({});
+  });
+
+  it("réenregistrer garde l'identifiant des questions ; une réponse à une question retirée est refusée sans rien enregistrer", async () => {
+    const avant = (await editeur(F, QUIZ)).questions;
+    const nouvelle = randomUUID();
+    const suite = [
+      { ...avant[0], enonce: "Quel logiciel gère les références ?" },
+      avant[1],
+      avant[2],
+      { id: nouvelle, genre: "courte", enonce: "Quel raccourci copie ?", choix: [], reponses: ["Ctrl+C"], explication: "" },
+    ];
+    await enregistrer(F, QUIZ, suite);
+    const apres = (await editeur(F, QUIZ)).questions;
+    expect(apres.map((q) => q.id)).toEqual([avant[0].id, avant[1].id, avant[2].id, nouvelle]);
+    expect(apres[0].enonce).toBe("Quel logiciel gère les références ?");
+    // Une tentative commencée avant la modification : refusée, et aucune tentative n'est comptée.
+    const { tentatives } = (await aPasser(E, QUIZ))!;
+    await expect(envoyer(E, QUIZ, { [avant[0].id]: [0], [avant[3].id]: "RECHERCHEX" })).rejects.toThrow("Ce quiz vient d’être modifié : rechargez la page pour le recommencer.");
+    expect((await aPasser(E, QUIZ))!.tentatives).toBe(tentatives);
+    // Deux fois le même identifiant : refusé ; l'identifiant d'une question d'un autre quiz n'est pas repris.
+    await expect(enregistrer(F, QUIZ, [suite[0], suite[0]])).rejects.toThrow("Deux questions ont le même identifiant.");
+    await enregistrer(F, BROUILLON, [avant[1]]);
+    expect((await editeur(F, BROUILLON)).questions[0].id).not.toBe(avant[1].id);
+    expect((await editeur(F, QUIZ)).questions.map((q) => q.id)).toContain(avant[1].id);
+  });
+
+  it("un quiz sans question ne se publie pas, ni à la création ni ensuite", async () => {
+    const m = (await un<{ module_id: string }>("select module_id from public.lecons where id = $1", [QUIZ])).module_id;
+    await expect(banc.db.query("insert into public.lecons (module_id, titre, type, ordre, publiee) values ($1, 'Quiz publié vide', 'quiz', 9, true)", [m])).rejects.toThrow(
+      "Ajoutez au moins une question avant de publier ce quiz.",
+    );
+    const vide = (await un<{ id: string }>("insert into public.lecons (module_id, titre, type, ordre, publiee) values ($1, 'Quiz à remplir', 'quiz', 9, false) returning id", [m])).id;
+    await expect(banc.en({ id: F }, "update public.lecons set publiee = true where id = $1", [vide])).rejects.toThrow("Ajoutez au moins une question avant de publier ce quiz.");
+    await enregistrer(F, vide, [QUESTIONS[0]]);
+    await banc.en({ id: F }, "update public.lecons set publiee = true where id = $1", [vide]);
+    expect((await un<{ publiee: boolean }>("select publiee from public.lecons where id = $1", [vide])).publiee).toBe(true);
   });
 });

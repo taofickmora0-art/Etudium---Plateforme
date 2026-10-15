@@ -8,7 +8,7 @@ const getShellUser = vi.fn();
 vi.mock("@/lib/auth/current-user", () => ({ getShellUser: () => getShellUser(), demoModeActive: () => false }));
 vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 
-const { addLecon, saveLecon, saveFormationInfos } = await import("@/lib/admin/actions");
+const { addLecon, saveLecon, saveFormationInfos, changerStatutLecon, setStatutFormation } = await import("@/lib/admin/actions");
 const { getFormationAdmin, getLeconAdmin, listFormations } = await import("@/lib/admin/data");
 const { IDLE } = await import("@/lib/auth/schemas");
 
@@ -33,7 +33,8 @@ describe("Créer un quiz", () => {
     faux.repondre("modules.select", { data: { formation_id: F, formations: { publiee_le: null } } });
     faux.repondre("lecons.insert", { data: { id: L } });
     expect(await addLecon(IDLE, form({ module_id: M, titre: "Quiz du module 1", type: "quiz", espace: "formateur" }))).toMatchObject({ status: "success" });
-    expect(faux.de("lecons", "insert")[0].valeurs).toMatchObject({ titre: "Quiz du module 1", type: "quiz" });
+    // Un quiz naît en brouillon, même dans une formation jamais publiée : il n'a pas encore de questions.
+    expect(faux.de("lecons", "insert")[0].valeurs).toMatchObject({ titre: "Quiz du module 1", type: "quiz", publiee: false });
     faux.vider();
     faux.repondre("modules.select", { data: { formation_id: F, formations: { publiee_le: null } } });
     faux.repondre("lecons.insert", { data: { id: L } });
@@ -68,6 +69,26 @@ describe("Enregistrer un quiz", () => {
   });
 });
 
+describe("Publier un quiz, publier la formation", () => {
+  it("un quiz sans question : le refus de la base est affiché", async () => {
+    faux.repondre("lecons.update", { error: { code: "P0001", message: "Ajoutez au moins une question avant de publier ce quiz." } });
+    expect(await changerStatutLecon(L, true)).toEqual({ ok: false, message: "Ajoutez au moins une question avant de publier ce quiz." });
+  });
+
+  it("la formation se publie avec au moins une leçon de contenu publiée : un quiz seul ne suffit pas", async () => {
+    getShellUser.mockResolvedValue({ roles: ["etudiant", "admin"] });
+    faux.repondre("modules.select", { data: [{ id: M, lecons: [{ id: L, publiee: true, type: "quiz" }] }] });
+    expect(await setStatutFormation(F, "publiee")).toEqual({ ok: false, message: "Publiez au moins une leçon avant de publier la formation." });
+    expect(faux.de("modules", "select")[0].valeurs).toContain("type");
+    // Avant la 0031 : sans le type, toutes les leçons comptent.
+    faux.vider();
+    faux.repondre("modules.select", (appel) =>
+      String(appel.valeurs).includes("type") ? { error: { code: "42703", message: "column lecons.type does not exist" } } : { data: [{ id: M, lecons: [{ id: L, publiee: true }] }] },
+    );
+    expect(await setStatutFormation(F, "publiee")).toEqual({ ok: true });
+  });
+});
+
 describe("Le score minimal aux quiz", () => {
   const INFOS = { id: F, titre: "Excel", slug: "excel", resume: "", description: "", objectifs: "", competences: "", niveau: "debutant", espace: "formateur" };
 
@@ -91,7 +112,7 @@ describe("Le score minimal aux quiz", () => {
 });
 
 describe("Les lectures du back-office", () => {
-  it("le type de chaque élément du programme et le score minimal de la formation ; avant la 0031, des leçons et 70 %", async () => {
+  it("le type de chaque élément du programme et le score minimal de la formation ; avant la 0031, des leçons et pas de score", async () => {
     faux.repondre("formations.select", (appel) =>
       JSON.stringify(appel.valeurs).includes("type")
         ? {
@@ -114,6 +135,13 @@ describe("Les lectures du back-office", () => {
     // Avant la 0031 (ou sans droit) : le nombre de questions n'est pas affiché.
     faux.repondre("rpc.questions_par_quiz", { error: { code: "PGRST202", message: "Could not find the function" } });
     expect((await getFormationAdmin(F))?.modules[0].lecons[0]).not.toHaveProperty("nbQuestions");
+    faux.vider();
+    faux.repondre("formations.select", (appel) =>
+      JSON.stringify(appel.valeurs).includes("score_quiz")
+        ? { error: { code: "42703", message: "column formations.score_quiz does not exist" } }
+        : { data: { id: F, slug: "excel", titre: "Excel", statut: "brouillon", niveau: "debutant", modules: [] } },
+    );
+    expect(await getFormationAdmin(F)).toMatchObject({ scoreQuiz: null });
     faux.vider();
     faux.repondre("lecons.select", (appel) =>
       JSON.stringify(appel.valeurs).includes("type")

@@ -23,7 +23,19 @@ const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? "s" : ""}`;
 
 type Ligne = { cle: string; question: QuestionQuiz };
 
+/** Un identifiant v4 ; `randomUUID` n'existe que sur une page sécurisée (https, localhost), pas sur une adresse locale. */
+function nouvelId() {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  const octets = crypto.getRandomValues(new Uint8Array(16));
+  octets[6] = (octets[6] & 0x0f) | 0x40;
+  octets[8] = (octets[8] & 0x3f) | 0x80;
+  const h = Array.from(octets, (o) => o.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+// Une nouvelle question reçoit son identifiant tout de suite : la base le reprend, et il ne change plus ensuite.
 const nouvelleQuestion = (): QuestionQuiz => ({
+  id: nouvelId(),
   genre: "unique",
   enonce: "",
   choix: [
@@ -50,8 +62,8 @@ function changerGenre(q: QuestionQuiz, genre: GenreQuestion): QuestionQuiz {
   return { ...q, genre, choix: genre === "unique" ? uneSeule(choix) : choix };
 }
 
-/** Ce qui part à la base : la question sans son identifiant (la base remplace toutes les questions). */
-const versEnvoi = ({ genre, enonce, choix, reponses, explication }: QuestionQuiz) => ({ genre, enonce, choix, reponses, explication });
+/** Ce qui part à la base : la question et son identifiant (gardé : une tentative en cours reste valable). */
+const versEnvoi = ({ id, genre, enonce, choix, reponses, explication }: QuestionQuiz) => ({ id, genre, enonce, choix, reponses, explication });
 
 type EditeurQuizProps = {
   questions: QuestionQuiz[];
@@ -69,8 +81,7 @@ type EditeurQuizProps = {
  */
 export function EditeurQuiz({ questions, form, erreur, onChange }: EditeurQuizProps) {
   const id = useId();
-  const [compteur, setCompteur] = useState(questions.length);
-  const [lignes, setLignes] = useState<Ligne[]>(() => questions.map((question, i) => ({ cle: question.id ?? `${id}-${i}`, question })));
+  const [lignes, setLignes] = useState<Ligne[]>(() => questions.map((question) => ({ cle: question.id ?? nouvelId(), question })));
 
   const changer = (suivantes: Ligne[]) => {
     setLignes(suivantes);
@@ -84,8 +95,8 @@ export function EditeurQuiz({ questions, form, erreur, onChange }: EditeurQuizPr
     changer(suivantes);
   };
   const ajouter = () => {
-    changer([...lignes, { cle: `${id}-n${compteur}`, question: nouvelleQuestion() }]);
-    setCompteur(compteur + 1);
+    const question = nouvelleQuestion();
+    changer([...lignes, { cle: question.id ?? `${id}-${lignes.length}`, question }]);
   };
 
   return (

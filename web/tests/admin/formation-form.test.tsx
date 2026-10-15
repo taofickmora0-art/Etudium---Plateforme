@@ -69,6 +69,11 @@ describe("Fiche d'une formation au back-office", () => {
     expect(screen.getByLabelText("Score minimal aux quiz (%)")).toHaveValue(70);
   });
 
+  it("avant la 0031, pas de champ « Score minimal aux quiz » : l'enregistrement ne bute pas dessus", () => {
+    avecNotifications(<FormationInfosForm formation={{ ...FORMATION, scoreQuiz: null }} parcours={PARCOURS} formateurs={[]} />);
+    expect(screen.queryByLabelText("Score minimal aux quiz (%)")).toBeNull();
+  });
+
   it("l'adresse d'un brouillon reste modifiable", () => {
     avecNotifications(<FormationInfosForm formation={{ ...FORMATION, statut: "brouillon", publieeLe: null }} parcours={PARCOURS} formateurs={[]} />);
     expect(screen.getByLabelText("Adresse")).not.toHaveAttribute("readonly");

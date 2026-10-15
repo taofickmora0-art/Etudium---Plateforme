@@ -110,6 +110,8 @@ export function FormationInfosForm({ formation, parcours, formateurs, espace = "
           <Field label="Niveau" htmlFor="formation-niveau" error={e.niveau}>
             <Select id="formation-niveau" name="niveau" options={NIVEAUX} defaultValue={valeur("niveau", formation.niveau)} />
           </Field>
+          {/* Avant la 0031, pas de champ : sinon chaque enregistrement buterait sur la colonne absente. */}
+          {formation.scoreQuiz !== null && (
           <Field label="Score minimal aux quiz (%)" htmlFor="formation-score-quiz" hint="Pour réussir chaque quiz de la formation." error={e.score_quiz}>
             <TextInput
               id="formation-score-quiz"
@@ -122,6 +124,7 @@ export function FormationInfosForm({ formation, parcours, formateurs, espace = "
               defaultValue={valeur("score_quiz", String(formation.scoreQuiz))}
             />
           </Field>
+          )}
           {equipe && (
             <>
               <Field label="Formateur" htmlFor="formation-formateur" error={e.formateur_id}>

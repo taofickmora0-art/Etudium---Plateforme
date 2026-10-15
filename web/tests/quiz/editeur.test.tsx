@@ -54,7 +54,8 @@ const QUESTIONS: QuestionQuiz[] = [
   { id: "a", genre: "unique", enonce: "Quel outil gère les références ?", choix: [{ texte: "Zotero", correcte: true }, { texte: "Excel", correcte: false }], reponses: [], explication: "" },
   { id: "b", genre: "courte", enonce: "Quelle fonction cherche une valeur ?", choix: [], reponses: ["RECHERCHEX"], explication: "Elle remplace RECHERCHEV." },
 ];
-const SANS_ID = QUESTIONS.map(({ genre, enonce, choix, reponses, explication }) => ({ genre, enonce, choix, reponses, explication }));
+// Envoyées avec leur identifiant : la base les met à jour sans en changer (une tentative en cours reste valable).
+const ENVOYEES = QUESTIONS.map(({ id, genre, enonce, choix, reponses, explication }) => ({ id, genre, enonce, choix, reponses, explication }));
 
 function afficher(quiz: { migrationAbsente: true } | { migrationAbsente: false; donnees: QuestionQuiz[] } = { migrationAbsente: false, donnees: QUESTIONS }) {
   return render(
@@ -95,43 +96,50 @@ describe("L'éditeur d'un quiz", () => {
 
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
     await waitFor(() => expect(actions.saveLecon).toHaveBeenCalled());
-    expect(questionsEnvoyees()).toEqual(SANS_ID);
+    expect(questionsEnvoyees()).toEqual(ENVOYEES);
     expect(await screen.findByText("Le quiz a bien été mis à jour.")).toBeInTheDocument();
   });
 
   it("ajouter et modifier des questions des quatre types", async () => {
     const user = userEvent.setup();
+    // Collé d'un coup : sous la charge de la suite complète, la frappe lettre à lettre dépassait le délai.
+    const saisir = async (champ: HTMLElement, texte: string) => {
+      await user.click(champ);
+      await user.paste(texte);
+    };
     afficher();
     await user.click(screen.getByRole("button", { name: "Ajouter une question" }));
     expect(screen.getByText("3 questions")).toBeInTheDocument();
     // Une nouvelle question : choix unique, deux réponses, la première cochée.
     expect(within(question(3)).getByRole("combobox", { name: "Type de question" })).toHaveValue("unique");
     expect(within(question(3)).getAllByRole("textbox", { name: /^Réponse \d$/ })).toHaveLength(2);
-    await user.type(within(question(3)).getByRole("textbox", { name: "Énoncé" }), "Un TCD modifie les données d’origine.");
+    await saisir(within(question(3)).getByRole("textbox", { name: "Énoncé" }), "Un TCD modifie les données d’origine.");
     await user.selectOptions(within(question(3)).getByRole("combobox", { name: "Type de question" }), "vrai_faux");
     expect(within(question(3)).queryByRole("textbox", { name: "Réponse 1" })).toBeNull();
     await user.click(within(question(3)).getByRole("radio", { name: "Faux" }));
-    await user.type(within(question(3)).getByRole("textbox", { name: "Explication (facultative)" }), "Il les résume.");
+    await saisir(within(question(3)).getByRole("textbox", { name: "Explication (facultative)" }), "Il les résume.");
 
     await user.click(screen.getByRole("button", { name: "Ajouter une question" }));
-    await user.type(within(question(4)).getByRole("textbox", { name: "Énoncé" }), "Que place-t-on dans un TCD ?");
+    await saisir(within(question(4)).getByRole("textbox", { name: "Énoncé" }), "Que place-t-on dans un TCD ?");
     await user.selectOptions(within(question(4)).getByRole("combobox", { name: "Type de question" }), "multiple");
-    await user.type(within(question(4)).getByRole("textbox", { name: "Réponse 1" }), "Des lignes");
-    await user.type(within(question(4)).getByRole("textbox", { name: "Réponse 2" }), "Des colonnes");
+    await saisir(within(question(4)).getByRole("textbox", { name: "Réponse 1" }), "Des lignes");
+    await saisir(within(question(4)).getByRole("textbox", { name: "Réponse 2" }), "Des colonnes");
     await user.click(within(question(4)).getByRole("button", { name: "Ajouter une réponse" }));
-    await user.type(within(question(4)).getByRole("textbox", { name: "Réponse 3" }), "Une vidéo");
+    await saisir(within(question(4)).getByRole("textbox", { name: "Réponse 3" }), "Une vidéo");
     await user.click(within(question(4)).getByRole("checkbox", { name: "Bonne réponse : réponse 2" }));
 
     await user.click(within(question(2)).getByRole("button", { name: "Ajouter une réponse acceptée" }));
-    await user.type(within(question(2)).getByRole("textbox", { name: "Réponse acceptée 2" }), "XLOOKUP");
+    await saisir(within(question(2)).getByRole("textbox", { name: "Réponse acceptée 2" }), "XLOOKUP");
 
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
     await waitFor(() => expect(actions.saveLecon).toHaveBeenCalled());
     expect(questionsEnvoyees()).toEqual([
-      SANS_ID[0],
-      { ...SANS_ID[1], reponses: ["RECHERCHEX", "XLOOKUP"] },
-      { genre: "vrai_faux", enonce: "Un TCD modifie les données d’origine.", choix: [{ texte: "Vrai", correcte: false }, { texte: "Faux", correcte: true }], reponses: [], explication: "Il les résume." },
+      ENVOYEES[0],
+      { ...ENVOYEES[1], reponses: ["RECHERCHEX", "XLOOKUP"] },
+      // Une nouvelle question reçoit son identifiant dans l'éditeur.
+      { id: expect.stringMatching(/^[0-9a-f-]{36}$/), genre: "vrai_faux", enonce: "Un TCD modifie les données d’origine.", choix: [{ texte: "Vrai", correcte: false }, { texte: "Faux", correcte: true }], reponses: [], explication: "Il les résume." },
       {
+        id: expect.stringMatching(/^[0-9a-f-]{36}$/),
         genre: "multiple",
         enonce: "Que place-t-on dans un TCD ?",
         choix: [

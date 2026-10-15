@@ -88,6 +88,8 @@ describe("Passer un quiz", () => {
     expect(reponse("Excel")).toHaveAttribute("aria-pressed", "false");
     await user.click(screen.getByRole("button", { name: "Valider" }));
     expect(screen.getByText("Question 2 sur 4")).toBeInTheDocument();
+    // Le focus suit : la nouvelle question est lue au lecteur d'écran.
+    expect(screen.getByRole("heading", { name: "Que place-t-on dans un TCD ?" })).toHaveFocus();
     expect(screen.getByText("Plusieurs réponses sont possibles.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Question précédente" }));
     expect(reponse("Zotero")).toHaveAttribute("aria-pressed", "true");
@@ -111,7 +113,7 @@ describe("Passer un quiz", () => {
     await user.click(screen.getByRole("button", { name: "Valider" }));
 
     await waitFor(() => expect(envoyerQuiz).toHaveBeenCalledWith("l9", { q1: [0], q2: [0, 1], q4: "recherchex" }));
-    expect(await screen.findByRole("heading", { name: "Quiz réussi" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Quiz réussi" })).toHaveFocus();
     expect(screen.getByText("75 %")).toBeInTheDocument();
     expect(screen.getByText("3 bonnes réponses sur 4 · score minimal : 70 %")).toBeInTheDocument();
     expect(screen.getByText("Tentative n° 1")).toBeInTheDocument();
@@ -158,7 +160,22 @@ describe("Passer un quiz", () => {
     expect(screen.getByText("Question 1 sur 4")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Quitter" }));
     await user.click(within(screen.getByRole("dialog", { name: "Quitter le quiz ?" })).getByRole("button", { name: "Quitter" }));
-    expect(screen.getByRole("button", { name: "Commencer" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Commencer" })).toHaveFocus());
     expect(envoyerQuiz).not.toHaveBeenCalled();
+  });
+
+  it("le quiz modifié pendant une tentative : les questions du début restent affichées", async () => {
+    const user = userEvent.setup();
+    const { rerender } = afficher();
+    await user.click(screen.getByRole("button", { name: "Commencer" }));
+    await user.click(reponse("Zotero"));
+    await user.click(screen.getByRole("button", { name: "Valider" }));
+    rerender(
+      <ToastProvider>
+        <QuizLecon leconId="l9" quiz={{ ...QUIZ, questions: QUIZ.questions.slice(0, 1) }} />
+      </ToastProvider>,
+    );
+    expect(screen.getByText("Question 2 sur 4")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Que place-t-on dans un TCD ?" })).toBeInTheDocument();
   });
 });

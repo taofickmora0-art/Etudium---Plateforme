@@ -15,6 +15,7 @@ import { slugify } from "./slug";
 import { estMesuree, messageLienCourt } from "@/lib/video/plateformes";
 import { parseVideoUrl } from "./video";
 import { MIGRATION_QUIZ } from "@/lib/quiz/conversion";
+import { estLeconDeContenu } from "@/lib/catalogue/regles";
 
 // Actions serveur du back-office (spec du lot 1, §10). Chacune revérifie qui demande : l'équipe (exigerEquipe) ou,
 // pour le contenu des formations, l'équipe ou un formateur (exigerEditeur, spec de l'espace formateur) ; puis la base
@@ -307,12 +308,14 @@ export async function setStatutFormation(id: string, statut: "publiee" | "archiv
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { supabase } = garde;
     if (statut === "publiee") {
-      // Au moins une leçon publiée (0027) ; avant la 0027, toutes les leçons sont visibles.
-      let lecture: { data: unknown; error: ErreurBase | null } = await supabase.from("modules").select("id, lecons(id, publiee)").eq("formation_id", id);
+      // Au moins une leçon de contenu publiée (0027) : un quiz seul ne suffit pas (0031). Avant la 0027, toutes les
+      // leçons sont visibles ; avant la 0031, elles sont toutes des leçons de contenu.
+      let lecture: { data: unknown; error: ErreurBase | null } = await supabase.from("modules").select("id, lecons(id, publiee, type)").eq("formation_id", id);
+      if (colonneAbsente(lecture.error)) lecture = await supabase.from("modules").select("id, lecons(id, publiee)").eq("formation_id", id);
       if (colonneAbsente(lecture.error)) lecture = await supabase.from("modules").select("id, lecons(id)").eq("formation_id", id);
       if (lecture.error) return { ok: false, message: ECHEC };
-      const modules = (lecture.data as { lecons?: { publiee?: boolean }[] }[] | null) ?? [];
-      const lecons = modules.reduce((total, m) => total + (m.lecons ?? []).filter((l) => l.publiee !== false).length, 0);
+      const modules = (lecture.data as { lecons?: { publiee?: boolean; type?: string }[] }[] | null) ?? [];
+      const lecons = modules.reduce((total, m) => total + (m.lecons ?? []).filter((l) => l.publiee !== false && estLeconDeContenu(l)).length, 0);
       if (lecons === 0) return { ok: false, message: FORMATION_VIDE };
     }
     const { error } = await supabase.from("formations").update({ statut }).eq("id", id);
@@ -439,7 +442,8 @@ export async function addLecon(_prev: FormState, fd: FormData): Promise<FormStat
     const formation = Array.isArray(ligne?.formations) ? ligne.formations[0] : ligne?.formations;
     const ordre = await rangSuivant(supabase, "lecons", ["module_id", moduleId]);
     const nouvelle = { module_id: moduleId, titre: parsed.data.titre, ordre, ...(type ? { type } : {}) };
-    let reponse = await supabase.from("lecons").insert({ ...nouvelle, publiee: !formation?.publiee_le }).select("id").single();
+    // Un quiz naît en brouillon : il ne se publie qu'avec au moins une question (0031).
+    let reponse = await supabase.from("lecons").insert({ ...nouvelle, publiee: type ? false : !formation?.publiee_le }).select("id").single();
     if (colonneAbsente(reponse.error)) {
       // Un quiz demande la 0031 ; une leçon, avant la 0027, s'ajoute sans statut (visible comme avant).
       if (type) return { status: "error", message: MIGRATION_QUIZ, values };
@@ -463,7 +467,8 @@ export async function changerStatutLecon(id: string, publiee: boolean): Promise<
     const garde = await exigerEditeur();
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { error } = await garde.supabase.from("lecons").update({ publiee }).eq("id", id);
-    if (error) return { ok: false, message: colonneAbsente(error) ? MIGRATION_LECONS : ECHEC };
+    // « Ajoutez au moins une question avant de publier ce quiz. » (0031)
+    if (error) return { ok: false, message: colonneAbsente(error) ? MIGRATION_LECONS : error.code === "P0001" && error.message ? typographie(error.message) : ECHEC };
   } catch {
     return { ok: false, message: ECHEC };
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -65,9 +65,22 @@ export function QuizLecon({ leconId, quiz, precedente, suivante }: QuizLeconProp
   const [erreur, setErreur] = useState<string | null>(null);
   const [quitter, setQuitter] = useState(false);
   const [envoi, demarrer] = useTransition();
-  const total = quiz.questions.length;
+  // Les questions du début de la tentative : si le quiz change pendant ce temps (page rafraîchie), elles restent.
+  const [questions, setQuestions] = useState(quiz.questions);
+  const total = questions.length;
+  const titreQuestion = useRef<HTMLHeadingElement>(null);
+  const boutonCommencer = useRef<HTMLButtonElement>(null);
+  // Le focus suit le quiz (question suivante, retour à l'accueil) : au clavier et au lecteur d'écran, rien ne se perd.
+  const etapeVue = useRef(etape);
+  useEffect(() => {
+    if (etapeVue.current === etape) return;
+    etapeVue.current = etape;
+    if (etape.vue === "questions") titreQuestion.current?.focus();
+    else if (etape.vue === "accueil") boutonCommencer.current?.focus();
+  }, [etape]);
 
   const commencer = () => {
+    setQuestions(quiz.questions);
     setReponses({});
     setErreur(null);
     setEtape({ vue: "questions", index: 0 });
@@ -113,17 +126,17 @@ export function QuizLecon({ leconId, quiz, precedente, suivante }: QuizLeconProp
           </span>
           <div className="flex min-w-0 flex-col">
             <p className="m-0 text-[15px] leading-[22px] font-medium text-encre max-sm:text-sm">
-              {`${pluriel(total, "question")} · meilleur score : ${meilleur === null ? "—" : `${meilleur} %`} · score minimal : ${quiz.scoreMinimal} %`}
+              {`${pluriel(quiz.questions.length, "question")} · meilleur score : ${meilleur === null ? "—" : `${meilleur} %`} · score minimal : ${quiz.scoreMinimal} %`}
             </p>
             <p className="m-0 text-[13px] leading-5 text-discret max-sm:text-xs">
               {tentatives > 0 ? `${pluriel(tentatives, "tentative")} · tentatives illimitées` : "Tentatives illimitées : seul votre meilleur score est gardé."}
             </p>
           </div>
         </div>
-        {total === 0 ? (
+        {quiz.questions.length === 0 ? (
           <p className="m-0 text-sm leading-[22px] text-discret">Ce quiz n’a pas encore de questions.</p>
         ) : (
-          <Button iconRight={ArrowRight01Icon} onClick={commencer} className="self-start max-sm:w-full">
+          <Button ref={boutonCommencer} iconRight={ArrowRight01Icon} onClick={commencer} className="self-start max-sm:w-full">
             {tentatives > 0 ? "Recommencer" : "Commencer"}
           </Button>
         )}
@@ -132,7 +145,7 @@ export function QuizLecon({ leconId, quiz, precedente, suivante }: QuizLeconProp
   }
 
   const { index } = etape;
-  const question = quiz.questions[index];
+  const question = questions[index];
   const choisie = reponses[question.id];
   const repondre = (r: Reponse) => {
     setErreur(null);
@@ -158,7 +171,9 @@ export function QuizLecon({ leconId, quiz, precedente, suivante }: QuizLeconProp
         <Tag tone="nouveau" className="self-start">
           {TYPES[question.genre]}
         </Tag>
-        <h2 className="m-0 text-[28px] leading-9 font-medium tracking-[-0.01em] text-balance text-titre max-sm:text-xl max-sm:leading-7">{question.enonce}</h2>
+        <h2 ref={titreQuestion} tabIndex={-1} className="m-0 text-[28px] leading-9 font-medium tracking-[-0.01em] text-balance text-titre outline-none max-sm:text-xl max-sm:leading-7">
+          {question.enonce}
+        </h2>
         <p className="m-0 text-sm leading-[22px] text-pretty text-discret max-sm:text-[13px] max-sm:leading-5">{CONSIGNES[question.genre]}</p>
       </div>
 
@@ -207,6 +222,7 @@ export function QuizLecon({ leconId, quiz, precedente, suivante }: QuizLeconProp
         title="Quitter le quiz ?"
         description="Vos réponses ne seront pas enregistrées. Vous pourrez recommencer le quiz plus tard."
         cancelLabel="Continuer le quiz"
+        returnFocus={() => boutonCommencer.current}
         confirmLabel="Quitter"
         onConfirm={() => {
           setReponses({});
@@ -275,6 +291,8 @@ function ChoixReponse({ question, reponse, onChange }: { question: QuestionAPass
 function Resultat({ resultat, precedente, suivante, onRecommencer }: { resultat: ResultatQuiz; precedente?: string; suivante?: string; onRecommencer: () => void }) {
   const { reussi } = resultat;
   const titreDetail = useId();
+  const titre = useRef<HTMLHeadingElement>(null);
+  useEffect(() => titre.current?.focus(), []);
   return (
     <section aria-label="Résultat du quiz" className={CARTE}>
       <Tag tone="enAttente" className="self-start">{`Tentative n° ${resultat.numero}`}</Tag>
@@ -284,7 +302,9 @@ function Resultat({ resultat, precedente, suivante, onRecommencer }: { resultat:
             <Icon icon={reussi ? CheckmarkCircle02Icon : Alert02Icon} size={28} />
           </span>
           <div className="flex min-w-0 flex-col gap-0.5">
-            <h2 className="m-0 text-[28px] leading-9 font-medium tracking-[-0.01em] text-titre max-sm:text-xl max-sm:leading-7">{reussi ? "Quiz réussi" : "Pas encore réussi"}</h2>
+            <h2 ref={titre} tabIndex={-1} className="m-0 text-[28px] leading-9 font-medium tracking-[-0.01em] text-titre outline-none max-sm:text-xl max-sm:leading-7">
+              {reussi ? "Quiz réussi" : "Pas encore réussi"}
+            </h2>
             <span className="text-sm leading-[22px] text-encre max-sm:text-[13px] max-sm:leading-5">
               {`${resultat.bonnes} ${resultat.bonnes > 1 ? "bonnes réponses" : "bonne réponse"} sur ${resultat.total} · score minimal : ${resultat.scoreMinimal} %`}
             </span>

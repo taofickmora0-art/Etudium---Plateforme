@@ -60,8 +60,8 @@ export type FormationAdmin = FormationResume & {
   prixFcfa: number | null;
   badge: Badge | null;
   seuilVideo: number;
-  /** Score minimal aux quiz (0031) ; 70 avant la 0031. */
-  scoreQuiz: number;
+  /** Score minimal aux quiz (0031) ; null avant la 0031 (le champ n'est pas affiché). */
+  scoreQuiz: number | null;
   publieeLe: string | null;
   parcoursIds: string[];
   modules: ModuleAdmin[];
