@@ -649,10 +649,10 @@ La page d'une leçon prend une barre du haut et des discussions, le programme se
 3. **Au-dessus du titre** : « Leçon 6 sur 12 » et les flèches ‹ ›. Avec ton compte de l'équipe (ou celui du formateur de la formation), le lien **Modifier la leçon** ouvre l'éditeur ; un compte étudiant ne le voit pas.
 4. **Le programme** (à gauche) : les modules se replient (celui de la leçon ouverte est déplié), chaque leçon a sa durée, la progression (barre, %, temps restant) est en bas.
 5. **Sur téléphone** : le bouton **Leçons** en haut à droite ouvre le programme dans un tiroir ; choisir une leçon le referme. L'onglet « Programme » sous la leçon a disparu.
-6. **Les discussions**, sous la leçon : « Discussions de la leçon », écris un commentaire puis **Publier le commentaire**.
+6. **Les discussions**, sous la leçon : « Discussions de la leçon », écris un commentaire puis clique la flèche d'envoi, à droite du champ (son nom pour les lecteurs d'écran : « Publier le commentaire »).
    - Avec un deuxième compte : Répondre, J'aime, le menu ⋮ (Copier le lien, Signaler). Ton compte formateur porte l'étiquette « Formateur ».
-   - Notifications : le formateur reçoit « Nouveau commentaire sur votre leçon », l'auteur reçoit « Nouvelle réponse à votre commentaire ».
+   - Notifications : le formateur reçoit « Nouveau commentaire sur votre leçon », l'auteur reçoit « Nouvelle réponse à votre commentaire ». Clique la notification : la leçon s'ouvre et descend jusqu'au commentaire, même ancien.
    - Signale un commentaire : il arrive dans la file de modération du back-office comme « Commentaire de leçon » (Garder ou Supprimer ; « Ouvrir la leçon »).
    - Dans l'éditeur de leçon, décoche « Activer les commentaires » : la section disparaît de la leçon.
-   - Un visiteur sans compte ne voit pas les discussions, même sur une leçon d'aperçu gratuit.
+   - Un visiteur sans compte ne voit pas les discussions, même sur une leçon d'aperçu gratuit ; en aperçu (bandeau jaune), l'équipe et le formateur non plus.
 7. **La page du cours** (compte qui a commencé la formation) : **Poursuivre le cours** en haut à droite, la carte « Progression du cours » (« Terminé 3 sur 12 », %), **Tout déplier / Tout replier** au-dessus du programme. Avec ton compte de l'équipe : **Modifier les leçons** mène à l'onglet Leçons de l'éditeur.

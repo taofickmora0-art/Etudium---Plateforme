@@ -90,6 +90,29 @@ describe("Discussions de la leçon", () => {
     await waitFor(() => expect(actions.signalerCommentaireLecon).toHaveBeenCalledWith("c0", "inapproprie", ""));
   });
 
+  it("un lien vers un commentaire hors de la première page (notification) : toute la discussion est lue, puis on y descend", async () => {
+    const descendre = vi.fn();
+    Element.prototype.scrollIntoView = descendre;
+    window.location.hash = "#commentaire-c0";
+    vi.mocked(actions.chargerDiscussion).mockResolvedValueOnce({ ok: true, reponses: [rep("c0", "La question d'il y a longtemps"), rep("c1", "Le lien est dans les documents.")] });
+    afficher(undefined, 2);
+    expect(actions.chargerDiscussion).toHaveBeenCalledWith(L);
+    expect(await screen.findByText("La question d'il y a longtemps")).toBeInTheDocument();
+    await waitFor(() => expect(descendre).toHaveBeenCalledWith({ block: "center" }));
+    expect(descendre.mock.contexts.at(-1)).toHaveAttribute("id", "commentaire-c0");
+    window.location.hash = "";
+  });
+
+  it("un lien vers un commentaire déjà affiché : on y descend sans rien relire", async () => {
+    const descendre = vi.fn();
+    Element.prototype.scrollIntoView = descendre;
+    window.location.hash = "#commentaire-c1";
+    afficher();
+    await waitFor(() => expect(descendre).toHaveBeenCalledWith({ block: "center" }));
+    expect(actions.chargerDiscussion).not.toHaveBeenCalled();
+    window.location.hash = "";
+  });
+
   it("aucune discussion encore : une invitation", () => {
     afficher([], 0);
     expect(screen.getByText("Aucun commentaire pour l’instant : posez la première question.")).toBeInTheDocument();

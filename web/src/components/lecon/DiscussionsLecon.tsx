@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Comment01Icon } from "@hugeicons/core-free-icons";
 import { Reponses, type ActionsReponses, type EtatReponses } from "@/components/communaute/Reponses";
 import { Icon } from "@/components/ui/Icon";
@@ -35,6 +35,36 @@ export function DiscussionsLecon({
   maintenant: Date;
 }) {
   const [etat, setEtat] = useState<EtatReponses>(() => ({ ...initial, completes: initial.total <= initial.reponses.length }));
+  // Un lien vers un commentaire (notification, « Copier le lien », file de modération) : la page ne lit que les derniers
+  // fils ; s'il n'y est pas, toute la discussion est lue. Puis on y descend nous-mêmes : Next abandonne le défilement
+  // quand la cible n'existe pas encore, et le panneau de la leçon défile seul.
+  const cible = useRef<string | null>(null);
+  useEffect(() => {
+    const ancre = window.location.hash.slice(1);
+    if (!ancre.startsWith("commentaire-")) return;
+    cible.current = ancre;
+    const id = ancre.slice("commentaire-".length);
+    if (initial.reponses.some((r) => r.id === id)) {
+      document.getElementById(ancre)?.scrollIntoView({ block: "center" });
+      cible.current = null;
+      return;
+    }
+    let actif = true;
+    chargerDiscussion(leconId)
+      .then((lu) => {
+        if (actif && lu.ok) setEtat({ reponses: lu.reponses, total: lu.reponses.length, completes: true });
+      })
+      .catch(() => undefined);
+    return () => {
+      actif = false;
+    };
+  }, [leconId, initial]);
+  useEffect(() => {
+    const element = cible.current && document.getElementById(cible.current);
+    if (!element) return;
+    element.scrollIntoView({ block: "center" });
+    cible.current = null;
+  }, [etat]);
   const actions: ActionsReponses = {
     charger: () => chargerDiscussion(leconId),
     repondre: (texte, parentId) => commenterLecon(leconId, texte, parentId),

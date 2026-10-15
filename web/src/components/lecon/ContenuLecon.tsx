@@ -93,8 +93,9 @@ export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lie
           <DansCetteLecon resume={lecon.resume} pointsCles={lecon.pointsCles} />
         </div>
       </div>
-      {/* Les discussions, sous le contenu et visibles sans clic (refonte des formations, §1.6). */}
-      {ouverte && donnees.discussion && moi && (
+      {/* Les discussions, sous le contenu et visibles sans clic (refonte des formations, §1.6). Pas en aperçu : un
+          commentaire de test y serait enregistré, et visible des étudiants à la publication. */}
+      {ouverte && !apercu && donnees.discussion && moi && (
         <DiscussionsLecon key={lecon.id} leconId={lecon.id} slug={fiche.slug} initial={donnees.discussion} moi={moi} maintenant={new Date()} />
       )}
     </div>

@@ -6,6 +6,7 @@ import { CompteDeLEntete } from "@/components/layout/CompteDeLEntete";
 import { EnTetePublic } from "@/components/site/EnTetePublic";
 import { Icon } from "@/components/ui/Icon";
 import { ToastProvider } from "@/components/ui/Toast";
+import { ArriveeLecon } from "./ArriveeLecon";
 
 type Props = {
   connecte: boolean;
@@ -78,6 +79,7 @@ export function CadreLecon({ connecte, titreFormation, retour, programme, haut, 
           {barre && <div className="sticky bottom-0 z-20 -mx-4 border-t border-bordure-carte bg-panneau px-4 py-3 lg:hidden">{barre}</div>}
         </main>
       </div>
+      <ArriveeLecon />
     </div>
   );
   // Toasts pour tous : le lecteur annonce « Leçon terminée. », les notes et ressources leurs erreurs.
