@@ -68,7 +68,8 @@ const ETATS_LECON: LeconSuivie["etat"][] = ["terminee", "ouverte", "non_ouverte"
 const nombre = (valeur: unknown) => Number(valeur) || 0;
 const nombreOuNull = (valeur: unknown) => (valeur === null || valeur === undefined ? null : Number(valeur));
 const dateOuNull = (valeur: unknown) => (typeof valeur === "string" && valeur ? valeur : null);
-const etat = (valeur: unknown): EtatSuivi => (ETATS.includes(valeur as EtatSuivi) ? (valeur as EtatSuivi) : "en_cours");
+/** L'état lu en base ; une valeur inconnue devient « En cours ». */
+export const versEtatSuivi = (valeur: unknown): EtatSuivi => (ETATS.includes(valeur as EtatSuivi) ? (valeur as EtatSuivi) : "en_cours");
 
 /** Une page du suivi, telle que la rend la fonction etudiants_formateur. */
 export function versPageSuivi(data: unknown): PageSuivi {
@@ -84,7 +85,7 @@ export function versPageSuivi(data: unknown): PageSuivi {
       terminees: nombre(l.terminees),
       total: nombre(l.total),
       derniereActivite: texte(l.derniere_activite),
-      etat: etat(l.etat),
+      etat: versEtatSuivi(l.etat),
     })),
   };
 }
@@ -102,7 +103,7 @@ function versSuiviEtudiant(l: Ligne): SuiviEtudiant {
       total: nombre(f.total),
       secondes: nombre(f.secondes),
       derniereActivite: texte(f.derniere_activite),
-      etat: etat(f.etat),
+      etat: versEtatSuivi(f.etat),
       modules: liste(f.modules).map((m) => ({
         id: texte(m.id),
         titre: texte(m.titre),
