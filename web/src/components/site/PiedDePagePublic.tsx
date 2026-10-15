@@ -2,16 +2,24 @@ import Link from "next/link";
 import { LogoMark } from "@/components/brand/Logo";
 
 /**
- * Colonnes du pied de page (NdLanding, NdCataloguePublic) : seulement les pages qui existent. Parcours, Tarifs,
- * Questions fréquentes et Communauté arrivent avec la landing (1.12), « Contact »
- * avec l'adresse de contact.
+ * Colonnes du pied de page (NdLanding §16). Les ancres mènent aux sections de la landing (« Tarifs » : les formules,
+ * jusqu'à la page Tarifs du lot 2). « Contact » viendra avec l'adresse e-mail de contact.
  */
 const COLONNES = [
   {
     titre: "Plateforme",
     liens: [
       { href: "/formations", label: "Formations" },
+      { href: "/#parcours", label: "Parcours" },
+      { href: "/#formules", label: "Tarifs" },
+    ],
+  },
+  {
+    titre: "Ressources",
+    liens: [
+      { href: "/#faq", label: "Questions fréquentes" },
       { href: "/verifier", label: "Vérifier un certificat" },
+      { href: "/#communaute", label: "Communauté" },
     ],
   },
   {

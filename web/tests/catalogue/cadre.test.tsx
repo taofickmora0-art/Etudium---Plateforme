@@ -22,7 +22,7 @@ describe("Cadre du catalogue selon la personne", () => {
     render(await CadreSelonVisiteur({ children: <p>Catalogue</p> }));
     expect(screen.getByText("Catalogue")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Se connecter" })).toHaveAttribute("href", "/connexion");
-    expect(screen.getByRole("link", { name: "Créer un compte gratuit" })).toHaveAttribute("href", "/inscription");
+    expect(screen.getByRole("link", { name: "Créer mon compte gratuit" })).toHaveAttribute("href", "/inscription");
     expect(screen.queryByRole("navigation", { name: "Navigation principale" })).toBeNull();
   });
 
@@ -31,7 +31,7 @@ describe("Cadre du catalogue selon la personne", () => {
     render(await CadreSelonVisiteur({ children: <p>Catalogue</p> }));
     expect(screen.getByText("Catalogue")).toBeInTheDocument();
     expect(screen.getAllByRole("navigation", { name: "Navigation principale" }).length).toBeGreaterThan(0);
-    expect(screen.queryByRole("link", { name: "Créer un compte gratuit" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Créer mon compte gratuit" })).toBeNull();
   });
 
   it("si Supabase est injoignable, le catalogue s'affiche en cadre public plutôt qu'en erreur", async () => {

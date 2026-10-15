@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithRef } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/cn";
 import { Icon, type IconSvgElement } from "./Icon";
@@ -22,7 +22,7 @@ export const iconButtonVariants = cva(
   },
 );
 
-type IconButtonProps = Omit<ComponentPropsWithoutRef<"button">, "children"> &
+type IconButtonProps = Omit<ComponentPropsWithRef<"button">, "children"> &
   VariantProps<typeof iconButtonVariants> & {
     icon: IconSvgElement;
     /** Obligatoire : c'est le nom annoncé du bouton (« Fermer », « Plus d’actions »). */
