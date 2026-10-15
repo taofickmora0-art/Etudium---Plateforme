@@ -24,6 +24,8 @@
 
 - Dans **Actualités**, tri **« Les plus récentes »** seulement, les formations mises en ligne depuis **30 jours** se
   glissent entre les publications, **à leur date** (une carte « Nouvelle formation »).
+- **Au plus 3** (les plus récentes) : au lancement, le catalogue ne noie pas la communauté (ajouté après la revue
+  finale ; les autres restent dans « Formations disponibles »).
 - Une formation plus ancienne que la dernière publication chargée attend « Voir plus » ; à la fin du fil, celles qui
   restent viennent à la suite.
 - **La carte :**

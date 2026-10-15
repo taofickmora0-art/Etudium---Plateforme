@@ -238,9 +238,7 @@ export function PageCommunaute({
   return (
     // Le fil (720 px) et sa colonne (320 px) restent au milieu de l'écran, l'en-tête aligné sur eux.
     <div className="mx-auto flex w-full max-w-[720px] min-w-0 flex-col xl:max-w-[1064px]">
-      <Heading level="page" className="max-sm:text-[28px] max-sm:leading-9">
-        {titre}
-      </Heading>
+      <Heading level="page">{titre}</Heading>
       <Lead className="mt-2.5">{intro}</Lead>
       {/* Les espaces, et à droite (dessous sur téléphone) « Sessions live programmées » s'il y en a une à venir. */}
       <div className="mt-[21px] flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-3 max-sm:mt-4">

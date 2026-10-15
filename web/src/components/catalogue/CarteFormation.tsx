@@ -18,7 +18,7 @@ export function CarteFormation({
   carte: CarteCatalogue;
   variante: "public" | "connecte";
   sansEtiquette?: boolean;
-  /** h3 sous le titre d'une section (tableau de bord). */
+  /** h3 sous le titre d'une section (« Formations disponibles » de l'Accueil). */
   titleAs?: "h2" | "h3";
 }) {
   const couleur = parcoursPrincipal(carte);

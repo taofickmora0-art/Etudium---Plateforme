@@ -38,6 +38,11 @@ describe("Les nouvelles formations", () => {
     expect(nouvellesFormations(cartes, MAINTENANT).map((f) => f.id)).toEqual(["recente", "moyenne", "limite"]);
   });
 
+  it("au plus 3 dans le fil : au lancement, le catalogue ne noie pas la communauté (revue finale)", () => {
+    const cartes = ["a", "b", "c", "d", "e"].map((id, i) => formation(id, `2026-10-1${i}T12:00:00Z`));
+    expect(nouvellesFormations(cartes, MAINTENANT).map((f) => f.id)).toEqual(["e", "d", "c"]);
+  });
+
   it("formationsDisponibles : les 4 plus récentes", () => {
     const cartes = ["a", "b", "c", "d", "e"].map((id, i) => formation(id, `2026-0${i + 1}-01T00:00:00Z`));
     expect(formationsDisponibles(cartes).map((f) => f.id)).toEqual(["e", "d", "c", "b"]);

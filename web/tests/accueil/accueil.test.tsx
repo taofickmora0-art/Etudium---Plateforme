@@ -96,6 +96,8 @@ describe("Le nouvel Accueil", () => {
 
   it("l'en-tête : « Bonjour, Koffi » et les dernières nouvelles", () => {
     afficher();
+    // La taille de titre du téléphone compact (26 px), comme les autres pages (revue finale).
+    expect(screen.getByRole("heading", { level: 1, name: "Bonjour, Koffi" })).not.toHaveClass("max-sm:text-[28px]");
     expect(screen.getByRole("heading", { level: 1, name: "Bonjour, Koffi" })).toBeInTheDocument();
     expect(screen.getByText("Les dernières nouvelles d’Étudium : publications, nouvelles formations et sessions live.")).toBeInTheDocument();
   });

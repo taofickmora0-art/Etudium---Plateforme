@@ -3,12 +3,14 @@ import type { Publication } from "@/lib/communaute/types";
 
 /** Une formation est « nouvelle » dans le fil de l'Accueil pendant 30 jours après sa mise en ligne (spec, §2). */
 export const NOUVELLES_JOURS = 30;
+/** Au plus 3 dans le fil : au lancement, le catalogue ne noie pas la communauté (les autres sont dans « Formations disponibles »). */
+export const NOUVELLES_MAX = 3;
 /** « Formations disponibles » sous le fil : les plus récentes (spec, §3). */
 export const FORMATIONS_DISPONIBLES = 4;
 
 const recentesDabord = (a: CarteCatalogue, b: CarteCatalogue) => Date.parse(b.publieeLe) - Date.parse(a.publieeLe);
 
-/** Les formations mises en ligne depuis 30 jours (pas dans le futur), de la plus récente à la plus ancienne. */
+/** Les 3 dernières formations mises en ligne depuis 30 jours (pas dans le futur), de la plus récente à la plus ancienne. */
 export function nouvellesFormations(cartes: CarteCatalogue[], maintenant: Date): CarteCatalogue[] {
   const depuis = maintenant.getTime() - NOUVELLES_JOURS * 86_400_000;
   return cartes
@@ -16,7 +18,8 @@ export function nouvellesFormations(cartes: CarteCatalogue[], maintenant: Date):
       const date = Date.parse(c.publieeLe);
       return !Number.isNaN(date) && date >= depuis && date <= maintenant.getTime();
     })
-    .sort(recentesDabord);
+    .sort(recentesDabord)
+    .slice(0, NOUVELLES_MAX);
 }
 
 /** Les formations les plus récentes du catalogue, pour « Formations disponibles ». */
