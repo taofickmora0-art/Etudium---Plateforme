@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { unstable_rethrow } from "next/navigation";
 import { BandeAppelAction } from "@/components/catalogue/BlocsFiche";
 import { listCatalogue, listParcoursCatalogue } from "@/lib/catalogue/data";
 import { HeroLanding } from "./HeroLanding";
@@ -9,11 +10,15 @@ import { SectionFormules } from "./SectionFormules";
 import { SectionParcours } from "./SectionParcours";
 import { SectionAccompagnement, SectionEtapes, SectionProblemes, SectionSolution } from "./SectionsPresentation";
 
-/** Une lecture en base qui échoue donne une liste vide (et une trace), plutôt qu'une page en erreur. */
+/**
+ * Une lecture en base qui échoue donne une liste vide (et une trace), plutôt qu'une page en erreur. Les interruptions
+ * de Next (pré-rendu, rendu dynamique) ne sont pas des échecs : elles repartent.
+ */
 async function lireOuRien<T>(lire: () => Promise<T[]>, quoi: string): Promise<T[]> {
   try {
     return await lire();
   } catch (erreur) {
+    unstable_rethrow(erreur);
     console.error(`Landing : lecture des ${quoi} impossible`, erreur);
     return [];
   }

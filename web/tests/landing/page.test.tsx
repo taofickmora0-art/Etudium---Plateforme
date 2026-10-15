@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CarteCatalogue, ParcoursCatalogue } from "@/lib/catalogue/types";
 import { CARTES_DESIGN, PARCOURS_DESIGN } from "../catalogue/cartes-design";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
+vi.mock("next/navigation", async (original) => ({ ...(await original<typeof import("next/navigation")>()), usePathname: () => "/" }));
 const listCatalogue = vi.fn<() => Promise<CarteCatalogue[]>>();
 const listParcoursCatalogue = vi.fn<() => Promise<ParcoursCatalogue[]>>();
 vi.mock("@/lib/catalogue/data", () => ({ listCatalogue: () => listCatalogue(), listParcoursCatalogue: () => listParcoursCatalogue() }));
@@ -47,6 +47,17 @@ describe("Landing assemblée (spec du lot 1, §9)", () => {
     expect(document.getElementById("parcours")).not.toBeNull();
     expect(screen.getByRole("heading", { level: 2, name: "Tout ce qu’il faut savoir avant de commencer" })).toBeInTheDocument();
     expect(espion).toHaveBeenCalled();
+    espion.mockRestore();
+  });
+
+  it("une interruption du pré-rendu de Next n'est pas un échec : elle repart, sans trace d'erreur", async () => {
+    const espion = vi.spyOn(console, "error").mockImplementation(() => {});
+    const interruption = Object.assign(new Error("During prerendering, `cookies()` rejects"), { digest: "HANGING_PROMISE_REJECTION" });
+    listCatalogue.mockRejectedValue(interruption);
+    listParcoursCatalogue.mockRejectedValue(interruption);
+    await expect(FormationsDepuisBase()).rejects.toBe(interruption);
+    await expect(ParcoursDepuisBase()).rejects.toBe(interruption);
+    expect(espion).not.toHaveBeenCalled();
     espion.mockRestore();
   });
 });
