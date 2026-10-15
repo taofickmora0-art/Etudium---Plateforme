@@ -691,7 +691,8 @@ La page d'une leçon prend une barre du haut et des discussions, le programme se
    - les flèches rangent les questions, la corbeille en supprime une ; « Enregistrer ».
    - Essaie une question sans bonne réponse : « La question 1 doit avoir une seule bonne réponse. » s'affiche, rien n'est remplacé.
    - Dans l'onglet « Leçons », la ligne dit « Quiz · 4 questions », et l'en-tête « 2 sections · 9 leçons · 1 quiz ».
-4. **Passer le quiz** avec un compte étudiant (publie le quiz d'abord, il est en brouillon à sa création si la formation est publiée) :
+   - Un quiz naît en brouillon : publie-le une fois ses questions enregistrées. Sans question, « Ajoutez au moins une question avant de publier ce quiz. »
+4. **Passer le quiz** avec un compte étudiant :
    - la page affiche « 4 questions · meilleur score : — · score minimal : 70 % » et **Commencer** ;
    - une question à la fois : « Question 2 sur 4 », « Question précédente », « Passer cette question », « Valider » ;
    - « Quitter » demande « Quitter le quiz ? » et n'enregistre rien ;
