@@ -42,6 +42,23 @@ describe("Une vidéo d'une autre plateforme", () => {
     expect(screen.queryByText(/Temps réellement regardé/)).toBeNull();
   });
 
+  it("Google Drive : le bouton « ouvrir dans Drive » est caché par un coin Étudium qui porte notre plein écran ; le plein écran de Drive est coupé (retour du 15 octobre)", () => {
+    const { container } = afficher(avec({ fournisseur: "drive", id: "1AbCdEfGhIjKlMnOpQrStUvWxYz012345" }));
+    const iframe = screen.getByTitle("Vidéo : Saisir des données");
+    expect(iframe).not.toHaveAttribute("allowfullscreen");
+    expect(iframe.getAttribute("allow")).not.toContain("fullscreen");
+    const coin = container.querySelector("[data-coin-video]")!;
+    expect(coin).not.toBeNull();
+    expect(coin.parentElement).toBe(iframe.parentElement);
+    expect(screen.getByRole("button", { name: "Plein écran" })).toBeInTheDocument();
+  });
+
+  it("YouTube intégré tel quel (aperçu de l'éditeur) : son plein écran, pas de coin", () => {
+    const { container } = afficher(avec({ fournisseur: "loom", id: "0123456789abcdef0123456789abcdef" }));
+    expect(screen.getByTitle("Vidéo : Saisir des données")).toHaveAttribute("allowfullscreen");
+    expect(container.querySelector("[data-coin-video]")).toBeNull();
+  });
+
   it("TikTok (mesurée) : le lecteur Étudium, au format vertical", () => {
     const { container } = afficher(avec({ fournisseur: "tiktok", id: "7234567890123456789" }));
     expect(screen.getByRole("button", { name: "Lire la vidéo" })).toBeInTheDocument();

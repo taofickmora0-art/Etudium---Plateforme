@@ -257,7 +257,7 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
               <div className="flex flex-col gap-1 text-[13px] leading-5 text-texte">
                 <p className="m-0">Cette plateforme ne permet pas de mesurer le temps regardé : la leçon se terminera d’un clic sur « Terminer la leçon ».</p>
                 {video.fournisseur === "drive" && (
-                  <p className="m-0 text-discret">Partagez la vidéo avec « Tous les utilisateurs disposant du lien ». Drive peut bloquer une vidéo très regardée, jusqu’à 24 h.</p>
+                  <p className="m-0 text-discret">Partagez la vidéo avec « Tous les utilisateurs disposant du lien », et dans les réglages du partage (roue dentée), décochez l’option qui permet aux lecteurs de télécharger, imprimer et copier. Drive peut bloquer une vidéo très regardée, jusqu’à 24 h.</p>
                 )}
               </div>
             )}

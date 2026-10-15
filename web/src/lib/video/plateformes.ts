@@ -11,6 +11,8 @@ type Plateforme = {
   mesuree: boolean;
   /** Lecteur piloté par messages, pas encore éprouvé : s'il ne répond pas, la leçon se termine d'un clic (0030). */
   secours?: boolean;
+  /** Le lecteur intégré met un bouton « ouvrir sur la plateforme » dans son coin haut droit (Drive) : on le cache. */
+  coinMasque?: boolean;
   verticale?: boolean;
   format: RegExp;
   lien: (id: string) => string;
@@ -70,6 +72,7 @@ const PLATEFORMES: Record<Fournisseur, Plateforme> = {
   drive: {
     nom: "Google Drive",
     mesuree: false,
+    coinMasque: true,
     format: /^[A-Za-z0-9_-]{20,80}$/,
     lien: (id) => `https://drive.google.com/file/d/${id}/view`,
     integration: (id) => `https://drive.google.com/file/d/${id}/preview`,
@@ -82,6 +85,8 @@ export const estFournisseur = (valeur: unknown): valeur is Fournisseur => typeof
 export const estMesuree = (f: Fournisseur) => PLATEFORMES[f].mesuree;
 /** Si le lecteur ne répond pas, la leçon se termine d'un clic (TikTok, Tella) : jamais d'impasse. */
 export const aSecoursManuel = (f: Fournisseur) => Boolean(PLATEFORMES[f].secours);
+/** Le bouton « ouvrir dans Drive » du lecteur intégré est caché, et son plein écran coupé (on fournit le nôtre). */
+export const aCoinMasque = (f: Fournisseur) => Boolean(PLATEFORMES[f].coinMasque);
 /** Une vidéo verticale (9:16), comme sur TikTok. */
 export const estVertical = (f: Fournisseur) => Boolean(PLATEFORMES[f].verticale);
 export const nomPlateforme = (f: Fournisseur) => PLATEFORMES[f].nom;

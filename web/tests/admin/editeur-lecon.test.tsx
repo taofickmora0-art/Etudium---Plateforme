@@ -254,7 +254,7 @@ describe("L'éditeur de leçon", () => {
     expect(screen.getByText("Reconnu : Google Drive · 1AbCdEfGhIjKlMnOpQrStUvWxYz012345")).toBeInTheDocument();
     expect(screen.getByTitle("Vidéo : Les formules")).toHaveAttribute("src", "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/preview");
     expect(screen.getByText("Cette plateforme ne permet pas de mesurer le temps regardé : la leçon se terminera d’un clic sur « Terminer la leçon ».")).toBeInTheDocument();
-    expect(screen.getByText("Partagez la vidéo avec « Tous les utilisateurs disposant du lien ». Drive peut bloquer une vidéo très regardée, jusqu’à 24 h.")).toBeInTheDocument();
+    expect(screen.getByText("Partagez la vidéo avec « Tous les utilisateurs disposant du lien », et dans les réglages du partage (roue dentée), décochez l’option qui permet aux lecteurs de télécharger, imprimer et copier. Drive peut bloquer une vidéo très regardée, jusqu’à 24 h.")).toBeInTheDocument();
     expect(screen.getByText("Facultative : elle s’affiche aux étudiants.")).toBeInTheDocument();
     expect(creerAdaptateur).not.toHaveBeenCalled();
   });
