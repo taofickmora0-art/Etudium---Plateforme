@@ -25,8 +25,9 @@ const INSCRIPTION =
   "focus-etudium inline-flex items-center justify-center gap-2 rounded-[14px] bg-bleu px-[18px] text-base font-medium text-white no-underline transition-colors hover:bg-bleu-survol";
 
 /**
- * En-tête des pages publiques (NdLanding, NdCataloguePublic, NdFormationPublic). Au téléphone (aucune maquette), il
- * tient sur une ligne : logo, « Se connecter » et un bouton « Menu » qui déplie les liens et l'inscription.
+ * En-tête des pages publiques (NdLanding, NdCataloguePublic, NdFormationPublic), collé en haut de l'écran quand la page
+ * défile (demande du 15 octobre 2026), sur le fond de la page. Au téléphone (aucune maquette), il tient sur une ligne :
+ * logo, « Se connecter » et un bouton « Menu » qui déplie les liens et l'inscription.
  */
 export function EnTetePublic() {
   const pathname = usePathname() ?? "";
@@ -52,7 +53,7 @@ export function EnTetePublic() {
   const actif = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3 py-5 pr-1 max-sm:gap-2 max-sm:py-3 max-sm:pr-0">
+    <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 bg-page py-5 pr-1 max-sm:gap-2 max-sm:py-3 max-sm:pr-0">
       <div className="flex min-w-0 flex-wrap items-center gap-3">
         <Link
           href="/"
@@ -93,7 +94,7 @@ export function EnTetePublic() {
         <nav
           id={idMenu}
           aria-label="Menu du site"
-          className="flex basis-full flex-col gap-1 rounded-carte bg-panneau p-2 shadow-[0_18px_44px_rgba(11,24,201,0.12)] sm:hidden"
+          className="flex max-h-[calc(100dvh-5rem)] basis-full flex-col gap-1 overflow-y-auto rounded-carte bg-panneau p-2 shadow-[0_18px_44px_rgba(11,24,201,0.12)] sm:hidden"
         >
           {LIENS_PUBLICS.map((lien) => (
             <Link

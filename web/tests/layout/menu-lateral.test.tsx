@@ -53,6 +53,15 @@ describe("La barre latérale repliable", () => {
     expect(within(accueil).getByText("Accueil")).toHaveClass("menu-lateral-libelle");
   });
 
+  it("la barre reste en place quand la page défile (même coque pour les trois espaces) et défile seule si l'écran est trop bas", () => {
+    // Demande du 15 octobre 2026 : « figer » la barre latérale, dans l'espace étudiant, formateur et back-office.
+    const { container } = render(<AppShell espace="etudiant">Contenu</AppShell>);
+    const barre = container.querySelector(".menu-lateral");
+    expect(barre).toHaveClass("sticky", "top-0", "max-h-dvh", "overflow-y-auto");
+    // Sur un écran bas (portable en 1366 × 768), une barre de défilement fine et discrète, pas celle, épaisse, de Windows.
+    expect(barre?.className).toContain("[scrollbar-width:thin]");
+  });
+
   it("au chargement, le choix mémorisé s'applique avant l'affichage ; sans stockage lisible, rien ne casse", () => {
     localStorage.setItem(CLE_MENU, "reduit");
     new Function(SCRIPT_MENU)();

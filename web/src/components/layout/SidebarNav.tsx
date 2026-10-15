@@ -62,7 +62,8 @@ export function SidebarNavLinks({
   }
   return (
     <div className={cn("menu-lateral-place relative shrink-0", className)}>
-      <div className="menu-lateral relative z-20 overflow-x-hidden rounded-l-coque bg-coque">
+      {/* Figée quand la page défile (demande du 15 octobre 2026) ; si l'écran est trop bas pour toutes ses entrées, elle défile seule. */}
+      <div className="menu-lateral sticky top-0 z-20 max-h-dvh overflow-x-hidden overflow-y-auto rounded-l-coque bg-coque [scrollbar-color:var(--color-bordure-champ)_transparent] [scrollbar-width:thin]">
         <nav id="menu-lateral" aria-label={menu?.libelle ?? "Navigation principale"} className={NAV}>
           {groupes}
         </nav>

@@ -68,6 +68,18 @@ describe("En-tête public (NdLanding §2)", () => {
     chemin = "/formations";
   });
 
+  it("l'en-tête reste en haut de l'écran quand la page défile, sur le fond de la page (demande du 15 octobre)", () => {
+    render(<EnTetePublic />);
+    expect(screen.getByRole("banner")).toHaveClass("sticky", "top-0", "z-40", "bg-page");
+  });
+
+  it("au téléphone, le menu déplié défile seul s'il dépasse la hauteur de l'écran", async () => {
+    const user = userEvent.setup();
+    render(<EnTetePublic />);
+    await user.click(screen.getByRole("button", { name: "Menu" }));
+    expect(screen.getByRole("navigation", { name: "Menu du site" })).toHaveClass("overflow-y-auto");
+  });
+
   it("la touche Échap referme le menu", async () => {
     const user = userEvent.setup();
     render(<EnTetePublic />);
