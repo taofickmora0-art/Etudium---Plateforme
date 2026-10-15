@@ -65,11 +65,12 @@ export async function contacterEquipe(sujet: string, texteMessage: string): Prom
   return envoi.ok ? { ok: true } : envoi;
 }
 
-/** Relit le fil ouvert (toutes les 10 s) ; null sur une erreur. */
-export async function relireFil(id: string): Promise<Fil | null> {
+/** Relit le fil ouvert (toutes les 10 s), ou ses messages d'avant `avant` (« Messages précédents ») ; null sur une erreur. */
+export async function relireFil(id: string, avant?: string): Promise<Fil | null> {
   if (!UUID.test(id) || !(await getShellUser())) return null;
+  const date = typeof avant === "string" && !Number.isNaN(Date.parse(avant)) ? avant : null;
   try {
-    const { data, error } = await (await createClient()).rpc("fil_conversation", { p_conversation: id });
+    const { data, error } = await (await createClient()).rpc("fil_conversation", date ? { p_conversation: id, p_avant: date } : { p_conversation: id });
     return error ? null : versFil(data);
   } catch {
     return null;

@@ -3,6 +3,7 @@
 import { Fragment, Suspense, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { SidebarGroup } from "@/components/ui/SidebarGroup";
+import { useMessagesNonLus } from "@/components/messages/useMessagesNonLus";
 import { useNouvellesSessions } from "@/components/sessions/useNouvellesSessions";
 import { SidebarItem } from "@/components/ui/SidebarItem";
 import { spaceOf, type Espace } from "@/lib/auth/permissions";
@@ -37,6 +38,16 @@ export function SidebarNavLinks({
   const menu = actuel ? MENUS[actuel] : null;
   // La pastille rouge des nouvelles sessions live, sur l'entrée Événements de l'espace étudiant.
   const nouvelles = useNouvellesSessions(pathname, actuel === "etudiant");
+  // Les conversations non lues, sur l'entrée « Messages » de l'espace (l'équipe : l'assistance).
+  const espaceMessages = actuel === "admin" ? "equipe" : (actuel ?? null);
+  const nonLus = useMessagesNonLus(espaceMessages, pathname !== null);
+  const pastilleDe = (href: string) => {
+    if (href === "/evenements" && nouvelles > 0) return { nombre: nouvelles, libelle: `${nouvelles} nouvelle${nouvelles > 1 ? "s" : ""} session${nouvelles > 1 ? "s" : ""}` };
+    if ((href === "/messages" || href === "/formateur/messages" || href === "/admin/messages") && nonLus > 0) {
+      return { nombre: nonLus, libelle: `${nonLus} conversation${nonLus > 1 ? "s" : ""} non lue${nonLus > 1 ? "s" : ""}` };
+    }
+    return undefined;
+  };
   const entree = (e: NavEntry) => (
     <SidebarItem
       key={e.href}
@@ -44,7 +55,7 @@ export function SidebarNavLinks({
       icon={e.icon}
       label={e.label}
       active={pathname !== null && entreeActive(pathname, e)}
-      pastille={e.href === "/evenements" && nouvelles > 0 ? { nombre: nouvelles, libelle: `${nouvelles} nouvelle${nouvelles > 1 ? "s" : ""} session${nouvelles > 1 ? "s" : ""}` } : undefined}
+      pastille={pastilleDe(e.href)}
     />
   );
   const groupes = menu?.groupes.map((groupe, index) => (

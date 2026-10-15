@@ -19,6 +19,8 @@ const TONES = {
   bleu: "bg-bleu-pale text-bleu",
   violet: "bg-premium-fond text-premium-texte",
   ambre: "bg-attention-fond text-attention-texte",
+  // L'Équipe Étudium dans les messages (NdMessages : « É » gris-bleu).
+  neutre: "bg-fond-doux text-ardoise-fonce",
 } as const;
 
 type AvatarProps = {

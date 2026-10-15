@@ -25,6 +25,7 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
       ["Avis", "/admin/avis"],
       ["Sessions live", "/admin/sessions"],
       ["Utilisateurs", "/admin/utilisateurs"],
+      ["Messages", "/admin/messages"],
       ["Annonces", "/admin/annonces"],
       ["Abonnements et paiements", "/admin/paiements"],
       ["Communauté", "/admin/communaute"],
@@ -134,9 +135,6 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
     expect(screen.getByText(/au lot 2/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Retour au tableau de bord" })).toHaveAttribute("href", "/admin");
     unmount();
-    // Sessions live existe depuis la 0018 : « Messages » reste à venir dans l'espace formateur.
-    render(<ComingSoonView page="formateur/messages" />);
-    expect(screen.getByText(/au lot 5/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Retour au tableau de bord" })).toHaveAttribute("href", "/formateur");
+    // L'espace formateur n'a plus de page à venir depuis la messagerie (lot 5, étape A).
   });
 });
