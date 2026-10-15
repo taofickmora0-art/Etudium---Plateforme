@@ -71,7 +71,8 @@ export function DepotTravail({ leconId, nouvelleVersion, onEnvoye }: { leconId: 
       await stockage.remove([chemin]).catch(() => undefined);
       return echouer(reponse.message);
     }
-    toast({ tone: "reussite", title: "Travail envoyé", description: "Votre formateur a été prévenu. Vous recevrez une notification dès la correction." });
+    // Juste même sans formateur attribué à la formation (l'équipe corrige alors).
+    toast({ tone: "reussite", title: "Travail envoyé", description: "Vous recevrez une notification dès la correction." });
     setChoisi(null);
     setMessage("");
     onEnvoye();

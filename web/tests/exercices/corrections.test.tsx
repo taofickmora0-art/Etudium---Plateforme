@@ -103,6 +103,8 @@ describe("Corriger un travail", () => {
   it("« Demander une correction » exige une remarque ; « Envoyer la demande » ; « Remarque envoyée »", async () => {
     const user = userEvent.setup();
     afficher();
+    // Les autres correcteurs de la formation la voient aussi : l'aide le dit.
+    expect(screen.getByText("Visible par l’étudiant et par les correcteurs de la formation. Exigée pour demander une correction, facultative pour valider.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Demander une correction" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Expliquez ce qu’il faut corriger.");
     expect(screen.queryByRole("dialog")).toBeNull();

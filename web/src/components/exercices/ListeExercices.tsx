@@ -66,7 +66,10 @@ export function ListeExercices({ exercices }: { exercices: ExerciceListe[] }) {
         <div className="flex min-w-0 flex-col gap-3">
           {visibles.map((e) => {
             const adresse = adresseLecon(e.slug, e.leconId);
-            const quand = e.corrigeLe ? `Retour reçu ${moment(e.corrigeLe, maintenant)}` : `Déposé ${moment(e.creeLe, maintenant)}`;
+            // Un exercice simple n'a pas de dépôt : il est « terminé ».
+            const quand = e.corrigeLe
+              ? `Retour reçu ${moment(e.corrigeLe, maintenant)}`
+              : `${e.genre === "simple" ? "Terminé" : "Déposé"} ${moment(e.creeLe, maintenant)}`;
             return (
               <article key={e.leconId} className="flex min-w-0 flex-col gap-3 rounded-carte border border-bordure-carte bg-panneau p-5 max-sm:p-4">
                 <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-4 gap-y-2">

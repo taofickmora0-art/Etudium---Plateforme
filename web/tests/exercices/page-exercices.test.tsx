@@ -47,6 +47,12 @@ describe("La page Exercices", () => {
     expect(cartes[2]).toHaveTextContent("Validé");
   });
 
+  it("un exercice simple se dit « Terminé », pas « Déposé »", () => {
+    render(<ListeExercices exercices={[exercice({ genre: "simple", statut: "valide", creeLe: il(5) })]} />);
+    expect(screen.getByRole("article")).toHaveTextContent("Terminé il y a 5 h");
+    expect(screen.getByRole("article")).not.toHaveTextContent("Déposé");
+  });
+
   it("les filtres : À corriger, En attente, Validés ; un filtre vide le dit et ramène à tous", async () => {
     const user = userEvent.setup();
     render(<ListeExercices exercices={LISTE.filter((e) => e.statut !== "en_attente")} />);

@@ -146,7 +146,7 @@ export function CorrectionRendu({ rendu }: { rendu: RenduACorriger }) {
                   </p>
                 ) : (
                   <p id={`${id}-aide`} className="m-0 text-xs leading-[18px] text-discret">
-                    Seul l’étudiant la lit. Exigée pour demander une correction, facultative pour valider.
+                    Visible par l’étudiant et par les correcteurs de la formation. Exigée pour demander une correction, facultative pour valider.
                   </p>
                 )}
               </div>

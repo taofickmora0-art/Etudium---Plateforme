@@ -96,6 +96,9 @@ describe("Un exercice avec rendu", () => {
     expect(options).toMatchObject({ contentType: XLSX, upsert: false });
     expect(rendreExercice).toHaveBeenCalledWith(L, chemin, "Tableau.xlsx", "Voici mon tableau.");
     expect(await screen.findByText("Travail envoyé")).toBeInTheDocument();
+    // Juste même sans formateur attribué : l'équipe corrige alors.
+    expect(screen.getByText("Vous recevrez une notification dès la correction.")).toBeInTheDocument();
+    expect(screen.queryByText(/formateur a été prévenu/)).toBeNull();
   });
 
   it("un ZIP annoncé « application/x-zip-compressed » par Windows part comme « application/zip »", async () => {
