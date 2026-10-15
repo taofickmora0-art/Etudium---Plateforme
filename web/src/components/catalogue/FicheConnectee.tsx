@@ -9,7 +9,7 @@ import { Icon, type IconSvgElement } from "@/components/ui/Icon";
 import { MetaDot, ProgressBar } from "@/components/ui/Progress";
 import { Tag, type TagTone } from "@/components/ui/Tag";
 import { Heading, Lead } from "@/components/ui/Text";
-import { dureeLisible, etatAcces, leconsApercu, nombreDeLecons, parcoursPrincipal, premiereLeconOuverte } from "@/lib/catalogue/regles";
+import { dureeLisible, estLeconDeContenu, etatAcces, leconsApercu, nombreDeLecons, nombreDeQuiz, parcoursPrincipal, premiereLeconOuverte } from "@/lib/catalogue/regles";
 import { formatNote, libelleNombreAvis, peutDonnerAvis } from "@/lib/avis/regles";
 import type { AvisFormation } from "@/lib/avis/types";
 import type { FicheFormation, LeconFiche } from "@/lib/catalogue/types";
@@ -41,7 +41,8 @@ function EnTeteSection({ titre, id, suite }: { titre: string; id?: string; suite
  */
 function EnTeteProgression({ fiche, progression }: { fiche: FicheFormation; progression: EtatProgression }) {
   const restant = dureeLisible(progression.restantSecondes);
-  const lecons = fiche.modules.flatMap((m) => m.lecons);
+  // Les quiz ne comptent pas dans la progression (R17).
+  const lecons = fiche.modules.flatMap((m) => m.lecons).filter(estLeconDeContenu);
   const faites = lecons.filter((l) => progression.terminees.has(l.id)).length;
   return (
     <>
@@ -178,6 +179,7 @@ export function FicheConnectee({
   favori = null,
   avis = null,
   lienModifier = null,
+  scores = {},
 }: {
   fiche: FicheFormation;
   progression?: EtatProgression | null;
@@ -187,6 +189,8 @@ export function FicheConnectee({
   avis?: AvisFormation | null;
   /** L'onglet « Leçons » de l'éditeur, pour l'équipe et le formateur de la formation. */
   lienModifier?: string | null;
+  /** Le meilleur score du compte à chaque quiz (lot 3). */
+  scores?: Readonly<Record<string, number>>;
 }) {
   const parcours = [...fiche.parcours].sort((a, b) => a.ordre - b.ordre)[0];
   const duree = dureeLisible(fiche.dureeSecondes);
@@ -199,6 +203,7 @@ export function FicheConnectee({
     duree && { icone: Clock01Icon, marge: "-mx-[1.5px]", texte: duree },
     { texte: libelleNiveau(fiche.niveau) },
     fiche.nbLecons > 0 && { texte: nombreDeLecons(fiche.nbLecons) },
+    Boolean(fiche.nbQuiz) && { texte: nombreDeQuiz(fiche.nbQuiz) },
     fiche.formateur && { texte: fiche.formateur.nom },
   ].filter(Boolean) as { icone?: IconSvgElement; marge?: string; texte: string }[];
   const appel = appelDuHaut(fiche, progression);
@@ -284,7 +289,7 @@ export function FicheConnectee({
           )}
           <section aria-labelledby="programme-titre" className="flex min-w-0 flex-col gap-4">
             <EnTeteSection titre="Programme" id="programme-titre" suite={fiche.modules.length > 0 ? resumeProgramme(fiche) : undefined} />
-            <ProgrammeFiche fiche={fiche} variante="connecte" progression={progression?.commencee ? progression : null} lienModifier={lienModifier} />
+            <ProgrammeFiche fiche={fiche} variante="connecte" progression={progression?.commencee ? progression : null} lienModifier={lienModifier} scores={scores} />
           </section>
           <SectionAvis
             variante="connecte"

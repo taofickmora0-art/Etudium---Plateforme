@@ -1,31 +1,39 @@
 import Link from "next/link";
-import { ArrowLeft02Icon, CheckmarkCircle02Icon, Clock01Icon, PlayCircleIcon, SquareLock02Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft02Icon, CheckmarkCircle02Icon, Clock01Icon, PlayCircleIcon, Quiz01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
 import { Couverture } from "@/components/ui/Couverture";
 import { Icon } from "@/components/ui/Icon";
 import { Tag } from "@/components/ui/Tag";
 import { ProgressBar } from "@/components/ui/Progress";
 import { formatDuree } from "@/lib/admin/duree";
-import { dureeLisible, parcoursPrincipal } from "@/lib/catalogue/regles";
+import { dureeLisible, estLeconDeContenu, libelleQuiz, parcoursPrincipal } from "@/lib/catalogue/regles";
 import type { FicheFormation, LeconFiche } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
 import { urlCouverture } from "@/lib/couvertures/adresse";
 import { etatLigne, tempsRestant, type EtatLigne } from "@/lib/lecon/regles";
 import { ModulesRepliables } from "./ModulesRepliables";
 
-type Props = { fiche: FicheFormation; leconId: string; connecte: boolean; terminees: ReadonlySet<string> };
+type Props = {
+  fiche: FicheFormation;
+  leconId: string;
+  connecte: boolean;
+  terminees: ReadonlySet<string>;
+  /** Le meilleur score du compte à chaque quiz (lot 3). */
+  scores?: Readonly<Record<string, number>>;
+};
 
 // Ligne du panneau : le style des entrées de la barre latérale (48 px, rayon 14, icône 20, texte 16).
 const LIGNE = "focus-etudium flex h-12 items-center gap-2.5 rounded-bouton px-3 text-base font-medium no-underline transition-colors";
 
 const ICONES = { courante: PlayCircleIcon, "a-venir": PlayCircleIcon, terminee: CheckmarkCircle02Icon, verrouillee: SquareLock02Icon };
 
-function Ligne({ fiche, lecon, etat }: { fiche: FicheFormation; lecon: LeconFiche; etat: EtatLigne }) {
-  const duree = formatDuree(lecon.dureeSecondes);
+function Ligne({ fiche, lecon, etat, meilleur }: { fiche: FicheFormation; lecon: LeconFiche; etat: EtatLigne; meilleur?: number }) {
+  const quiz = lecon.type === "quiz";
+  const duree = quiz ? libelleQuiz(meilleur) : formatDuree(lecon.dureeSecondes);
   const contenu = (
     <>
       <span className={cn("flex flex-none", etat === "terminee" && "text-reussite-texte")}>
-        <Icon icon={ICONES[etat]} size={20} />
+        <Icon icon={quiz && etat !== "verrouillee" ? Quiz01Icon : ICONES[etat]} size={20} />
       </span>
       <span title={lecon.titre} className="min-w-0 truncate">
         {lecon.titreCourt ?? lecon.titre}
@@ -57,7 +65,8 @@ function Ligne({ fiche, lecon, etat }: { fiche: FicheFormation; lecon: LeconFich
 
 /** La progression du cours : la barre, « 8 % terminé » et le temps restant (bas du programme, bas du tiroir). */
 export function ProgressionCours({ fiche, terminees }: { fiche: FicheFormation; terminees: ReadonlySet<string> }) {
-  const lecons = fiche.modules.flatMap((m) => m.lecons);
+  // Les quiz ne comptent pas dans la progression (R17).
+  const lecons = fiche.modules.flatMap((m) => m.lecons).filter(estLeconDeContenu);
   const faites = lecons.filter((l) => terminees.has(l.id)).length;
   const pourcentage = lecons.length ? Math.round((100 * faites) / lecons.length) : 0;
   const restant = dureeLisible(tempsRestant(fiche.modules, terminees));
@@ -85,7 +94,7 @@ export function ProgressionCours({ fiche, terminees }: { fiche: FicheFormation; 
  * formation, puis les modules, repliables (celui de la leçon en cours ouvert), avec la durée de chaque leçon. Il défile
  * seul ; la progression (compte connecté) reste en bas (refonte des formations, spec §1.4).
  */
-export function ProgrammeLecon({ fiche, leconId, connecte, terminees }: Props) {
+export function ProgrammeLecon({ fiche, leconId, connecte, terminees, scores = {} }: Props) {
   const enCours = fiche.modules.find((m) => m.lecons.some((l) => l.id === leconId)) ?? fiche.modules[0];
   return (
     <>
@@ -109,7 +118,7 @@ export function ProgrammeLecon({ fiche, leconId, connecte, terminees }: Props) {
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
                 {module.lecons.map((lecon) => (
                   <li key={lecon.id} className="flex min-w-0 flex-col">
-                    <Ligne fiche={fiche} lecon={lecon} etat={etatLigne(lecon, leconId, terminees)} />
+                    <Ligne fiche={fiche} lecon={lecon} etat={etatLigne(lecon, leconId, terminees)} meilleur={scores[lecon.id]} />
                   </li>
                 ))}
               </ul>

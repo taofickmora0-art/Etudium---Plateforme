@@ -79,6 +79,8 @@ describe("L'éditeur d'un quiz", () => {
     afficher();
     expect(screen.queryByRole("textbox", { name: "Lien de la vidéo" })).toBeNull();
     expect(screen.queryByRole("textbox", { name: "Texte de la leçon" })).toBeNull();
+    // Les documents ne s'affichent pas sur la page d'un quiz : ils ne s'y ajoutent pas.
+    expect(screen.queryByText("Documents & fichiers")).toBeNull();
     expect(screen.getByRole("textbox", { name: "Titre du quiz" })).toHaveValue("Quiz du module 1");
     expect(screen.getByRole("heading", { name: "Questions" })).toBeInTheDocument();
     expect(screen.getByText("2 questions")).toBeInTheDocument();

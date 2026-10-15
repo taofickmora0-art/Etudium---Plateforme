@@ -22,6 +22,7 @@ import { getLeconDans } from "@/lib/lecon/data";
 import { videoMesuree, voisines } from "@/lib/lecon/regles";
 import { lireProgression } from "@/lib/progression/data";
 import { etatFormation } from "@/lib/progression/regles";
+import { lireMesScores } from "@/lib/quiz/data";
 import type { DonneesLecon } from "@/lib/lecon/types";
 
 type Params = { params: Promise<{ slug: string; leconId: string }> };
@@ -50,6 +51,7 @@ async function Lecon({ params }: Params) {
   let lignes: Awaited<ReturnType<typeof lireProgression>>;
   let moi: Awaited<ReturnType<typeof moiCommunaute>> | null = null;
   let lienModifier: string | null = null;
+  let scores: Record<string, number> = {};
   try {
     // Une formation non publiée ne s'ouvre qu'en aperçu, pour l'équipe et son formateur (refonte des formations, §3.5).
     fiche = await getFiche(slug);
@@ -58,9 +60,11 @@ async function Lecon({ params }: Params) {
       apercuFormation = fiche !== null;
     }
     [donnees, lignes] = fiche ? await Promise.all([getLeconDans(fiche, leconId, connecte), connecte ? lireProgression() : null]) : [null, null];
-    [moi, lienModifier] = await Promise.all([
+    [moi, lienModifier, scores] = await Promise.all([
       connecte && donnees?.discussion ? moiCommunaute() : null,
       connecte && donnees ? lienModifierLecon(donnees.fiche.id, leconId) : null,
+      // Le meilleur score de chaque quiz, dans le programme (lot 3).
+      connecte && donnees && donnees.fiche.modules.some((m) => m.lecons.some((l) => l.type === "quiz")) ? lireMesScores(donnees.fiche.id) : {},
     ]);
   } catch (erreur) {
     return siTablesAbsentes(erreur);
@@ -75,14 +79,16 @@ async function Lecon({ params }: Params) {
   const terminees = lignes ? etatFormation(donnees.fiche, lignes).terminees : new Set<string>();
   const { precedente, suivante } = voisines(donnees.fiche.modules, leconId);
   // Bouton de fin : compte connecté, leçon ouverte, progression disponible en base (0007, 0008), et pas en aperçu.
-  const actif = connecte && lecon.accessible && lignes !== null && !apercu;
+  // Un quiz ne se termine pas : il se réussit (lot 3) ; seul « Leçon suivante » reste.
+  const quiz = donnees.fiche.modules.some((m) => m.lecons.some((l) => l.id === leconId && l.type === "quiz"));
+  const actif = connecte && lecon.accessible && lignes !== null && !apercu && !quiz;
   return (
     <EtatLeconProvider key={leconId} termineeInitiale={terminees.has(leconId)} avecVideo={videoMesuree(lecon)} seuil={donnees.fiche.seuilVideo} actif={actif}>
       <CadreLecon
         connecte={connecte}
         titreFormation={donnees.fiche.titre}
         retour={connecte ? "/mes-formations" : `/formations/${donnees.fiche.slug}`}
-        programme={<ProgrammeLecon fiche={donnees.fiche} leconId={leconId} connecte={connecte} terminees={terminees} />}
+        programme={<ProgrammeLecon fiche={donnees.fiche} leconId={leconId} connecte={connecte} terminees={terminees} scores={scores} />}
         haut={
           <BarreHautLecon
             titreFormation={donnees.fiche.titre}
@@ -94,7 +100,7 @@ async function Lecon({ params }: Params) {
         barre={precedente || suivante || actif ? <BarreLecon fiche={donnees.fiche} leconId={leconId} /> : undefined}
         tiroir={
           <TiroirLecons pied={connecte ? <ProgressionCours fiche={donnees.fiche} terminees={terminees} /> : undefined}>
-            <ProgrammeMobile fiche={donnees.fiche} leconId={leconId} connecte={connecte} terminees={terminees} />
+            <ProgrammeMobile fiche={donnees.fiche} leconId={leconId} connecte={connecte} terminees={terminees} scores={scores} />
           </TiroirLecons>
         }
       >

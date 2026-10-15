@@ -1,7 +1,10 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
-import { videoMesuree } from "@/lib/lecon/regles";
+import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
+import { QuizLecon } from "@/components/quiz/QuizLecon";
+import { videoMesuree, voisines } from "@/lib/lecon/regles";
 import type { DonneesLecon } from "@/lib/lecon/types";
 import { DansCetteLecon } from "./DansCetteLecon";
 import { EnTeteLecon } from "./EnTeteLecon";
@@ -32,10 +35,13 @@ type Props = {
 /**
  * Le contenu de la page leçon (NdLecon, NdMobLecon) : vidéo, en-tête, navigation, onglets et « Dans cette leçon ».
  * Une leçon fermée n'affiche que son verrou, son en-tête et son résumé : jamais la vidéo, le texte ni les fichiers.
+ * Un quiz (lot 3) : l'en-tête, puis le quiz ; ni texte, ni onglets, ni « Terminer la leçon ».
  */
 export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lienModifier = null }: Props) {
   const { fiche, lecon, note, notesDisponibles } = donnees;
   const ouverte = lecon.accessible;
+  const quiz = fiche.modules.some((m) => m.lecons.some((l) => l.id === lecon.id && l.type === "quiz"));
+  if (quiz) return <ContenuQuiz donnees={donnees} connecte={connecte} apercu={apercu} moi={moi} lienModifier={lienModifier} />;
   return (
     <div className="flex min-w-0 flex-col gap-6">
       {apercu && <BandeauApercu apercu={apercu} />}
@@ -101,6 +107,56 @@ export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lie
       {/* Les discussions, sous le contenu et visibles sans clic (refonte des formations, §1.6). Pas en aperçu : un
           commentaire de test y serait enregistré, et visible des étudiants à la publication. */}
       {ouverte && !apercu && donnees.discussion && moi && (
+        <DiscussionsLecon key={lecon.id} leconId={lecon.id} slug={fiche.slug} initial={donnees.discussion} moi={moi} maintenant={new Date()} />
+      )}
+    </div>
+  );
+}
+
+/** La page d'un quiz : l'en-tête, le quiz (ou ce qui empêche de le passer), la navigation et les discussions. */
+function ContenuQuiz({ donnees, connecte, apercu = null, moi = null, lienModifier = null }: Props) {
+  const { fiche, lecon } = donnees;
+  const { precedente, suivante } = voisines(fiche.modules, lecon.id);
+  let quiz: ReactNode;
+  if (!lecon.accessible) {
+    quiz = <LeconVerrouillee fiche={fiche} leconId={lecon.id} connecte={connecte} />;
+  } else if (!connecte) {
+    quiz = (
+      <Banner
+        tone="information"
+        title="Connectez-vous pour passer ce quiz et garder votre score."
+        action={
+          <span className="flex flex-wrap gap-2">
+            <Button asChild size="sm">
+              <Link href="/inscription">Créer un compte gratuit</Link>
+            </Button>
+            <Button asChild size="sm" variant="contour">
+              <Link href={`/connexion?next=${encodeURIComponent(adresseLecon(fiche.slug, lecon.id))}`}>Se connecter</Link>
+            </Button>
+          </span>
+        }
+      />
+    );
+  } else if (donnees.quiz) {
+    quiz = (
+      <QuizLecon
+        key={lecon.id}
+        leconId={lecon.id}
+        quiz={donnees.quiz}
+        precedente={precedente ? adresseLecon(fiche.slug, precedente.id) : undefined}
+        suivante={suivante ? adresseLecon(fiche.slug, suivante.id) : undefined}
+      />
+    );
+  } else {
+    quiz = <Banner tone="information" title="Ce quiz n’est pas disponible pour le moment." />;
+  }
+  return (
+    <div className="flex min-w-0 flex-col gap-6">
+      {apercu && <BandeauApercu apercu={apercu} />}
+      <EnTeteLecon fiche={fiche} lecon={lecon} lienModifier={lienModifier} quiz />
+      {quiz}
+      <NavigationLecon fiche={fiche} leconId={lecon.id} />
+      {lecon.accessible && !apercu && donnees.discussion && moi && (
         <DiscussionsLecon key={lecon.id} leconId={lecon.id} slug={fiche.slug} initial={donnees.discussion} moi={moi} maintenant={new Date()} />
       )}
     </div>

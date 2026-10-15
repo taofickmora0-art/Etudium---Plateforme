@@ -6,6 +6,7 @@ import type { Reponse } from "@/lib/communaute/types";
 import { estTablesAbsentes, liste, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import { depuisMultirange } from "@/lib/video/suivi";
+import { lireQuizAPasser } from "@/lib/quiz/data";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import type { DonneesLecon, LeconDetail, RessourceLecon, VideoLecon, VisionnageLecon } from "./types";
 
@@ -106,12 +107,15 @@ export async function getLeconDans(fiche: FicheFormation, leconId: string, conne
 
   const lecon = versLecon(ligne);
   if (!connecte) return { fiche, lecon, note: null, notesDisponibles: true };
-  const [notes, visionnage, discussion] = await Promise.all([
+  // Un quiz (lot 3) : ses questions à passer, sans les bonnes réponses.
+  const quiz = fiche.modules.some((m) => m.lecons.some((l) => l.id === leconId && l.type === "quiz"));
+  const [notes, visionnage, discussion, questions] = await Promise.all([
     lireNote(leconId),
-    lecon.accessible ? lireVisionnage(leconId) : null,
+    lecon.accessible && !quiz ? lireVisionnage(leconId) : null,
     lecon.accessible ? lireDiscussion(leconId) : null,
+    lecon.accessible && quiz ? lireQuizAPasser(leconId) : undefined,
   ]);
-  return { fiche, lecon: { ...lecon, visionnage }, ...notes, discussion };
+  return { fiche, lecon: { ...lecon, visionnage }, ...notes, discussion, ...(quiz ? { quiz: questions ?? null } : {}) };
 }
 
 /**

@@ -15,6 +15,12 @@ export function dureeLisible(secondes: number): string {
 /** « 1 leçon », « 12 leçons » (zéro reste au singulier). */
 export const nombreDeLecons = (n: number) => `${n} ${n > 1 ? "leçons" : "leçon"}`;
 
+/** « 4 quiz » ; rien sans quiz (lot 3). */
+export const nombreDeQuiz = (n: number | undefined) => (n ? `${n} quiz` : "");
+
+/** Un quiz dans le programme : « Quiz », ou « Quiz · 75 % » avec le meilleur score du compte (lot 3). */
+export const libelleQuiz = (meilleur?: number) => (meilleur === undefined ? "Quiz" : `Quiz · ${meilleur} %`);
+
 /**
  * Le badge d'une carte, un seul et le même partout (spec §11) : « Gratuit » d'abord, puis le badge saisi au
  * back-office (Populaire, Nouveau), puis « Complémentaire » pour une formation disponible seule.

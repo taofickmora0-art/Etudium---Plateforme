@@ -358,7 +358,8 @@ export function EditeurLecon({ lecon, base = "/admin/formations", quiz }: Editeu
               </span>
             </div>
           </div>
-          <RessourcesEditor lecon={lecon} variante="colonne" />
+          {/* Un quiz : pas de documents (la page du quiz ne les montre pas). */}
+          {!estQuiz && <RessourcesEditor lecon={lecon} variante="colonne" />}
         </section>
 
         <form id={formulaire} onSubmit={soumettre} noValidate className="flex min-w-0 flex-col gap-4 rounded-carte border border-bordure-carte bg-panneau p-6 max-sm:p-4">

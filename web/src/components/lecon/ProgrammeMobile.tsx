@@ -1,14 +1,22 @@
 import Link from "next/link";
-import { PlayIcon, SquareLock02Icon, Tick02Icon, Video01Icon } from "@hugeicons/core-free-icons";
+import { PlayIcon, Quiz01Icon, SquareLock02Icon, Tick02Icon, Video01Icon } from "@hugeicons/core-free-icons";
 import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
 import { Icon, type IconSvgElement } from "@/components/ui/Icon";
 import { Tag } from "@/components/ui/Tag";
 import { formatDuree } from "@/lib/admin/duree";
+import { estLeconDeContenu, libelleQuiz } from "@/lib/catalogue/regles";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
 import { etatLigne, type EtatLigne } from "@/lib/lecon/regles";
 
-type Props = { fiche: FicheFormation; leconId: string; connecte: boolean; terminees: ReadonlySet<string> };
+type Props = {
+  fiche: FicheFormation;
+  leconId: string;
+  connecte: boolean;
+  terminees: ReadonlySet<string>;
+  /** Le meilleur score du compte à chaque quiz (lot 3). */
+  scores?: Readonly<Record<string, number>>;
+};
 
 const TUILES: Record<EtatLigne, { classe: string; icone: IconSvgElement }> = {
   terminee: { classe: "bg-reussite-fond text-reussite-texte", icone: Tick02Icon },
@@ -23,7 +31,7 @@ const LIGNE = "flex min-h-12 items-center gap-3.5 px-1 py-3.5";
  * Onglet « Programme » du téléphone (NdMobLecon §3.5). Tous les modules : le déverrouillage module par module
  * (exercice validé) arrive au lot 3.
  */
-export function ProgrammeMobile({ fiche, leconId, connecte, terminees }: Props) {
+export function ProgrammeMobile({ fiche, leconId, connecte, terminees, scores = {} }: Props) {
   return (
     <div className="flex min-w-0 flex-col">
       {fiche.modules.map((module, index) => (
@@ -33,15 +41,16 @@ export function ProgrammeMobile({ fiche, leconId, connecte, terminees }: Props) 
             <h3 className="m-0 text-base leading-6 font-semibold text-encre">{`Module ${index + 1} : ${module.titre}`}</h3>
             {connecte && (
               <span className="text-xs leading-[18px] whitespace-nowrap text-discret">
-                {`${module.lecons.filter((l) => terminees.has(l.id)).length}/${module.lecons.length}`}
+                {`${module.lecons.filter((l) => estLeconDeContenu(l) && terminees.has(l.id)).length}/${module.lecons.filter(estLeconDeContenu).length}`}
               </span>
             )}
           </div>
           <ul className="m-0 flex list-none flex-col p-0 [&>li+li]:border-t [&>li+li]:border-bordure-carte">
             {module.lecons.map((lecon) => {
               const etat = etatLigne(lecon, leconId, terminees);
-              const tuile = TUILES[etat];
-              const duree = formatDuree(lecon.dureeSecondes);
+              const quiz = lecon.type === "quiz";
+              const tuile = quiz && etat !== "verrouillee" ? { ...TUILES[etat], icone: Quiz01Icon } : TUILES[etat];
+              const duree = quiz ? libelleQuiz(scores[lecon.id]) : formatDuree(lecon.dureeSecondes);
               const corps = (
                 <>
                   <span className={cn("flex size-10 flex-none items-center justify-center rounded-champ", tuile.classe)}>

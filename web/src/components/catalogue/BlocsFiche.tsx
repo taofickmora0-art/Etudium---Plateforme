@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight02Icon, Clock01Icon, PlayCircleIcon, SmartPhone01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight02Icon, Clock01Icon, PlayCircleIcon, Quiz01Icon, SmartPhone01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { Avatar } from "@/components/ui/Avatar";
 import { CourseIllustration } from "@/components/ui/CourseIllustration";
 import { Icon, type IconSvgElement } from "@/components/ui/Icon";
-import { dureeLisible, leconsApercu, nombreDeLecons } from "@/lib/catalogue/regles";
+import { dureeLisible, leconsApercu, nombreDeLecons, nombreDeQuiz } from "@/lib/catalogue/regles";
 import type { FicheFormation, FormateurFiche } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
 
@@ -22,6 +22,7 @@ export function elementsInclus(fiche: FicheFormation): { icone: IconSvgElement; 
   const duree = dureeLisible(fiche.dureeSecondes);
   return [
     fiche.nbLecons > 0 && { icone: PlayCircleIcon, texte: duree ? `${nombreDeLecons(fiche.nbLecons)}, ${duree} au total` : nombreDeLecons(fiche.nbLecons) },
+    Boolean(fiche.nbQuiz) && { icone: Quiz01Icon, texte: `${nombreDeQuiz(fiche.nbQuiz)} pour vérifier vos acquis` },
     apercu > 0 && { icone: Clock01Icon, texte: `${apercu} ${apercu > 1 ? "leçons" : "leçon"} en aperçu gratuit` },
     { icone: SmartPhone01Icon, texte: "Sur ordinateur et sur téléphone" },
   ].filter((e): e is { icone: IconSvgElement; texte: string } => Boolean(e));

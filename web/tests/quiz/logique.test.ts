@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fauxSupabase } from "../admin/faux-supabase";
+import { EXCEL_OUVERTE } from "../lecon/donnees";
 
 // Lot 3, étape A : la logique des quiz dans l'appli (lectures, envoi), et les comptes de leçons sans les quiz.
 const faux = fauxSupabase();
@@ -12,6 +13,7 @@ const { lireQuizAPasser, lireQuizEditeur, lireMesScores, MIGRATION_QUIZ } = awai
 const { envoyerQuiz } = await import("@/lib/quiz/actions");
 const { etatFormation } = await import("@/lib/progression/regles");
 const { getFiche, listCatalogue } = await import("@/lib/catalogue/data");
+const { getLeconDans } = await import("@/lib/lecon/data");
 
 const L = "11111111-1111-4111-8111-111111111111";
 const Q = "22222222-2222-4222-8222-222222222222";
@@ -157,5 +159,22 @@ describe("Les quiz ne comptent pas comme des leçons", () => {
     );
     const fiche = await getFiche("excel");
     expect(fiche).toMatchObject({ nbLecons: 1, nbQuiz: 0, modules: [{ lecons: [{ id: "l1", type: "lecon" }] }] });
+  });
+});
+
+describe("La page d'un quiz lit le quiz à passer", () => {
+  const module1 = EXCEL_OUVERTE.modules[0];
+  const fiche = (type: "lecon" | "quiz") => ({ ...EXCEL_OUVERTE, modules: [{ ...module1, lecons: [{ ...module1.lecons[0], id: L, type }] }] });
+
+  it("un quiz, compte connecté : le quiz à passer ; une leçon, ou un visiteur : rien n'est demandé", async () => {
+    faux.repondre("lecons.select", { data: { id: L, titre: "Quiz du module 1", duree_secondes: 0, apercu: false, accessible: true, lecons_contenus: null, ressources: [] } });
+    faux.repondre("rpc.quiz_a_passer", { data: { score_minimal: 70, meilleur: 50, tentatives: 1, questions: [] } });
+    expect((await getLeconDans(fiche("quiz"), L, true))?.quiz).toEqual({ scoreMinimal: 70, meilleur: 50, tentatives: 1, questions: [] });
+    expect(faux.de("rpc", "quiz_a_passer")[0].valeurs).toEqual({ p_lecon: L });
+    faux.vider();
+    faux.repondre("lecons.select", { data: { id: L, titre: "Quiz du module 1", duree_secondes: 0, apercu: true, accessible: true, lecons_contenus: null, ressources: [] } });
+    expect((await getLeconDans(fiche("quiz"), L, false))?.quiz).toBeUndefined();
+    await getLeconDans(fiche("lecon"), L, true);
+    expect(faux.de("rpc", "quiz_a_passer")).toEqual([]);
   });
 });

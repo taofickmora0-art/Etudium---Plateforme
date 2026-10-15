@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight01Icon, ChartIncreaseIcon, Clock01Icon, PlayCircleIcon, StarIcon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, ChartIncreaseIcon, Clock01Icon, PlayCircleIcon, Quiz01Icon, StarIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { SectionAvis } from "@/components/avis/SectionAvis";
 import { Couverture } from "@/components/ui/Couverture";
 import { urlCouverture } from "@/lib/couvertures/adresse";
@@ -8,7 +8,7 @@ import type { AvisFormation } from "@/lib/avis/types";
 import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
 import { Tag, type TagTone } from "@/components/ui/Tag";
-import { badgeDeCarte, dureeLisible, leconsApercu, nombreDeLecons, parcoursPrincipal } from "@/lib/catalogue/regles";
+import { badgeDeCarte, dureeLisible, leconsApercu, nombreDeLecons, nombreDeQuiz, parcoursPrincipal } from "@/lib/catalogue/regles";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { libelleNiveau } from "@/lib/contenus/libelles";
 import { cn } from "@/lib/cn";
@@ -78,6 +78,7 @@ export function FichePublique({ fiche, avis = null }: { fiche: FicheFormation; /
     fiche.nbAvis > 0 && fiche.note !== null && { icone: StarIcon, texte: `${formatNote(fiche.note)} (${libelleNombreAvis(fiche.nbAvis)})` },
     duree && { icone: Clock01Icon, texte: duree },
     fiche.nbLecons > 0 && { icone: PlayCircleIcon, texte: nombreDeLecons(fiche.nbLecons) },
+    Boolean(fiche.nbQuiz) && { icone: Quiz01Icon, texte: nombreDeQuiz(fiche.nbQuiz) },
     { icone: ChartIncreaseIcon, texte: libelleNiveau(fiche.niveau) },
   ].filter(Boolean) as { icone: typeof Clock01Icon; texte: string }[];
 
