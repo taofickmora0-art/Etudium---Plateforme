@@ -70,6 +70,18 @@ describe("Fiche d'une formation au back-office", () => {
     expect(screen.getByLabelText("Score minimal aux quiz (%)")).toHaveValue(70);
   });
 
+  it("la carte « Certification » : « Exercices obligatoires », coché par défaut ; absente avant la 0033", () => {
+    const { unmount } = avecNotifications(<FormationInfosForm formation={FORMATION} parcours={PARCOURS} formateurs={[]} espace="formateur" />);
+    const carte = screen.getByRole("group", { name: "Certification" });
+    expect(carte).toContainElement(screen.getByLabelText("Score minimal aux quiz (%)"));
+    expect(screen.getByRole("switch", { name: /Exercices obligatoires/ })).toBeChecked();
+    expect(document.querySelector('input[type="hidden"][name="certification"]')).not.toBeNull();
+    unmount();
+    avecNotifications(<FormationInfosForm formation={{ ...FORMATION, exercicesObligatoires: null }} parcours={PARCOURS} formateurs={[]} />);
+    expect(screen.queryByRole("switch", { name: /Exercices obligatoires/ })).toBeNull();
+    expect(document.querySelector('input[name="certification"]')).toBeNull();
+  });
+
   it("avant la 0031, pas de champ « Score minimal aux quiz » : l'enregistrement ne bute pas dessus", () => {
     avecNotifications(<FormationInfosForm formation={{ ...FORMATION, scoreQuiz: null }} parcours={PARCOURS} formateurs={[]} />);
     expect(screen.queryByLabelText("Score minimal aux quiz (%)")).toBeNull();

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight01Icon, ArrowRight02Icon, Clock01Icon, SquareLock02Icon, StarIcon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, ArrowRight02Icon, Certificate01Icon, Clock01Icon, SquareLock02Icon, StarIcon } from "@hugeicons/core-free-icons";
 import { SectionAvis } from "@/components/avis/SectionAvis";
 import { buttonVariants } from "@/components/ui/Button";
 import { Couverture } from "@/components/ui/Couverture";
@@ -122,6 +122,16 @@ function CarteAcces({ fiche, progression, favori }: { fiche: FicheFormation; pro
     <div className={CARTE}>
       {suivie && <EnTeteProgression fiche={fiche} progression={suivie} />}
       {reprise && <Reprise fiche={fiche} progression={suivie} />}
+      {/* Ce qui reste pour le certificat (lot 3, étape C). */}
+      {suivie && (
+        <Link
+          href={`/formations/${fiche.slug}/validation`}
+          className="focus-etudium mt-3 flex items-center justify-center gap-2 rounded-champ text-sm leading-[22px] font-medium text-bleu no-underline hover:underline"
+        >
+          <Icon icon={Certificate01Icon} size={18} />
+          <span>Validation et certificat</span>
+        </Link>
+      )}
       {!reprise && etat === "gratuite" && (
         <>
           <span className="text-sm leading-[22px] font-medium text-discret">Votre formation</span>

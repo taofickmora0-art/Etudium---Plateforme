@@ -65,6 +65,22 @@ export function FormationInfosForm({ formation, parcours, formateurs, espace = "
   const coche = (champ: string, enregistre: boolean) => (state.values ? state.values[champ] === "on" : enregistre);
   const parcoursCoches = state.values ? (state.values.parcours ?? "").split(",").filter(Boolean) : formation.parcoursIds;
 
+  // Le score minimal aux quiz (0031) : absent avant elle, sinon chaque enregistrement buterait sur la colonne absente.
+  const champScore = formation.scoreQuiz !== null && (
+    <Field label="Score minimal aux quiz (%)" htmlFor="formation-score-quiz" hint="Pour réussir chaque quiz de la formation." error={e.score_quiz}>
+      <TextInput
+        id="formation-score-quiz"
+        name="score_quiz"
+        type="number"
+        inputMode="numeric"
+        min={0}
+        max={100}
+        step={1}
+        defaultValue={valeur("score_quiz", String(formation.scoreQuiz))}
+      />
+    </Field>
+  );
+
   // Couleur de la couverture par défaut : celle du premier parcours coché.
   const couleur = parcours.find((p) => p.id === formation.parcoursIds[0])?.couleur ?? "academique";
 
@@ -110,21 +126,8 @@ export function FormationInfosForm({ formation, parcours, formateurs, espace = "
           <Field label="Niveau" htmlFor="formation-niveau" error={e.niveau}>
             <Select id="formation-niveau" name="niveau" options={NIVEAUX} defaultValue={valeur("niveau", formation.niveau)} />
           </Field>
-          {/* Avant la 0031, pas de champ : sinon chaque enregistrement buterait sur la colonne absente. */}
-          {formation.scoreQuiz !== null && (
-          <Field label="Score minimal aux quiz (%)" htmlFor="formation-score-quiz" hint="Pour réussir chaque quiz de la formation." error={e.score_quiz}>
-            <TextInput
-              id="formation-score-quiz"
-              name="score_quiz"
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={100}
-              step={1}
-              defaultValue={valeur("score_quiz", String(formation.scoreQuiz))}
-            />
-          </Field>
-          )}
+          {/* Avant la 0033, le score reste ici ; ensuite, il rejoint la carte « Certification ». */}
+          {formation.exercicesObligatoires === null && champScore}
           {equipe && (
             <>
               <Field label="Formateur" htmlFor="formation-formateur" error={e.formateur_id}>
@@ -149,6 +152,26 @@ export function FormationInfosForm({ formation, parcours, formateurs, espace = "
             </>
           )}
         </div>
+        {/* La carte « Certification » (NdEditeur, 0033) : ce qu'il faut pour obtenir le certificat. */}
+        {formation.exercicesObligatoires !== null && (
+          <fieldset className="m-0 flex flex-col gap-4 rounded-champ border border-bordure-carte p-4">
+            <legend className="px-1 text-sm leading-5 font-medium text-encre">Certification</legend>
+            <p className="m-0 text-[13px] leading-5 text-discret">Le certificat est délivré quand toutes les leçons sont terminées, tous les quiz réussis et, si vous le demandez, tous les exercices validés.</p>
+            <input type="hidden" name="certification" value="1" />
+            <div className={GRILLE}>{champScore}</div>
+            <Switch
+              name="exercices_obligatoires"
+              label="Exercices obligatoires"
+              description="Tous les exercices publiés doivent être validés pour obtenir le certificat."
+              defaultChecked={coche("exercices_obligatoires", formation.exercicesObligatoires)}
+            />
+            {e.exercices_obligatoires && (
+              <p role="alert" className="m-0 text-xs leading-[18px] text-erreur-texte">
+                {e.exercices_obligatoires}
+              </p>
+            )}
+          </fieldset>
+        )}
         <fieldset className="m-0 flex flex-col gap-3 border-0 p-0">
           <legend className="mb-3 p-0 text-sm leading-5 font-medium text-encre">Parcours</legend>
           {parcours.length === 0 ? (
