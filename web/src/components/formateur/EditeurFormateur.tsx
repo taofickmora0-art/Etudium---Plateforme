@@ -1,9 +1,12 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { FormationInfosForm } from "@/components/admin/FormationInfosForm";
 import { FormationOnglets } from "@/components/admin/FormationOnglets";
 import { PageAdmin } from "@/components/admin/PageAdmin";
+import { OngletApprenants } from "@/components/admin/OngletApprenants";
 import { OngletLecons } from "@/components/admin/OngletLecons";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { Tag } from "@/components/ui/Tag";
 import { getFormationAdmin, listParcours } from "@/lib/admin/data";
 import { ETATS, TON_ETAT } from "@/lib/contenus/etat";
@@ -13,7 +16,7 @@ import { PublicationFormateur } from "./PublicationFormateur";
 
 type Params = { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string }> };
 
-const ONGLETS = ["informations", "programme", "publication"];
+const ONGLETS = ["informations", "programme", "publication", "apprenants"];
 
 /**
  * L'éditeur d'une formation, dans l'espace formateur (spec de l'espace formateur, §3) : celui du back-office, réglé pour
@@ -42,6 +45,11 @@ export async function EditeurFormateur({ params, searchParams }: Params) {
         informations={<FormationInfosForm formation={formation} parcours={parcours} formateurs={[]} espace="formateur" />}
         programme={<OngletLecons formation={formation} base="/formateur/formations" />}
         publication={<PublicationFormateur id={formation.id} formation={formation} />}
+        apprenants={
+          <Suspense fallback={<Skeleton className="h-64 rounded-carte" />}>
+            <OngletApprenants formationId={formation.id} espace="formateur" />
+          </Suspense>
+        }
       />
     </PageAdmin>
   );

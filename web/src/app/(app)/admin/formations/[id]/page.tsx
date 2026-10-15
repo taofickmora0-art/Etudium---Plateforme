@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { FormationInfosForm } from "@/components/admin/FormationInfosForm";
 import { FormationOnglets } from "@/components/admin/FormationOnglets";
 import { PageAdmin } from "@/components/admin/PageAdmin";
+import { OngletApprenants } from "@/components/admin/OngletApprenants";
 import { OngletLecons } from "@/components/admin/OngletLecons";
 import { PublicationPanel } from "@/components/admin/PublicationPanel";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
@@ -17,7 +18,7 @@ export const metadata: Metadata = { title: "Formation · Back-office · Étudium
 
 type Params = { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string }> };
 
-const ONGLETS = ["informations", "programme", "publication"];
+const ONGLETS = ["informations", "programme", "publication", "apprenants"];
 
 async function FicheFormation({ params, searchParams }: Params) {
   await requireSpace("admin");
@@ -41,6 +42,11 @@ async function FicheFormation({ params, searchParams }: Params) {
         informations={<FormationInfosForm formation={formation} parcours={parcours} formateurs={formateurs} />}
         programme={<OngletLecons formation={formation} />}
         publication={<PublicationPanel id={formation.id} formation={formation} formateurNom={formateurs.find((f) => f.id === formation.formateurId)?.nom ?? null} />}
+        apprenants={
+          <Suspense fallback={<Skeleton className="h-64 rounded-carte" />}>
+            <OngletApprenants formationId={formation.id} espace="admin" />
+          </Suspense>
+        }
       />
     </PageAdmin>
   );
