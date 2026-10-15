@@ -273,6 +273,51 @@ describe("Lecteur aux couleurs d'Étudium", () => {
     expect(Math.max(...envoyes.map(([, fin]) => fin))).toBe(61);
   });
 
+  it("pendant la lecture, les commandes s'effacent (2,5 s sans mouvement, ou la souris sort) et reviennent au mouvement ; en pause, elles restent (retour du 15 octobre)", async () => {
+    const f = fauxLecteur();
+    await monter({ creer: f.creer });
+    const commandes = () => screen.getByRole("button", { name: /Lancer la lecture|Mettre en pause/ }).closest("[data-commandes]")!;
+    const cadre = () => commandes().parentElement!;
+    expect(commandes()).toHaveAttribute("data-masquees", "false");
+    fireEvent.click(screen.getByRole("button", { name: "Lire la vidéo" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(commandes()).toHaveAttribute("data-masquees", "false");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2600);
+    });
+    expect(commandes()).toHaveAttribute("data-masquees", "true");
+    fireEvent.pointerMove(cadre());
+    expect(commandes()).toHaveAttribute("data-masquees", "false");
+    fireEvent.pointerLeave(cadre());
+    expect(commandes()).toHaveAttribute("data-masquees", "true");
+    // Le clavier : une commande qui reçoit le focus les fait revenir.
+    fireEvent.focus(screen.getByRole("button", { name: "Mettre en pause" }));
+    expect(commandes()).toHaveAttribute("data-masquees", "false");
+    fireEvent.click(screen.getByRole("button", { name: "Mettre en pause" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(commandes()).toHaveAttribute("data-masquees", "false");
+  });
+
+  it("au téléphone, toucher la vidéo quand les commandes sont effacées les fait revenir, sans mettre en pause", async () => {
+    const f = fauxLecteur();
+    await monter({ creer: f.creer });
+    fireEvent.click(screen.getByRole("button", { name: "Lire la vidéo" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2600);
+    });
+    const commandes = screen.getByRole("button", { name: "Mettre en pause" }).closest("[data-commandes]")!;
+    expect(commandes).toHaveAttribute("data-masquees", "true");
+    const surface = commandes.parentElement!.querySelector("[data-surface]")!;
+    fireEvent.touchStart(surface);
+    fireEvent.click(surface);
+    expect(f.adaptateur.pause).not.toHaveBeenCalled();
+    expect(commandes).toHaveAttribute("data-masquees", "false");
+  });
+
   it("une plateforme à vitesse fixe (TikTok, Tella) : pas de bouton de vitesse", async () => {
     const f = fauxLecteur();
     f.adaptateur.vitesseFixe = true;

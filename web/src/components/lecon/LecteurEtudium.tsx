@@ -56,6 +56,9 @@ function chrono(secondes: number): string {
 }
 const enMots = (secondes: number) => dureeLecon(Math.floor(secondes)) || "0 s";
 
+/** Pendant la lecture, les commandes s'effacent après ce délai sans mouvement de la souris sur la vidéo. */
+const DELAI_COMMANDES_MS = 2500;
+
 const BOUTON = "focus-blanc flex size-9 flex-none cursor-pointer items-center justify-center rounded-champ text-white transition-colors hover:bg-white/15";
 
 function BoutonLecteur({ label, icone, onClick, presse }: { label: string; icone: IconSvgElement; onClick: () => void; presse?: boolean }) {
@@ -98,6 +101,11 @@ export function LecteurEtudium({
   const router = useRouter();
   const { toast } = useToast();
   const cadre = useRef<HTMLDivElement>(null);
+  // Les commandes (titre, barre, boutons) : effacées pendant la lecture quand la souris quitte la vidéo ou ne bouge plus.
+  const commandes = useRef<HTMLDivElement>(null);
+  const minuteurCommandes = useRef<number | undefined>(undefined);
+  // Un toucher (téléphone) : quand les commandes sont effacées, il les fait revenir au lieu de mettre en pause.
+  const toucher = useRef(false);
   const conteneur = useRef<HTMLDivElement>(null);
   const adaptateur = useRef<Adaptateur | null>(null);
   // Passages lus depuis le dernier envoi, et la dernière observation.
@@ -142,6 +150,7 @@ export function LecteurEtudium({
   const [vus, setVus] = useState<Intervalle[]>(() => fusionner(passagesInitiaux));
   const [referenceServeur, setReferenceServeur] = useState(reference);
   const [terminee, setTerminee] = useState(termineeInitiale);
+  const [commandesVisibles, setCommandesVisibles] = useState(true);
   const [dureeVideo, setDureeVideo] = useState(0);
 
   /** Ouvre le visionnage (une fois). Un échec (coupure réseau, refus) sera retenté au prochain envoi. */
@@ -237,6 +246,22 @@ export function LecteurEtudium({
       .catch(() => undefined);
   };
   const relireDureeRef = useRef(relireDuree);
+
+  /** Montre les commandes, et les efface après le délai si la vidéo joue (sauf si le clavier y est). */
+  const montrerCommandes = () => {
+    setCommandesVisibles(true);
+    window.clearTimeout(minuteurCommandes.current);
+    minuteurCommandes.current = window.setTimeout(() => {
+      if (enLectureRef.current && !commandes.current?.contains(document.activeElement)) setCommandesVisibles(false);
+    }, DELAI_COMMANDES_MS);
+  };
+  const montrerCommandesRef = useRef(montrerCommandes);
+  /** La souris quitte la vidéo : les commandes s'effacent aussitôt pendant la lecture. */
+  const cacherCommandes = () => {
+    window.clearTimeout(minuteurCommandes.current);
+    if (enLectureRef.current && !commandes.current?.contains(document.activeElement)) setCommandesVisibles(false);
+  };
+  useEffect(() => () => window.clearTimeout(minuteurCommandes.current), []);
   const dureeConnueRef = useRef(dureeConnue);
 
   useEffect(() => {
@@ -256,6 +281,7 @@ export function LecteurEtudium({
         setEnLecture(lecture);
         if (lecture) {
           setDemarre(true);
+          montrerCommandesRef.current();
           void commencerRef.current();
           const a = adaptateur.current;
           if (a) {
@@ -397,6 +423,7 @@ export function LecteurEtudium({
     a.lire();
   };
   const basculer = () => (enLecture ? adaptateur.current?.pause() : lire());
+  const commandesMasquees = enLecture && !commandesVisibles;
 
   // Le seuil se mesure sur la durée de la leçon : absente, ou plus longue que la vidéo, il ne peut pas être atteint.
   // On le dit au lieu de laisser « Terminer la leçon » grisé sans raison.
@@ -449,10 +476,30 @@ export function LecteurEtudium({
   const avance = duree > 0 ? Math.min(100, (100 * position) / duree) : 0;
   return (
     <div className="flex min-w-0 flex-col gap-2.5">
-      <div ref={cadre} className={cn("relative overflow-hidden rounded-carte bg-encre text-white", formatVideo(video))}>
+      <div
+        ref={cadre}
+        onPointerMove={montrerCommandes}
+        // Au toucher, le doigt qui se lève « quitte » la vidéo : seule la souris efface les commandes en sortant.
+        onPointerLeave={(e) => e.pointerType !== "touch" && cacherCommandes()}
+        className={cn("relative overflow-hidden rounded-carte bg-encre text-white", formatVideo(video))}
+      >
         <div ref={conteneur} aria-hidden="true" className="absolute inset-0 [&_iframe]:pointer-events-none [&_iframe]:absolute [&_iframe]:inset-0 [&_iframe]:size-full [&_iframe]:border-0" />
         {/* Toute la surface lance ou arrête la vidéo, comme sur un lecteur ordinaire (les boutons restent l'accès clavier). */}
-        <div aria-hidden="true" onClick={basculer} className="absolute inset-0 cursor-pointer" />
+        <div
+          aria-hidden="true"
+          data-surface=""
+          onTouchStart={() => {
+            toucher.current = true;
+          }}
+          onClick={() => {
+            const auDoigt = toucher.current;
+            toucher.current = false;
+            if (commandesMasquees && auDoigt) montrerCommandes();
+            else basculer();
+          }}
+          // Commandes effacées : le pointeur aussi, pour ne pas gêner la vidéo.
+          className={cn("absolute inset-0 cursor-pointer", commandesMasquees && "cursor-none")}
+        />
         {!enLecture && (
           <button
             type="button"
@@ -467,9 +514,14 @@ export function LecteurEtudium({
           </button>
         )}
         <div
+          ref={commandes}
+          data-commandes=""
+          data-masquees={commandesMasquees}
+          onFocus={montrerCommandes}
           className={cn(
-            "absolute inset-x-0 bottom-0 flex flex-col gap-1.5 bg-linear-to-t from-black/65 to-transparent px-3 pt-6 pb-2 sm:gap-2.5 sm:px-[18px] sm:pt-10 sm:pb-4",
+            "absolute inset-x-0 bottom-0 flex flex-col gap-1.5 bg-linear-to-t from-black/65 to-transparent px-3 pt-6 pb-2 transition-opacity duration-300 sm:gap-2.5 sm:px-[18px] sm:pt-10 sm:pb-4",
             !demarre && "max-sm:hidden",
+            commandesMasquees && "pointer-events-none opacity-0",
           )}
         >
           {legende && <span className="truncate text-sm leading-5 font-medium max-lg:hidden">{legende}</span>}
