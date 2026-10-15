@@ -1,3 +1,4 @@
+import { estFournisseur } from "@/lib/video/plateformes";
 import { demoModeActive } from "@/lib/auth/current-user";
 import { getFiche } from "@/lib/catalogue/data";
 import { versReponse } from "@/lib/communaute/data";
@@ -27,7 +28,7 @@ const rangDe = (r: Ligne) => Number(r.ordre ?? 0);
 function versVideo(contenu: Ligne | null): VideoLecon | null {
   const fournisseur = contenu?.video_fournisseur;
   const id = texte(contenu?.video_id);
-  return (fournisseur === "youtube" || fournisseur === "vimeo") && id ? { fournisseur, id } : null;
+  return estFournisseur(fournisseur) && id ? { fournisseur, id } : null;
 }
 
 function versLecon(l: Ligne): LeconDetail {

@@ -1,3 +1,4 @@
+import { estFournisseur } from "@/lib/video/plateformes";
 import { demoModeActive } from "@/lib/auth/current-user";
 import { etatFormation } from "@/lib/contenus/etat";
 import type { Badge, CouleurParcours, Niveau, StatutFormation } from "@/lib/contenus/libelles";
@@ -251,7 +252,7 @@ export async function getLeconAdmin(id: string): Promise<LeconAdmin | null> {
     apercu: l.apercu === true,
     resume: texte(l.resume),
     pointsCles: textes(l.points_cles),
-    video: (fournisseur === "youtube" || fournisseur === "vimeo") && typeof videoId === "string" ? { fournisseur, id: videoId } : null,
+    video: estFournisseur(fournisseur) && typeof videoId === "string" ? { fournisseur, id: videoId } : null,
     texte: texte(contenu?.texte),
     ressources: liste(l.ressources).map(versRessource).sort(parOrdre),
   };

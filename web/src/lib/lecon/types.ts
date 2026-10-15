@@ -1,3 +1,4 @@
+import type { Video } from "@/lib/video/plateformes";
 import type { Reponse } from "@/lib/communaute/types";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import type { Intervalle } from "@/lib/video/suivi";
@@ -13,7 +14,7 @@ export type RessourceLecon = {
   telechargeable: boolean;
 };
 
-export type VideoLecon = { fournisseur: "youtube" | "vimeo"; id: string };
+export type VideoLecon = Video;
 
 /** Temps regardé de la leçon par le compte connecté (migration 0007). */
 export type VisionnageLecon = { passages: Intervalle[]; positionSecondes: number; terminee: boolean };

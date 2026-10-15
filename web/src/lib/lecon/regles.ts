@@ -1,3 +1,4 @@
+import { urlIntegration as integrationPlateforme } from "@/lib/video/plateformes";
 import { formatParMime, tailleLisible } from "@/lib/admin/fichiers";
 import { leconsApercu } from "@/lib/catalogue/regles";
 import type { FicheFormation, LeconFiche, ModuleFiche } from "@/lib/catalogue/types";
@@ -45,9 +46,7 @@ export function situation(modules: ModuleFiche[], leconId: string): { numero: nu
 
 /** Adresse du lecteur officiel : YouTube sans cookies publicitaires, Vimeo sans suivi. */
 export function urlIntegration(video: VideoLecon): string {
-  if (video.fournisseur === "youtube") return `https://www.youtube-nocookie.com/embed/${video.id}?rel=0`;
-  const [numero, code] = video.id.split("/");
-  return `https://player.vimeo.com/video/${numero}?dnt=1${code ? `&h=${code}` : ""}`;
+  return integrationPlateforme(video);
 }
 
 const deuxChiffres = (n: number) => String(n).padStart(2, "0");
