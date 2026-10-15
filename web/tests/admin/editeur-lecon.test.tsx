@@ -228,6 +228,33 @@ describe("L'éditeur de leçon", () => {
     expect(screen.getByText("Durée lue sur la vidéo.")).toBeInTheDocument();
   });
 
+  it("un lien Google Drive : reconnu, sans lecture de la durée ; la leçon se terminera d'un clic ; le rappel du partage", async () => {
+    const user = userEvent.setup();
+    afficher({ ...LECON, video: null, dureeSecondes: 0 });
+    await user.click(screen.getByRole("textbox", { name: "Lien de la vidéo" }));
+    await user.paste("https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view?usp=sharing");
+    expect(screen.getByText("Reconnu : Google Drive · 1AbCdEfGhIjKlMnOpQrStUvWxYz012345")).toBeInTheDocument();
+    expect(screen.getByTitle("Vidéo : Les formules")).toHaveAttribute("src", "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/preview");
+    expect(screen.getByText("Cette plateforme ne permet pas de mesurer le temps regardé : la leçon se terminera d’un clic sur « Terminer la leçon ».")).toBeInTheDocument();
+    expect(screen.getByText("Partagez la vidéo avec « Tous les utilisateurs disposant du lien ». Drive peut bloquer une vidéo très regardée, jusqu’à 24 h.")).toBeInTheDocument();
+    expect(screen.getByText("Facultative : elle s’affiche aux étudiants.")).toBeInTheDocument();
+    expect(creerAdaptateur).not.toHaveBeenCalled();
+  });
+
+  it("un lien court TikTok : on demande le lien complet ; un lien TikTok complet : la durée est lue comme pour YouTube", async () => {
+    const user = userEvent.setup();
+    afficher({ ...LECON, video: null, dureeSecondes: 0 });
+    const champ = screen.getByRole("textbox", { name: "Lien de la vidéo" });
+    await user.click(champ);
+    await user.paste("https://vm.tiktok.com/ZMabcdEF/");
+    expect(screen.getByText("Lien court TikTok : ouvrez-le, puis copiez le lien complet de la vidéo (…/video/123…).")).toBeInTheDocument();
+    await user.clear(champ);
+    await user.paste("https://www.tiktok.com/@etudium/video/7234567890123456789");
+    expect(screen.getByText("Reconnu : TikTok · 7234567890123456789")).toBeInTheDocument();
+    await waitFor(() => expect(creerAdaptateur).toHaveBeenCalledWith({ fournisseur: "tiktok", id: "7234567890123456789" }, expect.anything(), expect.anything()));
+    await waitFor(() => expect(screen.getByRole("spinbutton", { name: "Minutes" })).toHaveValue(7));
+  });
+
   it("pendant la lecture de la durée, l'éditeur le dit ; si le lecteur ne répond pas, la saisie reste à la main", async () => {
     let livrer: (d: number) => void = () => undefined;
     creerAdaptateur.mockImplementation(async (_v: unknown, _c: HTMLElement, ev: { pret(): void }) => {

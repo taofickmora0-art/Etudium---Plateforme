@@ -12,6 +12,7 @@ import { formatParMime } from "./fichiers";
 import { formateurSchema, formationInfosSchema, leconSchema, lignes, moduleSchema, parcoursSchema, ressourceSchema } from "./schemas";
 import { parseDuree } from "./duree";
 import { slugify } from "./slug";
+import { estMesuree, messageLienCourt } from "@/lib/video/plateformes";
 import { parseVideoUrl } from "./video";
 
 // Actions serveur du back-office (spec du lot 1, §10). Chacune revérifie qui demande : l'équipe (exigerEquipe) ou,
@@ -467,7 +468,7 @@ export async function deleteLecon(id: string): Promise<Resultat> {
 
 // ─── Une leçon ──────────────────────────────────────────────────────────────
 
-const LIEN_INCONNU = "Ce lien n’est ni une vidéo YouTube ni une vidéo Vimeo.";
+const LIEN_INCONNU = "Ce lien n’est pas une vidéo YouTube, Vimeo, TikTok, Tella, Loom, ScreenPal ou Google Drive.";
 const DUREE_INVALIDE = "Durée au format 12:40.";
 // Le temps réellement regardé se mesure par rapport à cette durée (migration 0007) : sans elle, la leçon ne se valide pas.
 const DUREE_REQUISE = "Saisissez la durée de la vidéo : elle sert à mesurer le temps regardé.";
@@ -496,8 +497,9 @@ export async function saveLecon(_prev: FormState, fd: FormData): Promise<FormSta
   const parsed = leconSchema.safeParse(saisie);
   const erreurs = parsed.success ? {} : fieldErrorsFrom(parsed.error);
   if (duree === null) erreurs.duree = DUREE_INVALIDE;
-  else if (video && duree === 0) erreurs.duree = DUREE_REQUISE;
-  if (lien && !video) erreurs.video = LIEN_INCONNU;
+  // Sans mesure (Loom, ScreenPal, Google Drive), la durée est facultative : elle ne sert qu'à l'affichage.
+  else if (video && estMesuree(video.fournisseur) && duree === 0) erreurs.duree = DUREE_REQUISE;
+  if (lien && !video) erreurs.video = messageLienCourt(lien) ?? LIEN_INCONNU;
   if (!parsed.success || Object.keys(erreurs).length > 0) return { status: "error", fieldErrors: erreurs, values };
   if (!estUuid(id)) return { status: "error", message: ECHEC, values };
 

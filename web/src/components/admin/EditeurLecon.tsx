@@ -22,6 +22,7 @@ import { changerStatutLecon, saveLecon } from "@/lib/admin/actions";
 import { baseFormations } from "@/lib/admin/espace";
 import type { LeconAdmin } from "@/lib/admin/types";
 import { parseVideoUrl, videoLabel, videoLink } from "@/lib/admin/video";
+import { estMesuree, messageLienCourt } from "@/lib/video/plateformes";
 import { RessourcesEditor } from "./RessourcesEditor";
 import { StatutLecon } from "./StatutLecon";
 import { useFormulaireAdmin } from "./useFormulaireAdmin";
@@ -43,9 +44,10 @@ const TOLERANCE_S = 2;
 
 /** Ce que l'on sait du lien pendant la frappe : reconnu (fournisseur · identifiant) ou non. */
 function aideVideo(lien: string) {
-  if (!lien.trim()) return "YouTube ou Vimeo, par exemple https://youtu.be/…";
+  if (!lien.trim()) return "YouTube, Vimeo, TikTok, Tella, Loom, ScreenPal ou Google Drive, par exemple https://youtu.be/…";
   const video = parseVideoUrl(lien);
-  return video ? `Reconnu : ${videoLabel(video)}` : "Lien non reconnu : collez un lien YouTube ou Vimeo.";
+  if (video) return `Reconnu : ${videoLabel(video)}`;
+  return messageLienCourt(lien) ?? "Lien non reconnu : collez un lien YouTube, Vimeo, TikTok, Tella, Loom, ScreenPal ou Google Drive.";
 }
 
 type EditeurLeconProps = {
@@ -87,6 +89,8 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
   // Un lien collé ou tapé : la durée de cette vidéo remplacera celle saisie.
   const lienChange = useRef(false);
   const video = parseVideoUrl(lien);
+  // Le temps regardé se mesure (YouTube, Vimeo, TikTok, Tella) : la durée se lit sur la vidéo et elle est exigée.
+  const mesuree = video !== null && estMesuree(video.fournisseur);
   // Envoyée au format « 12:40 » (une durée de plus d'une heure s'écrit « 75:00 »).
   const duree = `${Number(minutes) || 0}:${String(Number(secondes) || 0).padStart(2, "0")}`;
   const changer = () => setModifie(true);
@@ -243,7 +247,15 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
               />
             </Field>
             {video && <LecteurVideo video={video} titre={lecon.titre} />}
-            {video && <SondeDureeVideo key={`${video.fournisseur}:${video.id}`} video={video} onDuree={dureeLue} onEchec={() => setSondeMuette(true)} />}
+            {video && mesuree && <SondeDureeVideo key={`${video.fournisseur}:${video.id}`} video={video} onDuree={dureeLue} onEchec={() => setSondeMuette(true)} />}
+            {video && !mesuree && (
+              <div className="flex flex-col gap-1 text-[13px] leading-5 text-texte">
+                <p className="m-0">Cette plateforme ne permet pas de mesurer le temps regardé : la leçon se terminera d’un clic sur « Terminer la leçon ».</p>
+                {video.fournisseur === "drive" && (
+                  <p className="m-0 text-discret">Partagez la vidéo avec « Tous les utilisateurs disposant du lien ». Drive peut bloquer une vidéo très regardée, jusqu’à 24 h.</p>
+                )}
+              </div>
+            )}
           </div>
           <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0">
             <legend className="mb-1.5 p-0 text-sm leading-5 font-semibold text-encre">Durée de la vidéo</legend>
@@ -302,11 +314,13 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
               </div>
             )}
             <p className="m-0 text-xs leading-[18px] text-discret">
-              {dureeVideo !== null && !ecart
-                ? "Durée lue sur la vidéo."
-                : video && dureeVideo === null && !sondeMuette
-                  ? "Lecture de la durée de la vidéo…"
-                  : "Elle sert à mesurer le temps réellement regardé."}
+              {video && !mesuree
+                ? "Facultative : elle s’affiche aux étudiants."
+                : dureeVideo !== null && !ecart
+                  ? "Durée lue sur la vidéo."
+                  : mesuree && dureeVideo === null && !sondeMuette
+                    ? "Lecture de la durée de la vidéo…"
+                    : "Elle sert à mesurer le temps réellement regardé."}
             </p>
           </fieldset>
           <div className="flex flex-col gap-1">

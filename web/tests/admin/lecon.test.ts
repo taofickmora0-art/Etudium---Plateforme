@@ -58,7 +58,7 @@ describe("Back-office : une leçon", () => {
 
   it("un lien inconnu est refusé sur son champ", async () => {
     const state = await saveLecon(IDLE, form({ ...SAISIE, video: "https://exemple.com/video.mp4" }));
-    expect(state.fieldErrors?.video).toBe("Ce lien n’est ni une vidéo YouTube ni une vidéo Vimeo.");
+    expect(state.fieldErrors?.video).toBe("Ce lien n’est pas une vidéo YouTube, Vimeo, TikTok, Tella, Loom, ScreenPal ou Google Drive.");
     expect(state.values?.video).toBe("https://exemple.com/video.mp4");
     expect(faux.appels).toEqual([]);
   });
@@ -80,6 +80,18 @@ describe("Back-office : une leçon", () => {
     expect(state.fieldErrors?.duree).toBe("Saisissez la durée de la vidéo : elle sert à mesurer le temps regardé.");
     // Sans vidéo, la durée reste facultative.
     expect((await saveLecon(IDLE, form({ ...SAISIE, video: "", duree: "" }))).fieldErrors?.duree).toBeUndefined();
+  });
+
+  it("les autres plateformes (spec du 15 octobre) ; la durée est facultative sans mesure (Drive, Loom, ScreenPal), exigée pour TikTok et Tella", async () => {
+    const DRIVE = "1AbCdEfGhIjKlMnOpQrStUvWxYz012345";
+    expect((await saveLecon(IDLE, form({ ...SAISIE, video: `https://drive.google.com/file/d/${DRIVE}/view?usp=sharing`, duree: "" }))).status).toBe("success");
+    expect(faux.de("lecons_contenus", "upsert")[0].valeurs).toMatchObject({ video_fournisseur: "drive", video_id: DRIVE });
+    faux.vider();
+    const tiktok = await saveLecon(IDLE, form({ ...SAISIE, video: "https://www.tiktok.com/@etudium/video/7234567890123456789", duree: "" }));
+    expect(tiktok.fieldErrors?.duree).toBe("Saisissez la durée de la vidéo : elle sert à mesurer le temps regardé.");
+    const court = await saveLecon(IDLE, form({ ...SAISIE, video: "https://vm.tiktok.com/ZMabcdEF/" }));
+    expect(court.fieldErrors?.video).toBe("Lien court TikTok : ouvrez-le, puis copiez le lien complet de la vidéo (…/video/123…).");
+    expect(faux.appels).toEqual([]);
   });
 
   it("un lien Vimeo non répertorié garde son code", async () => {
