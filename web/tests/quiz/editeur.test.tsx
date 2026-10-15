@@ -47,6 +47,7 @@ const QUIZ: LeconAdmin = {
   publiee: false,
   commentairesActifs: true,
   type: "quiz",
+  genreExercice: null,
   position: { rang: 3, total: 3, module: { rang: 1, titre: "Les bases" } },
   voisines: { precedente: "l2", suivante: null },
 };

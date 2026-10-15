@@ -54,6 +54,7 @@ function versCarte(f: Ligne, lecons: Ligne[]): CarteCatalogue {
     dureeSecondes: contenu.reduce((total, l) => total + Number(l.duree_secondes ?? 0), 0),
     nbLecons: contenu.length,
     nbQuiz: lecons.filter((l) => l.type === "quiz").length,
+    nbExercices: lecons.filter((l) => l.type === "exercice").length,
     parcours,
     note: f.note_moyenne === null || f.note_moyenne === undefined ? null : Number(f.note_moyenne),
     nbAvis: Number(f.nb_avis ?? 0),

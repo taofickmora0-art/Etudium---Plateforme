@@ -15,6 +15,7 @@ import { slugify } from "./slug";
 import { estMesuree, messageLienCourt } from "@/lib/video/plateformes";
 import { parseVideoUrl } from "./video";
 import { MIGRATION_QUIZ } from "@/lib/quiz/conversion";
+import { MIGRATION_EXERCICES } from "@/lib/exercices/conversion";
 import { estLeconDeContenu } from "@/lib/catalogue/regles";
 
 // Actions serveur du back-office (spec du lot 1, §10). Chacune revérifie qui demande : l'équipe (exigerEquipe) ou,
@@ -425,8 +426,9 @@ export async function deleteModule(id: string): Promise<Resultat> {
 export async function addLecon(_prev: FormState, fd: FormData): Promise<FormState> {
   const espace = espaceDe(fd);
   const moduleId = texte(fd, "module_id");
-  // Une leçon de contenu, ou un quiz (lot 3, 0031) ; une leçon ordinaire ne précise pas son type (avant la 0031).
-  const type = texte(fd, "type") === "quiz" ? "quiz" : null;
+  // Une leçon de contenu, un quiz (0031) ou un exercice (0032) ; une leçon ordinaire ne précise pas son type.
+  const saisi = texte(fd, "type");
+  const type = saisi === "quiz" || saisi === "exercice" ? saisi : null;
   const values = { titre: texte(fd, "titre") };
   const parsed = leconSchema.pick({ titre: true }).safeParse(values);
   if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values };
@@ -441,11 +443,13 @@ export async function addLecon(_prev: FormState, fd: FormData): Promise<FormStat
     if (!formationId) return { status: "error", message: ECHEC, values };
     const formation = Array.isArray(ligne?.formations) ? ligne.formations[0] : ligne?.formations;
     const ordre = await rangSuivant(supabase, "lecons", ["module_id", moduleId]);
-    const nouvelle = { module_id: moduleId, titre: parsed.data.titre, ordre, ...(type ? { type } : {}) };
-    // Un quiz naît en brouillon : il ne se publie qu'avec au moins une question (0031).
+    // Un exercice naît « avec rendu » (0032) ; l'envoyer révèle aussi une base sans la 0032.
+    const nouvelle = { module_id: moduleId, titre: parsed.data.titre, ordre, ...(type ? { type } : {}), ...(type === "exercice" ? { genre_exercice: "rendu" } : {}) };
+    // Un quiz ou un exercice naît en brouillon : on le publie une fois ses questions ou sa consigne écrites.
     let reponse = await supabase.from("lecons").insert({ ...nouvelle, publiee: type ? false : !formation?.publiee_le }).select("id").single();
     if (colonneAbsente(reponse.error)) {
       // Un quiz demande la 0031 ; une leçon, avant la 0027, s'ajoute sans statut (visible comme avant).
+      if (type === "exercice") return { status: "error", message: MIGRATION_EXERCICES, values };
       if (type) return { status: "error", message: MIGRATION_QUIZ, values };
       reponse = await supabase.from("lecons").insert(nouvelle).select("id").single();
     }
@@ -546,7 +550,9 @@ export async function saveLecon(_prev: FormState, fd: FormData): Promise<FormSta
     if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
     const { supabase } = garde;
     const { texte: contenuTexte, titre_court, ...lecon } = parsed.data;
-    const champs = { ...lecon, titre_court: titre_court || null };
+    // Un exercice (0032) : « simple » ou « avec rendu ».
+    const genre = texte(fd, "genre_exercice");
+    const champs = { ...lecon, titre_court: titre_court || null, ...(genre === "simple" || genre === "rendu" ? { genre_exercice: genre } : {}) };
     let { error } = await supabase
       .from("lecons")
       .update({ ...champs, commentaires_actifs: coche(fd, "commentaires_actifs") })

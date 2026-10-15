@@ -28,6 +28,8 @@ export type CarteCatalogue = {
   nbLecons: number;
   /** Les quiz du programme (0031), comptés à part ; absent : aucun. */
   nbQuiz?: number;
+  /** Les exercices du programme (0032), comptés à part ; absent : aucun. */
+  nbExercices?: number;
   /** Parcours de la formation, avec sa position dans chacun. */
   parcours: (ParcoursCatalogue & { position: number })[];
   /** Moyenne des avis visibles, au dixième ; null sans avis ou sans la migration 0010. */

@@ -1,3 +1,4 @@
+import type { GenreExercice } from "@/lib/exercices/types";
 import type { TypeLecon } from "@/lib/catalogue/types";
 import type { EtatFormation } from "@/lib/contenus/etat";
 import type { Badge, CouleurParcours, Niveau, StatutFormation } from "@/lib/contenus/libelles";
@@ -45,6 +46,8 @@ export type LeconResume = {
   type: TypeLecon;
   /** Le nombre de questions d'un quiz (0031), pour l'onglet Leçons ; absent s'il n'a pas pu être lu. */
   nbQuestions?: number;
+  /** Un exercice (0032) : simple, ou avec rendu ; null pour les autres types, ou avant la 0032. */
+  genreExercice?: GenreExercice | null;
 };
 
 export type ModuleAdmin = { id: string; titre: string; ordre: number; lecons: LeconResume[] };
@@ -96,6 +99,8 @@ export type LeconAdmin = {
   commentairesActifs: boolean;
   /** Leçon de contenu, quiz ou exercice (0031) ; « lecon » avant la 0031. */
   type: TypeLecon;
+  /** Un exercice (0032) : simple, ou avec rendu ; null pour les autres types, ou avant la 0032. */
+  genreExercice: GenreExercice | null;
   /** « Leçon 2 sur 5 · Module 1 : titre » : son rang dans toute la formation, et sa section. */
   position: { rang: number; total: number; module: { rang: number; titre: string } };
   /** Les leçons voisines dans l'ordre de la formation (flèches ‹ › de l'éditeur). */

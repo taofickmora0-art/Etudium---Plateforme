@@ -1,5 +1,6 @@
 import { estLeconDeContenu } from "@/lib/catalogue/regles";
 import type { TypeLecon } from "@/lib/catalogue/types";
+import type { GenreExercice } from "@/lib/exercices/types";
 import { estFournisseur } from "@/lib/video/plateformes";
 import { demoModeActive } from "@/lib/auth/current-user";
 import { etatFormation } from "@/lib/contenus/etat";
@@ -45,6 +46,8 @@ const versFormateur = (f: Ligne): FormateurAdmin => ({
 });
 
 const versTypeLecon = (valeur: unknown): TypeLecon => (valeur === "quiz" || valeur === "exercice" ? valeur : "lecon");
+const versGenreExercice = (l: Ligne): GenreExercice | null =>
+  l.type !== "exercice" ? null : l.genre_exercice === "simple" ? "simple" : l.genre_exercice === "rendu" ? "rendu" : null;
 
 const versLeconResume = (l: Ligne): LeconResume & { ordre: number } => ({
   id: String(l.id),
@@ -54,6 +57,7 @@ const versLeconResume = (l: Ligne): LeconResume & { ordre: number } => ({
   aVideo: Boolean(un(l.lecons_contenus)?.video_id),
   publiee: l.publiee !== false,
   type: versTypeLecon(l.type),
+  genreExercice: versGenreExercice(l),
   ordre: Number(l.ordre ?? 0),
 });
 
@@ -65,6 +69,7 @@ const sansOrdre = (lecon: LeconResume & { ordre: number }): LeconResume => ({
   aVideo: lecon.aVideo,
   publiee: lecon.publiee,
   type: lecon.type,
+  genreExercice: lecon.genreExercice,
 });
 
 const versModule = (m: Ligne): ModuleAdmin => ({
@@ -167,6 +172,8 @@ export async function getFormationAdmin(id: string): Promise<FormationAdmin | nu
   // Le statut des leçons (0027) aussi : sans lui, les leçons sont toutes visibles, comme avant.
   // Le score minimal aux quiz et le type des leçons (0031) aussi.
   const variantes = [
+    // Le genre des exercices (0032) aussi.
+    [", couverture, envoyee_le, renvoyee_le, remarque_relecture, modifiee_par_formateur_le, score_quiz", ", publiee, type, genre_exercice"],
     [", couverture, envoyee_le, renvoyee_le, remarque_relecture, modifiee_par_formateur_le, score_quiz", ", publiee, type"],
     [", couverture, envoyee_le, renvoyee_le, remarque_relecture, modifiee_par_formateur_le", ", publiee"],
     [", couverture, envoyee_le, renvoyee_le, remarque_relecture, modifiee_par_formateur_le", ""],
@@ -237,7 +244,7 @@ export async function getLeconAdmin(id: string): Promise<LeconAdmin | null> {
   if (demoModeActive() || !estUuid(id)) return null;
   const supabase = await createClient();
   // Le statut et « Activer les commentaires » (0027) ; le programme de la formation donne la position et les voisines.
-  const l = (await lireAvecRepli([", publiee, commentaires_actifs, type", ", publiee, commentaires_actifs", ""], (colonnes) =>
+  const l = (await lireAvecRepli([", publiee, commentaires_actifs, type, genre_exercice", ", publiee, commentaires_actifs, type", ", publiee, commentaires_actifs", ""], (colonnes) =>
     supabase
       .from("lecons")
       .select(
@@ -271,6 +278,7 @@ export async function getLeconAdmin(id: string): Promise<LeconAdmin | null> {
     publiee: l.publiee !== false,
     commentairesActifs: l.commentaires_actifs !== false,
     type: versTypeLecon(l.type),
+    genreExercice: versGenreExercice(l),
     position: { rang: Math.max(rang, 1), total: Math.max(suite.length, 1), module: { rang: rangModule + 1 || 1, titre: programme[rangModule]?.titre ?? "" } },
     voisines: { precedente: rang > 1 ? suite[rang - 2] : null, suivante: rang > 0 && rang < suite.length ? suite[rang] : null },
     titre: texte(l.titre),

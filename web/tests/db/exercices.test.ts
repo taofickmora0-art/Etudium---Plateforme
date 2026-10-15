@@ -140,8 +140,9 @@ describe("Migration 0032 : les exercices", () => {
     const chemin = `${E}/${EXO}/v1.xlsx`;
     expect([await lit(E, chemin), await lit(F, chemin), await lit(S, chemin), await lit(G, chemin), await lit(E2, chemin)]).toEqual([1, 1, 1, 0, 0]);
     const rendu = (await un<{ id: string }>("select id from public.rendus_exercices where fichier = $1", [chemin])).id;
-    const fichier = async (qui: string) => (await banc.en<{ f: string | null }>({ id: qui }, "select public.fichier_rendu($1) as f", [rendu]))[0].f;
-    expect([await fichier(E), await fichier(F), await fichier(E2), await fichier(G)]).toEqual([chemin, chemin, null, null]);
+    const fichier = async (qui: string) => (await banc.en<{ f: { chemin: string; nom: string } | null }>({ id: qui }, "select public.fichier_rendu($1) as f", [rendu]))[0].f;
+    const attendu = { chemin, nom: "Tableau_ventes.xlsx" };
+    expect([await fichier(E), await fichier(F), await fichier(E2), await fichier(G)]).toEqual([attendu, attendu, null, null]);
     expect(await banc.en({ id: E }, "delete from storage.objects where bucket_id = 'rendus' and name = $1 returning name", [chemin])).toEqual([]);
     expect(await banc.en({ id: E }, "delete from storage.objects where bucket_id = 'rendus' and name = $1 returning name", [`${E}/${EXO}/v3.xlsx`])).toHaveLength(1);
     await expect(deposer(E, `${E2}/${EXO}/intrus.xlsx`)).rejects.toThrow(/row-level security/);

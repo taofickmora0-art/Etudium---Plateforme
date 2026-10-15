@@ -447,17 +447,17 @@ begin
 end;
 $$;
 
--- Le chemin du fichier d'un rendu, pour son auteur ou un correcteur (le lien de téléchargement se fait ensuite).
+-- Le fichier d'un rendu (chemin et nom), pour son auteur ou un correcteur : le lien de téléchargement se fait ensuite.
 create or replace function public.fichier_rendu(p_rendu uuid)
-returns text
+returns jsonb
 language sql
 stable
 security definer
 set search_path = ''
 as $$
-  select r.fichier
+  select jsonb_build_object('chemin', r.fichier, 'nom', r.nom_fichier)
   from public.rendus_exercices r
-  where r.id = p_rendu and (r.profil_id = (select auth.uid()) or public.editeur_de_lecon(r.lecon_id));
+  where r.id = p_rendu and r.fichier is not null and (r.profil_id = (select auth.uid()) or public.editeur_de_lecon(r.lecon_id));
 $$;
 
 -- « Valider l'exercice » (commentaire facultatif) ou « Demander une correction » (remarque exigée) ; l'étudiant est prévenu.
