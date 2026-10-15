@@ -656,3 +656,13 @@ La page d'une leçon prend une barre du haut et des discussions, le programme se
    - Dans l'éditeur de leçon, décoche « Activer les commentaires » : la section disparaît de la leçon.
    - Un visiteur sans compte ne voit pas les discussions, même sur une leçon d'aperçu gratuit ; en aperçu (bandeau jaune), l'équipe et le formateur non plus.
 7. **La page du cours** (compte qui a commencé la formation) : **Poursuivre le cours** en haut à droite, la carte « Progression du cours » (« Terminé 3 sur 12 », %), **Tout déplier / Tout replier** au-dessus du programme. Avec ton compte de l'équipe : **Modifier les leçons** mène à l'onglet Leçons de l'éditeur.
+
+## 35. Valider l'onglet « Apprenants » d'une formation (étape C), 10 minutes
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0029_apprenants_formation.sql` (après la 0028).
+2. **Au back-office.** Ouvre une formation → onglet **Apprenants** : quatre chiffres (apprenants, progression moyenne, « Formation terminée », « À risque »), puis le tableau : apprenant, progression « 3 / 12 », commencée le, dernière activité, état.
+   - Les filtres Tous · À risque · Terminés et la recherche par nom changent la liste, pas les quatre chiffres.
+   - Le nom d'un apprenant ouvre sa fiche dans « Utilisateurs ».
+   - Ton compte de l'équipe et celui du formateur n'apparaissent pas, même s'ils ont ouvert des leçons.
+3. **Dans l'espace formateur.** Avec le compte du formateur : Mes formations → une formation → **Apprenants**. Le nom d'un apprenant ouvre sa fiche dans « Étudiants ».
+4. **Une formation que personne n'a commencée** : « Personne n'a encore commencé cette formation. »

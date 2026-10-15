@@ -73,7 +73,7 @@ export function ListeApprenants({ formationId, espace, initial }: Props) {
     <div className="flex min-w-0 flex-col gap-6 max-sm:gap-5">
       <ul aria-label="En bref" className="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-4">
         {chiffres.map((c) => (
-          <li key={c.label} className="flex min-w-0 flex-col rounded-carte border border-bordure-carte bg-panneau px-4 py-3">
+          <li key={c.label} className="flex min-w-0 flex-col justify-between rounded-carte border border-bordure-carte bg-panneau px-4 py-3">
             <span className="text-[13px] leading-5 text-discret">{c.label}</span>
             <span className="mt-1 text-2xl leading-8 font-medium tracking-[-0.01em] text-titre max-sm:text-xl max-sm:leading-7">{c.valeur}</span>
           </li>
