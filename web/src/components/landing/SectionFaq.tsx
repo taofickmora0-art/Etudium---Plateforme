@@ -1,11 +1,12 @@
 import { Accordion } from "@/components/ui/Accordion";
+import { cn } from "@/lib/cn";
 import { QUESTIONS_FREQUENTES } from "@/lib/site/faq";
 import { EnTeteSection, SECTION_NUE } from "./BlocsLanding";
 
 /** Les 7 questions fréquentes dans leur boîte blanche (§14), la première dépliée : landing et page Aide. */
-export function BoiteQuestions() {
+export function BoiteQuestions({ className }: { className?: string }) {
   return (
-    <div className="rounded-bloc bg-panneau px-[clamp(18px,3vw,32px)] pt-1.5 pb-2.5">
+    <div className={cn("rounded-bloc bg-panneau px-[clamp(18px,3vw,32px)] pt-1.5 pb-2.5", className)}>
       <Accordion items={QUESTIONS_FREQUENTES.map((q) => ({ question: q.question, answer: q.reponse }))} defaultOpen={[0]} />
     </div>
   );
