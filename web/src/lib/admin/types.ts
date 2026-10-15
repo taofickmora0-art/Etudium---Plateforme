@@ -32,7 +32,8 @@ export type FormationResume = {
   modifieeParFormateurLe: string | null;
 };
 
-export type LeconResume = { id: string; titre: string; dureeSecondes: number; apercu: boolean; aVideo: boolean };
+/** `publiee` : statut de la leçon (0027) ; vrai avant la 0027. */
+export type LeconResume = { id: string; titre: string; dureeSecondes: number; apercu: boolean; aVideo: boolean; publiee: boolean };
 
 export type ModuleAdmin = { id: string; titre: string; ordre: number; lecons: LeconResume[] };
 
@@ -73,6 +74,16 @@ export type LeconAdmin = {
   moduleId: string;
   formationId: string;
   formationTitre: string;
+  /** Pour « Voir comme un étudiant ». */
+  formationSlug: string;
+  /** Statut (0027) ; vrai avant la 0027. */
+  publiee: boolean;
+  /** « Activer les commentaires » (0027) ; vrai avant la 0027. */
+  commentairesActifs: boolean;
+  /** « Leçon 2 sur 5 · Module 1 : titre » : son rang dans toute la formation, et sa section. */
+  position: { rang: number; total: number; module: { rang: number; titre: string } };
+  /** Les leçons voisines dans l'ordre de la formation (flèches ‹ › de l'éditeur). */
+  voisines: { precedente: string | null; suivante: string | null };
   titre: string;
   titreCourt: string | null;
   dureeSecondes: number;

@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { authErrorMessage } from "@/lib/auth/messages";
 import { fieldErrorsFrom, type FormState } from "@/lib/auth/schemas";
 import type { createClient } from "@/lib/supabase/server";
+import { estFonctionAbsente } from "@/lib/contenus/lecture";
 import { cheminValide } from "@/lib/couvertures/regles";
 import { baseFormations, espaceDe, type EspaceEdition } from "./espace";
 import { ACCES_EQUIPE, exigerEditeur, exigerEquipe } from "./garde";
@@ -21,7 +22,8 @@ const ECHEC = authErrorMessage(null);
 const ADRESSE_PRISE = "Cette adresse est déjà prise.";
 const ADRESSE_PRISE_ENTRE_TEMPS = "Une autre formation vient de prendre cette adresse : réessayez.";
 const DEPLACEMENT_ECHOUE = "Le déplacement n’a pas abouti.";
-const FORMATION_VIDE = "Ajoutez au moins une leçon avant de publier.";
+const FORMATION_VIDE = "Publiez au moins une leçon avant de publier la formation.";
+const MIGRATION_LECONS = "Appliquez la migration 0027 (guide « Ce qui te revient », section 33).";
 const PUBLIEE_ARCHIVER = "Une formation publiée s’archive, elle ne s’efface pas.";
 
 type Resultat = { ok: boolean; message?: string; redirection?: string };
@@ -37,6 +39,8 @@ const enTextes = (valeurs: Record<string, unknown>) =>
   Object.fromEntries(Object.entries(valeurs).map(([cle, v]) => [cle, typeof v === "boolean" ? (v ? "on" : "") : String(v ?? "")]));
 
 type ErreurBase = { code?: string; message?: string };
+/** Une colonne d'une migration pas encore appliquée, à l'écriture (Postgres 42703, PostgREST PGRST204). */
+const colonneAbsente = (erreur: ErreurBase | null | undefined) => erreur?.code === "42703" || erreur?.code === "PGRST204";
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 /** Erreur de la base traduite pour le formulaire : adresse déjà prise, règle de la base (message en français), sinon générique. */
@@ -128,6 +132,29 @@ export async function deplacer(table: TableOrdonnee, id: string, sens: -1 | 1): 
     if (table === "parcours" && !garde.equipe) return { ok: false, message: ACCES_EQUIPE };
     const { error } = await garde.supabase.rpc("deplacer", { p_table: table, p_id: id, p_sens: sens });
     if (error) return { ok: false, message: DEPLACEMENT_ECHOUE };
+  } catch {
+    return { ok: false, message: DEPLACEMENT_ECHOUE };
+  }
+  refresh();
+  return { ok: true };
+}
+
+/**
+ * Range une section ou une leçon à un rang (1 = en tête), une leçon pouvant changer de section dans sa formation
+ * (fonction ranger de la migration 0027 : glisser-déposer et « Déplacer vers… » de l'onglet Leçons).
+ */
+export async function ranger(table: "modules" | "lecons", id: string, parent: string | null, position: number): Promise<Resultat> {
+  if ((table !== "modules" && table !== "lecons") || !estUuid(id) || (parent !== null && !estUuid(parent)) || !Number.isInteger(position) || position < 1) {
+    return { ok: false, message: DEPLACEMENT_ECHOUE };
+  }
+  try {
+    const garde = await exigerEditeur();
+    if ("erreur" in garde) return { ok: false, message: garde.erreur };
+    const { error } = await garde.supabase.rpc("ranger", { p_table: table, p_id: id, p_parent: parent, p_position: position });
+    if (error) {
+      if (estFonctionAbsente(error)) return { ok: false, message: MIGRATION_LECONS };
+      return { ok: false, message: error.code === "P0001" && error.message ? typographie(error.message) : DEPLACEMENT_ECHOUE };
+    }
   } catch {
     return { ok: false, message: DEPLACEMENT_ECHOUE };
   }
@@ -261,9 +288,12 @@ export async function setStatutFormation(id: string, statut: "publiee" | "archiv
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { supabase } = garde;
     if (statut === "publiee") {
-      const { data: modules, error } = await supabase.from("modules").select("id, lecons(id)").eq("formation_id", id);
-      if (error) return { ok: false, message: ECHEC };
-      const lecons = ((modules as { lecons?: unknown[] }[] | null) ?? []).reduce((total, m) => total + (m.lecons?.length ?? 0), 0);
+      // Au moins une leçon publiée (0027) ; avant la 0027, toutes les leçons sont visibles.
+      let lecture: { data: unknown; error: ErreurBase | null } = await supabase.from("modules").select("id, lecons(id, publiee)").eq("formation_id", id);
+      if (colonneAbsente(lecture.error)) lecture = await supabase.from("modules").select("id, lecons(id)").eq("formation_id", id);
+      if (lecture.error) return { ok: false, message: ECHEC };
+      const modules = (lecture.data as { lecons?: { publiee?: boolean }[] }[] | null) ?? [];
+      const lecons = modules.reduce((total, m) => total + (m.lecons ?? []).filter((l) => l.publiee !== false).length, 0);
       if (lecons === 0) return { ok: false, message: FORMATION_VIDE };
     }
     const { error } = await supabase.from("formations").update({ statut }).eq("id", id);
@@ -365,7 +395,11 @@ export async function deleteModule(id: string): Promise<Resultat> {
   return { ok: true };
 }
 
-/** Nouvelle leçon à la fin du module, avec son contenu vide ; on ouvre ensuite sa page. */
+/**
+ * Nouvelle leçon à la fin du module, avec son contenu vide ; on ouvre ensuite sa page. Dans une formation déjà publiée,
+ * elle naît en brouillon (0027) : les étudiants ne la voient qu'une fois publiée. Dans une formation jamais publiée, tout
+ * est encore caché : elle naît publiée, pour ne pas avoir à publier chaque leçon en plus de la formation.
+ */
 export async function addLecon(_prev: FormState, fd: FormData): Promise<FormState> {
   const espace = espaceDe(fd);
   const moduleId = texte(fd, "module_id");
@@ -377,11 +411,17 @@ export async function addLecon(_prev: FormState, fd: FormData): Promise<FormStat
     const garde = await exigerEditeur();
     if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
     const { supabase } = garde;
-    const { data: module } = await supabase.from("modules").select("formation_id").eq("id", moduleId).maybeSingle();
-    const formationId = (module as { formation_id?: string } | null)?.formation_id;
+    const { data: module } = await supabase.from("modules").select("formation_id, formations(publiee_le)").eq("id", moduleId).maybeSingle();
+    const ligne = module as { formation_id?: string; formations?: { publiee_le?: string | null } | { publiee_le?: string | null }[] } | null;
+    const formationId = ligne?.formation_id;
     if (!formationId) return { status: "error", message: ECHEC, values };
+    const formation = Array.isArray(ligne?.formations) ? ligne.formations[0] : ligne?.formations;
     const ordre = await rangSuivant(supabase, "lecons", ["module_id", moduleId]);
-    const { data, error } = await supabase.from("lecons").insert({ module_id: moduleId, titre: parsed.data.titre, ordre }).select("id").single();
+    const nouvelle = { module_id: moduleId, titre: parsed.data.titre, ordre };
+    let reponse = await supabase.from("lecons").insert({ ...nouvelle, publiee: !formation?.publiee_le }).select("id").single();
+    // Avant la 0027 : sans statut, la leçon est visible comme avant.
+    if (colonneAbsente(reponse.error)) reponse = await supabase.from("lecons").insert(nouvelle).select("id").single();
+    const { data, error } = reponse;
     if (error || !data) return erreurEnregistrement(error ?? {}, values);
     const leconId = (data as { id: string }).id;
     // Le contenu (vidéo, texte) vit à part : il ne se montre qu'avec l'accès à la leçon. Créé vide ici, complété ensuite.
@@ -390,6 +430,21 @@ export async function addLecon(_prev: FormState, fd: FormData): Promise<FormStat
   } catch {
     return { status: "error", message: ECHEC, values };
   }
+}
+
+/** Publie une leçon ou la remet en brouillon (0027) : les étudiants ne voient que les leçons publiées. */
+export async function changerStatutLecon(id: string, publiee: boolean): Promise<Resultat> {
+  if (!estUuid(id) || typeof publiee !== "boolean") return { ok: false, message: ECHEC };
+  try {
+    const garde = await exigerEditeur();
+    if ("erreur" in garde) return { ok: false, message: garde.erreur };
+    const { error } = await garde.supabase.from("lecons").update({ publiee }).eq("id", id);
+    if (error) return { ok: false, message: colonneAbsente(error) ? MIGRATION_LECONS : ECHEC };
+  } catch {
+    return { ok: false, message: ECHEC };
+  }
+  refresh();
+  return { ok: true };
 }
 
 /** Supprime une leçon (contenu et ressources en cascade), puis les fichiers de ses ressources. */
@@ -451,10 +506,13 @@ export async function saveLecon(_prev: FormState, fd: FormData): Promise<FormSta
     if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
     const { supabase } = garde;
     const { texte: contenuTexte, titre_court, ...lecon } = parsed.data;
-    const { error } = await supabase
+    const champs = { ...lecon, titre_court: titre_court || null };
+    let { error } = await supabase
       .from("lecons")
-      .update({ ...lecon, titre_court: titre_court || null })
+      .update({ ...champs, commentaires_actifs: coche(fd, "commentaires_actifs") })
       .eq("id", id);
+    // Avant la 0027, la colonne manque : le reste s'enregistre.
+    if (colonneAbsente(error)) ({ error } = await supabase.from("lecons").update(champs).eq("id", id));
     if (error) return erreurEnregistrement(error, values);
     const { error: erreurContenu } = await supabase.from("lecons_contenus").upsert({
       lecon_id: id,

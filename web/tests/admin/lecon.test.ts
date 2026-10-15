@@ -48,6 +48,8 @@ describe("Back-office : une leçon", () => {
       apercu: true,
       resume: "Résumé",
       points_cles: ["Créer", "Modifier"],
+      // « Activer les commentaires » (0027), décoché ici.
+      commentaires_actifs: false,
     });
     expect(maj.filtres).toContainEqual(["eq", "id", L]);
     expect(faux.de("lecons_contenus", "upsert")[0].valeurs).toEqual({ lecon_id: L, video_fournisseur: "youtube", video_id: "dQw4w9WgXcQ", texte: "Texte" });

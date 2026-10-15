@@ -47,6 +47,7 @@ const versLeconResume = (l: Ligne): LeconResume & { ordre: number } => ({
   dureeSecondes: Number(l.duree_secondes ?? 0),
   apercu: l.apercu === true,
   aVideo: Boolean(un(l.lecons_contenus)?.video_id),
+  publiee: l.publiee !== false,
   ordre: Number(l.ordre ?? 0),
 });
 
@@ -56,6 +57,7 @@ const sansOrdre = (lecon: LeconResume & { ordre: number }): LeconResume => ({
   dureeSecondes: lecon.dureeSecondes,
   apercu: lecon.apercu,
   aVideo: lecon.aVideo,
+  publiee: lecon.publiee,
 });
 
 const versModule = (m: Ligne): ModuleAdmin => ({
@@ -142,17 +144,25 @@ export async function getFormationAdmin(id: string): Promise<FormationAdmin | nu
   if (demoModeActive() || !estUuid(id)) return null;
   const supabase = await createClient();
   // La couverture (0012) et la relecture (0014) sont facultatives : sans elles, le back-office s'ouvre quand même.
-  const f = (await lireAvecRepli([", couverture, envoyee_le, renvoyee_le, remarque_relecture, modifiee_par_formateur_le", ", couverture", ""], (couverture) =>
-    supabase
+  // Le statut des leçons (0027) aussi : sans lui, les leçons sont toutes visibles, comme avant.
+  const variantes = [
+    [", couverture, envoyee_le, renvoyee_le, remarque_relecture, modifiee_par_formateur_le", ", publiee"],
+    [", couverture, envoyee_le, renvoyee_le, remarque_relecture, modifiee_par_formateur_le", ""],
+    [", couverture", ""],
+    ["", ""],
+  ];
+  const f = (await lireAvecRepli(variantes.map((v) => v.join("|")), (variante) => {
+    const [couverture, statut] = variante.split("|");
+    return supabase
       .from("formations")
       .select(
         `id, slug, titre, statut, niveau, resume, description, objectifs, competences, formateur_id, gratuite, achat_separe, prix_fcfa, badge, seuil_video, publiee_le${couverture}, ` +
           "formations_parcours(parcours_id, parcours(nom_court)), " +
-          "modules(id, titre, ordre, lecons(id, titre, duree_secondes, apercu, ordre, lecons_contenus(video_id)))",
+          `modules(id, titre, ordre, lecons(id, titre, duree_secondes, apercu, ordre${statut}, lecons_contenus(video_id)))`,
       )
       .eq("id", id)
-      .maybeSingle(),
-  )) as Ligne | null;
+      .maybeSingle();
+  })) as Ligne | null;
   if (!f) return null;
   const modules = liste(f.modules).map(versModule).sort(parOrdre);
   const { statut, etat, envoyeeLe, renvoyeeLe, modifieeParFormateurLe } = relecture(f);
@@ -199,28 +209,42 @@ const versRessource = (r: Ligne): RessourceAdmin => ({
 export async function getLeconAdmin(id: string): Promise<LeconAdmin | null> {
   if (demoModeActive() || !estUuid(id)) return null;
   const supabase = await createClient();
-  const l = verifier(
-    await supabase
+  // Le statut et « Activer les commentaires » (0027) ; le programme de la formation donne la position et les voisines.
+  const l = (await lireAvecRepli([", publiee, commentaires_actifs", ""], (colonnes) =>
+    supabase
       .from("lecons")
       .select(
-        "id, module_id, titre, titre_court, duree_secondes, apercu, resume, points_cles, " +
-          "modules(formation_id, formations(titre)), " +
+        `id, module_id, titre, titre_court, duree_secondes, apercu, resume, points_cles${colonnes}, ` +
+          "modules(formation_id, formations(titre, slug, modules(id, titre, ordre, lecons(id, ordre)))), " +
           "lecons_contenus(video_fournisseur, video_id, texte), " +
           "ressources(id, titre, fichier, format, taille_octets, telechargeable, ordre)",
       )
       .eq("id", id)
       .maybeSingle(),
-  ) as Ligne | null;
+  )) as Ligne | null;
   if (!l) return null;
   const parent = un(l.modules);
   const contenu = un(l.lecons_contenus);
   const fournisseur = contenu?.video_fournisseur;
   const videoId = contenu?.video_id;
+  const formation = un(parent?.formations);
+  // La formation dans l'ordre : ses sections, puis leurs leçons.
+  const programme = liste(formation?.modules)
+    .map((m) => ({ id: String(m.id), titre: texte(m.titre), ordre: Number(m.ordre ?? 0), lecons: liste(m.lecons).map((x) => ({ id: String(x.id), ordre: Number(x.ordre ?? 0) })).sort(parOrdre) }))
+    .sort(parOrdre);
+  const suite = programme.flatMap((m) => m.lecons.map((x) => x.id));
+  const rang = suite.indexOf(String(l.id)) + 1;
+  const rangModule = programme.findIndex((m) => m.id === String(l.module_id));
   return {
     id: String(l.id),
     moduleId: String(l.module_id),
     formationId: String(parent?.formation_id ?? ""),
-    formationTitre: texte(un(parent?.formations)?.titre),
+    formationTitre: texte(formation?.titre),
+    formationSlug: texte(formation?.slug),
+    publiee: l.publiee !== false,
+    commentairesActifs: l.commentaires_actifs !== false,
+    position: { rang: Math.max(rang, 1), total: Math.max(suite.length, 1), module: { rang: rangModule + 1 || 1, titre: programme[rangModule]?.titre ?? "" } },
+    voisines: { precedente: rang > 1 ? suite[rang - 2] : null, suivante: rang > 0 && rang < suite.length ? suite[rang] : null },
     titre: texte(l.titre),
     titreCourt: typeof l.titre_court === "string" ? l.titre_court : null,
     dureeSecondes: Number(l.duree_secondes ?? 0),

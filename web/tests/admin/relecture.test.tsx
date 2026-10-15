@@ -53,7 +53,7 @@ const FORMATION: FormationAdmin = {
   seuilVideo: 90,
   publieeLe: null,
   parcoursIds: [],
-  modules: [{ id: "m1", titre: "Module", ordre: 1, lecons: [{ id: "l1", titre: "Leçon", dureeSecondes: 0, apercu: false, aVideo: false }] }],
+  modules: [{ id: "m1", titre: "Module", ordre: 1, lecons: [{ id: "l1", titre: "Leçon", dureeSecondes: 0, apercu: false, aVideo: false, publiee: true }] }],
   couverture: null,
   modifieeParFormateurLe: null,
   envoyeeLe: null,

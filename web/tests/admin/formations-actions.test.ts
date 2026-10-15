@@ -139,7 +139,7 @@ describe("Back-office : formations", () => {
 
   it("on ne publie pas une formation vide", async () => {
     faux.repondre("modules.select", { data: [{ id: "m1", lecons: [] }] });
-    expect(await setStatutFormation(F, "publiee")).toEqual({ ok: false, message: "Ajoutez au moins une leçon avant de publier." });
+    expect(await setStatutFormation(F, "publiee")).toEqual({ ok: false, message: "Publiez au moins une leçon avant de publier la formation." });
     expect(faux.de("formations", "update")).toEqual([]);
   });
 

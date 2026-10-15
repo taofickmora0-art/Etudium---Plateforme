@@ -65,7 +65,8 @@ describe("Back-office : programme d'une formation", () => {
     faux.repondre("lecons.select", { data: { ordre: 4 } });
     faux.repondre("lecons.insert", { data: { id: L } });
     const state = await addLecon(IDLE, form({ module_id: M, titre: "Introduction aux macros" }));
-    expect(faux.de("lecons", "insert")[0].valeurs).toEqual({ module_id: M, titre: "Introduction aux macros", ordre: 5 });
+    // Une formation jamais publiée : la leçon naît publiée (0027).
+    expect(faux.de("lecons", "insert")[0].valeurs).toEqual({ module_id: M, titre: "Introduction aux macros", ordre: 5, publiee: true });
     expect(faux.de("lecons_contenus", "insert")[0].valeurs).toEqual({ lecon_id: L });
     expect(state).toEqual({ status: "success", redirection: `/admin/formations/${F}/lecons/${L}` });
   });
