@@ -5,7 +5,7 @@ const A4_LARGEUR = 842;
 const A4_HAUTEUR = 595;
 
 /** Un PDF d'une page A4 paysage, l'image JPEG (largeur × hauteur en pixels) occupant toute la page. */
-export function pdfDepuisJpeg(jpeg: Uint8Array, largeur: number, hauteur: number): Uint8Array {
+export function pdfDepuisJpeg(jpeg: Uint8Array, largeur: number, hauteur: number): Uint8Array<ArrayBuffer> {
   const encodeur = new TextEncoder();
   const morceaux: Uint8Array[] = [];
   const decalages: number[] = [];
