@@ -32,12 +32,27 @@ export function elementsInclus(fiche: FicheFormation): { icone: IconSvgElement; 
   ].filter((e): e is { icone: IconSvgElement; texte: string } => Boolean(e));
 }
 
-/** Liste à coches (« Ce que vous allez apprendre », « Inclus dans la formation »). */
-export function ListeCochee({ elements, couleur, taille = "text-[15px]", colonnes }: { elements: string[]; couleur: string; taille?: string; colonnes: string }) {
+/**
+ * Liste à coches (« Ce que vous allez apprendre », « Inclus dans la formation », formules de la landing).
+ * `couleurTexte` : texte blanc sur la formule mise en avant (fond bleu).
+ */
+export function ListeCochee({
+  elements,
+  couleur,
+  taille = "text-[15px]",
+  colonnes,
+  couleurTexte = "text-texte",
+}: {
+  elements: string[];
+  couleur: string;
+  taille?: string;
+  colonnes: string;
+  couleurTexte?: string;
+}) {
   return (
     <ul className={cn("m-0 grid list-none p-0", colonnes)}>
       {elements.map((element) => (
-        <li key={element} className={cn("flex items-start gap-2.5 leading-[22px] text-texte", taille)}>
+        <li key={element} className={cn("flex items-start gap-2.5 leading-[22px]", couleurTexte, taille)}>
           <span className={cn("mt-0.5 flex flex-none", couleur)}>
             <Icon icon={Tick02Icon} size={18} />
           </span>
@@ -116,13 +131,10 @@ export function BandeAppelAction() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link
-              href="/inscription"
-              className="focus-blanc inline-flex min-h-[52px] items-center justify-center gap-2 rounded-[14px] bg-white px-[22px] py-3 text-center text-base leading-tight font-semibold text-bleu no-underline transition-colors hover:bg-bleu-clair"
-            >
+            <LienBlanc href="/inscription">
               <span>Créer mon compte gratuit</span>
               <Icon icon={ArrowRight02Icon} size={18} />
-            </Link>
+            </LienBlanc>
             <LienContourBlanc href="/formations" hauteur="min-h-[52px] px-[22px] py-3 text-base">
               Découvrir les formations
             </LienContourBlanc>
@@ -146,6 +158,18 @@ export function LienContourBlanc({ href, hauteur, children }: { href: string; ha
         "focus-blanc box-border inline-flex items-center justify-center gap-2 rounded-[14px] border border-white/45 bg-transparent text-center leading-tight font-semibold text-white no-underline transition-colors hover:bg-white/14",
         hauteur,
       )}
+    >
+      {children}
+    </Link>
+  );
+}
+
+/** Bouton blanc sur fond bleu (BTN-BLANC) : le texte passe à la ligne plutôt que de déborder sur un petit écran. */
+export function LienBlanc({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="focus-blanc inline-flex min-h-[52px] items-center justify-center gap-2 rounded-[14px] bg-white px-[22px] py-3 text-center text-base leading-tight font-semibold text-bleu no-underline transition-colors hover:bg-bleu-clair"
     >
       {children}
     </Link>
