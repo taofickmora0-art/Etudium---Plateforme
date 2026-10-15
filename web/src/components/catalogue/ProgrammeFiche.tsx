@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { CheckmarkCircle02Icon, PlayCircleIcon, Quiz01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
+import { AssignmentsIcon, CheckmarkCircle02Icon, PlayCircleIcon, Quiz01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import { Accordion } from "@/components/ui/Accordion";
 import { AccordeonProgramme } from "./AccordeonProgramme";
 import { Icon } from "@/components/ui/Icon";
 import { formatDuree } from "@/lib/admin/duree";
-import { dureeLisible, estLeconDeContenu, libelleQuiz, nombreDeLecons, nombreDeQuiz } from "@/lib/catalogue/regles";
+import { dureeLisible, estLeconDeContenu, libelleExercice, libelleQuiz, nombreDExercices, nombreDeLecons, nombreDeQuiz } from "@/lib/catalogue/regles";
+import type { StatutRendu } from "@/lib/exercices/types";
 import type { FicheFormation, LeconFiche } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
 import { etatModule, type EtatProgression } from "@/lib/progression/regles";
@@ -15,14 +16,19 @@ export const adresseLecon = (slug: string, leconId: string) => `/formations/${sl
 /** « 4 modules · 12 leçons · 2 quiz · 2 h 20 ». */
 export function resumeProgramme(fiche: FicheFormation) {
   const n = fiche.modules.length;
-  return [`${n} ${n > 1 ? "modules" : "module"}`, nombreDeLecons(fiche.nbLecons), nombreDeQuiz(fiche.nbQuiz), dureeLisible(fiche.dureeSecondes)].filter(Boolean).join(" · ");
+  return [`${n} ${n > 1 ? "modules" : "module"}`, nombreDeLecons(fiche.nbLecons), nombreDeQuiz(fiche.nbQuiz), nombreDExercices(fiche.nbExercices), dureeLisible(fiche.dureeSecondes)]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 /** « 6 leçons · 1 quiz · 1 h 20 » : les quiz sont comptés à part. */
 const metaModule = (lecons: LeconFiche[]) => {
   const contenu = lecons.filter(estLeconDeContenu);
   const quiz = lecons.filter((l) => l.type === "quiz").length;
-  return [nombreDeLecons(contenu.length), nombreDeQuiz(quiz), dureeLisible(contenu.reduce((t, l) => t + l.dureeSecondes, 0))].filter(Boolean).join(" · ");
+  const exercices = lecons.filter((l) => l.type === "exercice").length;
+  return [nombreDeLecons(contenu.length), nombreDeQuiz(quiz), nombreDExercices(exercices), dureeLisible(contenu.reduce((t, l) => t + l.dureeSecondes, 0))]
+    .filter(Boolean)
+    .join(" · ");
 };
 
 /** Ligne d'une leçon, programme du visiteur (NdFormationPublic) : lien « Aperçu » sur les leçons d'aperçu seulement. */
@@ -30,7 +36,7 @@ function LeconPublique({ slug, lecon, premiere }: { slug: string; lecon: LeconFi
   return (
     <span className={cn("flex min-h-11 items-center gap-3 text-texte", !premiere && "border-t border-bordure-carte")}>
       <span className="flex flex-none text-discret">
-        <Icon icon={lecon.type === "quiz" ? Quiz01Icon : PlayCircleIcon} size={18} />
+        <Icon icon={lecon.type === "quiz" ? Quiz01Icon : lecon.type === "exercice" ? AssignmentsIcon : PlayCircleIcon} size={18} />
       </span>
       <span className="min-w-0 flex-1">{lecon.titre}</span>
       {lecon.apercu && (
@@ -38,7 +44,7 @@ function LeconPublique({ slug, lecon, premiere }: { slug: string; lecon: LeconFi
           Aperçu
         </Link>
       )}
-      <span className="min-w-11 text-right text-[13px] text-discret">{lecon.type === "quiz" ? libelleQuiz() : formatDuree(lecon.dureeSecondes)}</span>
+      <span className="min-w-11 text-right text-[13px] text-discret">{lecon.type === "quiz" ? libelleQuiz() : lecon.type === "exercice" ? libelleExercice() : formatDuree(lecon.dureeSecondes)}</span>
     </span>
   );
 }
@@ -47,9 +53,24 @@ function LeconPublique({ slug, lecon, premiere }: { slug: string; lecon: LeconFi
  * Ligne d'une leçon, programme connecté (NdFormation) : lien si la leçon est ouverte, cadenas sinon. Avec la progression
  * (1.7) : coche verte sur une leçon terminée, « Vous êtes ici » sur la leçon où reprendre.
  */
-function LeconConnectee({ slug, lecon, terminee = false, ici = false, meilleur }: { slug: string; lecon: LeconFiche; terminee?: boolean; ici?: boolean; meilleur?: number }) {
+function LeconConnectee({
+  slug,
+  lecon,
+  terminee = false,
+  ici = false,
+  meilleur,
+  statut,
+}: {
+  slug: string;
+  lecon: LeconFiche;
+  terminee?: boolean;
+  ici?: boolean;
+  meilleur?: number;
+  statut?: StatutRendu;
+}) {
   const quiz = lecon.type === "quiz";
-  const icone = !lecon.accessible ? SquareLock02Icon : terminee ? CheckmarkCircle02Icon : quiz ? Quiz01Icon : PlayCircleIcon;
+  const exercice = lecon.type === "exercice";
+  const icone = !lecon.accessible ? SquareLock02Icon : terminee ? CheckmarkCircle02Icon : quiz ? Quiz01Icon : exercice ? AssignmentsIcon : PlayCircleIcon;
   const contenu = (
     <>
       <span className={cn("flex flex-none", !lecon.accessible ? "text-discret" : terminee ? "text-reussite-texte" : "text-texte")}>
@@ -64,7 +85,7 @@ function LeconConnectee({ slug, lecon, terminee = false, ici = false, meilleur }
         {ici && <Tag tone="nouveau">Vous êtes ici</Tag>}
         {lecon.publiee === false && <Tag tone="enAttente">Brouillon</Tag>}
       </span>
-      <span className="min-w-14 flex-none text-right text-[13px] leading-5 text-discret">{quiz ? libelleQuiz(meilleur) : formatDuree(lecon.dureeSecondes)}</span>
+      <span className="min-w-14 flex-none text-right text-[13px] leading-5 text-discret">{quiz ? libelleQuiz(meilleur) : exercice ? libelleExercice(statut) : formatDuree(lecon.dureeSecondes)}</span>
     </>
   );
   const ligne = "flex min-h-11 items-center gap-3 border-t border-bordure-carte px-1";
@@ -92,6 +113,7 @@ export function ProgrammeFiche({
   progression = null,
   lienModifier = null,
   scores = {},
+  statuts = {},
 }: {
   fiche: FicheFormation;
   variante: "public" | "connecte";
@@ -101,6 +123,8 @@ export function ProgrammeFiche({
   lienModifier?: string | null;
   /** Le meilleur score du compte à chaque quiz (lot 3). */
   scores?: Readonly<Record<string, number>>;
+  /** Le dernier statut du compte à chaque exercice (lot 3). */
+  statuts?: Readonly<Record<string, StatutRendu>>;
 }) {
   if (fiche.modules.length === 0) return <p className="m-0 text-sm leading-[22px] text-discret">Le programme arrive bientôt.</p>;
   const terminees = progression?.terminees ?? new Set<string>();
@@ -128,7 +152,7 @@ export function ProgrammeFiche({
             variante === "public" ? (
               <LeconPublique key={lecon.id} slug={fiche.slug} lecon={lecon} premiere={index === 0} />
             ) : (
-              <LeconConnectee key={lecon.id} slug={fiche.slug} lecon={lecon} terminee={terminees.has(lecon.id)} ici={aReprendre?.id === lecon.id} meilleur={scores[lecon.id]} />
+              <LeconConnectee key={lecon.id} slug={fiche.slug} lecon={lecon} terminee={terminees.has(lecon.id)} ici={aReprendre?.id === lecon.id} meilleur={scores[lecon.id]} statut={statuts[lecon.id]} />
             ),
           )}
         </span>

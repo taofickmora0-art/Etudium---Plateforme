@@ -9,7 +9,8 @@ import { Icon, type IconSvgElement } from "@/components/ui/Icon";
 import { MetaDot, ProgressBar } from "@/components/ui/Progress";
 import { Tag, type TagTone } from "@/components/ui/Tag";
 import { Heading, Lead } from "@/components/ui/Text";
-import { dureeLisible, estLeconDeContenu, etatAcces, leconsApercu, nombreDeLecons, nombreDeQuiz, parcoursPrincipal, premiereLeconOuverte } from "@/lib/catalogue/regles";
+import { dureeLisible, estLeconDeContenu, etatAcces, leconsApercu, nombreDExercices, nombreDeLecons, nombreDeQuiz, parcoursPrincipal, premiereLeconOuverte } from "@/lib/catalogue/regles";
+import type { StatutRendu } from "@/lib/exercices/types";
 import { formatNote, libelleNombreAvis, peutDonnerAvis } from "@/lib/avis/regles";
 import type { AvisFormation } from "@/lib/avis/types";
 import type { FicheFormation, LeconFiche } from "@/lib/catalogue/types";
@@ -180,6 +181,7 @@ export function FicheConnectee({
   avis = null,
   lienModifier = null,
   scores = {},
+  statuts = {},
 }: {
   fiche: FicheFormation;
   progression?: EtatProgression | null;
@@ -191,6 +193,8 @@ export function FicheConnectee({
   lienModifier?: string | null;
   /** Le meilleur score du compte à chaque quiz (lot 3). */
   scores?: Readonly<Record<string, number>>;
+  /** Le dernier statut du compte à chaque exercice (lot 3). */
+  statuts?: Readonly<Record<string, StatutRendu>>;
 }) {
   const parcours = [...fiche.parcours].sort((a, b) => a.ordre - b.ordre)[0];
   const duree = dureeLisible(fiche.dureeSecondes);
@@ -204,6 +208,7 @@ export function FicheConnectee({
     { texte: libelleNiveau(fiche.niveau) },
     fiche.nbLecons > 0 && { texte: nombreDeLecons(fiche.nbLecons) },
     Boolean(fiche.nbQuiz) && { texte: nombreDeQuiz(fiche.nbQuiz) },
+    Boolean(fiche.nbExercices) && { texte: nombreDExercices(fiche.nbExercices) },
     fiche.formateur && { texte: fiche.formateur.nom },
   ].filter(Boolean) as { icone?: IconSvgElement; marge?: string; texte: string }[];
   const appel = appelDuHaut(fiche, progression);
@@ -289,7 +294,7 @@ export function FicheConnectee({
           )}
           <section aria-labelledby="programme-titre" className="flex min-w-0 flex-col gap-4">
             <EnTeteSection titre="Programme" id="programme-titre" suite={fiche.modules.length > 0 ? resumeProgramme(fiche) : undefined} />
-            <ProgrammeFiche fiche={fiche} variante="connecte" progression={progression?.commencee ? progression : null} lienModifier={lienModifier} scores={scores} />
+            <ProgrammeFiche fiche={fiche} variante="connecte" progression={progression?.commencee ? progression : null} lienModifier={lienModifier} scores={scores} statuts={statuts} />
           </section>
           <SectionAvis
             variante="connecte"

@@ -1,3 +1,4 @@
+import { LIBELLES_STATUT, type StatutRendu } from "@/lib/exercices/types";
 import type { CardTag } from "@/components/ui/CourseCard";
 import type { CouleurParcours } from "@/lib/contenus/libelles";
 import type { CarteCatalogue, FicheFormation, LeconFiche } from "./types";
@@ -20,6 +21,12 @@ export const nombreDeQuiz = (n: number | undefined) => (n ? `${n} quiz` : "");
 
 /** Un quiz dans le programme : « Quiz », ou « Quiz · 75 % » avec le meilleur score du compte (lot 3). */
 export const libelleQuiz = (meilleur?: number) => (meilleur === undefined ? "Quiz" : `Quiz · ${meilleur} %`);
+
+/** « 3 exercices » ; rien sans exercice (lot 3). */
+export const nombreDExercices = (n: number | undefined) => (n ? `${n} ${n > 1 ? "exercices" : "exercice"}` : "");
+
+/** Un exercice dans le programme : « Exercice », ou « Exercice · Validé » avec le dernier statut du compte (lot 3). */
+export const libelleExercice = (statut?: StatutRendu) => (statut ? `Exercice · ${LIBELLES_STATUT[statut]}` : "Exercice");
 
 /**
  * Le badge d'une carte, un seul et le même partout (spec §11) : « Gratuit » d'abord, puis le badge saisi au

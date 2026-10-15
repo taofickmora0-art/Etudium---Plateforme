@@ -5,7 +5,7 @@ import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
 import { iconButtonVariants } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/Icon";
 import { MetaDot } from "@/components/ui/Progress";
-import type { FicheFormation } from "@/lib/catalogue/types";
+import type { FicheFormation, TypeLecon } from "@/lib/catalogue/types";
 import { dureeLecon, rangDansFormation, situation, voisines } from "@/lib/lecon/regles";
 import type { LeconDetail } from "@/lib/lecon/types";
 
@@ -49,7 +49,7 @@ function Fleche({ vers, icone, nom }: { vers: string | null; icone: typeof Arrow
  * Au-dessus (refonte des formations, §1.3) : « Leçon 4 sur 22 », les flèches ‹ › et, pour l'équipe et le formateur de la
  * formation, « Modifier la leçon ». Ordinateur : module, puis formateur et durée. Téléphone : module et formateur.
  */
-export function EnTeteLecon({ fiche, lecon, lienModifier = null, quiz = false }: { fiche: FicheFormation; lecon: LeconDetail; lienModifier?: string | null; quiz?: boolean }) {
+export function EnTeteLecon({ fiche, lecon, lienModifier = null, type = "lecon" }: { fiche: FicheFormation; lecon: LeconDetail; lienModifier?: string | null; type?: TypeLecon }) {
   const ou = situation(fiche.modules, lecon.id);
   const rang = rangDansFormation(fiche.modules, lecon.id);
   const { precedente, suivante } = voisines(fiche.modules, lecon.id);
@@ -73,7 +73,7 @@ export function EnTeteLecon({ fiche, lecon, lienModifier = null, quiz = false }:
               className="focus-etudium ml-auto flex items-center gap-1.5 rounded-champ text-sm leading-[22px] font-medium text-bleu no-underline hover:underline max-sm:text-[13px]"
             >
               <Icon icon={PencilEdit02Icon} size={16} />
-              <span>{quiz ? "Modifier le quiz" : "Modifier la leçon"}</span>
+              <span>{type === "quiz" ? "Modifier le quiz" : type === "exercice" ? "Modifier l’exercice" : "Modifier la leçon"}</span>
             </Link>
           )}
         </div>

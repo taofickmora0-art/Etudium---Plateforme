@@ -4,6 +4,7 @@ import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
 import { QuizLecon } from "@/components/quiz/QuizLecon";
+import { ExerciceLecon } from "@/components/exercices/ExerciceLecon";
 import { videoMesuree, voisines } from "@/lib/lecon/regles";
 import type { DonneesLecon } from "@/lib/lecon/types";
 import { DansCetteLecon } from "./DansCetteLecon";
@@ -35,13 +36,16 @@ type Props = {
 /**
  * Le contenu de la page leçon (NdLecon, NdMobLecon) : vidéo, en-tête, navigation, onglets et « Dans cette leçon ».
  * Une leçon fermée n'affiche que son verrou, son en-tête et son résumé : jamais la vidéo, le texte ni les fichiers.
- * Un quiz (lot 3) : l'en-tête, puis le quiz ; ni texte, ni onglets, ni « Terminer la leçon ».
+ * Un quiz (lot 3) : l'en-tête, puis le quiz ; ni texte, ni onglets, ni « Terminer la leçon ». Un exercice : l'en-tête,
+ * la consigne et ses fichiers, puis le travail.
  */
 export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lienModifier = null }: Props) {
   const { fiche, lecon, note, notesDisponibles } = donnees;
   const ouverte = lecon.accessible;
   const quiz = fiche.modules.some((m) => m.lecons.some((l) => l.id === lecon.id && l.type === "quiz"));
   if (quiz) return <ContenuQuiz donnees={donnees} connecte={connecte} apercu={apercu} moi={moi} lienModifier={lienModifier} />;
+  const exercice = fiche.modules.some((m) => m.lecons.some((l) => l.id === lecon.id && l.type === "exercice"));
+  if (exercice) return <ContenuExercice donnees={donnees} connecte={connecte} apercu={apercu} moi={moi} lienModifier={lienModifier} />;
   return (
     <div className="flex min-w-0 flex-col gap-6">
       {apercu && <BandeauApercu apercu={apercu} />}
@@ -121,22 +125,7 @@ function ContenuQuiz({ donnees, connecte, apercu = null, moi = null, lienModifie
   if (!lecon.accessible) {
     quiz = <LeconVerrouillee fiche={fiche} leconId={lecon.id} connecte={connecte} />;
   } else if (!connecte) {
-    quiz = (
-      <Banner
-        tone="information"
-        title="Connectez-vous pour passer ce quiz et garder votre score."
-        action={
-          <span className="flex flex-wrap gap-2">
-            <Button asChild size="sm">
-              <Link href="/inscription">Créer un compte gratuit</Link>
-            </Button>
-            <Button asChild size="sm" variant="contour">
-              <Link href={`/connexion?next=${encodeURIComponent(adresseLecon(fiche.slug, lecon.id))}`}>Se connecter</Link>
-            </Button>
-          </span>
-        }
-      />
-    );
+    quiz = <InviterConnexion fiche={fiche} leconId={lecon.id} titre="Connectez-vous pour passer ce quiz et garder votre score." />;
   } else if (donnees.quiz) {
     quiz = (
       <QuizLecon
@@ -153,8 +142,65 @@ function ContenuQuiz({ donnees, connecte, apercu = null, moi = null, lienModifie
   return (
     <div className="flex min-w-0 flex-col gap-6">
       {apercu && <BandeauApercu apercu={apercu} />}
-      <EnTeteLecon fiche={fiche} lecon={lecon} lienModifier={lienModifier} quiz />
+      <EnTeteLecon fiche={fiche} lecon={lecon} lienModifier={lienModifier} type="quiz" />
       {quiz}
+      <NavigationLecon fiche={fiche} leconId={lecon.id} />
+      {lecon.accessible && !apercu && donnees.discussion && moi && (
+        <DiscussionsLecon key={lecon.id} leconId={lecon.id} slug={fiche.slug} initial={donnees.discussion} moi={moi} maintenant={new Date()} />
+      )}
+    </div>
+  );
+}
+
+/** Un visiteur devant un quiz ou un exercice d'aperçu : créer un compte, ou se connecter et revenir ici. */
+function InviterConnexion({ fiche, leconId, titre }: { fiche: DonneesLecon["fiche"]; leconId: string; titre: string }) {
+  return (
+    <Banner
+      tone="information"
+      title={titre}
+      action={
+        <span className="flex flex-wrap gap-2">
+          <Button asChild size="sm">
+            <Link href="/inscription">Créer un compte gratuit</Link>
+          </Button>
+          <Button asChild size="sm" variant="contour">
+            <Link href={`/connexion?next=${encodeURIComponent(adresseLecon(fiche.slug, leconId))}`}>Se connecter</Link>
+          </Button>
+        </span>
+      }
+    />
+  );
+}
+
+/** La page d'un exercice : l'en-tête, la consigne et ses fichiers, le travail (ou ce qui empêche de le faire), la suite. */
+function ContenuExercice({ donnees, connecte, apercu = null, moi = null, lienModifier = null }: Props) {
+  const { fiche, lecon } = donnees;
+  let travail: ReactNode;
+  if (!lecon.accessible) {
+    travail = <LeconVerrouillee fiche={fiche} leconId={lecon.id} connecte={connecte} />;
+  } else if (!connecte) {
+    travail = <InviterConnexion fiche={fiche} leconId={lecon.id} titre="Connectez-vous pour faire cet exercice." />;
+  } else if (donnees.exercice) {
+    travail = <ExerciceLecon key={lecon.id} leconId={lecon.id} exercice={donnees.exercice} />;
+  } else {
+    travail = <Banner tone="information" title="Cet exercice n’est pas disponible pour le moment." />;
+  }
+  return (
+    <div className="flex min-w-0 flex-col gap-6">
+      {apercu && <BandeauApercu apercu={apercu} />}
+      <EnTeteLecon fiche={fiche} lecon={lecon} lienModifier={lienModifier} type="exercice" />
+      {lecon.accessible && (
+        <section aria-label="Consigne" className="flex min-w-0 flex-col gap-3 rounded-carte border border-bordure-carte bg-panneau p-6 max-sm:p-4">
+          <h2 className="m-0 text-lg leading-7 font-semibold text-encre max-sm:text-base">Consigne</h2>
+          {lecon.texte ? (
+            <TexteMisEnForme texte={lecon.texte} className="text-[15px] leading-6 text-texte max-sm:text-sm max-sm:leading-[22px]" />
+          ) : (
+            <p className="m-0 text-sm leading-[22px] text-discret">La consigne arrive bientôt.</p>
+          )}
+          {lecon.ressources.length > 0 && <RessourcesLecon ressources={lecon.ressources} />}
+        </section>
+      )}
+      {travail}
       <NavigationLecon fiche={fiche} leconId={lecon.id} />
       {lecon.accessible && !apercu && donnees.discussion && moi && (
         <DiscussionsLecon key={lecon.id} leconId={lecon.id} slug={fiche.slug} initial={donnees.discussion} moi={moi} maintenant={new Date()} />

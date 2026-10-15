@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fauxSupabase } from "../admin/faux-supabase";
+import { EXCEL_OUVERTE } from "../lecon/donnees";
 
 // Lot 3, étape B : la logique des exercices dans l'appli (lectures, dépôt, correction, téléchargement, formats).
 const faux = fauxSupabase();
@@ -13,6 +14,7 @@ vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 const { lireExercice, lireMesExercices, lireStatutsExercices, lireCorrections, lireRenduACorriger, MIGRATION_EXERCICES } = await import("@/lib/exercices/data");
 const { rendreExercice, terminerExercice, corrigerRendu, lienRendu } = await import("@/lib/exercices/actions");
 const { FORMATS_RENDU, RENDU_MAX_OCTETS, formatDeRendu } = await import("@/lib/exercices/fichiers");
+const { getLeconDans } = await import("@/lib/lecon/data");
 
 const L = "11111111-1111-4111-8111-111111111111";
 const R = "22222222-2222-4222-8222-222222222222";
@@ -206,5 +208,22 @@ describe("Les formats de rendu", () => {
     const migration = readFileSync(join(process.cwd(), "supabase/migrations/0032_exercices.sql"), "utf8");
     const liste = migration.slice(migration.indexOf("select array["), migration.indexOf("]::text[]"));
     expect([...liste.matchAll(/'([^']+)'/g)].map((m) => m[1]).sort()).toEqual([...FORMATS_RENDU].sort());
+  });
+});
+
+describe("La page d'un exercice lit l'exercice", () => {
+  const module1 = EXCEL_OUVERTE.modules[0];
+  const fiche = (type: "lecon" | "exercice") => ({ ...EXCEL_OUVERTE, modules: [{ ...module1, lecons: [{ ...module1.lecons[0], id: L, type }] }] });
+
+  it("un exercice, compte connecté : l'exercice et ses versions ; une leçon, ou un visiteur : rien n'est demandé", async () => {
+    faux.repondre("lecons.select", { data: { id: L, titre: "Tableau des ventes", duree_secondes: 0, apercu: false, accessible: true, lecons_contenus: { texte: "La consigne." }, ressources: [] } });
+    faux.repondre("rpc.exercice_etudiant", { data: { genre: "rendu", statut: null, peut_deposer: true, versions: [] } });
+    expect((await getLeconDans(fiche("exercice"), L, true))?.exercice).toEqual({ genre: "rendu", statut: null, peutDeposer: true, versions: [] });
+    expect(faux.de("rpc", "exercice_etudiant")[0].valeurs).toEqual({ p_lecon: L });
+    faux.vider();
+    faux.repondre("lecons.select", { data: { id: L, titre: "Tableau des ventes", duree_secondes: 0, apercu: true, accessible: true, lecons_contenus: null, ressources: [] } });
+    expect((await getLeconDans(fiche("exercice"), L, false))?.exercice).toBeUndefined();
+    await getLeconDans(fiche("lecon"), L, true);
+    expect(faux.de("rpc", "exercice_etudiant")).toEqual([]);
   });
 });

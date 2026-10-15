@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { PlayIcon, Quiz01Icon, SquareLock02Icon, Tick02Icon, Video01Icon } from "@hugeicons/core-free-icons";
+import { AssignmentsIcon, PlayIcon, Quiz01Icon, SquareLock02Icon, Tick02Icon, Video01Icon } from "@hugeicons/core-free-icons";
 import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
 import { Icon, type IconSvgElement } from "@/components/ui/Icon";
 import { Tag } from "@/components/ui/Tag";
 import { formatDuree } from "@/lib/admin/duree";
-import { estLeconDeContenu, libelleQuiz } from "@/lib/catalogue/regles";
+import { estLeconDeContenu, libelleExercice, libelleQuiz } from "@/lib/catalogue/regles";
+import type { StatutRendu } from "@/lib/exercices/types";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
 import { etatLigne, type EtatLigne } from "@/lib/lecon/regles";
@@ -16,6 +17,8 @@ type Props = {
   terminees: ReadonlySet<string>;
   /** Le meilleur score du compte à chaque quiz (lot 3). */
   scores?: Readonly<Record<string, number>>;
+  /** Le dernier statut du compte à chaque exercice (lot 3). */
+  statuts?: Readonly<Record<string, StatutRendu>>;
 };
 
 const TUILES: Record<EtatLigne, { classe: string; icone: IconSvgElement }> = {
@@ -31,7 +34,7 @@ const LIGNE = "flex min-h-12 items-center gap-3.5 px-1 py-3.5";
  * Onglet « Programme » du téléphone (NdMobLecon §3.5). Tous les modules : le déverrouillage module par module
  * (exercice validé) arrive au lot 3.
  */
-export function ProgrammeMobile({ fiche, leconId, connecte, terminees, scores = {} }: Props) {
+export function ProgrammeMobile({ fiche, leconId, connecte, terminees, scores = {}, statuts = {} }: Props) {
   return (
     <div className="flex min-w-0 flex-col">
       {fiche.modules.map((module, index) => (
@@ -49,8 +52,10 @@ export function ProgrammeMobile({ fiche, leconId, connecte, terminees, scores = 
             {module.lecons.map((lecon) => {
               const etat = etatLigne(lecon, leconId, terminees);
               const quiz = lecon.type === "quiz";
-              const tuile = quiz && etat !== "verrouillee" ? { ...TUILES[etat], icone: Quiz01Icon } : TUILES[etat];
-              const duree = quiz ? libelleQuiz(scores[lecon.id]) : formatDuree(lecon.dureeSecondes);
+              const exercice = lecon.type === "exercice";
+              const tuile =
+                etat === "verrouillee" ? TUILES[etat] : quiz ? { ...TUILES[etat], icone: Quiz01Icon } : exercice ? { ...TUILES[etat], icone: AssignmentsIcon } : TUILES[etat];
+              const duree = quiz ? libelleQuiz(scores[lecon.id]) : exercice ? libelleExercice(statuts[lecon.id]) : formatDuree(lecon.dureeSecondes);
               const corps = (
                 <>
                   <span className={cn("flex size-10 flex-none items-center justify-center rounded-champ", tuile.classe)}>

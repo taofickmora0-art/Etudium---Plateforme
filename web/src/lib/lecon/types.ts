@@ -3,6 +3,7 @@ import type { Reponse } from "@/lib/communaute/types";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import type { Intervalle } from "@/lib/video/suivi";
 import type { QuizAPasser } from "@/lib/quiz/types";
+import type { ExerciceEtudiant } from "@/lib/exercices/types";
 
 // Ce que la page leçon lit de la base. Le contenu (vidéo, texte, ressources) n'existe que si la personne a accès.
 
@@ -49,4 +50,7 @@ export type DonneesLecon = {
   /** Un quiz (lot 3) : les questions à passer, sans les bonnes réponses ; null sans accès ou avant la 0031 ; absent
    * pour une leçon de contenu ou un visiteur. */
   quiz?: QuizAPasser | null;
+  /** Un exercice (lot 3) : son genre, son statut et les versions du compte ; null sans accès ou avant la 0032 ;
+   * absent pour une autre leçon ou un visiteur. */
+  exercice?: ExerciceEtudiant | null;
 };

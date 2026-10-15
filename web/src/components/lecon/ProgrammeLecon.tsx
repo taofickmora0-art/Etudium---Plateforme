@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { ArrowLeft02Icon, CheckmarkCircle02Icon, Clock01Icon, PlayCircleIcon, Quiz01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft02Icon, AssignmentsIcon, CheckmarkCircle02Icon, Clock01Icon, PlayCircleIcon, Quiz01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
 import { Couverture } from "@/components/ui/Couverture";
 import { Icon } from "@/components/ui/Icon";
 import { Tag } from "@/components/ui/Tag";
 import { ProgressBar } from "@/components/ui/Progress";
 import { formatDuree } from "@/lib/admin/duree";
-import { dureeLisible, estLeconDeContenu, libelleQuiz, parcoursPrincipal } from "@/lib/catalogue/regles";
+import { dureeLisible, estLeconDeContenu, libelleExercice, libelleQuiz, parcoursPrincipal } from "@/lib/catalogue/regles";
+import type { StatutRendu } from "@/lib/exercices/types";
 import type { FicheFormation, LeconFiche } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
 import { urlCouverture } from "@/lib/couvertures/adresse";
@@ -20,6 +21,8 @@ type Props = {
   terminees: ReadonlySet<string>;
   /** Le meilleur score du compte à chaque quiz (lot 3). */
   scores?: Readonly<Record<string, number>>;
+  /** Le dernier statut du compte à chaque exercice (lot 3). */
+  statuts?: Readonly<Record<string, StatutRendu>>;
 };
 
 // Ligne du panneau : le style des entrées de la barre latérale (48 px, rayon 14, icône 20, texte 16).
@@ -27,13 +30,14 @@ const LIGNE = "focus-etudium flex h-12 items-center gap-2.5 rounded-bouton px-3 
 
 const ICONES = { courante: PlayCircleIcon, "a-venir": PlayCircleIcon, terminee: CheckmarkCircle02Icon, verrouillee: SquareLock02Icon };
 
-function Ligne({ fiche, lecon, etat, meilleur }: { fiche: FicheFormation; lecon: LeconFiche; etat: EtatLigne; meilleur?: number }) {
+function Ligne({ fiche, lecon, etat, meilleur, statut }: { fiche: FicheFormation; lecon: LeconFiche; etat: EtatLigne; meilleur?: number; statut?: StatutRendu }) {
   const quiz = lecon.type === "quiz";
-  const duree = quiz ? libelleQuiz(meilleur) : formatDuree(lecon.dureeSecondes);
+  const exercice = lecon.type === "exercice";
+  const duree = quiz ? libelleQuiz(meilleur) : exercice ? libelleExercice(statut) : formatDuree(lecon.dureeSecondes);
   const contenu = (
     <>
       <span className={cn("flex flex-none", etat === "terminee" && "text-reussite-texte")}>
-        <Icon icon={quiz && etat !== "verrouillee" ? Quiz01Icon : ICONES[etat]} size={20} />
+        <Icon icon={etat === "verrouillee" ? ICONES[etat] : quiz ? Quiz01Icon : exercice ? AssignmentsIcon : ICONES[etat]} size={20} />
       </span>
       <span title={lecon.titre} className="min-w-0 truncate">
         {lecon.titreCourt ?? lecon.titre}
@@ -94,7 +98,7 @@ export function ProgressionCours({ fiche, terminees }: { fiche: FicheFormation; 
  * formation, puis les modules, repliables (celui de la leçon en cours ouvert), avec la durée de chaque leçon. Il défile
  * seul ; la progression (compte connecté) reste en bas (refonte des formations, spec §1.4).
  */
-export function ProgrammeLecon({ fiche, leconId, connecte, terminees, scores = {} }: Props) {
+export function ProgrammeLecon({ fiche, leconId, connecte, terminees, scores = {}, statuts = {} }: Props) {
   const enCours = fiche.modules.find((m) => m.lecons.some((l) => l.id === leconId)) ?? fiche.modules[0];
   return (
     <>
@@ -118,7 +122,7 @@ export function ProgrammeLecon({ fiche, leconId, connecte, terminees, scores = {
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
                 {module.lecons.map((lecon) => (
                   <li key={lecon.id} className="flex min-w-0 flex-col">
-                    <Ligne fiche={fiche} lecon={lecon} etat={etatLigne(lecon, leconId, terminees)} meilleur={scores[lecon.id]} />
+                    <Ligne fiche={fiche} lecon={lecon} etat={etatLigne(lecon, leconId, terminees)} meilleur={scores[lecon.id]} statut={statuts[lecon.id]} />
                   </li>
                 ))}
               </ul>

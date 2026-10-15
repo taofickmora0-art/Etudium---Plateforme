@@ -9,6 +9,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
 import { TextInput } from "@/components/ui/TextInput";
 import { Textarea } from "@/components/ui/Textarea";
+import { identifiantAleatoire } from "@/lib/identifiant";
 import type { GenreQuestion, QuestionQuiz } from "@/lib/quiz/types";
 
 const TYPES: { value: GenreQuestion; label: string }[] = [
@@ -23,19 +24,9 @@ const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? "s" : ""}`;
 
 type Ligne = { cle: string; question: QuestionQuiz };
 
-/** Un identifiant v4 ; `randomUUID` n'existe que sur une page sécurisée (https, localhost), pas sur une adresse locale. */
-function nouvelId() {
-  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
-  const octets = crypto.getRandomValues(new Uint8Array(16));
-  octets[6] = (octets[6] & 0x0f) | 0x40;
-  octets[8] = (octets[8] & 0x3f) | 0x80;
-  const h = Array.from(octets, (o) => o.toString(16).padStart(2, "0")).join("");
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
-}
-
 // Une nouvelle question reçoit son identifiant tout de suite : la base le reprend, et il ne change plus ensuite.
 const nouvelleQuestion = (): QuestionQuiz => ({
-  id: nouvelId(),
+  id: identifiantAleatoire(),
   genre: "unique",
   enonce: "",
   choix: [
@@ -81,7 +72,7 @@ type EditeurQuizProps = {
  */
 export function EditeurQuiz({ questions, form, erreur, onChange }: EditeurQuizProps) {
   const id = useId();
-  const [lignes, setLignes] = useState<Ligne[]>(() => questions.map((question) => ({ cle: question.id ?? nouvelId(), question })));
+  const [lignes, setLignes] = useState<Ligne[]>(() => questions.map((question) => ({ cle: question.id ?? identifiantAleatoire(), question })));
 
   const changer = (suivantes: Ligne[]) => {
     setLignes(suivantes);

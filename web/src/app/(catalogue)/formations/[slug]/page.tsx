@@ -16,6 +16,7 @@ import { lireFavoris } from "@/lib/favoris/data";
 import { lireProgression } from "@/lib/progression/data";
 import { etatFormation } from "@/lib/progression/regles";
 import { lireMesScores } from "@/lib/quiz/data";
+import { lireStatutsExercices } from "@/lib/exercices/data";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -48,13 +49,15 @@ async function Fiche({ params }: Params) {
   // Avis (1.11), progression (1.7) et favoris (1.9) : absents tant que leurs migrations ne sont pas appliquées.
   if (!compte) return <FichePublique fiche={fiche} avis={await lireAvis(fiche.id)} />;
   // Le meilleur score de chaque quiz, dans le programme (lot 3).
-  const aDesQuiz = fiche.modules.some((m) => m.lecons.some((l) => l.type === "quiz"));
-  const [lignes, favoris, avis, lienModifier, scores] = await Promise.all([
+  const aDes = (type: string) => fiche.modules.some((m) => m.lecons.some((l) => l.type === type));
+  const [lignes, favoris, avis, lienModifier, scores, statuts] = await Promise.all([
     lireProgression(),
     lireFavoris(),
     lireAvis(fiche.id),
     lienModifierLecons(fiche.id),
-    aDesQuiz ? lireMesScores(fiche.id) : {},
+    aDes("quiz") ? lireMesScores(fiche.id) : {},
+    // Le dernier statut de chaque exercice (lot 3).
+    aDes("exercice") ? lireStatutsExercices(fiche.id) : {},
   ]);
   const page = (
     <FicheConnectee
@@ -64,6 +67,7 @@ async function Fiche({ params }: Params) {
       avis={avis}
       lienModifier={lienModifier}
       scores={scores}
+      statuts={statuts}
     />
   );
   return apercu ? (
