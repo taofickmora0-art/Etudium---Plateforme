@@ -11,6 +11,8 @@ import { ETATS, TON_ETAT } from "@/lib/contenus/etat";
 import { lireMaFiche } from "@/lib/formateur/data";
 import { inactivite } from "@/lib/formateur/regles-suivi";
 import { lireTableauDeBordFormateur } from "@/lib/formateur/suivi";
+import { lireCertificatsFormateur } from "@/lib/certificats/data";
+import { lireCorrections, MIGRATION_EXERCICES } from "@/lib/exercices/data";
 import { lireSessionDetail, lireSessionsAnimees } from "@/lib/sessions/data";
 import type { LigneSessionEdition } from "@/lib/sessions/types";
 import { initialesCompte, nomAffiche } from "@/lib/utilisateurs/regles";
@@ -41,9 +43,20 @@ async function prochaineSession(): Promise<{ ligne: LigneSessionEdition | null; 
   }
 }
 
+/** Une lecture du lot 3 qui ne doit jamais casser le tableau de bord : null si elle échoue. */
+async function sansEchec<T>(lecture: Promise<T>): Promise<T | null> {
+  try {
+    return await lecture;
+  } catch (erreur) {
+    unstable_rethrow(erreur);
+    return null;
+  }
+}
+
 /**
  * Tableau de bord du formateur (design NdFormateur ; spec « Étudiants » et tableau de bord, §4) : ses chiffres, ses
- * étudiants à risque, sa prochaine session live (0018), ses formations. Exercices et questions arrivent aux lots 3 et 5.
+ * étudiants à risque, ses exercices à corriger (0032), sa prochaine session live (0018), ses formations. Les questions
+ * arrivent au lot 5.
  * La page vérifie le rôle avant (requireSpace).
  */
 export async function TableauDeBordFormateur() {
@@ -72,7 +85,7 @@ export async function TableauDeBordFormateur() {
     );
   }
   const t = lecture.donnees;
-  const session = await prochaineSession();
+  const [session, certificats, corrections] = await Promise.all([prochaineSession(), sansEchec(lireCertificatsFormateur()), sansEchec(lireCorrections())]);
 
   return (
     <PageAdmin {...cadre} description={`Bonjour ${t.prenom || "à vous"}. Voici ce qui demande votre attention aujourd’hui.`}>
@@ -81,12 +94,41 @@ export async function TableauDeBordFormateur() {
           <Tuile icon={CourseIcon} label="Formations" value={chiffre(t.formations.total)} hint={`${t.formations.brouillons} en brouillon`} />
           <Tuile icon={UserMultipleIcon} label="Étudiants" value={chiffre(t.etudiants.total)} hint={`+${chiffre(t.etudiants.ceMois)} ce mois`} />
           <Tuile icon={Target02Icon} tone="reussite" label="Progression moyenne" value={pourcent(t.progressionMoyenne)} hint="Toutes formations" />
-          <Tuile icon={Certificate01Icon} tone="attention" label="Certificats délivrés" value="—" hint="Disponible au lot 3" />
+          <Tuile
+            icon={Certificate01Icon}
+            tone="attention"
+            label="Certificats délivrés"
+            value={certificats === null ? "—" : chiffre(certificats)}
+            hint={certificats === null ? "Migration 0033 à appliquer" : "Dans vos formations"}
+          />
         </div>
 
         <div className={RANGEE}>
-          <Carte titre="Exercices à corriger" lot={3} className="flex-[1_1_320px]">
-            <div className={AVENIR}>Les exercices rendus par vos étudiants apparaîtront ici.</div>
+          <Carte titre="Exercices à corriger" className="flex-[1_1_320px]">
+            {!corrections || corrections.migrationAbsente ? (
+              <div className={AVENIR}>{corrections ? MIGRATION_EXERCICES : "Les exercices rendus par vos étudiants apparaîtront ici."}</div>
+            ) : corrections.donnees.length === 0 ? (
+              <p className="m-0 text-sm leading-[22px] text-discret">Aucun travail à corriger.</p>
+            ) : (
+              <>
+                <ul className="m-0 flex list-none flex-col p-0">
+                  {corrections.donnees.slice(0, 4).map((c) => (
+                    <li key={c.renduId} className="border-t border-bordure-carte first:border-t-0">
+                      <Link
+                        href={`/formateur/corrections/${c.renduId}`}
+                        className="focus-etudium flex min-w-0 flex-col gap-0.5 py-2.5 text-inherit no-underline hover:underline"
+                      >
+                        <span className="text-sm leading-[22px] font-medium text-encre">{c.etudiant}</span>
+                        <span className="text-[13px] leading-5 text-discret">{`${c.exercice} · ${c.formation}`}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/formateur/corrections" className="focus-etudium self-start text-sm leading-[22px] font-medium text-bleu no-underline hover:underline">
+                  Voir toutes les corrections
+                </Link>
+              </>
+            )}
           </Carte>
           <Carte titre="Étudiants à risque" className="flex-[1_1_320px]">
             <p className="m-0 text-[13px] leading-5 text-discret">Inactifs depuis plus de 10 jours.</p>

@@ -27,7 +27,7 @@ export default function Page() {
     <div className="flex max-w-[960px] min-w-0 flex-col gap-6">
       <div>
         <Heading level="page">Exercices</Heading>
-        <Lead className="mt-2.5">Vos travaux pratiques, corrigés par vos formateurs.</Lead>
+        <Lead className="mt-2.5">Vos travaux pratiques, corrigés par vos formateurs. Un exercice validé compte pour votre certificat.</Lead>
       </div>
       <Suspense fallback={<Skeleton className="h-60 rounded-carte" />}>
         <Contenu />

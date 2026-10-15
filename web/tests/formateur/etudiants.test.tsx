@@ -26,6 +26,10 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
+// Lot 3 : ses quiz, ses exercices et son certificat (0033).
+const lireLot3Etudiant = vi.fn();
+vi.mock("@/lib/certificats/data", () => ({ lireLot3Etudiant: (id: string) => lireLot3Etudiant(id) }));
+
 const { PageEtudiants } = await import("@/components/formateur/PageEtudiants");
 const { ListeEtudiants } = await import("@/components/formateur/ListeEtudiants");
 const { FicheEtudiant } = await import("@/components/formateur/FicheEtudiant");
@@ -125,8 +129,16 @@ describe("Page Étudiants", () => {
 });
 
 describe("Fiche d'un étudiant", () => {
-  it("ses formations : progression, temps de vidéo, leçons une par une, mention du lot 3", async () => {
+  it("ses formations : progression, temps de vidéo, leçons une par une ; ses quiz, ses exercices, son certificat", async () => {
     lireSuiviEtudiant.mockResolvedValue({ migrationAbsente: false, donnees: SUIVI });
+    lireLot3Etudiant.mockResolvedValue([
+      {
+        formationId: X,
+        quiz: [{ id: "q1", titre: "Quiz du module 1", meilleur: 75, reussi: true }, { id: "q2", titre: "Quiz final", meilleur: null, reussi: false }],
+        exercices: [{ id: "x1", titre: "Tableau des ventes", statut: "a_corriger", valide: false }],
+        certificat: null,
+      },
+    ]);
     avecToast(await FicheEtudiant({ id: E }));
     expect(screen.getByRole("heading", { level: 1, name: "Fifamè Adjovi" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Étudiants" })).toHaveAttribute("href", "/formateur/etudiants");
@@ -135,7 +147,14 @@ describe("Fiche d'un étudiant", () => {
     expect(screen.getByText("Terminée le 12 oct. 2026")).toBeInTheDocument();
     expect(screen.getByText("Ouverte")).toBeInTheDocument();
     expect(screen.getByText("Pas encore ouverte")).toBeInTheDocument();
-    expect(screen.getByText("Quiz, exercices et certificat : disponibles au lot 3.")).toBeInTheDocument();
+    expect(lireLot3Etudiant).toHaveBeenCalledWith(E);
+    const suivi = screen.getByRole("list", { name: "Quiz et exercices : Maîtriser Microsoft Excel" });
+    expect(within(suivi).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+      "Quiz du module 1Réussi · 75 %",
+      "Quiz finalPas encore passé",
+      "Tableau des ventesÀ corriger",
+    ]);
+    expect(screen.getByText("Pas encore de certificat.")).toBeInTheDocument();
   });
 
   it("deux modules de même titre : aucune clé en double (l'affichage reste juste après un enregistrement)", async () => {

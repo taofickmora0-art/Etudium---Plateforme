@@ -31,8 +31,7 @@ const TUILES: Record<EtatLigne, { classe: string; icone: IconSvgElement }> = {
 const LIGNE = "flex min-h-12 items-center gap-3.5 px-1 py-3.5";
 
 /**
- * Onglet « Programme » du téléphone (NdMobLecon §3.5). Tous les modules : le déverrouillage module par module
- * (exercice validé) arrive au lot 3.
+ * Onglet « Programme » du téléphone (NdMobLecon §3.5). Tous les modules : rien ne se verrouille (spec du lot 3, choix 2).
  */
 export function ProgrammeMobile({ fiche, leconId, connecte, terminees, scores = {}, statuts = {} }: Props) {
   return (

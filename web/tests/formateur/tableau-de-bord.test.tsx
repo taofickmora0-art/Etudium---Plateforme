@@ -15,6 +15,12 @@ const lireSessionsAnimees = vi.fn();
 const lireSessionDetail = vi.fn();
 vi.mock("@/lib/sessions/data", () => ({ lireSessionsAnimees: () => lireSessionsAnimees(), lireSessionDetail: (...a: unknown[]) => lireSessionDetail(...a) }));
 
+// Lot 3 : les certificats délivrés (0033) et les travaux à corriger (0032).
+const lireCertificatsFormateur = vi.fn();
+vi.mock("@/lib/certificats/data", () => ({ lireCertificatsFormateur: () => lireCertificatsFormateur() }));
+const lireCorrections = vi.fn();
+vi.mock("@/lib/exercices/data", () => ({ lireCorrections: () => lireCorrections(), MIGRATION_EXERCICES: "Appliquez la migration 0032 (guide « Ce qui te revient », section 38)." }));
+
 const { TableauDeBordFormateur } = await import("@/components/formateur/TableauDeBordFormateur");
 
 const DONNEES: Donnees = {
@@ -36,6 +42,11 @@ beforeEach(() => {
   lireTableauDeBordFormateur.mockResolvedValue({ migrationAbsente: false, donnees: DONNEES });
   lireSessionsAnimees.mockReset().mockResolvedValue({ migrationAbsente: true });
   lireSessionDetail.mockReset();
+  lireCertificatsFormateur.mockReset().mockResolvedValue(12);
+  lireCorrections.mockReset().mockResolvedValue({
+    migrationAbsente: false,
+    donnees: [{ renduId: "r1", etudiant: "Aïcha Kpadé", exercice: "Tableau des ventes", formation: "Maîtriser Microsoft Excel", formationId: "f1", module: "Analyse", moduleRang: 3, version: 2, nomFichier: "v2.xlsx", deposeLe: "2026-10-15T08:00:00Z" }],
+  });
 });
 
 describe("Tableau de bord du formateur", () => {
@@ -45,14 +56,21 @@ describe("Tableau de bord du formateur", () => {
     expect(screen.getByText("Bonjour Mireille. Voici ce qui demande votre attention aujourd’hui.")).toBeInTheDocument();
   });
 
-  it("les chiffres : formations, étudiants, progression moyenne, certificats (lot 3)", async () => {
+  it("les chiffres : formations, étudiants, progression moyenne, certificats délivrés", async () => {
     render(await TableauDeBordFormateur());
     const tuiles = document.querySelectorAll("[data-tuile]");
     const texte = [...tuiles].map((t) => t.textContent).join(" | ");
     expect(texte).toMatch(/Formations\s*3\s*1 en brouillon/);
     expect(texte).toMatch(/Étudiants\s*428\s*\+36 ce mois/);
     expect(texte).toMatch(/Progression moyenne\s*67 %\s*Toutes formations/);
-    expect(texte).toMatch(/Certificats délivrés\s*—\s*Disponible au lot 3/);
+    expect(texte).toMatch(/Certificats délivrés\s*12\s*Dans vos formations/);
+  });
+
+  it("avant la 0033, les certificats délivrés disent la migration", async () => {
+    lireCertificatsFormateur.mockResolvedValue(null);
+    render(await TableauDeBordFormateur());
+    const texte = [...document.querySelectorAll("[data-tuile]")].map((t) => t.textContent).join(" | ");
+    expect(texte).toMatch(/Certificats délivrés\s*—\s*Migration 0033 à appliquer/);
   });
 
   it("étudiants à risque : l'inactivité, la formation, la progression, et le lien vers le suivi", async () => {
@@ -88,9 +106,12 @@ describe("Tableau de bord du formateur", () => {
     expect(within(lignes[1]).getAllByRole("cell").map((c) => c.textContent)).toEqual(["Power Query pour débutants", "0", "—", "—", "—", "Brouillon", "Modifier"]);
   });
 
-  it("exercices, session live et question récente : disponibles aux lots 3 et 5", async () => {
+  it("exercices à corriger (les plus anciens, vers leur correction) ; session live et question récente : lot 5", async () => {
     render(await TableauDeBordFormateur());
-    expect(screen.getByRole("region", { name: "Exercices à corriger" })).toHaveTextContent("Disponible au lot 3");
+    const exercices = screen.getByRole("region", { name: "Exercices à corriger" });
+    expect(within(exercices).getByRole("link", { name: /Aïcha Kpadé/ })).toHaveAttribute("href", "/formateur/corrections/r1");
+    expect(within(exercices).getByRole("link", { name: /Aïcha Kpadé/ })).toHaveTextContent("Tableau des ventes · Maîtriser Microsoft Excel");
+    expect(within(exercices).getByRole("link", { name: "Voir toutes les corrections" })).toHaveAttribute("href", "/formateur/corrections");
     expect(screen.getByRole("region", { name: "Prochaine session live" })).toHaveTextContent("Disponible au lot 5");
     expect(screen.getByRole("region", { name: "Question récente" })).toHaveTextContent("Disponible au lot 5");
   });

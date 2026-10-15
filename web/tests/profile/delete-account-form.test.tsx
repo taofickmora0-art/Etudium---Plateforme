@@ -14,7 +14,7 @@ describe("Carte « Supprimer mon compte »", () => {
     vi.mocked(deleteAccount).mockResolvedValue(undefined);
     const user = userEvent.setup();
     render(<DeleteAccountCard />);
-    expect(screen.getByText("Cette action est définitive. Vos formations, votre progression et vos certificats seront supprimés.")).toBeInTheDocument();
+    expect(screen.getByText("Cette action est définitive. Vos formations et votre progression seront supprimées ; vos certificats restent vérifiables.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Supprimer mon compte" }));
     const fenetre = screen.getByRole("dialog", { name: "Supprimer votre compte ?" });
     const confirmer = [...fenetre.querySelectorAll("button")].find((b) => b.textContent === "Supprimer mon compte")!;

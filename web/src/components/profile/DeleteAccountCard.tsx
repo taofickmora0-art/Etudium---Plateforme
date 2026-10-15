@@ -21,7 +21,7 @@ export function DeleteAccountCard() {
       <div className="flex flex-col gap-1">
         <h3 className="m-0 text-base leading-6 font-semibold text-encre">Supprimer mon compte</h3>
         <p className="m-0 text-[13px] leading-5 text-pretty text-discret">
-          Cette action est définitive. Vos formations, votre progression et vos certificats seront supprimés.
+          Cette action est définitive. Vos formations et votre progression seront supprimées ; vos certificats restent vérifiables.
         </p>
       </div>
       <Button variant="dangerDoux" className="self-start" onClick={() => setOuvert(true)}>
