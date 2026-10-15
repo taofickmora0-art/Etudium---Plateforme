@@ -666,3 +666,15 @@ La page d'une leçon prend une barre du haut et des discussions, le programme se
    - Ton compte de l'équipe et celui du formateur n'apparaissent pas, même s'ils ont ouvert des leçons.
 3. **Dans l'espace formateur.** Avec le compte du formateur : Mes formations → une formation → **Apprenants**. Le nom d'un apprenant ouvre sa fiche dans « Étudiants ».
 4. **Une formation que personne n'a commencée** : « Personne n'a encore commencé cette formation. »
+
+## 36. Valider les vidéos TikTok, Tella, Loom, ScreenPal et Google Drive, 15 minutes
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0030_plateformes_video.sql` (après la 0029).
+2. **La durée exacte.** Dans l'éditeur d'une leçon, colle un lien YouTube ou Vimeo : « Lecture de la durée de la vidéo… », puis la durée exacte s'inscrit toute seule (« Durée lue sur la vidéo. »). Une leçon déjà enregistrée avec une durée fausse affiche « La vidéo dure 2:09 ; la durée saisie est 10:00. » et le bouton **Utiliser 2:09**.
+3. **TikTok et Tella** (le temps regardé se mesure, comme YouTube) :
+   - colle le lien complet d'une vidéo TikTok (`tiktok.com/@nom/video/123…`) ; un lien court (`vm.tiktok.com/…`) affiche « Lien court TikTok : ouvrez-le, puis copiez le lien complet » ;
+   - la durée se lit toute seule ; enregistre, puis ouvre la leçon avec un compte étudiant : la vidéo TikTok s'affiche en vertical, avec les commandes Étudium ;
+   - regarde-la jusqu'au bout : « Temps réellement regardé » monte, puis « Terminer la leçon » devient « Leçon suivante ».
+   - **Important :** dis-moi si une vidéo TikTok ou Tella reste sur « Le temps regardé ne peut pas être mesuré avec ce lecteur » : je n'ai pas pu essayer leurs lecteurs dans mon navigateur.
+4. **Loom, ScreenPal, Google Drive** (sans mesure) : colle le lien ; l'éditeur dit « la leçon se terminera d'un clic sur « Terminer la leçon » » et la durée devient facultative. Côté étudiant, le lecteur de la plateforme s'affiche, et « Terminer la leçon » marche tout de suite.
+   - Google Drive : partage la vidéo avec « Tous les utilisateurs disposant du lien », sinon l'étudiant voit « Accès refusé ».
