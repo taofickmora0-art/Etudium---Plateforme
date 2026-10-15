@@ -679,3 +679,23 @@ La page d'une leçon prend une barre du haut et des discussions, le programme se
    - Dans l'éditeur, la durée d'une vidéo TikTok ou Tella se lit en lançant la vidéo sans le son, en arrière-plan ; si elle n'arrive pas, « Durée non lue sur la vidéo : saisissez-la à la main ».
 4. **Loom, ScreenPal, Google Drive** (sans mesure) : colle le lien ; l'éditeur dit « la leçon se terminera d'un clic sur « Terminer la leçon » » et la durée devient facultative. Côté étudiant, le lecteur de la plateforme s'affiche, et « Terminer la leçon » marche tout de suite.
    - Google Drive : partage la vidéo avec « Tous les utilisateurs disposant du lien », sinon l'étudiant voit « Accès refusé ».
+
+## 37. Valider les quiz (lot 3, étape A), 20 minutes
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0031_quiz.sql` (après la 0030). Avant elle, le reste de l'appli marche ; créer un quiz affiche « Appliquez la migration 0031 (guide « Ce qui te revient », section 37). »
+2. **Le score minimal.** Dans l'onglet « Informations » d'une formation, le champ **Score minimal aux quiz (%)** vaut 70 ; il se règle de 0 à 100, par l'équipe comme par le formateur.
+3. **Créer un quiz.** Onglet « Leçons » : « Ajouter » dans un module, choisis **Quiz**, donne un titre. L'éditeur s'ouvre :
+   - « Ajouter une question », puis le type : choix unique, réponses multiples, vrai ou faux, réponse courte ;
+   - pour un choix, de 2 à 6 réponses, et coche la ou les bonnes ; pour une réponse courte, une ou plusieurs réponses acceptées ;
+   - une explication facultative, montrée après le quiz ;
+   - les flèches rangent les questions, la corbeille en supprime une ; « Enregistrer ».
+   - Essaie une question sans bonne réponse : « La question 1 doit avoir une seule bonne réponse. » s'affiche, rien n'est remplacé.
+   - Dans l'onglet « Leçons », la ligne dit « Quiz · 4 questions », et l'en-tête « 2 sections · 9 leçons · 1 quiz ».
+4. **Passer le quiz** avec un compte étudiant (publie le quiz d'abord, il est en brouillon à sa création si la formation est publiée) :
+   - la page affiche « 4 questions · meilleur score : — · score minimal : 70 % » et **Commencer** ;
+   - une question à la fois : « Question 2 sur 4 », « Question précédente », « Passer cette question », « Valider » ;
+   - « Quitter » demande « Quitter le quiz ? » et n'enregistre rien ;
+   - à la fin, « Quiz réussi » (ou « Pas encore réussi »), le score et le détail : la bonne réponse et l'explication pour chaque erreur ;
+   - une réponse courte « recherchex » est juste pour « RECHERCHEX » ;
+   - « Recommencer » : tentatives illimitées, seul le meilleur score est gardé ; il s'affiche dans le programme (« Quiz · 75 % »).
+5. **La progression ignore les quiz.** Sur la fiche, « 8 leçons · 1 quiz » ; le pourcentage et « Terminé 3 sur 8 » ne comptent que les leçons. Un quiz n'a pas de « Terminer la leçon » : seulement « Leçon suivante ».
