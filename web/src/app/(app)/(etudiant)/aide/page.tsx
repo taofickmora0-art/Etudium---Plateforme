@@ -5,7 +5,7 @@ import { SessionGuard } from "@/components/layout/SessionGuard";
 
 export const metadata: Metadata = { title: "Aide · Étudium" };
 
-/** Aide (lot 1) : les questions fréquentes, les mêmes que sur la landing. */
+/** Aide (NdAide, lot 5 étape A) : les questions fréquentes et celles sur les formules, une recherche, « Contacter l’équipe ». */
 export default function Page() {
   return (
     <>

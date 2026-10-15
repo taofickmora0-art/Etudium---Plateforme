@@ -1,41 +1,67 @@
-import Link from "next/link";
-import { BoiteQuestions } from "@/components/landing/SectionFaq";
-import { buttonVariants } from "@/components/ui/Button";
+"use client";
+
+import { useId, useState } from "react";
+import { Accordion } from "@/components/ui/Accordion";
+import { SearchInput } from "@/components/ui/SearchInput";
 import { Heading, Lead } from "@/components/ui/Text";
+import { QUESTIONS_FORMULES, QUESTIONS_FREQUENTES } from "@/lib/site/faq";
+import { ContacterEquipe } from "./ContacterEquipe";
+
+type Question = { question: string; reponse: string };
+
+/** Sans accents ni majuscules : « prélèvement » se trouve en tapant « prelevement ». */
+const simplifier = (texte: string) =>
+  texte
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+
+/** Un groupe de questions (titre et accordéon) ; rien s'il n'en reste aucune après la recherche. */
+function Groupe({ titre, questions, premiereOuverte, cle }: { titre: string; questions: Question[]; premiereOuverte: boolean; cle: string }) {
+  const id = useId();
+  if (questions.length === 0) return null;
+  return (
+    <section aria-labelledby={`${id}-titre`} className="flex min-w-0 flex-col">
+      <h2 id={`${id}-titre`} className="m-0 mb-1.5 text-xl leading-7 font-semibold text-encre max-sm:text-lg max-sm:leading-[26px]">
+        {titre}
+      </h2>
+      <Accordion key={cle} items={questions.map((q) => ({ question: q.question, answer: q.reponse }))} defaultOpen={premiereOuverte ? [0] : []} />
+    </section>
+  );
+}
 
 /**
- * Page Aide de l'espace connecté (aucune maquette) : les questions fréquentes de la landing, puis où poser une autre
- * question. Le contact par e-mail viendra avec l'adresse de contact.
+ * La page Aide (NdAide) : une recherche, les questions fréquentes (les mêmes que la landing) et celles sur les formules,
+ * puis « Contacter l’équipe », dont la réponse arrive dans les messages.
  */
 export function PageAide() {
+  const [recherche, setRecherche] = useState("");
+  const terme = simplifier(recherche.trim());
+  const garder = (q: Question) => !terme || simplifier(`${q.question} ${q.reponse}`).includes(terme);
+  const frequentes = QUESTIONS_FREQUENTES.filter(garder);
+  const formules = QUESTIONS_FORMULES.filter(garder);
   return (
-    <div className="flex max-w-[960px] min-w-0 flex-col gap-6">
-      <div>
+    <div className="flex min-w-0 flex-col">
+      <div className="min-w-0">
         <Heading level="page">Aide</Heading>
-        <Lead className="mt-2.5">Les réponses aux questions les plus fréquentes sur Étudium.</Lead>
+        <Lead className="mt-2.5">Trouvez une réponse dans les questions fréquentes ou écrivez à l’équipe Étudium.</Lead>
       </div>
-      <section aria-labelledby="titre-questions-aide" className="flex min-w-0 flex-col gap-3">
-        <h2 id="titre-questions-aide" className="m-0 text-xl leading-7 font-semibold text-encre max-sm:text-lg max-sm:leading-[26px]">
-          Questions fréquentes
-        </h2>
-        <BoiteQuestions className="rounded-carte border border-bordure-carte" />
-      </section>
-      <section aria-labelledby="titre-autre-question" className="flex min-w-0 flex-col gap-3 rounded-carte border border-bordure-carte bg-panneau p-6 max-sm:p-4">
-        <h2 id="titre-autre-question" className="m-0 text-xl leading-7 font-semibold text-encre max-sm:text-lg max-sm:leading-[26px]">
-          Une autre question ?
-        </h2>
-        <p className="m-0 text-sm leading-[22px] text-pretty text-texte">
-          Posez-la dans la communauté : un espace général ouvert à tous, et un espace pour chaque parcours.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/accueil" className={buttonVariants()}>
-            Aller à la communauté
-          </Link>
-          <Link href="/verifier" className={buttonVariants({ variant: "contour" })}>
-            Vérifier un certificat
-          </Link>
+      <div className="mt-[21px] max-w-[520px]">
+        <SearchInput value={recherche} onChange={(e) => setRecherche(e.target.value)} aria-label="Rechercher dans l’aide" placeholder="Rechercher dans l’aide…" />
+      </div>
+      <div className="mt-5 h-px bg-separateur" />
+      <div className="mt-8 flex flex-wrap items-start gap-6 max-sm:mt-6">
+        <div className="flex min-w-0 flex-[999_1_420px] flex-col gap-9 max-sm:gap-7">
+          <Groupe titre="Questions fréquentes" questions={frequentes} premiereOuverte={!terme} cle={terme} />
+          <Groupe titre="Questions sur les formules" questions={formules} premiereOuverte={false} cle={terme} />
+          {frequentes.length === 0 && formules.length === 0 && (
+            <p className="m-0 text-sm leading-[22px] text-discret">Aucune question ne correspond.</p>
+          )}
         </div>
-      </section>
+        <div className="min-w-0 flex-[1_1_300px]">
+          <ContacterEquipe />
+        </div>
+      </div>
     </div>
   );
 }

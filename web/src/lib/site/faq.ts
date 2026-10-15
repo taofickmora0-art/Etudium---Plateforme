@@ -33,3 +33,23 @@ export const QUESTIONS_FREQUENTES: { question: string; reponse: string }[] = [
     reponse: "Oui. Étudium s’installe sur votre téléphone comme une application, depuis le navigateur.",
   },
 ];
+
+// Questions sur les formules (NdAide, page Aide de l'espace connecté) : textes du design, tels quels.
+export const QUESTIONS_FORMULES: { question: string; reponse: string }[] = [
+  {
+    question: "Puis-je passer à une formule supérieure en cours de mois ?",
+    reponse: "Oui. Le changement est immédiat : vous payez seulement la différence, calculée au prorata des jours restants.",
+  },
+  {
+    question: "Et pour une formule inférieure ?",
+    reponse: "Le changement est programmé au prochain renouvellement. Vous gardez vos avantages actuels jusqu’à l’expiration.",
+  },
+  {
+    question: "Qu’est-ce qu’une formation complémentaire ?",
+    reponse: "Une formation hors de vos parcours, achetée une seule fois. Elle reste liée à votre compte et reste accessible tant que votre abonnement est actif.",
+  },
+  {
+    question: "Quels moyens de paiement ?",
+    reponse: "Le Mobile Money. Votre accès est activé automatiquement dès la confirmation du paiement, et vous recevez un reçu.",
+  },
+];
