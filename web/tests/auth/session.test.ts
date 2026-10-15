@@ -97,9 +97,10 @@ describe("Pages protégées", () => {
     }
   });
 
-  it("la racine oriente", () => {
+  it("la racine montre la landing au visiteur (même avec une session expirée) et l'accueil au compte connecté", () => {
     expect(routeFor({ pathname: "/", signedIn: true, hadSession: true })).toEqual({ redirect: "/accueil" });
-    expect(routeFor({ pathname: "/", signedIn: false, hadSession: false })).toEqual({ redirect: "/connexion" });
+    expect(routeFor({ pathname: "/", signedIn: false, hadSession: false })).toEqual({});
+    expect(routeFor({ pathname: "/", signedIn: false, hadSession: true })).toEqual({});
   });
 
   it("la vitrine, l'état et les retours d'e-mail restent ouverts", () => {

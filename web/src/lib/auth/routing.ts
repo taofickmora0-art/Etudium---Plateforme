@@ -2,7 +2,7 @@
 
 /**
  * Pages ouvertes sans compte. Tout le reste est réservé aux comptes connectés : une page ajoutée plus tard
- * est protégée d'office. Le site public ajoute ses pages ici (catalogue au lot 1, landing en 1.12).
+ * est protégée d'office. Le site public ajoute ses pages ici ; la racine (la landing) est traitée à part dans `routeFor`.
  */
 export const PAGES_PUBLIQUES = [
   "/connexion",
@@ -35,7 +35,8 @@ const API = "/api";
 
 export function routeFor({ pathname, signedIn, hadSession }: Situation): { redirect?: string } {
   if (dans(pathname, [API])) return {};
-  if (pathname === "/") return { redirect: signedIn ? "/accueil" : "/connexion" };
+  // La racine : la landing pour un visiteur (spec du lot 1, §2), l'accueil pour un compte connecté.
+  if (pathname === "/") return signedIn ? { redirect: "/accueil" } : {};
   if (!dans(pathname, PAGES_PUBLIQUES) && !signedIn) {
     // Un cookie de session était là mais n'est plus valable : on l'annonce (fenêtre « Votre session a expiré »).
     const next = `next=${encodeURIComponent(pathname)}`;

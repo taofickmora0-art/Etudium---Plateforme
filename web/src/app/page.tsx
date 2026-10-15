@@ -1,13 +1,34 @@
-import { redirect } from "next/navigation";
-import { demoModeActive } from "@/lib/auth/current-user";
+import { Suspense } from "react";
+import type { Metadata } from "next";
+import { ContenuLanding, FormationsDepuisBase, ParcoursDepuisBase } from "@/components/landing/ContenuLanding";
+import { SectionParcours } from "@/components/landing/SectionParcours";
+import { CadrePublic } from "@/components/site/CadrePublic";
 
-// Une page qui ne fait que rediriger n'a rien à afficher instantanément : pas de validation « instant ».
-export const instant = false;
+export const metadata: Metadata = {
+  title: "Étudium · Les compétences qui comptent, pendant vos études et après",
+  description:
+    "Étudium accompagne les étudiants et les jeunes diplômés : outils universitaires, compétences digitales et activités en ligne. Vous apprenez, vous pratiquez, un formateur vous accompagne, et vous obtenez un certificat vérifiable.",
+};
 
 /**
- * La racine oriente : le proxy envoie déjà vers l'accueil ou la connexion selon la session (le site public arrive au lot 1).
- * Ce repli ne sert qu'en mode démonstration, où le proxy laisse passer : on montre alors l'état de la base.
+ * La racine : la landing publique pour un visiteur (spec du lot 1, §2 et §9). Un compte connecté n'arrive jamais ici,
+ * le proxy l'envoie vers l'accueil. Parcours et formations sont lus en base pendant que le reste s'affiche.
  */
 export default function Racine() {
-  redirect(demoModeActive() ? "/etat" : "/connexion");
+  return (
+    <CadrePublic>
+      <ContenuLanding
+        parcours={
+          <Suspense fallback={<SectionParcours parcours={[]} />}>
+            <ParcoursDepuisBase />
+          </Suspense>
+        }
+        formations={
+          <Suspense fallback={null}>
+            <FormationsDepuisBase />
+          </Suspense>
+        }
+      />
+    </CadrePublic>
+  );
 }
