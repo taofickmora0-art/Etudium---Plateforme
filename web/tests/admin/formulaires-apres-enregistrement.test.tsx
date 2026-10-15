@@ -11,11 +11,13 @@ const reussite = async (_prev: FormState, fd: FormData): Promise<FormState> => (
   status: "success",
   values: Object.fromEntries([...fd.entries()].map(([k, v]) => [k, String(v)])),
 });
-vi.mock("@/lib/admin/actions", () => ({ saveLecon: vi.fn(), saveFormationInfos: vi.fn() }));
+vi.mock("@/lib/admin/actions", () => ({ saveLecon: vi.fn(), saveFormationInfos: vi.fn(), changerStatutLecon: vi.fn(), addRessource: vi.fn(), updateRessource: vi.fn(), deleteRessource: vi.fn(), deplacer: vi.fn() }));
+vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ storage: { from: () => ({ upload: vi.fn(), remove: vi.fn() }) } }) }));
+vi.mock("@/components/communaute/EditeurTexte", () => import("../communaute/editeur-simule"));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 
 const { saveLecon, saveFormationInfos } = await import("@/lib/admin/actions");
-const { LeconForm } = await import("@/components/admin/LeconForm");
+const { EditeurLecon } = await import("@/components/admin/EditeurLecon");
 const { FormationInfosForm } = await import("@/components/admin/FormationInfosForm");
 
 const LECON = {
@@ -30,6 +32,12 @@ const LECON = {
   video: null,
   texte: "",
   ressources: [],
+  formationTitre: "Excel",
+  formationSlug: "excel",
+  publiee: true,
+  commentairesActifs: true,
+  position: { rang: 1, total: 1, module: { rang: 1, titre: "Module" } },
+  voisines: { precedente: null, suivante: null },
 } as unknown as LeconAdmin;
 const FORMATION = {
   id: "f1",
@@ -60,12 +68,12 @@ const enregistrer = async () => {
 describe("Après un enregistrement, le formulaire montre ce qui est enregistré", () => {
   it("un interrupteur garde sa position, et l'enregistrement suivant la renvoie", async () => {
     vi.mocked(saveLecon).mockImplementation(reussite);
-    avecNotifications(<LeconForm lecon={LECON} />);
-    const apercu = screen.getByRole("switch", { name: "Leçon d’aperçu" });
+    avecNotifications(<EditeurLecon lecon={LECON} />);
+    const apercu = screen.getByRole("checkbox", { name: "Leçon d’aperçu gratuite" });
     await userEvent.click(apercu);
     await enregistrer();
     expect(vi.mocked(saveLecon).mock.calls[0][1].get("apercu")).toBe("on");
-    expect(screen.getByRole("switch", { name: "Leçon d’aperçu" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("checkbox", { name: "Leçon d’aperçu gratuite" })).toBeChecked();
     await enregistrer();
     expect(vi.mocked(saveLecon).mock.calls[1][1].get("apercu")).toBe("on");
   });

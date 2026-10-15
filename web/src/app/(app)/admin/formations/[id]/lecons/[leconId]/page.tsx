@@ -1,12 +1,8 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { LeconForm } from "@/components/admin/LeconForm";
-import { PageAdmin } from "@/components/admin/PageAdmin";
-import { RessourcesEditor } from "@/components/admin/RessourcesEditor";
+import { EditeurLecon } from "@/components/admin/EditeurLecon";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
-import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { getLeconAdmin } from "@/lib/admin/data";
 import type { LeconAdmin } from "@/lib/admin/types";
@@ -27,22 +23,12 @@ async function FicheLecon({ params }: Params) {
   }
   // Une leçon n'est ouverte que sous sa propre formation.
   if (!lecon || lecon.formationId !== id) notFound();
-  const programme = `/admin/formations/${id}?onglet=programme`;
+  // L'éditeur en deux colonnes (refonte des formations, §3.4) : sa barre du haut ramène aux leçons.
   return (
-    <PageAdmin
-      titre={lecon.titre}
-      fil={[{ label: "Formations", href: "/admin/formations" }, { label: lecon.formationTitre, href: programme }, { label: lecon.titre }]}
-      action={
-        <Button asChild variant="contour">
-          <Link href={programme}>Retour au programme</Link>
-        </Button>
-      }
-    >
-      <div className="flex flex-col gap-6">
-        <LeconForm lecon={lecon} />
-        <RessourcesEditor lecon={lecon} />
-      </div>
-    </PageAdmin>
+    <div className="flex flex-col">
+      <h1 className="sr-only">{`Modifier la leçon : ${lecon.titre}`}</h1>
+      <EditeurLecon lecon={lecon} />
+    </div>
   );
 }
 

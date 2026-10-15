@@ -120,8 +120,11 @@ function LigneRessource({ ressource, premier, dernier }: { ressource: RessourceA
   );
 }
 
-/** Ressources d'une leçon (spec du lot 1, §6) : envoi direct vers l'espace « ressources », puis enregistrement. */
-export function RessourcesEditor({ lecon }: { lecon: Pick<LeconAdmin, "id" | "formationId" | "ressources"> }) {
+/**
+ * Ressources d'une leçon (spec du lot 1, §6) : envoi direct vers l'espace « ressources », puis enregistrement.
+ * `colonne` : dans les réglages de l'éditeur de leçon, « Documents & fichiers » (refonte des formations, §3.4).
+ */
+export function RessourcesEditor({ lecon, variante = "carte" }: { lecon: Pick<LeconAdmin, "id" | "formationId" | "ressources">; variante?: "carte" | "colonne" }) {
   const { toast } = useToast();
   const [envois, setEnvois] = useState<{ cle: string; nom: string; taille: number }[]>([]);
 
@@ -171,10 +174,22 @@ export function RessourcesEditor({ lecon }: { lecon: Pick<LeconAdmin, "id" | "fo
   };
 
   return (
-    <section aria-labelledby="ressources-titre" className="flex max-w-[680px] flex-col gap-4 rounded-carte border border-bordure-carte bg-panneau p-6">
-      <Heading level="card" as="h2">
-        <span id="ressources-titre">Ressources</span>
-      </Heading>
+    <section
+      aria-labelledby="ressources-titre"
+      className={variante === "colonne" ? "flex min-w-0 flex-col gap-3" : "flex max-w-[680px] flex-col gap-4 rounded-carte border border-bordure-carte bg-panneau p-6"}
+    >
+      {variante === "colonne" ? (
+        <>
+          <h3 id="ressources-titre" className="m-0 text-sm leading-5 font-semibold text-encre">
+            Documents & fichiers
+          </h3>
+          <p className="m-0 -mt-1.5 text-xs leading-[18px] text-discret">Ces fichiers pourront être vus et téléchargés par les étudiants.</p>
+        </>
+      ) : (
+        <Heading level="card" as="h2">
+          <span id="ressources-titre">Ressources</span>
+        </Heading>
+      )}
       {lecon.ressources.length === 0 && envois.length === 0 ? (
         <p className="m-0 text-[13px] leading-5 text-discret">Aucun fichier pour cette leçon.</p>
       ) : (
