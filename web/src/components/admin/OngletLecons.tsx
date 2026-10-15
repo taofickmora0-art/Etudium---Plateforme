@@ -59,9 +59,9 @@ const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? "s" : ""}`;
 /** « 06:10 · Vidéo · Aperçu », « Quiz · 4 questions » : ce qu'il reste à compléter se voit d'un coup d'œil. */
 const resumeLecon = (l: LeconResume) =>
   (l.type === "quiz"
-    ? ["Quiz", l.nbQuestions !== undefined && pluriel(l.nbQuestions, "question"), l.apercu && "Aperçu"]
+    ? ["Quiz", l.nbQuestions !== undefined && pluriel(l.nbQuestions, "question")]
     : l.type === "exercice"
-      ? [l.genreExercice === "simple" ? "Exercice simple" : "Exercice avec rendu", l.apercu && "Aperçu"]
+      ? [l.genreExercice === "simple" ? "Exercice simple" : "Exercice avec rendu"]
     : [formatDuree(l.dureeSecondes) || "Durée à saisir", l.aVideo ? "Vidéo" : "Sans vidéo", l.apercu && "Aperçu"]
   )
     .filter(Boolean)

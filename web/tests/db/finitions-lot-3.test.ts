@@ -14,6 +14,10 @@ let LECON: string;
 let QUIZ: string;
 let EXO1: string;
 let EXO2: string;
+// Une formation payante dont un quiz et un exercice étaient cochés « aperçu » avant la 0034.
+let QUIZ_APERCU: string;
+let EXO_APERCU: string;
+const V = randomUUID(); // compte connecté qui ne suit pas la formation payante
 
 const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const un = async <T>(sql: string, params: unknown[] = []) => (await banc.db.query<T>(sql, params)).rows[0];
@@ -34,10 +38,10 @@ beforeAll(async () => {
       "0012_couvertures", "0013_utilisateurs", "0014_espace_formateur", "0015_suivi_etudiants", "0016_notifications", "0017_role_unique",
       "0018_sessions_live", "0019_communaute", "0020_moderation", "0021_communaute_actualites", "0022_communaute_video", "0023_sessions_rappels",
       "0024_sessions_promotion", "0025_communaute_commentaires", "0026_communaute_sondages", "0027_lecons_statut", "0028_discussions_lecons",
-      "0029_apprenants_formation", "0030_plateformes_video", "0031_quiz", "0032_exercices", "0033_certificats", "0034_finitions_lot_3",
+      "0029_apprenants_formation", "0030_plateformes_video", "0031_quiz", "0032_exercices", "0033_certificats",
     ].map((m) => `supabase/migrations/${m}.sql`),
   ]);
-  for (const [id, roles] of [[S, ["super_admin"]], [F, []], [E, []]] as const) await banc.creerCompte(id, [...roles]);
+  for (const [id, roles] of [[S, ["super_admin"]], [F, []], [E, []], [V, []]] as const) await banc.creerCompte(id, [...roles]);
   await banc.en({ id: S }, "select public.changer_role($1, 'formateur')", [F]);
   const fiche = (await un<{ id: string }>("select id from public.formateurs where compte_id = $1", [F])).id;
   const formation = (await un<{ id: string }>("insert into public.formations (titre, slug, formateur_id, gratuite) values ('Excel', $1, $2, true) returning id", [randomUUID(), fiche])).id;
@@ -51,6 +55,33 @@ beforeAll(async () => {
   await banc.db.query("update public.formations set statut = 'publiee' where id = $1", [formation]);
   // L'étudiante suit la formation (règle provisoire : une leçon ouverte suffit).
   await banc.en({ id: E }, "select public.terminer_lecon($1)", [LECON]);
+
+  // Avant la 0034 : un quiz et un exercice cochés « aperçu » dans une formation payante (la case existait).
+  const payante = (await un<{ id: string }>("insert into public.formations (titre, slug, formateur_id, gratuite) values ('Word', $1, $2, false) returning id", [randomUUID(), fiche])).id;
+  const section = (await un<{ id: string }>("insert into public.modules (formation_id, titre) values ($1, 'Module 1') returning id", [payante])).id;
+  QUIZ_APERCU = (await un<{ id: string }>("insert into public.lecons (module_id, titre, type, publiee, ordre) values ($1, 'Quiz d’essai', 'quiz', false, 1) returning id", [section])).id;
+  await banc.en({ id: F }, "select public.enregistrer_quiz($1, $2::jsonb)", [QUIZ_APERCU, JSON.stringify(question("Zotero"))]);
+  await banc.db.query("update public.lecons set publiee = true, apercu = true where id = $1", [QUIZ_APERCU]);
+  EXO_APERCU = (await un<{ id: string }>("insert into public.lecons (module_id, titre, type, publiee, apercu, ordre) values ($1, 'Exercice d’essai', 'exercice', true, true, 2) returning id", [section])).id;
+  await banc.db.query("update public.formations set statut = 'publiee' where id = $1", [payante]);
+  // Ouverts à tous, faute d'abonnement à vérifier : c'est ce que la 0034 corrige.
+  expect((await banc.en<{ a: boolean }>({ id: V }, "select public.acces_lecon($1) as a", [QUIZ_APERCU]))[0].a).toBe(true);
+
+  await banc.appliquer("supabase/migrations/0034_finitions_lot_3.sql");
+});
+
+describe("L'aperçu gratuit concerne les leçons seulement", () => {
+  it("un ancien quiz ou exercice coché « aperçu » ne l'est plus après la 0034, et ne peut plus l'être", async () => {
+    const lignes = await banc.db.query<{ apercu: boolean }>("select apercu from public.lecons where id = any($1)", [[QUIZ_APERCU, EXO_APERCU]]);
+    expect(lignes.rows).toEqual([{ apercu: false }, { apercu: false }]);
+    for (const l of [QUIZ_APERCU, EXO_APERCU]) {
+      expect((await banc.en<{ a: boolean }>({ id: V }, "select public.acces_lecon($1) as a", [l]))[0].a, l).toBe(false);
+    }
+    await expect(banc.db.query("update public.lecons set apercu = true where id = $1", [QUIZ_APERCU])).rejects.toThrow(/lecons_apercu_lecons/);
+    // Une leçon de contenu reste cochable.
+    await banc.db.query("update public.lecons set apercu = true where id = $1", [LECON]);
+    await banc.db.query("update public.lecons set apercu = false where id = $1", [LECON]);
+  });
 });
 
 describe("Un quiz ou un exercice ne se « termine » pas comme une leçon", () => {

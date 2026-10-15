@@ -3,6 +3,8 @@
 -- - Un quiz se réussit et un exercice se termine depuis sa page : « Terminer la leçon » (terminer_lecon) les refuse,
 --   même appelé directement, pour qu'un étudiant ne fausse pas sa propre progression.
 -- - La notification de publication dit ce qui paraît : « Nouveau quiz », « Nouvel exercice » ou « Nouvelle leçon ».
+-- - L'aperçu gratuit concerne les leçons seulement : un quiz ou un exercice coché « aperçu » avant ce lot restait
+--   ouvert sans abonnement (acces_lecon). Les anciens sont décochés, et la base ne l'accepte plus.
 -- - Garde-fous : un choix ou une réponse acceptée d'un quiz tient en 300 caractères (comme dans l'appli) ; un fichier
 --   déposé ne s'attache qu'à un seul rendu.
 --
@@ -77,6 +79,13 @@ begin
   return null;
 end;
 $$;
+
+-- ─── L'aperçu gratuit : les leçons seulement ────────────────────────────────────────────────────────
+-- La case a disparu de l'éditeur d'un quiz et d'un exercice ; ceux qui étaient cochés sont décochés (seul le
+-- déclencheur de date de modification réagit), puis la base refuse un quiz ou un exercice « aperçu ».
+update public.lecons set apercu = false where apercu and type <> 'lecon';
+alter table public.lecons drop constraint if exists lecons_apercu_lecons;
+alter table public.lecons add constraint lecons_apercu_lecons check (not apercu or type = 'lecon');
 
 -- ─── Les réponses d'un quiz : 300 caractères au plus (comme dans l'appli) ────────────────────────────
 create or replace function public.longueurs_quiz_ok(p_choix jsonb, p_reponses text[])

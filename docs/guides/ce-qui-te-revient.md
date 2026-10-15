@@ -768,6 +768,7 @@ Aucune migration. Ouvre le site **sans être connecté** (fenêtre de navigation
 1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0034_finitions_lot_3.sql` (après la 0033). Elle ne crée rien de nouveau :
    - un quiz ou un exercice ne peut plus être marqué « terminé » comme une leçon ;
    - la notification de publication dit « Nouveau quiz » ou « Nouvel exercice » ;
+   - l'« aperçu gratuit » ne concerne plus que les leçons : un quiz ou un exercice coché « aperçu » avant ce lot est décoché (il restait ouvert sans abonnement) ;
    - deux garde-fous : réponses de quiz de 300 caractères au plus, un fichier pour un seul rendu.
    Avant elle, l'appli marche comme aujourd'hui.
 2. **La recette du lot 3 (tâche 3.7), partie faisable dès maintenant.** Fais-la dans une fenêtre de navigation privée, comme un nouveau venu :

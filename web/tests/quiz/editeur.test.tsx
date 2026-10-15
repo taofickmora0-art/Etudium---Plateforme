@@ -238,6 +238,19 @@ describe("Les quiz dans l'onglet Leçons", () => {
     ],
   } as unknown as FormationAdmin;
 
+  it("un quiz encore coché « aperçu » (avant la 0034) ne porte pas l'étiquette « Aperçu »", () => {
+    const ancien = {
+      ...FORMATION,
+      modules: FORMATION.modules.map((m) => ({ ...m, lecons: m.lecons.map((l) => (l.type === "quiz" ? { ...l, apercu: true } : l)) })),
+    } as unknown as FormationAdmin;
+    render(
+      <ToastProvider>
+        <OngletLecons formation={ancien} />
+      </ToastProvider>,
+    );
+    expect(within(screen.getByRole("listitem", { name: "Quiz du module 1" })).getByText("Quiz · 4 questions")).toBeInTheDocument();
+  });
+
   it("le compte à part, la ligne « Quiz · 4 questions » ; « Ajouter » propose une leçon ou un quiz", async () => {
     const user = userEvent.setup();
     vi.mocked(actions.addLecon).mockResolvedValue({ status: "success", redirection: "/admin/formations/f1/lecons/q2" });
