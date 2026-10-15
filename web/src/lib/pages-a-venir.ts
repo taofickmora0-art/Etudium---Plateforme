@@ -2,7 +2,6 @@
 
 const LOT_1 = "au lot 1, Catalogue et apprentissage";
 const LOT_5 = "au lot 5, Communauté et accompagnement";
-const LOT_4 = "au lot 4, Espace formateur";
 
 /**
  * Pages « Bientôt disponible » : clé = adresse sans « / ». `quand` dit à quel moment l'écran arrive,
@@ -18,7 +17,6 @@ export const PAGES_A_VENIR = {
   // Back-office (menu de l'équipe)
   "admin/paiements": { titre: "Abonnements et paiements", quand: "au lot 2, Abonnements et paiement", description: "Les formules, les abonnements et les paiements s’afficheront ici." },
   // Espace formateur (son propre menu)
-  "formateur/corrections": { titre: "Corrections", quand: LOT_4, description: "Les exercices à corriger s’afficheront ici." },
   "formateur/messages": { titre: "Messages", quand: LOT_5, description: "Vous pourrez écrire à vos étudiants." },
 } satisfies Record<string, { titre: string; quand: string; description: string }>;
 

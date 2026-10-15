@@ -1,14 +1,21 @@
 import { Suspense } from "react";
-import { comingSoonMetadata } from "@/components/layout/ComingSoon";
-import { ReservedComingSoon } from "@/components/layout/ReservedComingSoon";
+import type { Metadata } from "next";
+import { PageCorrections } from "@/components/corrections/PagesCorrections";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { requireSpace } from "@/lib/auth/require-space";
 
-export const metadata = comingSoonMetadata("formateur/corrections");
+export const metadata: Metadata = { title: "Corrections · Espace formateur · Étudium" };
 
-/** Réservée aux rôles de l'espace (lib/auth/permissions) : un autre compte est renvoyé vers l'accueil. */
+async function Contenu() {
+  await requireSpace("formateur");
+  return <PageCorrections espace="formateur" />;
+}
+
+/** Les travaux à corriger (lot 3, étape B) : réservée à l'espace, rien n'est rendu avant la vérification. */
 export default function Page() {
   return (
-    <Suspense fallback={null}>
-      <ReservedComingSoon espace="formateur" page="formateur/corrections" />
+    <Suspense fallback={<Skeleton className="h-60 max-w-[960px] rounded-carte" />}>
+      <Contenu />
     </Suspense>
   );
 }
