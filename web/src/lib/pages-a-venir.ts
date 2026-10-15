@@ -10,7 +10,6 @@ const LOT_5 = "au lot 5, Communauté et accompagnement";
 export const PAGES_A_VENIR = {
   messages: { titre: "Messages", quand: LOT_5, description: "Vous pourrez écrire à vos formateurs." },
   aide: { titre: "Aide", quand: LOT_1, description: "Les réponses aux questions fréquentes s’afficheront ici." },
-  exercices: { titre: "Exercices", quand: "au lot 3, Quiz, exercices et certificats", description: "Vos exercices à rendre et à corriger s’afficheront ici." },
   certificats: { titre: "Certificats", quand: "au lot 3, Quiz, exercices et certificats", description: "Vos certificats et leur QR Code de vérification s’afficheront ici." },
   abonnement: { titre: "Mon abonnement", quand: "au lot 2, Abonnements et paiement", description: "Votre formule, vos paiements et vos reçus s’afficheront ici." },
   admin: { titre: "Back-office", quand: "au lot 1, avec le back-office de saisie", description: "L’équipe Étudium y gérera les formations et les comptes." },
