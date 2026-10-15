@@ -1,7 +1,9 @@
 import type { VideoLecon } from "@/lib/lecon/types";
+import { estMesuree } from "./plateformes";
 
-// Lecteurs officiels de YouTube (IFrame API) et de Vimeo (Player SDK), derrière une interface commune : le lecteur
-// Étudium pose ses propres commandes par-dessus. Les scripts ne se chargent qu'à la première vidéo de la page.
+// Lecteurs officiels de YouTube (IFrame API), de Vimeo (Player SDK), de TikTok et de Tella (messages), derrière une
+// interface commune : le lecteur Étudium pose ses propres commandes par-dessus. Les scripts ne se chargent qu'à la
+// première vidéo de la page. Les plateformes sans mesure (Loom, ScreenPal, Drive) n'ont pas de lecteur piloté.
 
 export type Evenements = { pret(): void; etat(enLecture: boolean): void; fin(): void };
 
@@ -16,6 +18,8 @@ export type Adaptateur = {
   /** La vidéo a-t-elle des sous-titres ? */
   sousTitres(): Promise<boolean>;
   setSousTitres(actifs: boolean): void;
+  /** La vitesse ne se règle pas (TikTok, Tella) : le bouton n'apparaît pas. */
+  vitesseFixe?: boolean;
   detruire(): void;
 };
 
@@ -197,9 +201,180 @@ async function vimeo(id: string, cible: HTMLElement, ev: Evenements): Promise<Ad
   };
 }
 
-/** Crée le lecteur officiel dans `conteneur` ; échoue si son script ne se charge pas à temps. */
+// ─── Lecteurs pilotés par messages (TikTok, Tella) ──────────────────────────────────────────────────
+
+type Message = Record<string, unknown>;
+/** Un message reçu : un objet, ou le même en texte JSON ; null pour le reste. */
+function lireMessage(data: unknown): Message | null {
+  if (typeof data === "string") {
+    try {
+      return lireMessage(JSON.parse(data));
+    } catch {
+      return null;
+    }
+  }
+  return data && typeof data === "object" ? (data as Message) : null;
+}
+const nombre = (valeur: unknown) => (typeof valeur === "number" && Number.isFinite(valeur) ? valeur : null);
+
+/**
+ * L'iframe officielle et l'écoute de ses messages : seuls ceux de son origine et de sa fenêtre comptent. `pret`
+ * (appelée par `traiter` au message « prêt ») résout l'adaptateur ; au-delà du délai, tout est retiré.
+ */
+function lecteurParMessages(
+  cible: HTMLElement,
+  adresse: string,
+  origine: string,
+  traiter: (message: Message, pret: () => void) => void,
+  construire: (envoyer: (message: Message) => void, detruire: () => void) => Adaptateur,
+): Promise<Adaptateur> {
+  const iframe = document.createElement("iframe");
+  iframe.src = adresse;
+  iframe.allow = "autoplay; fullscreen; encrypted-media; picture-in-picture";
+  cible.appendChild(iframe);
+  let ecouter: (e: MessageEvent) => void = () => undefined;
+  const detruire = () => {
+    window.removeEventListener("message", ecouter);
+    iframe.remove();
+  };
+  const envoyer = (message: Message) => iframe.contentWindow?.postMessage(message, origine);
+  const adaptateur = construire(envoyer, detruire);
+  return avantDelai(
+    new Promise<Adaptateur>((resoudre) => {
+      let resolu = false;
+      ecouter = (e: MessageEvent) => {
+        if (e.origin !== origine || e.source !== iframe.contentWindow) return;
+        const message = lireMessage(e.data);
+        if (!message) return;
+        traiter(message, () => {
+          if (resolu) return;
+          resolu = true;
+          resoudre(adaptateur);
+        });
+      };
+      window.addEventListener("message", ecouter);
+    }),
+  ).catch((erreur: unknown) => {
+    detruire();
+    throw erreur;
+  });
+}
+
+/** TikTok (lecteur « player/v1 », messages « x-tiktok-player ») : ses commandes sont masquées, les nôtres les remplacent. */
+function tiktok(id: string, cible: HTMLElement, ev: Evenements): Promise<Adaptateur> {
+  const ORIGINE = "https://www.tiktok.com";
+  const sansCommandes = "controls=0&progress_bar=0&play_button=0&volume_control=0&fullscreen_button=0&timestamp=0&rel=0&music_info=0&description=0&native_context_menu=0&closed_caption=0";
+  let position = 0;
+  let duree = 0;
+  return lecteurParMessages(
+    cible,
+    `${ORIGINE}/player/v1/${id}?${sansCommandes}`,
+    ORIGINE,
+    (m, pret) => {
+      if (m["x-tiktok-player"] !== true) return;
+      if (m.type === "onPlayerReady") {
+        pret();
+        ev.pret();
+      } else if (m.type === "onStateChange") {
+        // 1 : lecture ; 2 : pause ; 0 : fin (-1 : départ, 3 : chargement).
+        if (m.value === 1) ev.etat(true);
+        else if (m.value === 2) ev.etat(false);
+        else if (m.value === 0) {
+          ev.etat(false);
+          ev.fin();
+        }
+      } else if (m.type === "onCurrentTime") {
+        const valeur = lireMessage(m.value);
+        position = nombre(valeur?.currentTime) ?? position;
+        duree = nombre(valeur?.duration) ?? duree;
+      }
+    },
+    (envoyer, detruire) => {
+      const commande = (type: string, value?: unknown) => envoyer({ type, value, "x-tiktok-player": true });
+      return {
+        lire: () => commande("play"),
+        pause: () => commande("pause"),
+        aller: (s) => {
+          commande("seekTo", s);
+          position = s;
+        },
+        position: async () => position,
+        duree: async () => duree,
+        setMuet: (muet) => commande(muet ? "mute" : "unMute"),
+        setVitesse: () => undefined,
+        sousTitres: async () => false,
+        setSousTitres: () => undefined,
+        vitesseFixe: true,
+        detruire,
+      };
+    },
+  );
+}
+
+/** Tella (lecteur intégré, messages « ready », « playbackState », « timeUpdate »). */
+function tella(id: string, cible: HTMLElement, ev: Evenements): Promise<Adaptateur> {
+  const ORIGINE = "https://www.tella.tv";
+  let position = 0;
+  let duree = 0;
+  let enLecture = false;
+  return lecteurParMessages(
+    cible,
+    `${ORIGINE}/video/${id}/embed`,
+    ORIGINE,
+    (m, pret) => {
+      if (m.type === "ready") {
+        pret();
+        ev.pret();
+        return;
+      }
+      if (m.type !== "playbackState" && m.type !== "timeUpdate") return;
+      position = nombre(m.currentTime) ?? position;
+      duree = nombre(m.duration) ?? duree;
+      if (m.type !== "playbackState") return;
+      if (m.state === "playing" && !enLecture) {
+        enLecture = true;
+        ev.etat(true);
+      } else if (m.state !== "playing" && m.state !== "seeking" && m.state !== "stalled") {
+        if (enLecture) {
+          enLecture = false;
+          ev.etat(false);
+        }
+        // « stopped » au bout de la vidéo : la fin (Tella n'a pas d'événement « ended »).
+        if (m.state === "stopped" && duree > 0 && position >= duree - 1) ev.fin();
+      }
+    },
+    (envoyer, detruire) => ({
+      lire: () => envoyer({ type: "play" }),
+      pause: () => envoyer({ type: "pause" }),
+      aller: (s) => {
+        envoyer({ type: "seek", time: s });
+        position = s;
+      },
+      position: async () => position,
+      duree: async () => duree,
+      setMuet: (muet) => envoyer({ type: muet ? "mute" : "unmute" }),
+      setVitesse: () => undefined,
+      sousTitres: async () => false,
+      setSousTitres: () => undefined,
+      vitesseFixe: true,
+      detruire,
+    }),
+  );
+}
+
+/** Crée le lecteur officiel dans `conteneur` ; échoue si son script ne se charge pas à temps, ou sans mesure possible. */
 export async function creerAdaptateur(video: VideoLecon, conteneur: HTMLElement, ev: Evenements): Promise<Adaptateur> {
+  if (!estMesuree(video.fournisseur)) throw new Error(`Pas de lecteur piloté pour ${video.fournisseur}.`);
   const cible = document.createElement("div");
   conteneur.appendChild(cible);
-  return video.fournisseur === "youtube" ? youtube(video.id, cible, ev) : vimeo(video.id, cible, ev);
+  switch (video.fournisseur) {
+    case "youtube":
+      return youtube(video.id, cible, ev);
+    case "tiktok":
+      return tiktok(video.id, cible, ev);
+    case "tella":
+      return tella(video.id, cible, ev);
+    default:
+      return vimeo(video.id, cible, ev);
+  }
 }
