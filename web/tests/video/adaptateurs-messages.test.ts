@@ -10,9 +10,26 @@ const conteneur = () => document.body.appendChild(document.createElement("div"))
 const iframe = (c: HTMLElement) => c.querySelector("iframe")!;
 const recevoir = (origine: string, source: Window | null, data: unknown) => window.dispatchEvent(new MessageEvent("message", { origin: origine, source, data }));
 const attendre = () => new Promise((r) => setTimeout(r, 0));
+/** Une machine chargée : quelques millisecondes passent entre deux instructions (l'horloge réelle avance). */
+const machineLente = () => {
+  const fin = performance.now() + 3;
+  while (performance.now() < fin);
+};
+
+/**
+ * Horloge figée : la position estimée avance avec `Date.now()` pendant la lecture. Sans cela, une machine chargée
+ * laisse passer une milliseconde entre le message et la lecture de la position (16,251 au lieu de 16,25).
+ * Seule la date est simulée : les messages et les promesses gardent leur cours normal.
+ */
+const figerHorloge = () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
+};
+const avancerHorloge = (ms: number) => vi.setSystemTime(Date.now() + ms);
 
 afterEach(() => {
   document.body.innerHTML = "";
+  vi.useRealTimers();
 });
 
 describe("Le lecteur TikTok", () => {
@@ -20,6 +37,7 @@ describe("Le lecteur TikTok", () => {
   const msg = (type: string, value?: unknown) => ({ "x-tiktok-player": true, type, value });
 
   it("sans commandes TikTok ; prêt, lecture, position et durée, fin ; les commandes partent vers TikTok seulement", async () => {
+    figerHorloge();
     const c = conteneur();
     const ev = evenements();
     const promesse = creerAdaptateur({ fournisseur: "tiktok", id: "7234567890123456789" }, c, ev);
@@ -35,8 +53,11 @@ describe("Le lecteur TikTok", () => {
     recevoir(TIKTOK, cadre.contentWindow, msg("onStateChange", 1));
     expect(ev.etat).toHaveBeenLastCalledWith(true);
     recevoir(TIKTOK, cadre.contentWindow, msg("onCurrentTime", { currentTime: 12.5, duration: 61.2 }));
+    machineLente();
+    expect(await a.position()).toBe(12.5);
     // Pendant la lecture, la position avance avec le temps écoulé depuis le message.
-    expect(await a.position()).toBeCloseTo(12.5, 1);
+    avancerHorloge(2000);
+    expect(await a.position()).toBe(14.5);
     expect(await a.duree()).toBe(61.2);
     recevoir(TIKTOK, cadre.contentWindow, msg("onStateChange", 2));
     expect(ev.etat).toHaveBeenLastCalledWith(false);
@@ -76,6 +97,7 @@ describe("Le lecteur Tella", () => {
   const TELLA = "https://www.tella.tv";
 
   it("prêt, état et temps, fin (arrêt au bout) ; les commandes partent vers Tella seulement", async () => {
+    figerHorloge();
     const c = conteneur();
     const ev = evenements();
     const promesse = creerAdaptateur({ fournisseur: "tella", id: "mon-cours-excel-a1b2" }, c, ev);
@@ -89,7 +111,10 @@ describe("Le lecteur Tella", () => {
     recevoir(TELLA, cadre.contentWindow, { type: "playbackState", state: "playing", currentTime: 1, duration: 120 });
     expect(ev.etat).toHaveBeenLastCalledWith(true);
     recevoir(TELLA, cadre.contentWindow, { type: "timeUpdate", currentTime: 16.25, duration: 120 });
+    machineLente();
     expect(await a.position()).toBe(16.25);
+    avancerHorloge(2000);
+    expect(await a.position()).toBe(18.25);
     expect(await a.duree()).toBe(120);
     recevoir(TELLA, cadre.contentWindow, { type: "playbackState", state: "paused", currentTime: 16.25, duration: 120 });
     expect(ev.etat).toHaveBeenLastCalledWith(false);
