@@ -120,6 +120,8 @@ describe("Les exercices dans l'onglet Leçons", () => {
     await waitFor(() => expect(push).toHaveBeenCalledWith("/admin/formations/f1/lecons/e3"));
     expect((vi.mocked(actions.addLecon).mock.calls[0][1] as FormData).get("type")).toBe("exercice");
     expect(await screen.findByText("Exercice créé")).toBeInTheDocument();
+    // La fenêtre se ferme après l'enregistrement : la liste redevient lisible.
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
     await user.click(within(screen.getByRole("listitem", { name: "Tableau des ventes" })).getByRole("button", { name: "Actions sur « Tableau des ventes »" }));
     await user.click(screen.getByRole("menuitem", { name: "Supprimer" }));
