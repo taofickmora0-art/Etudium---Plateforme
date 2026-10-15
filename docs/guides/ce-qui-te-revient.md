@@ -723,3 +723,19 @@ La page d'une leçon prend une barre du haut et des discussions, le programme se
    - après une demande de correction, il dépose une **version 2** ; les versions restent dans l'historique.
 5. **La page « Exercices »** de l'étudiant liste ses exercices rendus avec les filtres Tous · À corriger · En attente · Validés, et la remarque du formateur.
 6. **Les exercices ne comptent pas comme des leçons** : la fiche dit « 8 leçons · 2 exercices » ; le pourcentage ne compte que les leçons ; rien ne se débloque après un exercice.
+
+## 39. Valider les certificats (lot 3, étape C), 25 minutes
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0033_certificats.sql` (après la 0032). Avant elle, le reste de l'appli marche ; les pages des certificats affichent « Appliquez la migration 0033 (guide « Ce qui te revient », section 39). »
+2. **Le réglage.** Dans l'onglet « Informations » d'une formation, la carte **Certification** regroupe le « Score minimal aux quiz » et l'interrupteur **Exercices obligatoires** (activé par défaut).
+3. **Obtenir un certificat** avec un compte étudiant, sur une formation publiée qui a au moins une leçon publiée :
+   - termine toutes les leçons, réussis tous les quiz (meilleur score au moins égal au score minimal) et, si les exercices sont obligatoires, fais valider tous les exercices ;
+   - le certificat est délivré **tout seul** au moment où la dernière condition est remplie ; la cloche annonce « Votre certificat est prêt » ;
+   - sur la fiche de la formation, « **Validation et certificat** » ouvre la page qui montre chaque condition (remplie ou non, avec un lien vers ce qui manque) ;
+   - à la première visite après la délivrance, la fenêtre « Félicitations, … ! » s'ouvre une fois ;
+   - « Télécharger le PDF » (A4 paysage, avec le QR Code), « Partager » (le lien de vérification à copier), « Vérifier ».
+4. **La page « Certificats »** (menu « Mon espace », barre du bas du téléphone) : les certificats obtenus, et les formations « En préparation » avec ce qui manque.
+5. **La vérification, sans compte** : ouvre `/verifier` dans une fenêtre de navigation privée (lien « Vérifier un certificat » en haut des pages publiques), saisis l'identifiant (`ET-2026-…`) : « Certificat authentique. » avec le titulaire, la formation, la date, le parcours et le formateur. Scanne le QR Code du PDF avec un téléphone : il ouvre la même page.
+   - **À la mise en ligne**, l'adresse du QR Code vient de `NEXT_PUBLIC_SITE_URL` (aujourd'hui `http://localhost:3000`) : elle devra être l'adresse publique du site, sinon les QR Codes imprimés ne mèneront nulle part.
+6. **Côté formateur** : le tableau de bord montre « Certificats délivrés » et « Exercices à corriger » ; la fiche d'un étudiant montre ses quiz, ses exercices et son certificat.
+7. **Le certificat est définitif** : changer le titre de la formation ne le change pas ; un compte supprimé garde son certificat vérifiable.
