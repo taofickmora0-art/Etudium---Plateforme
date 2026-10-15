@@ -99,6 +99,12 @@ describe("L'onglet « Apprenants »", () => {
     expect(screen.getByText("Appliquez la migration 0029 (guide « Ce qui te revient », section 35).")).toBeInTheDocument();
   });
 
+  it("une erreur de lecture reste dans l'onglet : l'éditeur et ses saisies ne sont pas remplacés par la page d'erreur (revue)", async () => {
+    faux.repondre("rpc.apprenants_formation", { error: { code: "57014", message: "canceling statement due to statement timeout" } });
+    render(await OngletApprenants({ formationId: X, espace: "admin" }));
+    expect(screen.getByText("Les apprenants n’ont pas pu être chargés. Rechargez la page pour réessayer.")).toBeInTheDocument();
+  });
+
   it("un quatrième onglet « Apprenants », ouvert par ?onglet=apprenants", () => {
     render(<FormationOnglets ongletInitial="apprenants" informations={<p>Infos</p>} programme={<p>Leçons</p>} publication={<p>Publication</p>} apprenants={<p>La liste</p>} />);
     expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual(["Informations", "Leçons", "Publication", "Apprenants"]);
