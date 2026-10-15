@@ -19,7 +19,7 @@ let ANCIENNE: string; // leçon écrite avant la 0027
 let AUTRE_MODULE: string; // module d'une formation de G
 
 const un = async <T>(sql: string, params: unknown[] = []) => (await banc.db.query<T>(sql, params)).rows[0];
-const module = async (formation: string, titre: string, ordre: number) =>
+const section = async (formation: string, titre: string, ordre: number) =>
   (await un<{ id: string }>("insert into public.modules (formation_id, titre, ordre) values ($1, $2, $3) returning id", [formation, titre, ordre])).id;
 const lecon = async (moduleId: string, titre: string, ordre: number) => {
   const l = await un<{ id: string }>("insert into public.lecons (module_id, titre, ordre) values ($1, $2, $3) returning id", [moduleId, titre, ordre]);
@@ -64,12 +64,12 @@ beforeAll(async () => {
   FA = (await un<{ id: string }>("select id from public.formateurs where compte_id = $1", [F])).id;
   FB = (await un<{ id: string }>("select id from public.formateurs where compte_id = $1", [G])).id;
   PUB = (await un<{ id: string }>("insert into public.formations (titre, slug, formateur_id, gratuite) values ('Publiée', 'publiee-0027', $1, true) returning id", [FA])).id;
-  M1 = await module(PUB, "Module 1", 1);
-  M2 = await module(PUB, "Module 2", 2);
+  M1 = await section(PUB, "Module 1", 1);
+  M2 = await section(PUB, "Module 2", 2);
   ANCIENNE = await lecon(M1, "Ancienne", 1);
   await banc.db.query("update public.formations set statut = 'publiee' where id = $1", [PUB]);
   const autre = (await un<{ id: string }>("insert into public.formations (titre, slug, formateur_id) values ('Autre', 'autre-0027', $1) returning id", [FB])).id;
-  AUTRE_MODULE = await module(autre, "Module de G", 1);
+  AUTRE_MODULE = await section(autre, "Module de G", 1);
   // L'étudiant suit la formation : il a ouvert la leçon.
   await banc.db.query("insert into public.progression_lecons (profil_id, lecon_id, ouverte_le) values ($1, $2, now())", [E, ANCIENNE]);
   await banc.appliquer("supabase/migrations/0027_lecons_statut.sql");
@@ -122,7 +122,7 @@ describe("Le statut d'une leçon", () => {
 
   it("envoyer en relecture : refusé sans leçon publiée", async () => {
     const brouillon = (await un<{ id: string }>("insert into public.formations (titre, slug, formateur_id) values ('Brouillon', 'brouillon-0027', $1) returning id", [FA])).id;
-    await lecon(await module(brouillon, "Module", 1), "Pas encore publiée", 1);
+    await lecon(await section(brouillon, "Module", 1), "Pas encore publiée", 1);
     await expect(banc.en({ id: F }, "select public.envoyer_en_relecture($1)", [brouillon])).rejects.toThrow("Publiez au moins une leçon avant d’envoyer la formation en relecture.");
   });
 

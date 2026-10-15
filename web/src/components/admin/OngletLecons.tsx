@@ -222,7 +222,8 @@ function Section({
     >
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 bg-page/60 py-3 pr-2 pl-1.5 max-sm:py-2.5">
         <Poignee nom={`la section « ${module.titre} »`} id={cleModule(module.id)} />
-        <h3 className="m-0 min-w-0 flex-1 text-[15px] leading-[22px] font-semibold wrap-anywhere text-encre max-sm:text-sm max-sm:leading-5">
+        {/* Sur téléphone, le titre a sa ligne ; la pastille et les boutons passent dessous, à droite. */}
+        <h3 className="m-0 min-w-0 flex-1 text-[15px] leading-[22px] font-semibold wrap-anywhere text-encre max-sm:min-w-[calc(100%-40px)] max-sm:text-sm max-sm:leading-5">
           Module {rang} : {module.titre}
         </h3>
         <span className="ml-auto flex flex-none items-center gap-1.5">
@@ -283,6 +284,8 @@ type Fenetre =
 export function OngletLecons({ formation, base = "/admin/formations" }: OngletLeconsProps) {
   const espace: EspaceEdition = base === "/formateur/formations" ? "formateur" : "admin";
   const { toast } = useToast();
+  // Un identifiant stable : sans lui, dnd-kit numérote ses descriptions autrement côté serveur et côté navigateur.
+  const idGlisser = useId();
   // Le programme affiché : celui du serveur, changé aussitôt par un rangement ou un statut.
   const [source, setSource] = useState(formation.modules);
   const [programme, setProgramme] = useState(formation.modules);
@@ -420,6 +423,7 @@ export function OngletLecons({ formation, base = "/admin/formations" }: OngletLe
           </div>
         ) : (
           <DndContext
+            id={idGlisser}
             sensors={capteurs}
             collisionDetection={closestCorners}
             onDragEnd={deposer}

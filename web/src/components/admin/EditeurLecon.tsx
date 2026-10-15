@@ -122,18 +122,21 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
           </span>
         </Link>
         <span className="ml-auto flex min-w-0 flex-wrap items-center gap-2 max-sm:ml-0 max-sm:w-full">
-          <span className="min-w-0 text-[13px] leading-5 text-discret max-sm:text-xs">{`Leçon ${position.rang} sur ${position.total} · Module ${position.module.rang} : ${position.module.titre}`}</span>
-          <span className="flex items-center gap-1">
-            {voisines.precedente && (
-              <Link href={versLecon(voisines.precedente)} onClick={partir(versLecon(voisines.precedente))} aria-label="Leçon précédente" className={fleche}>
-                <Icon icon={ArrowLeft01Icon} size={16} />
-              </Link>
-            )}
-            {voisines.suivante && (
-              <Link href={versLecon(voisines.suivante)} onClick={partir(versLecon(voisines.suivante))} aria-label="Leçon suivante" className={fleche}>
-                <Icon icon={ArrowRight01Icon} size={16} />
-              </Link>
-            )}
+          {/* Sur téléphone, la position (tronquée) et les flèches tiennent sur une ligne. */}
+          <span className="flex min-w-0 items-center gap-2 max-sm:w-full">
+            <span className="min-w-0 text-[13px] leading-5 text-discret max-sm:flex-1 max-sm:truncate max-sm:text-xs">{`Leçon ${position.rang} sur ${position.total} · Module ${position.module.rang} : ${position.module.titre}`}</span>
+            <span className="flex flex-none items-center gap-1">
+              {voisines.precedente && (
+                <Link href={versLecon(voisines.precedente)} onClick={partir(versLecon(voisines.precedente))} aria-label="Leçon précédente" className={fleche}>
+                  <Icon icon={ArrowLeft01Icon} size={16} />
+                </Link>
+              )}
+              {voisines.suivante && (
+                <Link href={versLecon(voisines.suivante)} onClick={partir(versLecon(voisines.suivante))} aria-label="Leçon suivante" className={fleche}>
+                  <Icon icon={ArrowRight01Icon} size={16} />
+                </Link>
+              )}
+            </span>
           </span>
           <span className="flex items-center gap-2 max-sm:ml-auto">
             <StatutLecon publiee={publiee} onChange={(suivant) => void changerStatut(suivant)} />
@@ -235,15 +238,18 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
 
         <form id={formulaire} onSubmit={envoyer} noValidate className="flex min-w-0 flex-col gap-4 rounded-carte border border-bordure-carte bg-panneau p-6 max-sm:p-4">
           <input type="hidden" name="id" value={lecon.id} />
-          <input
+          {/* Un titre long passe à la ligne (la zone grandit avec son texte) ; Entrée n'y ajoute pas de ligne. */}
+          <textarea
             name="titre"
             aria-label="Titre de la leçon"
             placeholder="Titre de la leçon"
             defaultValue={valeur("titre", lecon.titre)}
             maxLength={120}
             required
+            rows={1}
             onChange={changer}
-            className="focus-etudium w-full min-w-0 rounded-champ border-0 bg-transparent px-0 py-1 text-[28px] leading-9 font-bold text-encre outline-none placeholder:text-indice max-sm:text-[22px] max-sm:leading-8"
+            onKeyDown={(evenement) => evenement.key === "Enter" && evenement.preventDefault()}
+            className="focus-etudium w-full min-w-0 resize-none rounded-champ border-0 bg-transparent px-0 py-1 text-[28px] leading-9 font-bold text-encre outline-none [field-sizing:content] placeholder:text-indice max-sm:text-[22px] max-sm:leading-8"
           />
           {e.titre && (
             <p role="alert" className="m-0 -mt-2 text-[13px] leading-5 text-erreur-texte">
