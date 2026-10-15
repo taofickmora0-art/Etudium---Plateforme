@@ -700,3 +700,26 @@ La page d'une leçon prend une barre du haut et des discussions, le programme se
    - une réponse courte « recherchex » est juste pour « RECHERCHEX » ;
    - « Recommencer » : tentatives illimitées, seul le meilleur score est gardé ; il s'affiche dans le programme (« Quiz · 75 % »).
 5. **La progression ignore les quiz.** Sur la fiche, « 8 leçons · 1 quiz » ; le pourcentage et « Terminé 3 sur 8 » ne comptent que les leçons. Un quiz n'a pas de « Terminer la leçon » : seulement « Leçon suivante ».
+
+## 38. Valider les exercices (lot 3, étape B), 25 minutes
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0032_exercices.sql` (après la 0031). Elle crée aussi l'espace de stockage privé « rendus » (20 Mo par fichier). Avant elle, le reste de l'appli marche ; créer un exercice affiche « Appliquez la migration 0032 (guide « Ce qui te revient », section 38). »
+2. **Créer un exercice.** Onglet « Leçons » : « Ajouter » dans un module, choisis **Exercice**, donne un titre. Dans l'éditeur :
+   - choisis le genre : **Avec rendu** (l'étudiant dépose un fichier, que tu corriges) ou **Simple** (il le marque comme terminé) ;
+   - écris la **Consigne** ; ajoute les fichiers fournis (données, modèle) dans « Documents & fichiers » ;
+   - « Enregistrer », puis publie-le (un exercice naît en brouillon).
+   - Dans l'onglet « Leçons », la ligne dit « Exercice avec rendu » ou « Exercice simple », et l'en-tête « … · 2 exercices ».
+3. **Rendre un exercice** avec un compte étudiant :
+   - la page montre la consigne, les fichiers fournis, puis « Votre travail » ;
+   - dépose un fichier (PDF, Word, Excel, PowerPoint, image ou ZIP, 20 Mo au plus) ; un autre format est refusé tout de suite ;
+   - un message facultatif, « Envoyer mon travail », confirme « Envoyer votre travail ? » : « Travail envoyé » ;
+   - le statut passe à **En attente** ; tant que ce n'est pas corrigé, on ne peut pas déposer de nouvelle version ;
+   - un exercice simple : « Marquer comme terminé ».
+4. **Corriger** avec le compte du formateur (menu « Corrections ») ou de l'équipe (back-office, « Corrections ») :
+   - le formateur reçoit la notification « Nouveau travail à corriger » ;
+   - la page montre le travail (« Télécharger »), le message de l'étudiant, la consigne et l'historique ;
+   - « Demander une correction » exige une remarque ; « Valider l'exercice » accepte un commentaire facultatif ;
+   - l'étudiant reçoit « Une correction est demandée » ou « Exercice validé » ;
+   - après une demande de correction, il dépose une **version 2** ; les versions restent dans l'historique.
+5. **La page « Exercices »** de l'étudiant liste ses exercices rendus avec les filtres Tous · À corriger · En attente · Validés, et la remarque du formateur.
+6. **Les exercices ne comptent pas comme des leçons** : la fiche dit « 8 leçons · 2 exercices » ; le pourcentage ne compte que les leçons ; rien ne se débloque après un exercice.
