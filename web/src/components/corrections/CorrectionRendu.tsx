@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download04Icon } from "@hugeicons/core-free-icons";
 import { TexteMisEnForme } from "@/components/communaute/TexteMisEnForme";
@@ -37,6 +37,14 @@ export function CorrectionRendu({ rendu }: { rendu: RenduACorriger }) {
   const { version } = rendu;
   const aCorriger = version.statut === "en_attente" && rendu.derniere;
   const maintenant = new Date();
+  const champ = useRef<HTMLTextAreaElement>(null);
+  // Corrigé, la page relue : les boutons disparaissent, le focus passe au titre « Votre retour ».
+  const titreRetour = useRef<HTMLHeadingElement>(null);
+  const statutVu = useRef(version.statut);
+  useEffect(() => {
+    if (version.statut !== statutVu.current) titreRetour.current?.focus();
+    statutVu.current = version.statut;
+  }, [version.statut]);
 
   async function telecharger() {
     const reponse = await lienRendu(version.id).catch(() => ({ erreur: FICHIER_ECHEC }));
@@ -45,7 +53,11 @@ export function CorrectionRendu({ rendu }: { rendu: RenduACorriger }) {
   }
 
   function ouvrir(choix: "valide" | "a_corriger") {
-    if (choix === "a_corriger" && !remarque.trim()) return setErreurRemarque(REMARQUE_EXIGEE);
+    if (choix === "a_corriger" && !remarque.trim()) {
+      setErreurRemarque(REMARQUE_EXIGEE);
+      champ.current?.focus();
+      return;
+    }
     setErreurRemarque(null);
     setErreurEnvoi(undefined);
     setDecision(choix);
@@ -101,7 +113,7 @@ export function CorrectionRendu({ rendu }: { rendu: RenduACorriger }) {
         </section>
 
         <section aria-labelledby={`${id}-retour`} className={CARTE}>
-          <h2 id={`${id}-retour`} className="m-0 text-lg leading-7 font-semibold text-encre max-sm:text-base">
+          <h2 ref={titreRetour} tabIndex={-1} id={`${id}-retour`} className="m-0 text-lg leading-7 font-semibold text-encre outline-none max-sm:text-base">
             Votre retour
           </h2>
           {!rendu.derniere ? (
@@ -115,7 +127,9 @@ export function CorrectionRendu({ rendu }: { rendu: RenduACorriger }) {
                   Remarque pour l’étudiant
                 </label>
                 <Textarea
+                  ref={champ}
                   id={`${id}-remarque`}
+                  aria-invalid={erreurRemarque ? true : undefined}
                   rows={4}
                   maxLength={2000}
                   placeholder="Expliquez ce qu’il faut améliorer, ou un mot d’encouragement…"

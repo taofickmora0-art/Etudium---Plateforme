@@ -61,7 +61,10 @@ export function DepotTravail({ leconId, nouvelleVersion, onEnvoye }: { leconId: 
     const extension = choisi.fichier.name.split(".").pop()?.toLowerCase() ?? "bin";
     const chemin = `${compte}/${leconId}/${identifiantAleatoire()}.${extension}`;
     const stockage = supabase.storage.from("rendus");
-    const { error } = await stockage.upload(chemin, choisi.fichier, { contentType: choisi.format, upsert: false });
+    // Une copie typée : pour un fichier, la bibliothèque ignore contentType et garde le type du navigateur (un ZIP sous
+    // Windows s'annonce « application/x-zip-compressed », que l'espace « rendus » refuse).
+    const copie = choisi.fichier.slice(0, choisi.fichier.size, choisi.format);
+    const { error } = await stockage.upload(chemin, copie, { contentType: choisi.format, upsert: false });
     if (error) return echouer(ENVOI_ECHEC);
     const reponse = await rendreExercice(leconId, chemin, choisi.fichier.name, message).catch(() => ({ ok: false as const, message: ENVOI_ECHEC }));
     if (!reponse.ok) {

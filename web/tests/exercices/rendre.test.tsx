@@ -62,6 +62,8 @@ describe("Un exercice simple", () => {
     await user.click(screen.getByRole("button", { name: "Marquer comme terminé" }));
     expect(terminerExercice).toHaveBeenCalledWith(L);
     expect(await screen.findByText("Exercice marqué comme terminé")).toBeInTheDocument();
+    // Le bouton disparaît : le focus passe à l'état de l'exercice.
+    expect(screen.getByText("Exercice terminé")).toHaveFocus();
     unmount();
     afficher({ genre: "simple", statut: "valide", peutDeposer: false, versions: [version({ statut: "valide", aUnFichier: false })] });
     expect(screen.getByText("Exercice terminé")).toBeInTheDocument();
@@ -89,10 +91,22 @@ describe("Un exercice avec rendu", () => {
     await waitFor(() => expect(rendreExercice).toHaveBeenCalled());
     const [chemin, fichier, options] = upload.mock.calls[0];
     expect(chemin).toMatch(new RegExp(`^u1/${L}/[0-9a-f-]{36}\\.xlsx$`));
-    expect(fichier).toBeInstanceOf(File);
+    // Le type part avec le fichier lui-même (la bibliothèque ignore contentType pour un fichier) : celui vérifié.
+    expect((fichier as Blob).type).toBe(XLSX);
     expect(options).toMatchObject({ contentType: XLSX, upsert: false });
     expect(rendreExercice).toHaveBeenCalledWith(L, chemin, "Tableau.xlsx", "Voici mon tableau.");
     expect(await screen.findByText("Travail envoyé")).toBeInTheDocument();
+  });
+
+  it("un ZIP annoncé « application/x-zip-compressed » par Windows part comme « application/zip »", async () => {
+    const user = userEvent.setup();
+    vi.mocked(rendreExercice).mockResolvedValue({ ok: true, version: 1 });
+    const { container } = afficher(RENDU);
+    await deposer(container, new File([new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0, 0])], "projet.zip", { type: "application/x-zip-compressed" }));
+    await user.click(screen.getByRole("button", { name: "Envoyer mon travail" }));
+    await user.click(within(screen.getByRole("dialog", { name: "Envoyer votre travail ?" })).getByRole("button", { name: "Envoyer" }));
+    await waitFor(() => expect(upload).toHaveBeenCalled());
+    expect((upload.mock.calls[0][1] as Blob).type).toBe("application/zip");
   });
 
   it("un format refusé ou un fichier trop lourd est arrêté dans le navigateur ; un refus de la base retire le fichier déposé", async () => {
@@ -129,6 +143,16 @@ describe("Un exercice avec rendu", () => {
     await user.click(within(v1).getByRole("button", { name: "Télécharger Tableau_ventes.xlsx" }));
     expect(lienRendu).toHaveBeenCalledWith(R);
     expect(await screen.findByText("Ce fichier n’est pas accessible.")).toBeInTheDocument();
+  });
+
+  it("le statut change après l'envoi : le focus passe au titre « Votre travail »", () => {
+    const { rerender } = afficher(RENDU);
+    rerender(
+      <ToastProvider>
+        <ExerciceLecon leconId={L} exercice={{ genre: "rendu", statut: "en_attente", peutDeposer: false, versions: [version()] }} />
+      </ToastProvider>,
+    );
+    expect(screen.getByRole("heading", { name: "Votre travail" })).toHaveFocus();
   });
 
   it("à corriger : la remarque du formateur, puis « Déposer une nouvelle version » ; validé : le commentaire", () => {

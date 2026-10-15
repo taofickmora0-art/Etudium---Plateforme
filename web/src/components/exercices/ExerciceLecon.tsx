@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CheckmarkCircle02Icon } from "@hugeicons/core-free-icons";
 import { Banner } from "@/components/ui/Banner";
@@ -25,12 +25,21 @@ export function ExerciceLecon({ leconId, exercice }: { leconId: string; exercice
   const { toast } = useToast();
   const [termine, setTermine] = useState(exercice.statut === "valide");
   const [enCours, demarrer] = useTransition();
+  // Le bouton ou la zone de dépôt disparaît (terminé, envoyé, corrigé) : le focus passe à l'état de l'exercice.
+  const etatTermine = useRef<HTMLParagraphElement>(null);
+  const titre = useRef<HTMLHeadingElement>(null);
+  const vu = useRef({ termine, statut: exercice.statut });
+  useEffect(() => {
+    if (termine && !vu.current.termine) etatTermine.current?.focus();
+    else if (exercice.statut !== vu.current.statut) titre.current?.focus();
+    vu.current = { termine, statut: exercice.statut };
+  }, [termine, exercice.statut]);
 
   if (exercice.genre === "simple") {
     return (
       <section aria-label="Votre exercice" className={CARTE}>
         {termine ? (
-          <p className="m-0 flex items-center gap-2 text-[15px] leading-[22px] font-medium text-reussite-texte">
+          <p ref={etatTermine} tabIndex={-1} className="m-0 flex items-center gap-2 text-[15px] leading-[22px] font-medium text-reussite-texte outline-none">
             <Icon icon={CheckmarkCircle02Icon} size={20} />
             Exercice terminé
           </p>
@@ -62,7 +71,9 @@ export function ExerciceLecon({ leconId, exercice }: { leconId: string; exercice
   return (
     <section aria-label="Votre travail" className={CARTE}>
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="m-0 text-lg leading-7 font-semibold text-encre max-sm:text-base">Votre travail</h2>
+        <h2 ref={titre} tabIndex={-1} className="m-0 text-lg leading-7 font-semibold text-encre outline-none max-sm:text-base">
+          Votre travail
+        </h2>
         {statut && <Tag tone={TONS_STATUT[statut]}>{LIBELLES_STATUT[statut]}</Tag>}
       </div>
       {statut === "en_attente" && <Banner tone="information" title="Votre travail attend sa correction. Vous recevrez une notification dès qu’il sera corrigé." />}

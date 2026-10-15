@@ -1,8 +1,9 @@
-import type { ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithRef } from "react";
 import { cn } from "@/lib/cn";
 import { controlClasses, isInvalid } from "./TextInput";
 
-type TextareaProps = ComponentPropsWithoutRef<"textarea"> & { invalid?: boolean };
+// La ref (React 19) passe au <textarea> avec le reste : le champ peut reprendre le focus.
+type TextareaProps = ComponentPropsWithRef<"textarea"> & { invalid?: boolean };
 
 /** Zone de texte : même habillage que les champs, hauteur libre, redimensionnable en hauteur. */
 export function Textarea({ invalid, className, rows = 3, "aria-invalid": ariaInvalid, ...props }: TextareaProps) {

@@ -106,6 +106,9 @@ describe("Corriger un travail", () => {
     await user.click(screen.getByRole("button", { name: "Demander une correction" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Expliquez ce qu’il faut corriger.");
     expect(screen.queryByRole("dialog")).toBeNull();
+    // Le champ est signalé et reprend le focus.
+    expect(screen.getByRole("textbox", { name: "Remarque pour l’étudiant" })).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("textbox", { name: "Remarque pour l’étudiant" })).toHaveFocus();
     await user.type(screen.getByRole("textbox", { name: "Remarque pour l’étudiant" }), "Ajoutez le filtre par produit.");
     await user.click(screen.getByRole("button", { name: "Demander une correction" }));
     const fenetre = screen.getByRole("dialog", { name: "Demander une correction ?" });
@@ -129,6 +132,16 @@ describe("Corriger un travail", () => {
     await user.click(within(fenetre).getByRole("button", { name: "Valider l’exercice" }));
     await waitFor(() => expect(corrigerRendu).toHaveBeenLastCalledWith(R, "valide", ""));
     expect(await screen.findByText("Exercice validé")).toBeInTheDocument();
+  });
+
+  it("corrigé (la page relue) : le focus passe au titre « Votre retour »", () => {
+    const { rerender } = afficher();
+    rerender(
+      <ToastProvider>
+        <CorrectionRendu rendu={{ ...RENDU, version: version({ statut: "valide" }) }} />
+      </ToastProvider>,
+    );
+    expect(screen.getByRole("heading", { name: "Votre retour" })).toHaveFocus();
   });
 
   it("un travail déjà corrigé, ou une ancienne version : plus de boutons", () => {

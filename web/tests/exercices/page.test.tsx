@@ -17,6 +17,7 @@ const { ProgrammeLecon } = await import("@/components/lecon/ProgrammeLecon");
 const { ProgrammeMobile } = await import("@/components/lecon/ProgrammeMobile");
 const { FicheConnectee } = await import("@/components/catalogue/FicheConnectee");
 const { ProgrammeFiche, resumeProgramme } = await import("@/components/catalogue/ProgrammeFiche");
+const { elementsInclus } = await import("@/components/catalogue/BlocsFiche");
 const { ouvrirLecon } = await import("@/lib/lecon/actions");
 
 const EXO = "99999999-9999-4999-8999-999999999999";
@@ -102,6 +103,7 @@ describe("Un exercice dans le programme", () => {
 
   it("la fiche : « 2 exercices », le statut dans le programme ; la fiche publique dit « Exercice »", () => {
     expect(resumeProgramme(FICHE)).toContain(" · 2 exercices · ");
+    expect(elementsInclus({ ...FICHE, nbExercices: 1 }).map((e) => e.texte)).toContain("1 exercice pratique, à faire ou à rendre");
     const lignes = EXCEL_OUVERTE.modules.flatMap((m) => m.lecons).map((l) => ({ leconId: l.id, formationId: FICHE.id, termineeLe: null, vueLe: "2026-10-15T08:00:00Z", positionSecondes: 0 }));
     const { unmount } = render(<FicheConnectee fiche={FICHE} progression={etatFormation(FICHE, lignes)} statuts={STATUTS} />);
     expect(screen.getAllByText("2 exercices").length).toBeGreaterThan(0);

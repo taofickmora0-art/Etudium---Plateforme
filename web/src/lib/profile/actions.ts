@@ -133,6 +133,13 @@ export async function deleteAccount(): Promise<void> {
     if (effacement.error) throw new Error("Photos non effacées");
     await supabase.from("profils").update({ photo_url: null }).eq("id", user.id);
   }
+  // Ses travaux rendus (exercices, 0032) : leurs lignes partent, puis leurs fichiers, qui ne sont plus attachés.
+  const rendus = await supabase.rpc("oublier_mes_rendus");
+  const cheminsRendus = rendus.error ? [] : ((rendus.data as string[] | null) ?? []).filter(Boolean);
+  if (cheminsRendus.length > 0) {
+    const effacement = await supabase.storage.from("rendus").remove(cheminsRendus);
+    if (effacement.error) throw new Error("Travaux non effacés");
+  }
   const { error } = await supabase.rpc("supprimer_mon_compte");
   if (error) throw new Error("Suppression refusée");
   await clearLocalSession();

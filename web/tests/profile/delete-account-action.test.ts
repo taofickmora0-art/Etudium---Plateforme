@@ -40,11 +40,18 @@ describe("Supprimer son compte", () => {
     expect(appels).toEqual([
       "photos u1/a.jpg",
       `profil {"photo_url":null}`,
+      "rpc oublier_mes_rendus",
       "rpc supprimer_mon_compte",
       "cookie sb-projet-auth-token",
       "cookie etudium-souvenir",
     ]);
     expect(jar.size).toBe(0);
+  });
+
+  it("ses travaux rendus (exercices) sont effacés avant le compte", async () => {
+    rpc.mockImplementation(async (nom: string) => (appels.push(`rpc ${nom}`), nom === "oublier_mes_rendus" ? { data: ["u1/l1/v1.pdf"], error: null } : { error: null }));
+    await deleteAccount();
+    expect(appels.slice(2, 5)).toEqual(["rpc oublier_mes_rendus", "photos u1/l1/v1.pdf", "rpc supprimer_mon_compte"]);
   });
 
   it("si la base refuse, rien n'est effacé sur l'appareil et l'erreur remonte", async () => {

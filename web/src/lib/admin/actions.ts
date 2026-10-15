@@ -357,6 +357,17 @@ export async function deleteFormation(id: string, espace: EspaceEdition = "admin
 // ─── Programme : modules et leçons ──────────────────────────────────────────
 
 /** Retire du stockage les fichiers des ressources supprimées (après la ligne : voir deleteFormation). */
+/**
+ * Les fichiers rendus par les étudiants (0032) de ces leçons, retirés avant de les supprimer : après, la règle de
+ * l'espace « rendus » ne laisserait plus le correcteur les effacer. Avant la 0032, il n'y a rien à retirer.
+ */
+async function retirerRendus(supabase: Supabase, lecons: string[]) {
+  if (lecons.length === 0) return;
+  const { data, error } = await supabase.rpc("fichiers_rendus", { p_lecons: lecons });
+  const chemins = error ? [] : ((data as string[] | null) ?? []).filter(Boolean);
+  if (chemins.length > 0) await supabase.storage.from("rendus").remove(chemins);
+}
+
 async function retirerFichiers(supabase: Supabase, fichiers: unknown) {
   const chemins = ((fichiers as { fichier: string }[] | null) ?? []).map((r) => r.fichier).filter(Boolean);
   if (chemins.length > 0) await supabase.storage.from("ressources").remove(chemins);
@@ -408,6 +419,8 @@ export async function deleteModule(id: string): Promise<Resultat> {
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { supabase } = garde;
     const { data: fichiers } = await supabase.from("ressources").select("fichier, lecons!inner(module_id)").eq("lecons.module_id", id);
+    const { data: lecons } = await supabase.from("lecons").select("id").eq("module_id", id);
+    await retirerRendus(supabase, ((lecons as { id: string }[] | null) ?? []).map((l) => l.id));
     const { error } = await supabase.from("modules").delete().eq("id", id);
     if (error) return { ok: false, message: ECHEC };
     await retirerFichiers(supabase, fichiers);
@@ -488,6 +501,7 @@ export async function deleteLecon(id: string): Promise<Resultat> {
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { supabase } = garde;
     const { data: fichiers } = await supabase.from("ressources").select("fichier").eq("lecon_id", id);
+    await retirerRendus(supabase, [id]);
     const { error } = await supabase.from("lecons").delete().eq("id", id);
     if (error) return { ok: false, message: ECHEC };
     await retirerFichiers(supabase, fichiers);

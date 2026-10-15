@@ -176,4 +176,26 @@ describe("Migration 0032 : les exercices", () => {
     expect(statuts).toEqual({ [EXO]: "valide", [SIMPLE]: "valide" });
     expect((await banc.en<{ l: unknown[] }>({ id: E2 }, "select public.mes_exercices() as l"))[0].l).toEqual([]);
   });
+
+  it("les fichiers des rendus partent avec la leçon (correcteurs) ou avec le compte (oubli) ; un dépôt sans « owner » passe", async () => {
+    // Les chemins des rendus d'une leçon : pour ses correcteurs seulement.
+    const chemins = async (qui: string) => (await banc.en<{ c: string[] }>({ id: qui }, "select public.fichiers_rendus($1::uuid[]) as c", [[EXO]]))[0].c;
+    expect((await chemins(F)).sort()).toEqual([`${E}/${EXO}/v1.xlsx`, `${E}/${EXO}/v2.xlsx`]);
+    expect(await chemins(G)).toEqual([]);
+    expect(await chemins(E)).toEqual([]);
+    // Un correcteur peut effacer un fichier rendu (avant de supprimer la leçon) ; un autre formateur, non.
+    expect(await banc.en({ id: G }, "delete from storage.objects where bucket_id = 'rendus' and name = $1 returning name", [`${E}/${EXO}/v2.xlsx`])).toEqual([]);
+    expect(await banc.en({ id: F }, "delete from storage.objects where bucket_id = 'rendus' and name = $1 returning name", [`${E}/${EXO}/v2.xlsx`])).toHaveLength(1);
+
+    // Le compte s'efface : ses rendus partent, leurs chemins reviennent pour retirer les fichiers, qu'il peut alors effacer.
+    const oublies = (await banc.en<{ c: string[] }>({ id: E }, "select public.oublier_mes_rendus() as c"))[0].c;
+    expect(oublies.sort()).toEqual([`${E}/${EXO}/v1.xlsx`, `${E}/${EXO}/v2.xlsx`]);
+    expect(await exercice(E, EXO)).toMatchObject({ statut: null, versions: [] });
+    expect(await banc.en({ id: E }, "delete from storage.objects where bucket_id = 'rendus' and name = $1 returning name", [`${E}/${EXO}/v1.xlsx`])).toHaveLength(1);
+
+    // Storage ne remplit plus toujours « owner » : le dossier du compte suffit.
+    const chemin = `${E}/${EXO}/sans-owner.pdf`;
+    await banc.en({ id: E }, "insert into storage.objects (bucket_id, name, metadata) values ('rendus', $1, $2::jsonb)", [chemin, JSON.stringify({ mimetype: "application/pdf", size: 1000 })]);
+    expect(await rendre(E, EXO, chemin, "travail.pdf")).toMatchObject({ version: 1, statut: "en_attente" });
+  });
 });

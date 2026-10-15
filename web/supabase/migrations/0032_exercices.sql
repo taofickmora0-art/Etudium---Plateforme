@@ -154,7 +154,8 @@ as $$
 $$;
 
 -- Privé, 20 Mo, les formats acceptés. Chacun dépose dans son dossier (« <compte>/… ») ; on lit le sien, ou celui d'un
--- rendu que l'on corrige ; on supprime le sien tant qu'aucun rendu ne l'attache.
+-- rendu que l'on corrige ; on supprime le sien tant qu'aucun rendu ne l'attache, et le correcteur ceux de ses rendus
+-- (pour les retirer avant de supprimer la leçon).
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('rendus', 'rendus', false, 20971520, public.formats_rendu())
 on conflict (id) do update
@@ -184,8 +185,10 @@ create policy "rendus : supprimer" on storage.objects
   for delete to authenticated
   using (
     bucket_id = 'rendus'
-    and (storage.foldername(name))[1] = (select auth.uid())::text
-    and not (select public.rendu_attache(objects.name))
+    and (
+      ((storage.foldername(name))[1] = (select auth.uid())::text and not (select public.rendu_attache(objects.name)))
+      or (select public.rendu_lisible(objects.name))
+    )
   );
 
 -- ─── Côté étudiant ──────────────────────────────────────────────────────────────────────────────────
@@ -267,7 +270,8 @@ begin
   end if;
   select o.metadata ->> 'mimetype', (o.metadata ->> 'size')::bigint into v_format, v_taille
   from storage.objects o
-  where o.bucket_id = 'rendus' and o.name = p_fichier and o.owner = v_uid and (storage.foldername(o.name))[1] = v_uid::text;
+  -- Le dossier du compte suffit : seul le compte y dépose (« owner » n'est plus toujours rempli par Storage).
+  where o.bucket_id = 'rendus' and o.name = p_fichier and (storage.foldername(o.name))[1] = v_uid::text;
   if not found or public.rendu_attache(p_fichier) then
     raise exception 'Ce fichier n’a pas été reçu. Déposez-le à nouveau.';
   end if;
@@ -506,6 +510,38 @@ begin
 end;
 $$;
 
+-- ─── Effacer les fichiers avec la leçon, ou avec le compte ─────────────────────────────────────────
+-- Les chemins des fichiers rendus de ces leçons, pour leurs correcteurs : on les retire avant de supprimer les leçons.
+create or replace function public.fichiers_rendus(p_lecons uuid[])
+returns text[]
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(array_agg(r.fichier), '{}'::text[])
+  from public.rendus_exercices r
+  where r.lecon_id = any (p_lecons) and r.fichier is not null and public.editeur_de_lecon(r.lecon_id);
+$$;
+
+-- Le compte s'efface : ses rendus partent, et les chemins de leurs fichiers reviennent pour que l'appli les retire.
+create or replace function public.oublier_mes_rendus()
+returns text[]
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_chemins text[];
+begin
+  with partis as (
+    delete from public.rendus_exercices r where r.profil_id = (select auth.uid()) returning r.fichier
+  )
+  select coalesce(array_agg(fichier) filter (where fichier is not null), '{}'::text[]) into v_chemins from partis;
+  return v_chemins;
+end;
+$$;
+
 -- ─── Droits d'exécution ─────────────────────────────────────────────────────────────────────────────
 revoke execute on function public.genre_exercice_par_defaut() from public, anon, authenticated;
 revoke execute on function public.formats_rendu() from public, anon;
@@ -535,5 +571,9 @@ revoke execute on function public.fichier_rendu(uuid) from public, anon;
 grant execute on function public.fichier_rendu(uuid) to authenticated;
 revoke execute on function public.corriger_rendu(uuid, text, text) from public, anon;
 grant execute on function public.corriger_rendu(uuid, text, text) to authenticated;
+revoke execute on function public.fichiers_rendus(uuid[]) from public, anon;
+grant execute on function public.fichiers_rendus(uuid[]) to authenticated;
+revoke execute on function public.oublier_mes_rendus() from public, anon;
+grant execute on function public.oublier_mes_rendus() to authenticated;
 
 commit;

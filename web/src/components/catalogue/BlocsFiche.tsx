@@ -23,7 +23,10 @@ export function elementsInclus(fiche: FicheFormation): { icone: IconSvgElement; 
   return [
     fiche.nbLecons > 0 && { icone: PlayCircleIcon, texte: duree ? `${nombreDeLecons(fiche.nbLecons)}, ${duree} au total` : nombreDeLecons(fiche.nbLecons) },
     Boolean(fiche.nbQuiz) && { icone: Quiz01Icon, texte: `${nombreDeQuiz(fiche.nbQuiz)} pour vérifier vos acquis` },
-    Boolean(fiche.nbExercices) && { icone: AssignmentsIcon, texte: `${nombreDExercices(fiche.nbExercices)} pratiques, corrigés par le formateur` },
+    Boolean(fiche.nbExercices) && {
+      icone: AssignmentsIcon,
+      texte: `${nombreDExercices(fiche.nbExercices)} ${(fiche.nbExercices ?? 0) > 1 ? "pratiques" : "pratique"}, à faire ou à rendre`,
+    },
     apercu > 0 && { icone: Clock01Icon, texte: `${apercu} ${apercu > 1 ? "leçons" : "leçon"} en aperçu gratuit` },
     { icone: SmartPhone01Icon, texte: "Sur ordinateur et sur téléphone" },
   ].filter((e): e is { icone: IconSvgElement; texte: string } => Boolean(e));

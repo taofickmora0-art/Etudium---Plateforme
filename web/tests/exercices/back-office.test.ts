@@ -8,7 +8,7 @@ const getShellUser = vi.fn();
 vi.mock("@/lib/auth/current-user", () => ({ getShellUser: () => getShellUser(), demoModeActive: () => false }));
 vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 
-const { addLecon, saveLecon } = await import("@/lib/admin/actions");
+const { addLecon, saveLecon, deleteLecon, deleteModule } = await import("@/lib/admin/actions");
 const { getFormationAdmin, getLeconAdmin } = await import("@/lib/admin/data");
 const { listCatalogue } = await import("@/lib/catalogue/data");
 const { IDLE } = await import("@/lib/auth/schemas");
@@ -47,6 +47,24 @@ describe("Créer un exercice", () => {
     faux.vider();
     await saveLecon(IDLE, form({ ...saisie, genre_exercice: "autre" }));
     expect(faux.de("lecons", "update")[0].valeurs).not.toHaveProperty("genre_exercice");
+  });
+});
+
+describe("Supprimer une leçon ou un module : les fichiers rendus partent aussi", () => {
+  it("les chemins des rendus sont demandés et retirés avant la suppression ; avant la 0032, rien ne bloque", async () => {
+    faux.repondre("rpc.fichiers_rendus", { data: [`e/${L}/v1.xlsx`] });
+    expect(await deleteLecon(L)).toEqual({ ok: true });
+    expect(faux.de("rpc", "fichiers_rendus")[0].valeurs).toEqual({ p_lecons: [L] });
+    expect(faux.de("storage.rendus", "remove")[0].valeurs).toEqual([[`e/${L}/v1.xlsx`]]);
+    const ordre = faux.appels.map((a) => `${a.table}.${a.op}`);
+    expect(ordre.indexOf("storage.rendus.remove")).toBeLessThan(ordre.indexOf("lecons.delete"));
+    faux.vider();
+    faux.repondre("lecons.select", { data: [{ id: L }] });
+    faux.repondre("rpc.fichiers_rendus", { error: { code: "PGRST202", message: "Could not find the function" } });
+    expect(await deleteModule(M)).toEqual({ ok: true });
+    expect(faux.de("rpc", "fichiers_rendus")[0].valeurs).toEqual({ p_lecons: [L] });
+    expect(faux.de("storage.rendus", "remove")).toEqual([]);
+    expect(faux.de("modules", "delete")).toHaveLength(1);
   });
 });
 
