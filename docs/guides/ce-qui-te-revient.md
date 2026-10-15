@@ -781,3 +781,27 @@ Aucune migration. Ouvre le site **sans être connecté** (fenêtre de navigation
    - l'étape « abonné » arrivera avec le lot 2 (abonnements et paiement) ;
    - le test complet sur téléphone se fera une fois le site en ligne (le QR Code mène aujourd'hui à `localhost`).
    Tu donneras le feu vert du lancement à ce moment-là.
+
+## 42. Valider la messagerie et la page Aide (lot 5, étape A), 25 minutes
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0035_messagerie.sql` (après la 0034). Elle crée :
+   - les conversations et leurs messages, lus et écrits seulement par les fonctions de la base ;
+   - l'espace de fichiers privé « messages » (10 Mo, les mêmes formats que les rendus d'exercices) ;
+   - la catégorie de notification « Messages ».
+   Avant elle, les pages Messages affichent un bandeau qui renvoie ici. « Contacter l'équipe », sur la page Aide, affiche le même renvoi.
+2. **Étudiant et formateur.** Prends un compte étudiant qui suit une formation de ton compte formateur.
+   - **Côté étudiant, dans Messages** : « Nouveau message ». Choisis le formateur et écris-lui ; joins un PDF ou une image.
+   - **Côté formateur** :
+     - la pastille rouge apparaît sur « Messages » (en moins d'une minute) ;
+     - la notification « Nouveau message de … » arrive ;
+     - réponds, puis télécharge le fichier reçu.
+   - **Depuis la fiche d'un étudiant** (Étudiants, puis un nom) : « Envoyer un message » ouvre la même conversation.
+   - **Une conversation ouverte se met à jour toute seule** (toutes les 10 secondes). Garde les deux comptes ouverts côte à côte pour le voir.
+3. **L'assistance.**
+   - **Côté étudiant** : dans Aide, « Contacter l'équipe ». Choisis un sujet et écris ; le message part dans la conversation « Équipe Étudium » de ses messages.
+   - **Côté équipe, avec ton compte admin** : Back-office, puis « Messages ». Tous les membres de l'équipe voient la demande et y répondent au nom d'« Équipe Étudium ».
+4. **La page Aide.**
+   - La recherche filtre les questions, sans tenir compte des accents ; essaie « prelevement ».
+   - Les questions sur les formules sont celles du design.
+5. **Les préférences.** Dans Mon profil, onglet Notifications, coupe « Messages ». Plus aucune notification de message n'arrive ; la pastille reste.
+6. **La suppression d'un compte de test.** Ses conversations disparaissent des deux côtés, avec leurs fichiers.
