@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type MouseEvent } from "react";
+import { useEffect, useId, useState, type FormEvent, type MouseEvent } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -32,6 +32,9 @@ const EditeurTexte = dynamic(() => import("@/components/communaute/EditeurTexte"
 });
 
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
+const DUREE_ENTIERE = "Minutes et secondes : des nombres entiers (secondes de 0 à 59).";
+// Des chiffres seulement : « 12.40 » dans les minutes serait lu « 12:4:00 » (12 h 04) et la leçon ne se terminerait plus.
+const ENTIER = /^\d*$/;
 
 /** Ce que l'on sait du lien pendant la frappe : reconnu (fournisseur · identifiant) ou non. */
 function aideVideo(lien: string) {
@@ -71,10 +74,23 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
   const [details, setDetails] = useState(false);
   const [modifie, setModifie] = useState(false);
   const [depart, setDepart] = useState<string | null>(null);
+  const [erreurDuree, setErreurDuree] = useState<string | null>(null);
   const video = parseVideoUrl(lien);
   // Envoyée au format « 12:40 » (une durée de plus d'une heure s'écrit « 75:00 »).
   const duree = `${Number(minutes) || 0}:${String(Number(secondes) || 0).padStart(2, "0")}`;
   const changer = () => setModifie(true);
+  const dureeValide = ENTIER.test(minutes.trim()) && ENTIER.test(secondes.trim()) && (Number(secondes) || 0) < 60;
+  // Une erreur dans « Dans cette leçon » : la section s'ouvre pour la montrer.
+  const deplie = details || Boolean(e.resume || e.points_cles || e.titre_court);
+  const soumettre = (evenement: FormEvent<HTMLFormElement>) => {
+    if (!dureeValide) {
+      evenement.preventDefault();
+      setErreurDuree(DUREE_ENTIERE);
+      return;
+    }
+    setErreurDuree(null);
+    envoyer(evenement);
+  };
 
   // Enregistré : plus rien à perdre.
   const [etatVu, setEtatVu] = useState(state);
@@ -85,9 +101,26 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
   // Fermer l'onglet ou recharger avec des changements : le navigateur demande confirmation.
   useEffect(() => {
     if (!modifie) return;
-    const retenir = (evenement: BeforeUnloadEvent) => evenement.preventDefault();
+    const retenir = (evenement: BeforeUnloadEvent) => {
+      evenement.preventDefault();
+      evenement.returnValue = "";
+    };
     window.addEventListener("beforeunload", retenir);
-    return () => window.removeEventListener("beforeunload", retenir);
+    // Tout autre lien de la page (menu, logo…) : la même question que « Retour aux leçons ».
+    const intercepter = (evenement: globalThis.MouseEvent) => {
+      if (evenement.defaultPrevented || evenement.button !== 0 || evenement.metaKey || evenement.ctrlKey || evenement.shiftKey || evenement.altKey) return;
+      const lien = evenement.target instanceof Element ? evenement.target.closest("a[href]") : null;
+      if (!(lien instanceof HTMLAnchorElement) || lien.target === "_blank" || lien.hasAttribute("download")) return;
+      const href = lien.getAttribute("href") ?? "";
+      if (!href || href.startsWith("#")) return;
+      evenement.preventDefault();
+      setDepart(href);
+    };
+    document.addEventListener("click", intercepter, true);
+    return () => {
+      window.removeEventListener("beforeunload", retenir);
+      document.removeEventListener("click", intercepter, true);
+    };
   }, [modifie]);
 
   /** Un lien qui quitte la leçon : avec des changements non enregistrés, on demande d'abord. */
@@ -114,7 +147,7 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
   return (
     <div className="flex min-w-0 flex-col gap-5">
       {/* La barre du haut, qui reste visible pendant qu'on écrit. */}
-      <div className="sticky top-0 z-20 -mx-1 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-bordure-carte bg-page/95 px-1 py-3 backdrop-blur max-sm:gap-y-1.5 max-sm:py-2">
+      <div className="sticky top-[60px] z-20 -mx-1 sm:top-[73px] lg:top-0 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-bordure-carte bg-page/95 px-1 py-3 backdrop-blur max-sm:gap-y-1.5 max-sm:py-2">
         <Link href={retour} onClick={partir(retour)} className="focus-etudium inline-flex min-w-0 items-center gap-1.5 rounded-puce text-[15px] leading-[22px] font-medium text-encre no-underline hover:underline max-sm:text-sm">
           <Icon icon={ArrowLeft01Icon} size={18} className="flex-none" />
           <span className="truncate">
@@ -191,6 +224,8 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
                   type="number"
                   min={0}
                   aria-label="Minutes"
+                  step={1}
+                  inputMode="numeric"
                   value={minutes}
                   onChange={(evenement) => {
                     setMinutes(evenement.target.value);
@@ -206,6 +241,8 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
                   min={0}
                   max={59}
                   aria-label="Secondes"
+                  step={1}
+                  inputMode="numeric"
                   value={secondes}
                   onChange={(evenement) => {
                     setSecondes(evenement.target.value);
@@ -217,9 +254,9 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
               </label>
             </div>
             <input type="hidden" form={formulaire} name="duree" value={duree} />
-            {e.duree && (
+            {(erreurDuree ?? e.duree) && (
               <p role="alert" className="m-0 text-[13px] leading-5 text-erreur-texte">
-                {e.duree}
+                {erreurDuree ?? e.duree}
               </p>
             )}
             <p className="m-0 text-xs leading-[18px] text-discret">Elle sert à mesurer le temps réellement regardé.</p>
@@ -236,7 +273,7 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
           <RessourcesEditor lecon={lecon} variante="colonne" />
         </section>
 
-        <form id={formulaire} onSubmit={envoyer} noValidate className="flex min-w-0 flex-col gap-4 rounded-carte border border-bordure-carte bg-panneau p-6 max-sm:p-4">
+        <form id={formulaire} onSubmit={soumettre} noValidate className="flex min-w-0 flex-col gap-4 rounded-carte border border-bordure-carte bg-panneau p-6 max-sm:p-4">
           <input type="hidden" name="id" value={lecon.id} />
           {/* Un titre long passe à la ligne (la zone grandit avec son texte) ; Entrée n'y ajoute pas de ligne. */}
           <textarea
@@ -275,15 +312,15 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
           <div className="rounded-champ border border-bordure-carte">
             <button
               type="button"
-              aria-expanded={details}
-              onClick={() => setDetails((d) => !d)}
+              aria-expanded={deplie}
+              onClick={() => setDetails(!deplie)}
               className="focus-etudium flex w-full cursor-pointer items-center justify-between gap-2 rounded-champ bg-transparent px-4 py-3 text-left text-[15px] leading-[22px] font-semibold text-encre max-sm:text-sm"
             >
               Dans cette leçon
-              <Icon icon={ArrowDown01Icon} size={18} className={cn("transition-transform", details && "rotate-180")} />
+              <Icon icon={ArrowDown01Icon} size={18} className={cn("transition-transform", deplie && "rotate-180")} />
             </button>
             {/* Repliée, les champs restent dans le formulaire : rien ne se perd à l'enregistrement. */}
-            <div hidden={!details} className="flex flex-col gap-4 border-t border-bordure-carte px-4 py-4">
+            <div hidden={!deplie} className="flex flex-col gap-4 border-t border-bordure-carte px-4 py-4">
               <Field label="Résumé" htmlFor={`${id}-resume`} error={e.resume}>
                 <Textarea id={`${id}-resume`} name="resume" rows={3} defaultValue={valeur("resume", lecon.resume)} maxLength={1000} onChange={changer} />
               </Field>
@@ -309,7 +346,8 @@ export function EditeurLecon({ lecon, base = "/admin/formations" }: EditeurLecon
           const vers = depart;
           setModifie(false);
           setDepart(null);
-          if (vers) router.push(vers);
+          if (vers && /^https?:/.test(vers)) window.location.assign(vers);
+          else if (vers) router.push(vers);
         }}
       />
     </div>

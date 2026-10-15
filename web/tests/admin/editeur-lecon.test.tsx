@@ -149,6 +149,41 @@ describe("L'éditeur de leçon", () => {
     expect(push).toHaveBeenCalledWith("/admin/formations/f1?onglet=programme");
   });
 
+  it("une durée qui n'est pas en nombres entiers est refusée avant l'envoi (revue finale)", async () => {
+    const user = userEvent.setup();
+    afficher();
+    await user.clear(screen.getByRole("spinbutton", { name: "Minutes" }));
+    await user.type(screen.getByRole("spinbutton", { name: "Minutes" }), "12.40");
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect(await screen.findByText("Minutes et secondes : des nombres entiers (secondes de 0 à 59).")).toBeInTheDocument();
+    expect(actions.saveLecon).not.toHaveBeenCalled();
+  });
+
+  it("une erreur dans « Dans cette leçon » déplie la section (revue finale)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.saveLecon).mockResolvedValue({ status: "error", fieldErrors: { points_cles: "20 points clés au plus." } });
+    afficher();
+    expect(screen.getByRole("button", { name: "Dans cette leçon" })).toHaveAttribute("aria-expanded", "false");
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect(await screen.findByText("20 points clés au plus.")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Dans cette leçon" })).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("des changements non enregistrés : un lien du menu demande aussi confirmation (revue finale)", async () => {
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <a href="/accueil">Accueil</a>
+        <EditeurLecon lecon={LECON} />
+      </ToastProvider>,
+    );
+    await user.type(screen.getByRole("textbox", { name: "Titre de la leçon" }), " (modifiée)");
+    await user.click(screen.getByRole("link", { name: "Accueil" }));
+    const fenetre = screen.getByRole("dialog", { name: "Quitter sans enregistrer ?" });
+    await user.click(within(fenetre).getByRole("button", { name: "Quitter" }));
+    expect(push).toHaveBeenCalledWith("/accueil");
+  });
+
   it("la première leçon n'a pas de précédente ; espace formateur : ses adresses", () => {
     afficher({ ...LECON, voisines: { precedente: null, suivante: null }, position: { rang: 1, total: 1, module: { rang: 1, titre: "Les bases" } } }, "/formateur/formations");
     expect(screen.queryByRole("link", { name: "Leçon précédente" })).toBeNull();
