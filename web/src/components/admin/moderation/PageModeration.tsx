@@ -64,7 +64,7 @@ export function PageModeration({
   }
 
   async function agir(e: ElementFile, action: "garder" | "supprimer" | "retablir"): Promise<string | null> {
-    const cible = e.type === "reponse" ? { reponseId: e.id } : { publicationId: e.id };
+    const cible = e.type === "reponse" ? { reponseId: e.id } : e.type === "commentaire_lecon" ? { commentaireLeconId: e.id } : { publicationId: e.id };
     const appel = action === "garder" ? garderContenu(cible) : action === "supprimer" ? supprimerContenu(cible) : retablirPublication(e.id);
     const reponse = await appel.catch(() => ({ ok: false as const, message: ECHEC }));
     if (!reponse.ok) {

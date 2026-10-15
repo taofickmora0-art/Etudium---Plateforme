@@ -64,6 +64,7 @@ export function versReponse(l: Ligne): Reponse {
     jAime: l.j_aime === true,
     modifie: l.modifie === true,
     peutModifier: l.peut_modifier === true,
+    ...(l.formateur === true ? { formateur: true } : {}),
   };
 }
 

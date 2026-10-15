@@ -53,7 +53,8 @@ export function ElementModeration({
   const [suppression, setSuppression] = useState(false);
   const [erreurSuppression, setErreurSuppression] = useState<string>();
   const nom = `${e.auteur.prenom} ${e.auteur.nom}`.trim() || "Membre d’Étudium";
-  const reponse = e.type === "reponse";
+  // Une publication, une réponse de la communauté, ou un commentaire sous une leçon (0028).
+  const genre = e.type === "reponse" ? "Réponse" : e.type === "commentaire_lecon" ? "Commentaire de leçon" : "Publication";
 
   async function agir(action: "garder" | "retablir") {
     setOccupe(true);
@@ -70,15 +71,15 @@ export function ElementModeration({
   }
 
   return (
-    <article aria-label={`${reponse ? "Réponse" : "Publication"} de ${nom}`} className="box-border flex min-w-0 flex-col gap-3 rounded-2xl border border-bordure-carte bg-panneau px-5 py-[18px]">
+    <article aria-label={`${genre} de ${nom}`} className="box-border flex min-w-0 flex-col gap-3 rounded-2xl border border-bordure-carte bg-panneau px-5 py-[18px]">
       <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-        <Tag tone="enAttente">{reponse ? "Réponse" : "Publication"}</Tag>
+        <Tag tone="enAttente">{genre}</Tag>
         <Link href={`/admin/utilisateurs/${e.auteur.id}`} className="focus-etudium min-w-0 text-[15px] leading-[22px] font-semibold wrap-anywhere text-encre no-underline hover:underline">
           {nom}
         </Link>
         <span className="text-[13px] leading-5 text-discret">{`${nomEspace(e.espace)} · ${moment(e.creeLe, maintenant)}`}</span>
       </div>
-      {e.extrait && <p className="m-0 text-[13px] leading-5 wrap-anywhere text-discret">{`En réponse à « ${e.extrait} »`}</p>}
+      {e.extrait && <p className="m-0 text-[13px] leading-5 wrap-anywhere text-discret">{e.type === "commentaire_lecon" ? `Sous la leçon « ${e.extrait} »` : `En réponse à « ${e.extrait} »`}</p>}
       <div className="flex min-w-0 flex-col gap-1.5">
         {e.titre && <h3 className="m-0 text-base leading-6 font-semibold wrap-anywhere text-encre">{e.titre}</h3>}
         <TexteMisEnForme texte={e.texte} className="text-sm leading-[22px] text-texte" />
@@ -126,9 +127,15 @@ export function ElementModeration({
         >
           Supprimer
         </Button>
-        <Link href={`/communaute/publications/${e.publicationId}`} className={`${LIEN} ml-1`}>
-          Ouvrir la publication
-        </Link>
+        {e.type === "commentaire_lecon" ? (
+          <Link href={e.lien ?? "#"} className={`${LIEN} ml-1`}>
+            Ouvrir la leçon
+          </Link>
+        ) : (
+          <Link href={`/communaute/publications/${e.publicationId}`} className={`${LIEN} ml-1`}>
+            Ouvrir la publication
+          </Link>
+        )}
       </div>
       <ConfirmDialog
         open={suppression}

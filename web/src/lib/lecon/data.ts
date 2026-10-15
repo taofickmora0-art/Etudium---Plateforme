@@ -1,5 +1,7 @@
 import { demoModeActive } from "@/lib/auth/current-user";
 import { getFiche } from "@/lib/catalogue/data";
+import { versReponse } from "@/lib/communaute/data";
+import type { Reponse } from "@/lib/communaute/types";
 import { estTablesAbsentes, liste, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import { depuisMultirange } from "@/lib/video/suivi";
@@ -105,4 +107,17 @@ export async function getLeconDans(fiche: FicheFormation, leconId: string, conne
   if (!connecte) return { fiche, lecon, note: null, notesDisponibles: true };
   const [notes, visionnage] = await Promise.all([lireNote(leconId), lecon.accessible ? lireVisionnage(leconId) : null]);
   return { fiche, lecon: { ...lecon, visionnage }, ...notes };
+}
+
+/**
+ * La discussion d'une leçon (0028) : ses 10 derniers commentaires et leurs réponses, et le total. null sans accès,
+ * commentaires fermés, ou avant la 0028 : la page n'affiche pas la section.
+ */
+export async function lireDiscussion(leconId: string): Promise<{ total: number; reponses: Reponse[] } | null> {
+  if (demoModeActive() || !UUID.test(leconId)) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("discussion_lecon", { p_lecon: leconId, p_tout: false });
+  const lue = error ? null : un(data);
+  if (!lue) return null;
+  return { total: Number(lue.total) || 0, reponses: liste(lue.commentaires).map(versReponse) };
 }

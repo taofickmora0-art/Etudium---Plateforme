@@ -38,6 +38,8 @@ export type Reponse = {
   modifie: boolean;
   /** Son auteur, ou l'équipe (migration 0025). */
   peutModifier: boolean;
+  /** Discussions d'une leçon (0028) : l'auteur est le formateur de la formation. */
+  formateur?: boolean;
 };
 
 /** « en_attente » : vue par son auteur (et l'équipe) seulement ; « bloquee » : par l'équipe seule (migration 0020). */

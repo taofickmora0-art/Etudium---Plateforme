@@ -22,11 +22,27 @@ function message(error: Erreur): string {
   return ECHEC;
 }
 
-/** Les paramètres d'une cible ; null si l'identifiant est mal formé. */
+/** Les paramètres d'une cible ; null si l'identifiant est mal formé (un commentaire de leçon a ses propres fonctions). */
 function cibler(cible: CibleModeration) {
+  if ("commentaireLeconId" in cible) return null;
   const id = "publicationId" in cible ? cible.publicationId : cible.reponseId;
   if (!UUID.test(id)) return null;
   return { p_publication: "publicationId" in cible ? id : null, p_commentaire: "reponseId" in cible ? id : null };
+}
+
+type Equipe = Exclude<Awaited<ReturnType<typeof exigerEquipe>>, { erreur: string }>;
+
+/** Garder ou retirer un commentaire de leçon (0028) : ses propres fonctions. */
+async function actionCommentaireLecon(
+  supabase: Equipe["supabase"],
+  fonction: "garder_commentaire_lecon" | "retirer_commentaire_lecon",
+  id: string,
+): Promise<Resultat> {
+  if (!UUID.test(id)) return { ok: false, message: ECHEC };
+  const { error } = await supabase.rpc(fonction, { p_id: id });
+  if (error) return { ok: false, message: message(error) };
+  refresh();
+  return { ok: true };
 }
 
 /** Un onglet de la file. */
@@ -42,6 +58,7 @@ export async function chargerFile(onglet: OngletFile): Promise<{ ok: true; eleme
 export async function garderContenu(cible: CibleModeration): Promise<Resultat> {
   const garde = await exigerEquipe();
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
+  if ("commentaireLeconId" in cible) return actionCommentaireLecon(garde.supabase, "garder_commentaire_lecon", cible.commentaireLeconId);
   const parametres = cibler(cible);
   if (!parametres) return { ok: false, message: ECHEC };
   const { error } = await garde.supabase.rpc("garder_contenu", parametres);
@@ -54,6 +71,7 @@ export async function garderContenu(cible: CibleModeration): Promise<Resultat> {
 export async function supprimerContenu(cible: CibleModeration): Promise<Resultat> {
   const garde = await exigerEquipe();
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
+  if ("commentaireLeconId" in cible) return actionCommentaireLecon(garde.supabase, "retirer_commentaire_lecon", cible.commentaireLeconId);
   const parametres = cibler(cible);
   if (!parametres) return { ok: false, message: ECHEC };
   // Les images d'un sondage (0026), lues avant la suppression ; rien pour un commentaire, ni avant la 0026.

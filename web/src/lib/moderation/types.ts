@@ -30,14 +30,16 @@ export type ContenuAnalyse = {
 
 export type OngletFile = "a_examiner" | "bloquees";
 
-/** Le contenu visé par une action de l'équipe : une publication ou une réponse. */
-export type CibleModeration = { publicationId: string } | { reponseId: string };
+/** Le contenu visé par une action de l'équipe : une publication, une réponse, ou un commentaire de leçon (0028). */
+export type CibleModeration = { publicationId: string } | { reponseId: string } | { commentaireLeconId: string };
 
 /** Un élément de la file : une publication ou une réponse, ses raisons d'y être, le fichier avec un lien temporaire. */
 export type ElementFile = {
-  type: "publication" | "reponse";
+  type: "publication" | "reponse" | "commentaire_lecon";
   id: string;
   publicationId: string;
+  /** Un commentaire de leçon (0028) : l'adresse de la leçon, à son commentaire. */
+  lien?: string | null;
   espace: { id: string | null; nom: string };
   auteur: { id: string; prenom: string; nom: string };
   creeLe: string;

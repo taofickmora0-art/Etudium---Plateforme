@@ -24,9 +24,10 @@ export function versElement(l: Ligne): ElementFile {
   const analyse = un(l.analyse);
   const signalements = un(l.signalements);
   return {
-    type: l.type === "reponse" ? "reponse" : "publication",
+    type: l.type === "reponse" || l.type === "commentaire_lecon" ? l.type : "publication",
     id: texte(l.id),
     publicationId: texte(l.publication_id),
+    ...(l.type === "commentaire_lecon" ? { lien: texteOuNull(l.lien) } : {}),
     espace: { id: texteOuNull(espace?.id), nom: texte(espace?.nom) },
     auteur: { id: texte(auteur?.id), prenom: texte(auteur?.prenom), nom: texte(auteur?.nom) },
     creeLe: texte(l.cree_le),

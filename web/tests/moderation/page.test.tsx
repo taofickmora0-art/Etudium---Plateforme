@@ -148,6 +148,29 @@ describe("La file", () => {
     expect(within(screen.getByRole("article", { name: "Publication de Rodrigue H" })).getByText("Analyse impossible : délai dépassé.")).toBeInTheDocument();
   });
 
+  it("un commentaire de leçon (0028) : son étiquette, la leçon, son lien ; Garder vise le commentaire", async () => {
+    const user = userEvent.setup({ delay: null });
+    vi.mocked(actions.garderContenu).mockResolvedValueOnce({ ok: true });
+    const commentaire = element({
+      type: "commentaire_lecon",
+      id: "c7",
+      publicationId: "",
+      lien: "/formations/excel/lecons/l1#commentaire-c7",
+      espace: { id: null, nom: "Maîtriser Excel" },
+      titre: "",
+      extrait: "Installer les outils",
+      pieceJointe: null,
+      analyse: null,
+    });
+    page([commentaire]);
+    const carte = screen.getByRole("article", { name: "Commentaire de leçon de Jules Kossou" });
+    expect(within(carte).getByText("Commentaire de leçon")).toBeInTheDocument();
+    expect(within(carte).getByText("Sous la leçon « Installer les outils »")).toBeInTheDocument();
+    expect(within(carte).getByRole("link", { name: "Ouvrir la leçon" })).toHaveAttribute("href", "/formations/excel/lecons/l1#commentaire-c7");
+    await user.click(within(carte).getByRole("button", { name: "Garder" }));
+    expect(actions.garderContenu).toHaveBeenCalledWith({ commentaireLeconId: "c7" });
+  });
+
   it("Garder et Supprimer (confirmé) ; Bloquées : Rétablir", async () => {
     const user = userEvent.setup({ delay: null });
     vi.mocked(actions.garderContenu).mockResolvedValueOnce({ ok: true });
