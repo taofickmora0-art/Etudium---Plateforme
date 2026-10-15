@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { moiCommunaute } from "@/components/communaute/ContenuCommunaute";
+import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
+import { BarreHautLecon } from "@/components/lecon/BarreHautLecon";
 import { CadreLecon } from "@/components/lecon/CadreLecon";
 import { EtatLeconProvider } from "@/components/lecon/EtatLecon";
 import { ContenuLecon } from "@/components/lecon/ContenuLecon";
@@ -10,7 +12,7 @@ import { BarreLecon } from "@/components/lecon/NavigationLecon";
 import { ProgrammeLecon } from "@/components/lecon/ProgrammeLecon";
 import { Skeleton } from "@/components/ui/Skeleton";
 import type { Apercu } from "@/components/lecon/BandeauApercu";
-import { ficheApercu } from "@/lib/catalogue/apercu";
+import { ficheApercu, lienModifierLecon } from "@/lib/catalogue/apercu";
 import { getFiche } from "@/lib/catalogue/data";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { compteConnecte } from "@/lib/catalogue/visiteur";
@@ -45,6 +47,7 @@ async function Lecon({ params }: Params) {
   let donnees: DonneesLecon | null;
   let lignes: Awaited<ReturnType<typeof lireProgression>>;
   let moi: Awaited<ReturnType<typeof moiCommunaute>> | null = null;
+  let lienModifier: string | null = null;
   try {
     // Une formation non publiée ne s'ouvre qu'en aperçu, pour l'équipe et son formateur (refonte des formations, §3.5).
     fiche = await getFiche(slug);
@@ -53,7 +56,10 @@ async function Lecon({ params }: Params) {
       apercuFormation = fiche !== null;
     }
     [donnees, lignes] = fiche ? await Promise.all([getLeconDans(fiche, leconId, connecte), connecte ? lireProgression() : null]) : [null, null];
-    moi = connecte && donnees?.discussion ? await moiCommunaute() : null;
+    [moi, lienModifier] = await Promise.all([
+      connecte && donnees?.discussion ? moiCommunaute() : null,
+      connecte && donnees ? lienModifierLecon(donnees.fiche.id, leconId) : null,
+    ]);
   } catch (erreur) {
     return siTablesAbsentes(erreur);
   }
@@ -75,9 +81,17 @@ async function Lecon({ params }: Params) {
         titreFormation={donnees.fiche.titre}
         retour={connecte ? "/mes-formations" : `/formations/${donnees.fiche.slug}`}
         programme={<ProgrammeLecon fiche={donnees.fiche} leconId={leconId} connecte={connecte} terminees={terminees} />}
+        haut={
+          <BarreHautLecon
+            titreFormation={donnees.fiche.titre}
+            adresseFormation={`/formations/${donnees.fiche.slug}`}
+            leconId={leconId}
+            suivante={suivante ? adresseLecon(donnees.fiche.slug, suivante.id) : undefined}
+          />
+        }
         barre={precedente || suivante || actif ? <BarreLecon fiche={donnees.fiche} leconId={leconId} /> : undefined}
       >
-        <ContenuLecon donnees={donnees} connecte={connecte} terminees={terminees} apercu={apercu} moi={moi} />
+        <ContenuLecon donnees={donnees} connecte={connecte} terminees={terminees} apercu={apercu} moi={moi} lienModifier={lienModifier} />
       </CadreLecon>
     </EtatLeconProvider>
   );

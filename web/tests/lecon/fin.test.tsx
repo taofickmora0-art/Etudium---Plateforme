@@ -48,24 +48,24 @@ describe("Bouton de fin d'une leçon", () => {
   it("une leçon sans vidéo se termine par le bouton", async () => {
     terminerLecon.mockResolvedValue({ ok: true });
     render(avec(<BoutonFin leconId={id(2)} variante="ordinateur" />));
-    await userEvent.click(screen.getByRole("button", { name: "Marquer comme terminée" }));
+    await userEvent.click(screen.getByRole("button", { name: "Terminer la leçon" }));
     expect(terminerLecon).toHaveBeenCalledWith(id(2));
-    expect(await screen.findByText("Leçon terminée")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Marquer comme terminée" })).toBeNull();
+    expect(await screen.findByText("Dernière leçon terminée !")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Terminer la leçon" })).toBeNull();
   });
 
   it("un échec est annoncé, et le bouton reste disponible", async () => {
     terminerLecon.mockResolvedValue({ ok: false, erreur: "La leçon n’a pas pu être marquée comme terminée. Réessayez." });
     render(avec(<BoutonFin leconId={id(2)} variante="ordinateur" />));
-    await userEvent.click(screen.getByRole("button", { name: "Marquer comme terminée" }));
+    await userEvent.click(screen.getByRole("button", { name: "Terminer la leçon" }));
     expect(await screen.findByText("La leçon n’a pas pu être marquée comme terminée. Réessayez.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Marquer comme terminée" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Terminer la leçon" })).toBeEnabled();
   });
 
   it("une coupure réseau est annoncée de la même façon", async () => {
     terminerLecon.mockRejectedValue(new TypeError("Failed to fetch"));
     render(avec(<BoutonFin leconId={id(2)} variante="ordinateur" />));
-    await userEvent.click(screen.getByRole("button", { name: "Marquer comme terminée" }));
+    await userEvent.click(screen.getByRole("button", { name: "Terminer la leçon" }));
     expect(await screen.findByText("La leçon n’a pas pu être marquée comme terminée. Réessayez.")).toBeInTheDocument();
   });
 
@@ -79,10 +79,10 @@ describe("Bouton de fin d'une leçon", () => {
         { avecVideo: true },
       ),
     );
-    expect(screen.getByRole("button", { name: "Marquer comme terminée" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Terminer la leçon" })).toBeDisabled();
     expect(screen.getByText("Regardez au moins 90 % de la vidéo")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Valider (lecteur)" }));
-    expect(screen.getByText("Leçon terminée")).toBeInTheDocument();
+    expect(screen.getByText("Dernière leçon terminée !")).toBeInTheDocument();
     expect(screen.queryByText("Regardez au moins 90 % de la vidéo")).toBeNull();
   });
 
@@ -97,7 +97,7 @@ describe("Bouton de fin d'une leçon", () => {
     unmount();
     render(avec(<BoutonFin leconId={id(2)} variante="telephone" suivante="/formations/x/lecons/3" />, { actif: false }));
     expect(screen.getByRole("link", { name: "Leçon suivante" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Marquer comme terminée" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Terminer la leçon" })).toBeNull();
   });
 });
 

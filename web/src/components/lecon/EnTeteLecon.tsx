@@ -1,9 +1,12 @@
 import type { ReactNode } from "react";
-import { Clock01Icon, TeachingIcon } from "@hugeicons/core-free-icons";
+import Link from "next/link";
+import { ArrowLeft01Icon, ArrowRight01Icon, Clock01Icon, PencilEdit02Icon, TeachingIcon } from "@hugeicons/core-free-icons";
+import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
+import { iconButtonVariants } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/Icon";
 import { MetaDot } from "@/components/ui/Progress";
 import type { FicheFormation } from "@/lib/catalogue/types";
-import { dureeLecon, situation } from "@/lib/lecon/regles";
+import { dureeLecon, rangDansFormation, situation, voisines } from "@/lib/lecon/regles";
 import type { LeconDetail } from "@/lib/lecon/types";
 
 const META = "flex flex-wrap items-center gap-[7px] text-sm leading-[22px] text-discret";
@@ -24,17 +27,57 @@ function Meta({ elements, className }: { elements: ReactNode[]; className: strin
   );
 }
 
+/** Une flèche ‹ › vers une voisine ; grisée quand il n'y en a pas. */
+function Fleche({ vers, icone, nom }: { vers: string | null; icone: typeof ArrowLeft01Icon; nom: string }) {
+  const classes = iconButtonVariants({ variant: "discret", size: "sm" });
+  if (!vers) {
+    return (
+      <span aria-hidden="true" className={`${classes} cursor-default opacity-45`}>
+        <Icon icon={icone} size={16} />
+      </span>
+    );
+  }
+  return (
+    <Link href={vers} aria-label={nom} className={`${classes} no-underline`}>
+      <Icon icon={icone} size={16} />
+    </Link>
+  );
+}
+
 /**
  * En-tête de la leçon : un seul h1, 32/40 sur ordinateur (NdLecon §2.5), 20/28 sur téléphone (NdMobLecon §3.3).
- * Ordinateur : module au-dessus, puis formateur, durée et rang dans le module. Téléphone : module et formateur.
+ * Au-dessus (refonte des formations, §1.3) : « Leçon 4 sur 22 », les flèches ‹ › et, pour l'équipe et le formateur de la
+ * formation, « Modifier la leçon ». Ordinateur : module, puis formateur et durée. Téléphone : module et formateur.
  */
-export function EnTeteLecon({ fiche, lecon }: { fiche: FicheFormation; lecon: LeconDetail }) {
+export function EnTeteLecon({ fiche, lecon, lienModifier = null }: { fiche: FicheFormation; lecon: LeconDetail; lienModifier?: string | null }) {
   const ou = situation(fiche.modules, lecon.id);
+  const rang = rangDansFormation(fiche.modules, lecon.id);
+  const { precedente, suivante } = voisines(fiche.modules, lecon.id);
   const nomModule = ou ? `Module ${ou.numero} · ${ou.titreModule}` : "";
   const formateur = fiche.formateur?.nom ?? "";
   const duree = dureeLecon(lecon.dureeSecondes);
   return (
     <div>
+      {(rang || lienModifier) && (
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+          {rang && (
+            <div className="-ml-2 flex items-center gap-1 text-sm leading-[22px] text-discret max-sm:text-[13px]">
+              <Fleche vers={precedente && adresseLecon(fiche.slug, precedente.id)} icone={ArrowLeft01Icon} nom="Aller à la leçon précédente" />
+              <span>{`Leçon ${rang.rang} sur ${rang.total}`}</span>
+              <Fleche vers={suivante && adresseLecon(fiche.slug, suivante.id)} icone={ArrowRight01Icon} nom="Aller à la leçon suivante" />
+            </div>
+          )}
+          {lienModifier && (
+            <Link
+              href={lienModifier}
+              className="focus-etudium ml-auto flex items-center gap-1.5 rounded-champ text-sm leading-[22px] font-medium text-bleu no-underline hover:underline max-sm:text-[13px]"
+            >
+              <Icon icon={PencilEdit02Icon} size={16} />
+              <span>Modifier la leçon</span>
+            </Link>
+          )}
+        </div>
+      )}
       {nomModule && <p className="m-0 text-sm leading-[22px] text-pretty text-discret max-lg:hidden">{nomModule}</p>}
       <h1 className="m-0 text-xl leading-7 font-semibold text-balance text-encre lg:mt-1 lg:text-[32px] lg:leading-10 lg:font-medium lg:tracking-[-0.01em] lg:text-titre">
         {lecon.titre}
@@ -54,7 +97,6 @@ export function EnTeteLecon({ fiche, lecon }: { fiche: FicheFormation; lecon: Le
               <span>{duree}</span>
             </span>
           ),
-          ou && <span>{`Leçon ${ou.rang} sur ${ou.total} de ce module`}</span>,
         ]}
       />
       <Meta className={`${META} mt-1 lg:hidden`} elements={[nomModule && <span>{nomModule}</span>, formateur && <span>{formateur}</span>]} />

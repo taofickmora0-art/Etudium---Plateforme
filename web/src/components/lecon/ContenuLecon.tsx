@@ -26,13 +26,15 @@ type Props = {
   apercu?: Apercu | null;
   /** Le compte connecté, pour les discussions (0028). */
   moi?: MoiCommunaute | null;
+  /** « Modifier la leçon », pour l'équipe et le formateur de la formation. */
+  lienModifier?: string | null;
 };
 
 /**
  * Le contenu de la page leçon (NdLecon, NdMobLecon) : vidéo, en-tête, navigation, onglets et « Dans cette leçon ».
  * Une leçon fermée n'affiche que son verrou, son en-tête et son résumé : jamais la vidéo, le texte ni les fichiers.
  */
-export function ContenuLecon({ donnees, connecte, terminees, apercu = null, moi = null }: Props) {
+export function ContenuLecon({ donnees, connecte, terminees, apercu = null, moi = null, lienModifier = null }: Props) {
   const { fiche, lecon, note, notesDisponibles } = donnees;
   const ouverte = lecon.accessible;
   const ou = situation(fiche.modules, lecon.id);
@@ -74,7 +76,7 @@ export function ContenuLecon({ donnees, connecte, terminees, apercu = null, moi 
           />
         )
       )}
-      <EnTeteLecon fiche={fiche} lecon={lecon} />
+      <EnTeteLecon fiche={fiche} lecon={lecon} lienModifier={lienModifier} />
       {/* Le texte mis en forme dans l'éditeur de leçon (titres, gras, listes, liens), comme les publications. */}
       {ouverte && lecon.texte && <TexteMisEnForme texte={lecon.texte} className="text-[15px] leading-6 text-texte max-sm:text-sm max-sm:leading-[22px]" />}
       <NavigationLecon fiche={fiche} leconId={lecon.id} />

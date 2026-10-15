@@ -2,7 +2,8 @@
 
 import { useTransition } from "react";
 import Link from "next/link";
-import { CheckmarkCircle02Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { useRouter } from "next/navigation";
+import { ArrowRight01Icon, CheckmarkCircle02Icon } from "@hugeicons/core-free-icons";
 import { buttonVariants } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { useToast } from "@/components/ui/Toast";
@@ -12,39 +13,55 @@ import { useEtatLecon } from "./EtatLecon";
 
 type Props = {
   leconId: string;
-  /** Ordinateur : dans la ligne de navigation (NdLecon §2.6). Téléphone : dans la barre basse (NdMobLecon §3.8). */
+  /** Ordinateur : la barre du haut et la ligne de navigation (NdLecon §2.6). Téléphone : la barre basse (NdMobLecon §3.8). */
   variante: "ordinateur" | "telephone";
-  /** Adresse de la leçon suivante (téléphone : le bouton y mène une fois la leçon terminée). */
+  /** Adresse de la leçon suivante : le bouton y mène une fois la leçon terminée. */
   suivante?: string;
+  /** Adresse de la formation : « Voir la formation » après la dernière leçon (ordinateur). */
+  formation?: string;
 };
 
 const ECHEC = "La leçon n’a pas pu être marquée comme terminée. Réessayez.";
 const AIDE = "text-xs leading-[18px] text-discret";
 
 /**
- * « Marquer comme terminée » (spec Q3) : une leçon sans vidéo se termine par ce bouton ; une leçon vidéo se termine en
- * la regardant, et le bouton reste grisé jusque-là. Rien pour un visiteur (aucune progression à enregistrer).
+ * « Terminer la leçon › » (refonte des formations, spec §1.2) : une leçon sans vidéo se termine par ce bouton, qui ouvre
+ * aussitôt la suivante ; une leçon vidéo se termine en la regardant, et le bouton reste grisé jusqu'au seuil. Une fois
+ * la leçon terminée, il devient « Leçon suivante › ». Pour un visiteur (rien à enregistrer), seulement ce lien.
  */
-export function BoutonFin({ leconId, variante, suivante }: Props) {
+export function BoutonFin({ leconId, variante, suivante, formation }: Props) {
   const etat = useEtatLecon();
+  const router = useRouter();
   const { toast } = useToast();
   const [enCours, demarrer] = useTransition();
   const telephone = variante === "telephone";
   // Téléphone : le texte peut passer sur deux lignes (bouton de 48 px), pour tenir à 320 px à côté de « Leçon précédente ».
   const taille = telephone ? "h-12 w-full px-2.5 text-center leading-[18px] whitespace-normal" : "";
+  const fleche = !telephone && <Icon icon={ArrowRight01Icon} size={18} />;
 
   const lienSuivante = suivante && (
     <Link href={suivante} className={cn(buttonVariants(), taille)}>
-      Leçon suivante
+      <span>Leçon suivante</span>
+      {fleche}
     </Link>
   );
-  if (!etat?.actif) return telephone ? lienSuivante || null : null;
-  if (etat.terminee && telephone && lienSuivante) return lienSuivante;
+  if (!etat?.actif) return lienSuivante || null;
+  if (etat.terminee && lienSuivante) return lienSuivante;
   if (etat.terminee) {
-    return (
+    // La dernière leçon : la formation n'est terminée que si toutes les autres le sont, la page du cours le dit.
+    const fin = (
       <span role="status" className={cn(buttonVariants({ variant: "gris" }), "cursor-default hover:bg-coque", taille)}>
         <Icon icon={CheckmarkCircle02Icon} size={18} />
-        <span>Leçon terminée</span>
+        <span>Dernière leçon terminée !</span>
+      </span>
+    );
+    if (telephone || !formation) return fin;
+    return (
+      <span className="flex flex-wrap items-center justify-end gap-2">
+        {fin}
+        <Link href={formation} className={buttonVariants({ variant: "contour" })}>
+          Voir la formation
+        </Link>
       </span>
     );
   }
@@ -60,8 +77,12 @@ export function BoutonFin({ leconId, variante, suivante }: Props) {
         demarrer(async () => {
           try {
             const reponse = await terminerLecon(leconId);
-            if (reponse.ok) etat.marquerTerminee();
-            else toast({ tone: "erreur", title: reponse.erreur });
+            if (!reponse.ok) {
+              toast({ tone: "erreur", title: reponse.erreur });
+              return;
+            }
+            etat.marquerTerminee();
+            if (suivante) router.push(suivante);
           } catch {
             // Coupure réseau : on le dit, au lieu de l'écran d'erreur.
             toast({ tone: "erreur", title: ECHEC });
@@ -70,8 +91,8 @@ export function BoutonFin({ leconId, variante, suivante }: Props) {
       }
       className={cn(buttonVariants(), taille)}
     >
-      {!telephone && <Icon icon={Tick02Icon} size={18} />}
-      <span>Marquer comme terminée</span>
+      <span>Terminer la leçon</span>
+      {fleche}
     </button>
   );
   if (!aide) return bouton;

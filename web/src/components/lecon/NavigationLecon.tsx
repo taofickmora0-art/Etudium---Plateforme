@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft02Icon, ArrowRight02Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
 import { buttonVariants } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
@@ -11,8 +11,8 @@ import { BoutonFin } from "./BoutonFin";
 type Props = { fiche: FicheFormation; leconId: string };
 
 /**
- * Ordinateur (NdLecon §2.6) : « Leçon précédente » à gauche ; à droite, le bouton de fin et « Leçon suivante ».
- * Une voisine absente disparaît.
+ * Ordinateur (NdLecon §2.6) : « Leçon précédente » à gauche ; à droite, « Terminer la leçon › », qui devient « Leçon
+ * suivante › » une fois la leçon terminée (refonte des formations, §1.2). Une voisine absente disparaît.
  */
 export function NavigationLecon({ fiche, leconId }: Props) {
   const { precedente, suivante } = voisines(fiche.modules, leconId);
@@ -25,13 +25,12 @@ export function NavigationLecon({ fiche, leconId }: Props) {
         </Link>
       )}
       <div className="ml-auto flex flex-wrap items-start gap-2">
-        <BoutonFin leconId={leconId} variante="ordinateur" />
-        {suivante && (
-          <Link href={adresseLecon(fiche.slug, suivante.id)} className={buttonVariants({ variant: "contour" })}>
-            <span>Leçon suivante</span>
-            <Icon icon={ArrowRight02Icon} size={18} />
-          </Link>
-        )}
+        <BoutonFin
+          leconId={leconId}
+          variante="ordinateur"
+          suivante={suivante ? adresseLecon(fiche.slug, suivante.id) : undefined}
+          formation={`/formations/${fiche.slug}`}
+        />
       </div>
     </div>
   );

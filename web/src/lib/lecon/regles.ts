@@ -27,6 +27,13 @@ export function voisines(modules: ModuleFiche[], leconId: string): { precedente:
   return { precedente: lecons[i - 1] ?? null, suivante: lecons[i + 1] ?? null };
 }
 
+/** « Leçon 4 sur 22 » : le rang de la leçon dans toute la formation (refonte des formations, spec §1.3). */
+export function rangDansFormation(modules: ModuleFiche[], leconId: string): { rang: number; total: number } | null {
+  const lecons = modules.flatMap((m) => m.lecons);
+  const i = lecons.findIndex((l) => l.id === leconId);
+  return i < 0 ? null : { rang: i + 1, total: lecons.length };
+}
+
 /** « Module 3 · Analyse de données », « Leçon 2 sur 3 de ce module ». */
 export function situation(modules: ModuleFiche[], leconId: string): { numero: number; titreModule: string; rang: number; total: number } | null {
   for (const [index, m] of modules.entries()) {

@@ -51,7 +51,7 @@ describe("Page leçon : contenu", () => {
   it("un compte connecté suit la leçon : titre, vidéo, voisines, onglets et « Dans cette leçon »", () => {
     render(<ContenuLecon donnees={donnees({})} connecte terminees={new Set()} />);
     expect(screen.getByRole("heading", { level: 1, name: "Saisir et mettre en forme des données" })).toBeInTheDocument();
-    expect(screen.getByText("Leçon 2 sur 4 de ce module")).toBeInTheDocument();
+    expect(screen.getByText("Leçon 2 sur 12")).toBeInTheDocument();
     expect(screen.getByText("12 min 30")).toBeInTheDocument();
     // Le lecteur Étudium : bouton central, légende et piste.
     expect(screen.getByRole("button", { name: "Lire la vidéo" })).toBeInTheDocument();

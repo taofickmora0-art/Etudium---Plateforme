@@ -183,6 +183,16 @@ html[data-menu="reduit"] .menu-lateral:not(:hover):not(:has(:focus-visible)) .me
   }
 }
 
+/* « Mode lecture » de la page leçon (BarreHautLecon) : le programme s'efface, le panneau prend toute la largeur. */
+@media (width >= 64rem) {
+  html[data-lecture="1"] .programme-lecon {
+    display: none;
+  }
+  html[data-lecture="1"] .panneau-lecon {
+    margin-left: 1.25rem;
+  }
+}
+
 /* L'éditeur visuel de la communauté (Tiptap) : le texte indicatif quand il est vide. */
 .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);

@@ -20,7 +20,7 @@ vi.mock("@/lib/video/adaptateurs", () => ({ creerAdaptateur: () => new Promise((
 
 const { ContenuLecon } = await import("@/components/lecon/ContenuLecon");
 const { ProgrammeLecon } = await import("@/components/lecon/ProgrammeLecon");
-const { ficheApercu } = await import("@/lib/catalogue/apercu");
+const { ficheApercu, lienModifierLecon } = await import("@/lib/catalogue/apercu");
 const { getFiche } = await import("@/lib/catalogue/data");
 
 const render = (element: ReactElement) => rendre(<ToastProvider>{element}</ToastProvider>);
@@ -123,6 +123,24 @@ describe("Lire une formation en aperçu", () => {
     faux.vider();
     getShellUser.mockResolvedValue(null);
     expect(await ficheApercu("brouillon")).toBeNull();
+    expect(faux.appels).toEqual([]);
+  });
+
+  it("« Modifier la leçon » (étape B) : l'éditeur du back-office pour l'équipe, celui de l'espace formateur pour le formateur de la formation ; rien pour les autres", async () => {
+    getShellUser.mockResolvedValue({ roles: ["etudiant", "moderateur"] });
+    expect(await lienModifierLecon("f1", id(2))).toBe(`/admin/formations/f1/lecons/${id(2)}`);
+    expect(faux.appels).toEqual([]);
+    getShellUser.mockResolvedValue({ roles: ["etudiant", "formateur"] });
+    faux.repondre("rpc.formateur_de", { data: true });
+    expect(await lienModifierLecon("f1", id(2))).toBe(`/formateur/formations/f1/lecons/${id(2)}`);
+    faux.vider();
+    faux.repondre("rpc.formateur_de", { data: false });
+    expect(await lienModifierLecon("f1", id(2))).toBeNull();
+    faux.vider();
+    getShellUser.mockResolvedValue({ roles: ["etudiant"] });
+    expect(await lienModifierLecon("f1", id(2))).toBeNull();
+    getShellUser.mockResolvedValue(null);
+    expect(await lienModifierLecon("f1", id(2))).toBeNull();
     expect(faux.appels).toEqual([]);
   });
 
