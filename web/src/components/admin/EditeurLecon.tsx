@@ -28,6 +28,8 @@ import type { QuestionQuiz } from "@/lib/quiz/types";
 import type { Lecture } from "@/lib/utilisateurs/types";
 import { EditeurQuiz } from "./EditeurQuiz";
 import { RessourcesEditor } from "./RessourcesEditor";
+import { RadioGroup } from "@/components/ui/RadioGroup";
+import type { GenreExercice } from "@/lib/exercices/types";
 import { StatutLecon } from "./StatutLecon";
 import { useFormulaireAdmin } from "./useFormulaireAdmin";
 
@@ -72,11 +74,20 @@ type EditeurLeconProps = {
  */
 export function EditeurLecon({ lecon, base = "/admin/formations", quiz }: EditeurLeconProps) {
   const estQuiz = lecon.type === "quiz";
+  const estExercice = lecon.type === "exercice";
+  // Un quiz ou un exercice (lot 3) n'a ni vidéo ni durée.
+  const sansVideo = estQuiz || estExercice;
+  const mots = estQuiz
+    ? { titre: "Titre du quiz", succes: "Le quiz a bien été mis à jour.", publie: "Quiz publié", brouillon: "Quiz remis en brouillon", details: "Dans ce quiz" }
+    : estExercice
+      ? { titre: "Titre de l’exercice", succes: "L’exercice a bien été mis à jour.", publie: "Exercice publié", brouillon: "Exercice remis en brouillon", details: "Dans cet exercice" }
+      : { titre: "Titre de la leçon", succes: "La leçon a bien été mise à jour.", publie: "Leçon publiée", brouillon: "Leçon remise en brouillon", details: "Dans cette leçon" };
+  const [genre, setGenre] = useState<GenreExercice>(lecon.genreExercice ?? "rendu");
   const id = useId();
   const formulaire = `${id}-lecon`;
   const router = useRouter();
   const { toast } = useToast();
-  const { state, envoyer, pending, erreurs: e, valeur } = useFormulaireAdmin(saveLecon, { succes: estQuiz ? "Le quiz a bien été mis à jour." : "La leçon a bien été mise à jour." });
+  const { state, envoyer, pending, erreurs: e, valeur } = useFormulaireAdmin(saveLecon, { succes: mots.succes });
   const espace = base === "/formateur/formations" ? "formateur" : "admin";
   const racine = `${baseFormations(espace)}/${lecon.formationId}`;
   const retour = `${racine}?onglet=programme`;
@@ -175,7 +186,7 @@ export function EditeurLecon({ lecon, base = "/admin/formations", quiz }: Editeu
       setPubliee(!suivant);
       toast({ tone: "erreur", title: reponse.message ?? ECHEC });
     } else {
-      toast({ tone: "reussite", title: estQuiz ? (suivant ? "Quiz publié" : "Quiz remis en brouillon") : suivant ? "Leçon publiée" : "Leçon remise en brouillon" });
+      toast({ tone: "reussite", title: suivant ? mots.publie : mots.brouillon });
     }
   }
 
@@ -235,11 +246,15 @@ export function EditeurLecon({ lecon, base = "/admin/formations", quiz }: Editeu
         {/* Les réglages : leurs champs appartiennent au formulaire de la leçon (attribut form) ; les documents ont les leurs. */}
         <section aria-label="Réglages" className="flex min-w-0 flex-col gap-5 rounded-carte border border-bordure-carte bg-bleu-clair/60 p-5 max-sm:gap-4 max-sm:p-4 lg:sticky lg:top-[72px]">
           <h2 className="m-0 text-[15px] leading-[22px] font-semibold text-encre">Réglages</h2>
-          {estQuiz ? (
+          {sansVideo ? (
             <>
               <input type="hidden" form={formulaire} name="video" value={lien} />
               <input type="hidden" form={formulaire} name="duree" value={duree} />
-              <p className="m-0 text-[13px] leading-5 text-texte">Le score minimal pour réussir se règle dans les informations de la formation. Les tentatives sont illimitées ; le meilleur score est gardé.</p>
+              <p className="m-0 text-[13px] leading-5 text-texte">
+                {estQuiz
+                  ? "Le score minimal pour réussir se règle dans les informations de la formation. Les tentatives sont illimitées ; le meilleur score est gardé."
+                  : "Les fichiers fournis à l’étudiant (données, modèle) s’ajoutent dans « Documents & fichiers »."}
+              </p>
             </>
           ) : (
           <>
@@ -367,8 +382,8 @@ export function EditeurLecon({ lecon, base = "/admin/formations", quiz }: Editeu
           {/* Un titre long passe à la ligne (la zone grandit avec son texte) ; Entrée n'y ajoute pas de ligne. */}
           <textarea
             name="titre"
-            aria-label={estQuiz ? "Titre du quiz" : "Titre de la leçon"}
-            placeholder={estQuiz ? "Titre du quiz" : "Titre de la leçon"}
+            aria-label={mots.titre}
+            placeholder={mots.titre}
             defaultValue={valeur("titre", lecon.titre)}
             maxLength={120}
             required
@@ -391,9 +406,25 @@ export function EditeurLecon({ lecon, base = "/admin/formations", quiz }: Editeu
             )
           ) : (
             <>
+              {estExercice && (
+                <RadioGroup
+                  label="Genre de l’exercice"
+                  showLabel
+                  name="genre_exercice"
+                  value={genre}
+                  onValueChange={(suivant) => {
+                    setGenre(suivant === "simple" ? "simple" : "rendu");
+                    changer();
+                  }}
+                  options={[
+                    { value: "rendu", label: "Avec rendu : l’étudiant dépose un fichier, que vous corrigez." },
+                    { value: "simple", label: "Simple : l’étudiant le marque comme terminé." },
+                  ]}
+                />
+              )}
               <EditeurTexte
-                etiquette="Texte de la leçon"
-                placeholder="Le texte de la leçon : explications, liens, étapes…"
+                etiquette={estExercice ? "Consigne" : "Texte de la leçon"}
+                placeholder={estExercice ? "La consigne : ce qu’il faut faire, ce qu’il faut rendre…" : "Le texte de la leçon : explications, liens, étapes…"}
                 valeur={texte}
                 onChange={(suivant) => {
                   setTexte(suivant);
@@ -415,13 +446,13 @@ export function EditeurLecon({ lecon, base = "/admin/formations", quiz }: Editeu
               onClick={() => setDetails(!deplie)}
               className="focus-etudium flex w-full cursor-pointer items-center justify-between gap-2 rounded-champ bg-transparent px-4 py-3 text-left text-[15px] leading-[22px] font-semibold text-encre max-sm:text-sm"
             >
-              {estQuiz ? "Dans ce quiz" : "Dans cette leçon"}
+              {mots.details}
               <Icon icon={ArrowDown01Icon} size={18} className={cn("transition-transform", deplie && "rotate-180")} />
             </button>
             {/* Repliée, les champs restent dans le formulaire : rien ne se perd à l'enregistrement. */}
             <div hidden={!deplie} className="flex flex-col gap-4 border-t border-bordure-carte px-4 py-4">
-              {/* Un quiz n'a ni résumé ni points clés : ils restent dans le formulaire, inchangés. */}
-              <div hidden={estQuiz} className="flex flex-col gap-4">
+              {/* Un quiz ou un exercice n'a ni résumé ni points clés : ils restent dans le formulaire, inchangés. */}
+              <div hidden={sansVideo} className="flex flex-col gap-4">
                 <Field label="Résumé" htmlFor={`${id}-resume`} error={e.resume}>
                   <Textarea id={`${id}-resume`} name="resume" rows={3} defaultValue={valeur("resume", lecon.resume)} maxLength={1000} onChange={changer} />
                 </Field>

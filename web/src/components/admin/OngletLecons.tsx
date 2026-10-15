@@ -60,15 +60,18 @@ const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? "s" : ""}`;
 const resumeLecon = (l: LeconResume) =>
   (l.type === "quiz"
     ? ["Quiz", l.nbQuestions !== undefined && pluriel(l.nbQuestions, "question"), l.apercu && "Aperçu"]
+    : l.type === "exercice"
+      ? [l.genreExercice === "simple" ? "Exercice simple" : "Exercice avec rendu", l.apercu && "Aperçu"]
     : [formatDuree(l.dureeSecondes) || "Durée à saisir", l.aVideo ? "Vidéo" : "Sans vidéo", l.apercu && "Aperçu"]
   )
     .filter(Boolean)
     .join(" · ");
 
-/** « 3 leçons · 1 quiz » : les quiz sont comptés à part (lot 3). */
+/** « 3 leçons · 1 quiz · 2 exercices » : les quiz et les exercices sont comptés à part (lot 3). */
 const compteLecons = (lecons: LeconResume[]) => {
   const quiz = lecons.filter((l) => l.type === "quiz").length;
-  return pluriel(lecons.length - quiz, "leçon") + (quiz > 0 ? ` · ${quiz} quiz` : "");
+  const exercices = lecons.filter((l) => l.type === "exercice").length;
+  return pluriel(lecons.length - quiz - exercices, "leçon") + (quiz > 0 ? ` · ${quiz} quiz` : "") + (exercices > 0 ? ` · ${pluriel(exercices, "exercice")}` : "");
 };
 
 /** « Ses 2 leçons… », « Sa leçon… », « Cette section est vide. » */
@@ -104,7 +107,8 @@ function FenetreTitre({
   const formulaire = `${id}-formulaire`;
   const [type, setType] = useState("lecon");
   const quiz = avecType && type === "quiz";
-  const { state, envoyer, pending, erreurs, valeur } = useFormulaireAdmin(action, { succes: quiz ? "Quiz créé" : succes });
+  const exercice = avecType && type === "exercice";
+  const { state, envoyer, pending, erreurs, valeur } = useFormulaireAdmin(action, { succes: quiz ? "Quiz créé" : exercice ? "Exercice créé" : succes });
   // Une fois enregistré, la fenêtre se ferme (une leçon créée ouvre aussi sa page).
   useEffect(() => {
     if (state.status === "success") onOpenChange(false);
@@ -140,10 +144,11 @@ function FenetreTitre({
             options={[
               { value: "lecon", label: "Leçon" },
               { value: "quiz", label: "Quiz" },
+              { value: "exercice", label: "Exercice" },
             ]}
           />
         )}
-        <Field label={quiz ? "Titre du quiz" : label} htmlFor={`${id}-titre`} error={erreurs.titre}>
+        <Field label={quiz ? "Titre du quiz" : exercice ? "Titre de l’exercice" : label} htmlFor={`${id}-titre`} error={erreurs.titre}>
           <TextInput id={`${id}-titre`} name="titre" defaultValue={valeur("titre", valeurInitiale)} maxLength={120} autoFocus />
         </Field>
       </form>
@@ -542,15 +547,17 @@ export function OngletLecons({ formation, base = "/admin/formations" }: OngletLe
         tone="danger"
         icon={Delete02Icon}
         iconTone="danger"
-        title={supprimeeLecon?.type === "quiz" ? "Supprimer ce quiz ?" : "Supprimer cette leçon ?"}
+        title={supprimeeLecon?.type === "quiz" ? "Supprimer ce quiz ?" : supprimeeLecon?.type === "exercice" ? "Supprimer cet exercice ?" : "Supprimer cette leçon ?"}
         description={
           supprimeeLecon?.type === "quiz"
             ? `« ${supprimeeLecon.titre} » : ses questions et les résultats des étudiants seront supprimés.`
-            : `« ${supprimeeLecon?.titre ?? ""} » : sa vidéo, son texte et ses documents seront supprimés.`
+            : supprimeeLecon?.type === "exercice"
+              ? `« ${supprimeeLecon.titre} » : sa consigne, ses documents et les travaux rendus par les étudiants seront supprimés.`
+              : `« ${supprimeeLecon?.titre ?? ""} » : sa vidéo, son texte et ses documents seront supprimés.`
         }
         confirmLabel="Supprimer"
         errorMessage={erreurSuppression}
-        onConfirm={supprimer(() => (supprimeeLecon ? deleteLecon(supprimeeLecon.id) : Promise.resolve({ ok: true })), supprimeeLecon?.type === "quiz" ? "Quiz supprimé" : "Leçon supprimée")}
+        onConfirm={supprimer(() => (supprimeeLecon ? deleteLecon(supprimeeLecon.id) : Promise.resolve({ ok: true })), supprimeeLecon?.type === "quiz" ? "Quiz supprimé" : supprimeeLecon?.type === "exercice" ? "Exercice supprimé" : "Leçon supprimée")}
       />
     </div>
   );
