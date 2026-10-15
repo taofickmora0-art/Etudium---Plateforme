@@ -211,11 +211,32 @@ describe("Contacts", () => {
 });
 
 describe("Suppression du compte", () => {
-  it("les conversations de l'étudiante partent ; ses fichiers sont rendus pour être effacés", async () => {
+  it("les conversations de l'étudiante partent avec leurs fichiers, des deux côtés", async () => {
+    // Le formateur a joint un fichier à leur conversation : il part aussi, et l'étudiante peut l'effacer.
+    const sien = `${F}/${CE}/${randomUUID()}.pdf`;
+    await deposer(F, sien, "application/pdf");
+    await envoyer(F, CE, "Le corrigé", sien, "corrige.pdf");
+    const effacer = async (qui: string, chemin: string) =>
+      (await banc.en({ id: qui }, "delete from storage.objects where bucket_id = 'messages' and name = $1 returning name", [chemin])).length;
+    expect(await effacer(E, sien)).toBe(0); // tant que la conversation existe, chacun n'efface que son dossier
     const chemins = (await banc.en<{ c: string[] }>({ id: E }, "select public.oublier_mes_messages() as c"))[0].c;
-    expect(chemins.length).toBeGreaterThanOrEqual(2);
-    expect(chemins.every((c) => c.startsWith(`${E}/`))).toBe(true);
+    expect(chemins.filter((c) => c.startsWith(`${E}/`)).length).toBeGreaterThanOrEqual(2);
+    expect(chemins).toContain(sien);
     expect(await liste(F, "formateur")).toEqual([]);
     expect((await liste(A, "equipe")).some((c) => c.id === CA)).toBe(false);
+    expect(await effacer(X, sien)).toBe(0); // noté pour elle seule
+    expect(await effacer(E, sien)).toBe(1);
+    expect(await effacer(E, chemins.find((c) => c.startsWith(`${E}/`))!)).toBe(1);
+  });
+
+  it("un fichier joint à une conversation qui existe encore ne s'efface que par son auteur", async () => {
+    const conv = await ouvrir(X, G);
+    const sien = `${G}/${conv}/${randomUUID()}.pdf`;
+    await deposer(G, sien, "application/pdf");
+    await envoyer(G, conv, "", sien, "plan.pdf");
+    const effacer = async (qui: string) =>
+      (await banc.en({ id: qui }, "delete from storage.objects where bucket_id = 'messages' and name = $1 returning name", [sien])).length;
+    expect(await effacer(E)).toBe(0);
+    expect(await effacer(X)).toBe(0);
   });
 });

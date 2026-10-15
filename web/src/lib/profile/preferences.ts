@@ -1,4 +1,5 @@
-// Onglet Notifications du profil (NdProfil) : 8 catégories et 2 canaux, rangés dans `profils.preferences_notifications`.
+// Onglet Notifications du profil (NdProfil) : les 8 catégories du design, plus « Messages » (lot 5), et 2 canaux, rangés
+// dans `profils.preferences_notifications`.
 
 export const NOTIFICATION_CATEGORIES = [
   { key: "nouveaux_contenus", label: "Nouveaux contenus", description: "Nouvelles leçons dans vos parcours" },
@@ -7,6 +8,7 @@ export const NOTIFICATION_CATEGORIES = [
   { key: "exercices", label: "Exercices", description: "Corrections et remarques de vos formateurs" },
   { key: "rappels_apprentissage", label: "Rappels d’apprentissage", description: "Pour garder votre série active" },
   { key: "communaute", label: "Communauté", description: "Réponses et mentions dans vos publications" },
+  { key: "messages", label: "Messages", description: "Messages de vos formateurs et de l’équipe" },
   { key: "recommandations", label: "Recommandations", description: "Formations suggérées selon votre progression" },
   { key: "annonces", label: "Annonces", description: "Nouveautés d’Étudium" },
 ] as const;

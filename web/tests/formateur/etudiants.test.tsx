@@ -30,6 +30,10 @@ vi.mock("next/navigation", () => ({
 const lireLot3Etudiant = vi.fn();
 vi.mock("@/lib/certificats/data", () => ({ lireLot3Etudiant: (id: string) => lireLot3Etudiant(id) }));
 
+// Lot 5 : écrire à l'étudiant depuis sa fiche.
+const ouvrirConversation = vi.fn();
+vi.mock("@/lib/messages/actions", () => ({ ouvrirConversation: (id: string) => ouvrirConversation(id) }));
+
 const { PageEtudiants } = await import("@/components/formateur/PageEtudiants");
 const { ListeEtudiants } = await import("@/components/formateur/ListeEtudiants");
 const { FicheEtudiant } = await import("@/components/formateur/FicheEtudiant");
@@ -75,7 +79,7 @@ const SUIVI: SuiviEtudiant = {
 const avecToast = (enfant: React.ReactNode) => render(<ToastProvider>{enfant}</ToastProvider>);
 
 beforeEach(() => {
-  for (const f of [lireMaFiche, lireSuivi, lireSuiviEtudiant, listFormations, chercherSuivi, enregistrerRemarque, routeur.push, routeur.replace]) f.mockReset();
+  for (const f of [lireMaFiche, lireSuivi, lireSuiviEtudiant, listFormations, chercherSuivi, enregistrerRemarque, ouvrirConversation, routeur.push, routeur.replace]) f.mockReset();
   lireMaFiche.mockResolvedValue({ migrationAbsente: false, fiche: "fa" });
   lireSuivi.mockResolvedValue({ migrationAbsente: false, donnees: PAGE });
   listFormations.mockResolvedValue([{ id: X, titre: "Maîtriser Microsoft Excel" }]);
@@ -166,6 +170,20 @@ describe("Fiche d'un étudiant", () => {
     expect(screen.getAllByRole("heading", { level: 3, name: "Intro" })).toHaveLength(2);
     expect(erreurs.mock.calls.some((c) => String(c[0]).includes("same key"))).toBe(false);
     erreurs.mockRestore();
+  });
+
+  it("« Envoyer un message » ouvre la conversation avec l'étudiant dans les messages ; un refus s'affiche", async () => {
+    const user = userEvent.setup();
+    lireSuiviEtudiant.mockResolvedValue({ migrationAbsente: false, donnees: SUIVI });
+    ouvrirConversation.mockResolvedValue({ ok: true, id: "c1" });
+    avecToast(await FicheEtudiant({ id: E }));
+    await user.click(screen.getByRole("button", { name: "Envoyer un message" }));
+    expect(ouvrirConversation).toHaveBeenCalledWith(E);
+    await waitFor(() => expect(routeur.push).toHaveBeenCalledWith("/formateur/messages?c=c1"));
+    ouvrirConversation.mockResolvedValue({ ok: false, message: "Vous ne pouvez pas écrire à cette personne." });
+    await user.click(screen.getByRole("button", { name: "Envoyer un message" }));
+    expect(await screen.findByText("Vous ne pouvez pas écrire à cette personne.")).toBeInTheDocument();
+    expect(routeur.push).toHaveBeenCalledTimes(1);
   });
 
   it("un compte qui ne suit aucune de ses formations : page introuvable", async () => {

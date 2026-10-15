@@ -22,7 +22,7 @@ describe("Listes du profil", () => {
 describe("Préférences de notification", () => {
   it("les préférences manquantes sont activées", () => {
     const toutes = readPreferences({});
-    expect(Object.keys(toutes)).toHaveLength(10);
+    expect(Object.keys(toutes)).toHaveLength(11);
     expect(Object.values(toutes).every(Boolean)).toBe(true);
     const lues = readPreferences({ recommandations: false, inconnue: false });
     expect(lues.recommandations).toBe(false);
@@ -31,7 +31,7 @@ describe("Préférences de notification", () => {
     expect(Object.values(readPreferences("x")).every(Boolean)).toBe(true);
   });
 
-  it("les 8 catégories et les 2 canaux du design", () => {
+  it("les 8 catégories du design, plus « Messages » (lot 5), et les 2 canaux", () => {
     expect(NOTIFICATION_CATEGORIES.map((c) => c.key)).toEqual([
       "nouveaux_contenus",
       "sessions_live",
@@ -39,10 +39,12 @@ describe("Préférences de notification", () => {
       "exercices",
       "rappels_apprentissage",
       "communaute",
+      "messages",
       "recommandations",
       "annonces",
     ]);
     expect(NOTIFICATION_CATEGORIES[1]).toEqual({ key: "sessions_live", label: "Sessions live", description: "Programmation et rappels 1 h avant" });
+    expect(NOTIFICATION_CATEGORIES[6]).toEqual({ key: "messages", label: "Messages", description: "Messages de vos formateurs et de l’équipe" });
     expect(CHANNELS.map((c) => c.label)).toEqual(["Notifications dans l’appli", "Notifications push"]);
   });
 

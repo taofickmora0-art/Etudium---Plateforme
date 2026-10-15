@@ -21,9 +21,10 @@ describe("Onglet Notifications", () => {
     vi.mocked(updatePreferences).mockReset();
   });
 
-  it("les 8 catégories, les canaux et l'e-mail toujours actif", () => {
+  it("les 9 catégories, les canaux et l'e-mail toujours actif", () => {
     afficher();
-    expect(screen.getAllByRole("switch")).toHaveLength(10);
+    expect(screen.getAllByRole("switch")).toHaveLength(11);
+    expect(screen.getByRole("switch", { name: "Messages" })).toHaveAccessibleDescription("Messages de vos formateurs et de l’équipe");
     expect(screen.getByRole("switch", { name: "Sessions live" })).toHaveAccessibleDescription("Programmation et rappels 1 h avant");
     expect(screen.getByText("Toujours actif")).toBeInTheDocument();
   });

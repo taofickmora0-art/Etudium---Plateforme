@@ -490,8 +490,17 @@ end;
 $$;
 
 -- ─── La suppression d'un compte ─────────────────────────────────────────────────────────────────────
--- Ses conversations (comme étudiant ou formateur) partent, des deux côtés. Ses fichiers sont rendus pour être effacés
--- de l'espace « messages » ; ceux qu'il a joints à l'assistance comme membre de l'équipe sont détachés.
+-- Ses conversations (comme étudiant ou formateur) partent, des deux côtés, avec tous leurs fichiers : ils sont rendus
+-- pour être effacés de l'espace « messages ». Ceux de l'autre personne sont notés dans `messages_fichiers_a_effacer`,
+-- ce qui permet à l'appelant, et à lui seul, de les effacer. Ceux qu'il a joints à l'assistance comme membre de
+-- l'équipe sont détachés et rendus aussi.
+create table if not exists public.messages_fichiers_a_effacer (
+  chemin text primary key,
+  par uuid not null references public.profils (id) on delete cascade
+);
+alter table public.messages_fichiers_a_effacer enable row level security;
+revoke all on public.messages_fichiers_a_effacer from public, anon, authenticated;
+
 create or replace function public.oublier_mes_messages()
 returns text[]
 language plpgsql
@@ -507,7 +516,12 @@ begin
   end if;
   select coalesce(array_agg(m.fichier), '{}') into v_chemins
   from public.messages m
-  where m.fichier is not null and (storage.foldername(m.fichier))[1] = v_uid::text;
+  join public.conversations c on c.id = m.conversation_id
+  where m.fichier is not null
+    and (c.etudiant_id = v_uid or c.formateur_id = v_uid or (storage.foldername(m.fichier))[1] = v_uid::text);
+  insert into public.messages_fichiers_a_effacer (chemin, par)
+  select f, v_uid from unnest(v_chemins) f where (storage.foldername(f))[1] <> v_uid::text
+  on conflict (chemin) do update set par = excluded.par;
   delete from public.conversations where etudiant_id = v_uid or formateur_id = v_uid;
   delete from public.messages where fichier = any (v_chemins) and texte = '';
   update public.messages set fichier = null, nom_fichier = '', format = '', taille_octets = 0 where fichier = any (v_chemins);
@@ -527,8 +541,20 @@ as $$
   select exists (select 1 from public.messages m where m.fichier = p_nom and public.cote_conversation(m.conversation_id) is not null);
 $$;
 
+-- Un fichier de l'autre personne, noté par `oublier_mes_messages` quand l'appelant supprime son compte.
+create or replace function public.message_a_effacer(p_nom text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (select 1 from public.messages_fichiers_a_effacer a where a.chemin = p_nom and a.par = (select auth.uid()));
+$$;
+
 -- Privé, 10 Mo, les formats des rendus. Chacun dépose et supprime dans son dossier (« <compte>/… ») ; on lit le sien,
--- ou un fichier joint à une conversation dont on est participant.
+-- ou un fichier joint à une conversation dont on est participant. Qui supprime son compte lit et efface aussi les
+-- fichiers que l'autre personne avait joints à leurs conversations (le stockage n'efface que ce qu'on peut lire).
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('messages', 'messages', false, 10485760, public.formats_rendu())
 on conflict (id) do update
@@ -550,13 +576,20 @@ create policy "messages : lire" on storage.objects
   for select to authenticated
   using (
     bucket_id = 'messages'
-    and ((storage.foldername(name))[1] = (select auth.uid())::text or (select public.message_lisible(objects.name)))
+    and (
+      (storage.foldername(name))[1] = (select auth.uid())::text
+      or (select public.message_lisible(objects.name))
+      or (select public.message_a_effacer(objects.name))
+    )
   );
 
 drop policy if exists "messages : supprimer" on storage.objects;
 create policy "messages : supprimer" on storage.objects
   for delete to authenticated
-  using (bucket_id = 'messages' and (storage.foldername(name))[1] = (select auth.uid())::text);
+  using (
+    bucket_id = 'messages'
+    and ((storage.foldername(name))[1] = (select auth.uid())::text or (select public.message_a_effacer(objects.name)))
+  );
 
 -- ─── Droits ─────────────────────────────────────────────────────────────────────────────────────────
 revoke execute on function public.suit_formation_de(uuid, uuid) from public, anon, authenticated;
@@ -568,6 +601,8 @@ revoke execute on function public.resume_conversation(public.conversations, text
 revoke execute on function public.conversations_de(text) from public, anon, authenticated;
 revoke execute on function public.message_lisible(text) from public, anon;
 grant execute on function public.message_lisible(text) to authenticated;
+revoke execute on function public.message_a_effacer(text) from public, anon;
+grant execute on function public.message_a_effacer(text) to authenticated;
 revoke execute on function public.mes_conversations(text) from public, anon;
 grant execute on function public.mes_conversations(text) to authenticated;
 revoke execute on function public.messages_non_lus(text) from public, anon;

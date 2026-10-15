@@ -8,6 +8,7 @@ import { dureeVideo, ETATS_SUIVI, TON_SUIVI } from "@/lib/formateur/regles-suivi
 import { lireSuiviEtudiant, type LeconSuivie } from "@/lib/formateur/suivi";
 import { dateCourte, nomAffiche } from "@/lib/utilisateurs/regles";
 import { MigrationFormateurAbsente, MigrationSuiviAbsente, RACINE_FORMATEUR, SansFiche } from "./cadre";
+import { EcrireEtudiant } from "./EcrireEtudiant";
 import { RemarqueEtudiant } from "./RemarqueEtudiant";
 import { lireLot3Etudiant } from "@/lib/certificats/data";
 import type { Lot3Etudiant } from "@/lib/certificats/types";
@@ -44,8 +45,8 @@ function SuiviLot3({ titre, suivi }: { titre: string; suivi: Lot3Etudiant | unde
 
 /**
  * La fiche d'un étudiant, dans l'espace formateur (spec, §3) : pour chacune des formations du formateur qu'il suit,
- * la progression leçon par leçon et le temps de vidéo ; puis la remarque privée. Un compte qui ne suit aucune de ses
- * formations donne la page introuvable. La page vérifie le rôle avant (requireSpace).
+ * la progression leçon par leçon et le temps de vidéo ; puis la remarque privée. « Envoyer un message » ouvre la
+ * conversation avec lui (lot 5). Un compte qui ne suit aucune de ses formations donne la page introuvable. La page vérifie le rôle avant (requireSpace).
  */
 export async function FicheEtudiant({ id }: { id: string }) {
   const fiche = await lireMaFiche();
@@ -79,7 +80,7 @@ export async function FicheEtudiant({ id }: { id: string }) {
   const lot3 = (await lireLot3Etudiant(id).catch(() => [])) ?? [];
 
   return (
-    <PageAdmin titre={nom} racine={RACINE_FORMATEUR} fil={[ETUDIANTS, { label: nom }]}>
+    <PageAdmin titre={nom} racine={RACINE_FORMATEUR} fil={[ETUDIANTS, { label: nom }]} action={<EcrireEtudiant etudiantId={etudiant.id} />}>
       <div className="flex max-w-[760px] min-w-0 flex-col gap-5">
         {etudiant.formations.map((f) => (
           <Section key={f.id} titre={f.titre}>
