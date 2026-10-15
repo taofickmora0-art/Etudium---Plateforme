@@ -2,6 +2,7 @@ import { ImageResponse } from "next/og";
 import { adresseVerification } from "@/lib/certificats/adresse";
 import { matriceQr } from "@/lib/certificats/qr";
 import type { Certificat } from "@/lib/certificats/types";
+import { dateLongue } from "./dates";
 
 // Le certificat de réussite (NdCertificat) en image : A4 paysage à 150 points par pouce. Il sert aussi au PDF.
 
@@ -11,12 +12,6 @@ const BLEU = "#0B18C9";
 const ENCRE = "#1D1D1F";
 const DISCRET = "#667085";
 const HEXAGONE = "15,4 24.5,9.5 24.5,20.5 15,26 5.5,20.5 5.5,9.5";
-
-/** « 15 octobre 2026 ». */
-export function dateLongue(jour: string): string {
-  const date = new Date(`${jour}T12:00:00Z`);
-  return Number.isNaN(date.getTime()) ? jour : new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(date);
-}
 
 /** Le QR Code en un seul tracé (une case = un carré), avec sa marge blanche de 4 cases. */
 function QrCode({ adresse, taille }: { adresse: string; taille: number }) {

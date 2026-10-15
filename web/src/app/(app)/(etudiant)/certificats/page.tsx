@@ -1,7 +1,47 @@
-import { ComingSoon, comingSoonMetadata } from "@/components/layout/ComingSoon";
+import { Suspense } from "react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { ListeCertificats } from "@/components/certificats/ListeCertificats";
+import { SessionGuard } from "@/components/layout/SessionGuard";
+import { Banner } from "@/components/ui/Banner";
+import { buttonVariants } from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { Heading, Lead } from "@/components/ui/Text";
+import { lireMesCertificats, MIGRATION_CERTIFICATS } from "@/lib/certificats/data";
 
-export const metadata = comingSoonMetadata("certificats");
+export const metadata: Metadata = { title: "Certificats · Étudium" };
 
+async function Contenu() {
+  const lecture = await lireMesCertificats();
+  if (lecture.migrationAbsente) {
+    return (
+      <Banner tone="attention" title="Les certificats ne sont pas encore dans la base.">
+        {MIGRATION_CERTIFICATS}
+      </Banner>
+    );
+  }
+  return <ListeCertificats page={lecture.donnees} />;
+}
+
+/** Certificats (lot 3, étape C ; NdCertificats) : obtenus, et en préparation. */
 export default function Page() {
-  return <ComingSoon page="certificats" />;
+  return (
+    <div className="flex max-w-[960px] min-w-0 flex-col gap-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1 basis-[260px]">
+          <Heading level="page">Certificats</Heading>
+          <Lead className="mt-2.5">Chaque certificat porte un QR Code qui permet de vérifier son authenticité.</Lead>
+        </div>
+        <Link href="/verifier" className={buttonVariants({ variant: "contour" })}>
+          Vérifier un certificat
+        </Link>
+      </div>
+      <Suspense fallback={<Skeleton className="h-60 rounded-carte" />}>
+        <Contenu />
+      </Suspense>
+      <Suspense fallback={null}>
+        <SessionGuard />
+      </Suspense>
+    </div>
+  );
 }

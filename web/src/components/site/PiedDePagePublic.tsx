@@ -3,11 +3,17 @@ import { LogoMark } from "@/components/brand/Logo";
 
 /**
  * Colonnes du pied de page (NdLanding, NdCataloguePublic) : seulement les pages qui existent. Parcours, Tarifs,
- * Questions fréquentes et Communauté arrivent avec la landing (1.12), « Vérifier un certificat » au lot 3, « Contact »
+ * Questions fréquentes et Communauté arrivent avec la landing (1.12), « Contact »
  * avec l'adresse de contact.
  */
 const COLONNES = [
-  { titre: "Plateforme", liens: [{ href: "/formations", label: "Formations" }] },
+  {
+    titre: "Plateforme",
+    liens: [
+      { href: "/formations", label: "Formations" },
+      { href: "/verifier", label: "Vérifier un certificat" },
+    ],
+  },
   {
     titre: "Légal",
     liens: [

@@ -7,9 +7,12 @@ import { cn } from "@/lib/cn";
 
 /**
  * Pages publiques montrées dans l'en-tête : seulement celles qui existent. Parcours, Tarifs et Communauté arrivent
- * avec la landing (tâche 1.12), « Vérifier un certificat » au lot 3.
+ * avec la landing (tâche 1.12).
  */
-const LIENS = [{ href: "/formations", label: "Formations" }];
+const LIENS = [
+  { href: "/formations", label: "Formations" },
+  { href: "/verifier", label: "Vérifier un certificat" },
+];
 
 const LIEN = "focus-etudium flex h-[49px] items-center rounded-[14px] px-3.5 text-base font-medium text-texte no-underline transition-colors hover:bg-coque";
 
