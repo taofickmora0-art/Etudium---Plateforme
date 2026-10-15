@@ -618,3 +618,21 @@ Aucune migration. L'Accueil est maintenant la communauté : « Communauté » a 
 3. **Les nouvelles formations.** Dans Actualités, « Les plus récentes », une formation mise en ligne depuis moins de 30 jours apparaît dans le fil, à sa date, avec « Découvrir la formation ». Dans Général, un parcours ou un autre tri, elle n'y est pas.
 4. **Formations disponibles.** Sous le fil, les 4 formations les plus récentes et « Voir toutes les formations ». Sur téléphone, elles défilent en largeur.
 5. **Les anciens liens.** Ouvre `/communaute` : tu arrives sur l'Accueil ; `/communaute?espace=general` ouvre l'onglet Général. Une notification de commentaire ouvre toujours la page de la publication, dont le fil d'Ariane ramène à l'Accueil.
+
+## 33. Valider la nouvelle création des formations (étape A), 20 minutes
+
+L'onglet « Programme » devient « Leçons » (sections et leçons au glisser-déposer, statut par leçon) et la page d'une leçon devient un éditeur en deux colonnes.
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0027_lecons_statut.sql` (après la 0026). Tes leçons actuelles restent publiées.
+2. **L'onglet Leçons.** Back-office → une formation → **Leçons** : « n sections · n leçons », chaque section repliable (pastille « n leçons »), **+ Ajouter une section**, **Ajouter** (une leçon).
+   - Attrape la poignée ⠿ d'une leçon et glisse-la, y compris dans une autre section ; au clavier : Tab jusqu'à la poignée, Espace, flèches, Espace.
+   - Le menu ⋮ d'une leçon : Modifier, Voir comme un étudiant, Monter, Descendre, « Déplacer vers… », Supprimer.
+3. **Le statut.** Clique « Publiée ▾ » ou « Brouillon ▾ » sur une leçon. Avec un compte étudiant, une leçon en brouillon n'apparaît pas dans la formation ; la publier envoie « Nouvelle leçon » à ceux qui suivent la formation.
+   - Dans une formation déjà publiée, une nouvelle leçon naît en **brouillon** ; dans une formation jamais publiée, elle naît publiée (tout reste caché tant que la formation ne l'est pas).
+   - Publier une formation demande au moins une leçon publiée.
+4. **L'éditeur de leçon.** Ouvre une leçon : en haut, « Retour aux leçons », « Leçon 2 sur 5 · Module 1 », les flèches ‹ ›, le statut, **Enregistrer** et l'œil **Voir comme un étudiant** (nouvel onglet).
+   - À gauche, les **Réglages** : lien de la vidéo (l'aperçu s'affiche), durée en minutes et secondes, « Activer les commentaires », « Leçon d'aperçu gratuite », documents.
+   - À droite, le titre et le texte **mis en forme** (titres, gras, listes, liens) ; « Dans cette leçon » se déplie.
+   - Modifie quelque chose, puis clique « Retour aux leçons » : « Quitter sans enregistrer ? ».
+5. **Voir comme un étudiant.** Sur une formation en brouillon, l'œil ouvre la vraie page de la leçon avec le bandeau « Aperçu : pas encore visible des étudiants » (ta progression n'y est pas enregistrée). Un compte étudiant, lui, a « page introuvable ».
+
