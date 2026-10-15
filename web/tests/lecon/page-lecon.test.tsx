@@ -55,7 +55,9 @@ describe("Page leçon : contenu", () => {
     expect(screen.getByText("12 min 30")).toBeInTheDocument();
     // Le lecteur Étudium : bouton central, légende et piste.
     expect(screen.getByRole("button", { name: "Lire la vidéo" })).toBeInTheDocument();
-    expect(screen.getByText("Module 1 · Saisir et mettre en forme des données")).toBeInTheDocument();
+    // Sur la vidéo, le titre de la leçon regardée, sans le module (retour du 15 octobre).
+    expect(screen.getByText("Saisir et mettre en forme des données", { selector: "[data-commandes] span" })).toBeInTheDocument();
+    expect(screen.queryByText("Module 1 · Saisir et mettre en forme des données")).toBeNull();
     expect(screen.getByRole("slider", { name: "Avancer dans la vidéo" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Leçon précédente" })).toHaveAttribute("href", `${ADRESSE}/${id(1)}`);
     expect(screen.getByRole("link", { name: "Leçon suivante" })).toHaveAttribute("href", `${ADRESSE}/${id(3)}`);

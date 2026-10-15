@@ -106,6 +106,9 @@ export function LecteurEtudium({
   const minuteurCommandes = useRef<number | undefined>(undefined);
   // Un toucher (téléphone) : quand les commandes sont effacées, il les fait revenir au lieu de mettre en pause.
   const toucher = useRef(false);
+  // Le dernier geste vient du clavier : un bouton de la barre qui a le focus la garde visible. Après un clic, le
+  // bouton garde aussi le focus, mais la barre doit s'effacer comme d'habitude.
+  const auClavier = useRef(false);
   const conteneur = useRef<HTMLDivElement>(null);
   const adaptateur = useRef<Adaptateur | null>(null);
   // Passages lus depuis le dernier envoi, et la dernière observation.
@@ -247,21 +250,37 @@ export function LecteurEtudium({
   };
   const relireDureeRef = useRef(relireDuree);
 
+  /** Le clavier est dans la barre (Tab) : elle reste visible tant qu'il y est. */
+  const clavierDansCommandes = () => auClavier.current && Boolean(commandes.current?.contains(document.activeElement));
   /** Montre les commandes, et les efface après le délai si la vidéo joue (sauf si le clavier y est). */
   const montrerCommandes = () => {
     setCommandesVisibles(true);
     window.clearTimeout(minuteurCommandes.current);
     minuteurCommandes.current = window.setTimeout(() => {
-      if (enLectureRef.current && !commandes.current?.contains(document.activeElement)) setCommandesVisibles(false);
+      if (enLectureRef.current && !clavierDansCommandes()) setCommandesVisibles(false);
     }, DELAI_COMMANDES_MS);
   };
   const montrerCommandesRef = useRef(montrerCommandes);
   /** La souris quitte la vidéo : les commandes s'effacent aussitôt pendant la lecture. */
   const cacherCommandes = () => {
     window.clearTimeout(minuteurCommandes.current);
-    if (enLectureRef.current && !commandes.current?.contains(document.activeElement)) setCommandesVisibles(false);
+    if (enLectureRef.current && !clavierDansCommandes()) setCommandesVisibles(false);
   };
-  useEffect(() => () => window.clearTimeout(minuteurCommandes.current), []);
+  useEffect(() => {
+    const clavier = () => {
+      auClavier.current = true;
+    };
+    const pointeur = () => {
+      auClavier.current = false;
+    };
+    document.addEventListener("keydown", clavier, true);
+    document.addEventListener("pointerdown", pointeur, true);
+    return () => {
+      window.clearTimeout(minuteurCommandes.current);
+      document.removeEventListener("keydown", clavier, true);
+      document.removeEventListener("pointerdown", pointeur, true);
+    };
+  }, []);
   const dureeConnueRef = useRef(dureeConnue);
 
   useEffect(() => {

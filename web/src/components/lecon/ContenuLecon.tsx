@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
-import { situation, videoMesuree } from "@/lib/lecon/regles";
+import { videoMesuree } from "@/lib/lecon/regles";
 import type { DonneesLecon } from "@/lib/lecon/types";
 import { DansCetteLecon } from "./DansCetteLecon";
 import { EnTeteLecon } from "./EnTeteLecon";
@@ -36,7 +36,6 @@ type Props = {
 export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lienModifier = null }: Props) {
   const { fiche, lecon, note, notesDisponibles } = donnees;
   const ouverte = lecon.accessible;
-  const ou = situation(fiche.modules, lecon.id);
   return (
     <div className="flex min-w-0 flex-col gap-6">
       {apercu && <BandeauApercu apercu={apercu} />}
@@ -66,7 +65,8 @@ export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lie
           <LecteurEtudium
             video={lecon.video}
             titre={lecon.titre}
-            legende={ou ? `Module ${ou.numero} · ${lecon.titre}` : lecon.titre}
+            // Sur la vidéo, le titre de la leçon regardée (le module est déjà au-dessus du titre de la page).
+            legende={lecon.titre}
             leconId={lecon.id}
             // Sans la table du visionnage (0007 pas encore appliquée), la vidéo se lit sans mesure.
             suivre={connecte && !apercu && lecon.visionnage !== null}

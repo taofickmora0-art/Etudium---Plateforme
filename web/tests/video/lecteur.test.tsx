@@ -302,6 +302,33 @@ describe("Lecteur aux couleurs d'Étudium", () => {
     expect(commandes()).toHaveAttribute("data-masquees", "false");
   });
 
+  it("après un clic sur un bouton de la barre (lecture), les commandes s'effacent quand même ; au clavier (Tab), elles restent", async () => {
+    const f = fauxLecteur();
+    await monter({ creer: f.creer });
+    fireEvent.click(screen.getByRole("button", { name: "Lire la vidéo" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    const pause = screen.getByRole("button", { name: "Mettre en pause" });
+    const commandes = pause.closest("[data-commandes]")!;
+    // À la souris : le bouton cliqué garde le focus, mais ce n'est pas le clavier.
+    fireEvent.pointerDown(pause);
+    pause.focus();
+    fireEvent.pointerMove(commandes.parentElement!);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2600);
+    });
+    expect(commandes).toHaveAttribute("data-masquees", "true");
+    // Au clavier : Tab jusqu'au bouton, les commandes restent tant que le focus y est.
+    fireEvent.keyDown(document, { key: "Tab" });
+    pause.blur();
+    pause.focus();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2600);
+    });
+    expect(commandes).toHaveAttribute("data-masquees", "false");
+  });
+
   it("au téléphone, toucher la vidéo quand les commandes sont effacées les fait revenir, sans mettre en pause", async () => {
     const f = fauxLecteur();
     await monter({ creer: f.creer });
