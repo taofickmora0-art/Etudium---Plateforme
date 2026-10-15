@@ -739,3 +739,28 @@ La page d'une leçon prend une barre du haut et des discussions, le programme se
    - **À la mise en ligne**, l'adresse du QR Code vient de `NEXT_PUBLIC_SITE_URL` (aujourd'hui `http://localhost:3000`) : elle devra être l'adresse publique du site, sinon les QR Codes imprimés ne mèneront nulle part.
 6. **Côté formateur** : le tableau de bord montre « Certificats délivrés » et « Exercices à corriger » ; la fiche d'un étudiant montre ses quiz, ses exercices et son certificat.
 7. **Le certificat est définitif** : changer le titre de la formation ne le change pas ; un compte supprimé garde son certificat vérifiable.
+
+## 40. Relire la landing et la page Aide (fin du lot 1), 20 minutes
+
+Aucune migration. Ouvre le site **sans être connecté** (fenêtre de navigation privée), sur ordinateur puis sur ton téléphone.
+
+1. **La racine `/`** montre la landing ; connecté, elle t'envoie sur l'Accueil.
+2. **L'en-tête** (aussi sur le catalogue et les fiches) : Parcours, Formations, Tarifs, Communauté, Vérifier un certificat, « Se connecter » et « Créer mon compte gratuit ».
+   - Parcours, Tarifs et Communauté descendent vers leur section de la landing ;
+   - au téléphone, il tient sur une ligne, et le bouton « Menu » déplie les liens et l'inscription.
+3. **Les sections**, dans l'ordre du design :
+   - hero, « Vous vous reconnaissez ? », « La solution », les trois parcours, « Comment ça marche » ;
+   - « Pour bien commencer », Formules, Accompagnement, Communauté, questions fréquentes, appel final.
+4. **Ce qui vient de la base :**
+   - les parcours : nom, couleur, description (modifiables au back-office) ; leurs 6 points sont du texte fixe ;
+   - « Pour bien commencer » : 2 formations gratuites, puis les « Populaire », les plus récentes d'abord, 4 au plus. Sans formation publiée, la section disparaît.
+5. **Ce qui manque exprès :**
+   - les prix : « Prix annoncés au lancement » (lot 2) ;
+   - « Voir le détail » des formules (page Tarifs, lot 2) ;
+   - les témoignages et les chiffres, tant qu'on n'en a pas de vrais ;
+   - **Contact** dans le pied de page.
+6. **Ce que j'attends de toi :**
+   - relis les textes (ceux du design, tels quels) ;
+   - donne-moi **l'adresse e-mail de contact** pour ajouter « Contact » ;
+   - dis-moi si tu gardes les personnes inventées des illustrations : « Koffi D. », « Dr Mireille Adjovi ».
+7. **La page Aide** (espace connecté, menu « Aide ») reprend les 7 questions fréquentes, puis « Une autre question ? » vers la communauté.
