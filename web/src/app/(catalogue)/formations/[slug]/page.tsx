@@ -6,6 +6,8 @@ import { FicheConnectee } from "@/components/catalogue/FicheConnectee";
 import { FichePublique } from "@/components/catalogue/FichePublique";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { lireAvis } from "@/lib/avis/data";
+import { BandeauApercu } from "@/components/lecon/BandeauApercu";
+import { ficheApercu } from "@/lib/catalogue/apercu";
 import { getFiche } from "@/lib/catalogue/data";
 import { metadonneesFiche } from "@/lib/catalogue/partage";
 import type { FicheFormation } from "@/lib/catalogue/types";
@@ -29,23 +31,37 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 async function Fiche({ params }: Params) {
   const [compte, { slug }] = await Promise.all([compteConnecte(), params]);
   let fiche: FicheFormation | null;
+  let apercu = false;
   try {
     fiche = await getFiche(slug);
+    // « Voir comme un étudiant » : une formation non publiée, pour l'équipe et son formateur (refonte des formations, §3.5).
+    if (!fiche && compte) {
+      fiche = await ficheApercu(slug);
+      apercu = fiche !== null;
+    }
   } catch (erreur) {
     return siTablesAbsentes(erreur);
   }
-  // Brouillon, formation archivée ou adresse inconnue : page introuvable, pour tout le monde.
+  // Brouillon (hors aperçu), formation archivée ou adresse inconnue : page introuvable.
   if (!fiche) notFound();
   // Avis (1.11), progression (1.7) et favoris (1.9) : absents tant que leurs migrations ne sont pas appliquées.
   if (!compte) return <FichePublique fiche={fiche} avis={await lireAvis(fiche.id)} />;
   const [lignes, favoris, avis] = await Promise.all([lireProgression(), lireFavoris(), lireAvis(fiche.id)]);
-  return (
+  const page = (
     <FicheConnectee
       fiche={fiche}
       progression={lignes ? etatFormation(fiche, lignes) : null}
       favori={favoris ? favoris.some((f) => f.formationId === fiche.id) : null}
       avis={avis}
     />
+  );
+  return apercu ? (
+    <div className="flex flex-col gap-4">
+      <BandeauApercu apercu="formation" />
+      {page}
+    </div>
+  ) : (
+    page
   );
 }
 

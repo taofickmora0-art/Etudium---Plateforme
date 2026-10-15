@@ -8,9 +8,12 @@ import { ContenuLecon } from "@/components/lecon/ContenuLecon";
 import { BarreLecon } from "@/components/lecon/NavigationLecon";
 import { ProgrammeLecon } from "@/components/lecon/ProgrammeLecon";
 import { Skeleton } from "@/components/ui/Skeleton";
+import type { Apercu } from "@/components/lecon/BandeauApercu";
+import { ficheApercu } from "@/lib/catalogue/apercu";
 import { getFiche } from "@/lib/catalogue/data";
+import type { FicheFormation } from "@/lib/catalogue/types";
 import { compteConnecte } from "@/lib/catalogue/visiteur";
-import { getLecon } from "@/lib/lecon/data";
+import { getLeconDans } from "@/lib/lecon/data";
 import { voisines } from "@/lib/lecon/regles";
 import { lireProgression } from "@/lib/progression/data";
 import { etatFormation } from "@/lib/progression/regles";
@@ -23,7 +26,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug, leconId } = await params;
   let titre = "Leçon introuvable · Étudium";
   try {
-    const fiche = await getFiche(slug);
+    // Une formation non publiée : son titre pour l'équipe et son formateur (aperçu).
+    const fiche = (await getFiche(slug)) ?? (await ficheApercu(slug));
     const lecon = fiche?.modules.flatMap((m) => m.lecons).find((l) => l.id === leconId);
     if (fiche && lecon) titre = `${lecon.titre} · ${fiche.titre} · Étudium`;
   } catch {
@@ -35,31 +39,42 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 async function Lecon({ params }: Params) {
   const [compte, { slug, leconId }] = await Promise.all([compteConnecte(), params]);
   const connecte = compte !== null;
+  let fiche: FicheFormation | null;
+  let apercuFormation = false;
   let donnees: DonneesLecon | null;
   let lignes: Awaited<ReturnType<typeof lireProgression>>;
   try {
-    [donnees, lignes] = await Promise.all([getLecon(slug, leconId, connecte), connecte ? lireProgression() : null]);
+    // Une formation non publiée ne s'ouvre qu'en aperçu, pour l'équipe et son formateur (refonte des formations, §3.5).
+    fiche = await getFiche(slug);
+    if (!fiche && connecte) {
+      fiche = await ficheApercu(slug);
+      apercuFormation = fiche !== null;
+    }
+    [donnees, lignes] = fiche ? await Promise.all([getLeconDans(fiche, leconId, connecte), connecte ? lireProgression() : null]) : [null, null];
   } catch (erreur) {
     return siTablesAbsentes(erreur);
   }
-  // Formation non publiée, leçon d'une autre formation ou adresse inventée : page introuvable.
+  // Formation non publiée (sauf aperçu), leçon d'une autre formation ou adresse inventée : page introuvable.
   if (!donnees) notFound();
 
-  const { fiche, lecon } = donnees;
-  const terminees = lignes ? etatFormation(fiche, lignes).terminees : new Set<string>();
-  const { precedente, suivante } = voisines(fiche.modules, leconId);
-  // Bouton de fin : compte connecté, leçon ouverte, et progression disponible en base (0007, 0008).
-  const actif = connecte && lecon.accessible && lignes !== null;
+  const { lecon } = donnees;
+  // Une leçon en brouillon n'est lue que par l'équipe et le formateur : c'est un aperçu, comme une formation non publiée.
+  const enBrouillon = donnees.fiche.modules.some((m) => m.lecons.some((l) => l.id === leconId && l.publiee === false));
+  const apercu: Apercu | null = apercuFormation ? "formation" : enBrouillon ? "lecon" : null;
+  const terminees = lignes ? etatFormation(donnees.fiche, lignes).terminees : new Set<string>();
+  const { precedente, suivante } = voisines(donnees.fiche.modules, leconId);
+  // Bouton de fin : compte connecté, leçon ouverte, progression disponible en base (0007, 0008), et pas en aperçu.
+  const actif = connecte && lecon.accessible && lignes !== null && !apercu;
   return (
-    <EtatLeconProvider key={leconId} termineeInitiale={terminees.has(leconId)} avecVideo={lecon.video !== null} seuil={fiche.seuilVideo} actif={actif}>
+    <EtatLeconProvider key={leconId} termineeInitiale={terminees.has(leconId)} avecVideo={lecon.video !== null} seuil={donnees.fiche.seuilVideo} actif={actif}>
       <CadreLecon
         connecte={connecte}
-        titreFormation={fiche.titre}
-        retour={connecte ? "/mes-formations" : `/formations/${fiche.slug}`}
-        programme={<ProgrammeLecon fiche={fiche} leconId={leconId} connecte={connecte} terminees={terminees} />}
-        barre={precedente || suivante || actif ? <BarreLecon fiche={fiche} leconId={leconId} /> : undefined}
+        titreFormation={donnees.fiche.titre}
+        retour={connecte ? "/mes-formations" : `/formations/${donnees.fiche.slug}`}
+        programme={<ProgrammeLecon fiche={donnees.fiche} leconId={leconId} connecte={connecte} terminees={terminees} />}
+        barre={precedente || suivante || actif ? <BarreLecon fiche={donnees.fiche} leconId={leconId} /> : undefined}
       >
-        <ContenuLecon donnees={donnees} connecte={connecte} terminees={terminees} />
+        <ContenuLecon donnees={donnees} connecte={connecte} terminees={terminees} apercu={apercu} />
       </CadreLecon>
     </EtatLeconProvider>
   );

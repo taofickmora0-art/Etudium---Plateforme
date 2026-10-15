@@ -54,6 +54,7 @@ function LeconConnectee({ slug, lecon, terminee = false, ici = false }: { slug: 
         {terminee && <span className="sr-only"> (terminée)</span>}
       </span>
       {ici && <Tag tone="nouveau">Vous êtes ici</Tag>}
+      {lecon.publiee === false && <Tag tone="enAttente">Brouillon</Tag>}
       <span className="min-w-14 flex-none text-right text-[13px] leading-5 text-discret">{formatDuree(lecon.dureeSecondes)}</span>
     </>
   );

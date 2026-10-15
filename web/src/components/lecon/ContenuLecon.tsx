@@ -6,6 +6,8 @@ import type { DonneesLecon } from "@/lib/lecon/types";
 import { DansCetteLecon } from "./DansCetteLecon";
 import { EnTeteLecon } from "./EnTeteLecon";
 import { LeconVerrouillee } from "./LeconVerrouillee";
+import { TexteMisEnForme } from "@/components/communaute/TexteMisEnForme";
+import { BandeauApercu, type Apercu } from "./BandeauApercu";
 import { LecteurEtudium } from "./LecteurEtudium";
 import { NavigationLecon } from "./NavigationLecon";
 import { NoteProvider, NotesLecon } from "./NotesLecon";
@@ -14,20 +16,27 @@ import { ProgrammeMobile } from "./ProgrammeMobile";
 import { RessourcesLecon } from "./RessourcesLecon";
 import { VisiteLecon } from "./VisiteLecon";
 
-type Props = { donnees: DonneesLecon; connecte: boolean; terminees: ReadonlySet<string> };
+type Props = {
+  donnees: DonneesLecon;
+  connecte: boolean;
+  terminees: ReadonlySet<string>;
+  /** L'équipe ou le formateur en aperçu (formation non publiée, leçon en brouillon) : rien n'est enregistré. */
+  apercu?: Apercu | null;
+};
 
 /**
  * Le contenu de la page leçon (NdLecon, NdMobLecon) : vidéo, en-tête, navigation, onglets et « Dans cette leçon ».
  * Une leçon fermée n'affiche que son verrou, son en-tête et son résumé : jamais la vidéo, le texte ni les fichiers.
  */
-export function ContenuLecon({ donnees, connecte, terminees }: Props) {
+export function ContenuLecon({ donnees, connecte, terminees, apercu = null }: Props) {
   const { fiche, lecon, note, notesDisponibles } = donnees;
   const ouverte = lecon.accessible;
   const ou = situation(fiche.modules, lecon.id);
   const programme = <ProgrammeMobile fiche={fiche} leconId={lecon.id} connecte={connecte} terminees={terminees} />;
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      {ouverte && connecte && <VisiteLecon leconId={lecon.id} />}
+      {apercu && <BandeauApercu apercu={apercu} />}
+      {ouverte && connecte && !apercu && <VisiteLecon leconId={lecon.id} />}
       {ouverte && !connecte && (
         // Spec Q1 : le visiteur regarde l'aperçu ; on l'invite à créer son compte pour garder sa progression.
         <Banner
@@ -52,7 +61,7 @@ export function ContenuLecon({ donnees, connecte, terminees }: Props) {
             legende={ou ? `Module ${ou.numero} · ${lecon.titre}` : lecon.titre}
             leconId={lecon.id}
             // Sans la table du visionnage (0007 pas encore appliquée), la vidéo se lit sans mesure.
-            suivre={connecte && lecon.visionnage !== null}
+            suivre={connecte && !apercu && lecon.visionnage !== null}
             passagesInitiaux={lecon.visionnage?.passages ?? []}
             reference={lecon.dureeSecondes}
             seuil={fiche.seuilVideo}
@@ -62,7 +71,8 @@ export function ContenuLecon({ donnees, connecte, terminees }: Props) {
         )
       )}
       <EnTeteLecon fiche={fiche} lecon={lecon} />
-      {ouverte && lecon.texte && <div className="text-[15px] leading-6 whitespace-pre-line text-texte">{lecon.texte}</div>}
+      {/* Le texte mis en forme dans l'éditeur de leçon (titres, gras, listes, liens), comme les publications. */}
+      {ouverte && lecon.texte && <TexteMisEnForme texte={lecon.texte} className="text-[15px] leading-6 text-texte max-sm:text-sm max-sm:leading-[22px]" />}
       <NavigationLecon fiche={fiche} leconId={lecon.id} />
       <div aria-hidden="true" className="h-px bg-separateur max-lg:hidden" />
       <div className="flex flex-wrap items-start gap-8">

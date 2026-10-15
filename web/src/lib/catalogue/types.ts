@@ -44,6 +44,8 @@ export type LeconFiche = {
   apercu: boolean;
   /** Calculé par la base (règle d'accès de la 0004) pour la personne qui regarde. */
   accessible: boolean;
+  /** Statut (0027) : une leçon en brouillon n'est lue que par l'équipe et le formateur ; vrai avant la 0027. */
+  publiee?: boolean;
 };
 
 export type ModuleFiche = { id: string; titre: string; lecons: LeconFiche[] };

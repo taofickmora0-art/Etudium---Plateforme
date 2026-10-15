@@ -3,6 +3,7 @@ import { getFiche } from "@/lib/catalogue/data";
 import { estTablesAbsentes, liste, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import { depuisMultirange } from "@/lib/video/suivi";
+import type { FicheFormation } from "@/lib/catalogue/types";
 import type { DonneesLecon, LeconDetail, RessourceLecon, VideoLecon, VisionnageLecon } from "./types";
 
 // Lecture de la page leçon. Le programme vient de la fiche (formations publiées, accès calculé par la base) ;
@@ -79,7 +80,13 @@ async function lireVisionnage(leconId: string): Promise<VisionnageLecon | null> 
 export async function getLecon(slug: string, leconId: string, connecte: boolean): Promise<DonneesLecon | null> {
   if (demoModeActive() || !UUID.test(leconId)) return null;
   const fiche = await getFiche(slug);
-  if (!fiche || !fiche.modules.some((m) => m.lecons.some((l) => l.id === leconId))) return null;
+  return fiche ? getLeconDans(fiche, leconId, connecte) : null;
+}
+
+/** La leçon d'une fiche déjà lue (publiée, ou en aperçu pour l'équipe et le formateur) ; null si elle n'y est pas. */
+export async function getLeconDans(fiche: FicheFormation, leconId: string, connecte: boolean): Promise<DonneesLecon | null> {
+  if (demoModeActive() || !UUID.test(leconId)) return null;
+  if (!fiche.modules.some((m) => m.lecons.some((l) => l.id === leconId))) return null;
 
   const supabase = await createClient();
   const ligne = verifier(

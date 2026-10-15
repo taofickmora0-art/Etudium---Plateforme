@@ -3,6 +3,7 @@ import { ArrowLeft02Icon, CheckmarkCircle02Icon, Clock01Icon, PlayCircleIcon, Sq
 import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
 import { Couverture } from "@/components/ui/Couverture";
 import { Icon } from "@/components/ui/Icon";
+import { Tag } from "@/components/ui/Tag";
 import { ProgressBar } from "@/components/ui/Progress";
 import { dureeLisible, parcoursPrincipal } from "@/lib/catalogue/regles";
 import type { FicheFormation, LeconFiche } from "@/lib/catalogue/types";
@@ -26,6 +27,12 @@ function Ligne({ fiche, lecon, etat }: { fiche: FicheFormation; lecon: LeconFich
       <span title={lecon.titre} className="min-w-0 truncate">
         {lecon.titreCourt ?? lecon.titre}
       </span>
+      {/* Une leçon en brouillon : seuls l'équipe et le formateur la voient (0027). */}
+      {lecon.publiee === false && (
+        <Tag tone="enAttente" className="ml-auto flex-none">
+          Brouillon
+        </Tag>
+      )}
     </>
   );
   if (etat === "verrouillee") {

@@ -19,6 +19,9 @@ const COLONNES_CARTE =
 // fait relire sans elle : le catalogue s'affiche avant que les migrations soient appliquées.
 const COLONNES_FACULTATIVES = [", note_moyenne, nb_avis, couverture", ", note_moyenne, nb_avis", ""];
 const avecNotes = (lire: Parameters<typeof lireAvecRepli>[1]) => lireAvecRepli(COLONNES_FACULTATIVES, lire);
+// La fiche lit aussi le statut des leçons (0027) : « colonnes de la formation|colonnes des leçons ».
+const VARIANTES_FICHE = [`${COLONNES_FACULTATIVES[0]}|, publiee`, ...COLONNES_FACULTATIVES.map((c) => `${c}|`)];
+const avecFiche = (lire: Parameters<typeof lireAvecRepli>[1]) => lireAvecRepli(VARIANTES_FICHE, lire);
 
 const versParcours = (p: Ligne): ParcoursCatalogue => ({
   slug: texte(p.slug),
@@ -77,12 +80,17 @@ const versLecon = (l: Ligne): LeconFiche & { ordre: number } => ({
   dureeSecondes: Number(l.duree_secondes ?? 0),
   apercu: l.apercu === true,
   accessible: l.accessible === true,
+  publiee: l.publiee !== false,
   ordre: Number(l.ordre ?? 0),
 });
 
-const colonnesFiche = (notes: string) =>
-  `${COLONNES_CARTE}${notes}, description, seuil_video, objectifs, competences, formateurs(nom, titre, domaine, presentation), ` +
-  "modules(id, titre, ordre, lecons(id, titre, titre_court, duree_secondes, apercu, ordre, accessible))";
+const colonnesFiche = (variante: string) => {
+  const [notes, lecons = ""] = variante.split("|");
+  return (
+    `${COLONNES_CARTE}${notes}, description, seuil_video, objectifs, competences, formateurs(nom, titre, domaine, presentation), ` +
+    `modules(id, titre, ordre, lecons(id, titre, titre_court, duree_secondes, apercu, ordre, accessible${lecons}))`
+  );
+};
 
 /** Une ligne de formation (avec son programme) → fiche : modules et leçons dans l'ordre. */
 function versFiche(f: Ligne): FicheFormation {
@@ -106,7 +114,7 @@ function versFiche(f: Ligne): FicheFormation {
       (m): ModuleFiche => ({
         id: m.id,
         titre: m.titre,
-        lecons: m.lecons.map((l) => ({ id: l.id, titre: l.titre, titreCourt: l.titreCourt, dureeSecondes: l.dureeSecondes, apercu: l.apercu, accessible: l.accessible })),
+        lecons: m.lecons.map((l) => ({ id: l.id, titre: l.titre, titreCourt: l.titreCourt, dureeSecondes: l.dureeSecondes, apercu: l.apercu, accessible: l.accessible, publiee: l.publiee })),
       }),
     ),
   };
@@ -119,7 +127,7 @@ function versFiche(f: Ligne): FicheFormation {
 export const getFiche = cache(async (slug: string): Promise<FicheFormation | null> => {
   if (demoModeActive() || !ADRESSE.test(slug)) return null;
   const supabase = await createClient();
-  const f = (await avecNotes((notes) => supabase.from("formations").select(colonnesFiche(notes)).eq("statut", "publiee").eq("slug", slug).maybeSingle())) as Ligne | null;
+  const f = (await avecFiche((variante) => supabase.from("formations").select(colonnesFiche(variante)).eq("statut", "publiee").eq("slug", slug).maybeSingle())) as Ligne | null;
   return f ? versFiche(f) : null;
 });
 
@@ -132,6 +140,17 @@ export type StatutFiche = "publiee" | "archivee" | "brouillon";
 export async function listFiches(ids: string[]): Promise<(FicheFormation & { statut: StatutFiche })[]> {
   if (demoModeActive() || ids.length === 0) return [];
   const supabase = await createClient();
-  const lignes = (await avecNotes((notes) => supabase.from("formations").select(`${colonnesFiche(notes)}, statut`).in("id", ids))) as Ligne[] | null;
+  const lignes = (await avecFiche((variante) => supabase.from("formations").select(`${colonnesFiche(variante)}, statut`).in("id", ids))) as Ligne[] | null;
   return liste(lignes).map((f) => ({ ...versFiche(f), statut: (texte(f.statut) || "publiee") as StatutFiche }));
 }
+
+/**
+ * Une formation par son adresse, quel que soit son statut : les règles de la base décident qui la lit (l'équipe et son
+ * formateur, un brouillon ; qui l'a commencée, une formation archivée). Pour « Voir comme un étudiant » (catalogue/apercu).
+ */
+export const lireFicheParAdresse = cache(async (slug: string): Promise<(FicheFormation & { statut: StatutFiche }) | null> => {
+  if (demoModeActive() || !ADRESSE.test(slug)) return null;
+  const supabase = await createClient();
+  const f = (await avecFiche((variante) => supabase.from("formations").select(`${colonnesFiche(variante)}, statut`).eq("slug", slug).maybeSingle())) as Ligne | null;
+  return f ? { ...versFiche(f), statut: (texte(f.statut) || "publiee") as StatutFiche } : null;
+});
