@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CarteCatalogue, ParcoursCatalogue } from "@/lib/catalogue/types";
 import { CARTES_DESIGN, PARCOURS_DESIGN } from "../catalogue/cartes-design";
@@ -9,10 +9,10 @@ const listCatalogue = vi.fn<() => Promise<CarteCatalogue[]>>();
 const listParcoursCatalogue = vi.fn<() => Promise<ParcoursCatalogue[]>>();
 vi.mock("@/lib/catalogue/data", () => ({ listCatalogue: () => listCatalogue(), listParcoursCatalogue: () => listParcoursCatalogue() }));
 
-const { ContenuLanding, FormationsDepuisBase, ParcoursDepuisBase } = await import("@/components/landing/ContenuLanding");
+const { ContenuLanding, FormationsDepuisBase } = await import("@/components/landing/ContenuLanding");
 
 async function rendre() {
-  return render(<ContenuLanding parcours={await ParcoursDepuisBase()} formations={await FormationsDepuisBase()} />);
+  return render(<ContenuLanding formations={await FormationsDepuisBase()} />);
 }
 
 describe("Landing assemblée (spec du lot 1, §9)", () => {
@@ -36,15 +36,16 @@ describe("Landing assemblée (spec du lot 1, §9)", () => {
       "Commencez gratuitement dès aujourd’hui",
     ]);
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    // Les parcours sont du texte fixe : rien à lire en base, rien qui arrive après coup au-dessus des ancres.
+    expect(listParcoursCatalogue).not.toHaveBeenCalled();
   });
 
-  it("une lecture impossible n'empêche pas la page de s'afficher : les cartes manquent, l'ancre des parcours reste", async () => {
+  it("une lecture impossible n'empêche pas la page de s'afficher : seules les formations manquent", async () => {
     const espion = vi.spyOn(console, "error").mockImplementation(() => {});
     listCatalogue.mockRejectedValue(new Error("base injoignable"));
-    listParcoursCatalogue.mockRejectedValue(new Error("base injoignable"));
     await rendre();
     expect(screen.queryByRole("heading", { level: 2, name: "Pour bien commencer" })).toBeNull();
-    expect(document.getElementById("parcours")).not.toBeNull();
+    expect(within(document.getElementById("parcours") as HTMLElement).getAllByRole("heading", { level: 3 })).toHaveLength(3);
     expect(screen.getByRole("heading", { level: 2, name: "Tout ce qu’il faut savoir avant de commencer" })).toBeInTheDocument();
     expect(espion).toHaveBeenCalled();
     espion.mockRestore();
@@ -54,9 +55,7 @@ describe("Landing assemblée (spec du lot 1, §9)", () => {
     const espion = vi.spyOn(console, "error").mockImplementation(() => {});
     const interruption = Object.assign(new Error("During prerendering, `cookies()` rejects"), { digest: "HANGING_PROMISE_REJECTION" });
     listCatalogue.mockRejectedValue(interruption);
-    listParcoursCatalogue.mockRejectedValue(interruption);
     await expect(FormationsDepuisBase()).rejects.toBe(interruption);
-    await expect(ParcoursDepuisBase()).rejects.toBe(interruption);
     expect(espion).not.toHaveBeenCalled();
     espion.mockRestore();
   });

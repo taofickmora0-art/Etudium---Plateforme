@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { ContenuLanding, FormationsDepuisBase, ParcoursDepuisBase } from "@/components/landing/ContenuLanding";
-import { SectionParcours } from "@/components/landing/SectionParcours";
+import { ContenuLanding, FormationsDepuisBase } from "@/components/landing/ContenuLanding";
+import { FormationsEnAttente } from "@/components/landing/SectionFormations";
 import { CadrePublic } from "@/components/site/CadrePublic";
 
 export const metadata: Metadata = {
@@ -12,19 +12,15 @@ export const metadata: Metadata = {
 
 /**
  * La racine : la landing publique pour un visiteur (spec du lot 1, §2 et §9). Un compte connecté n'arrive jamais ici,
- * le proxy l'envoie vers l'accueil. Parcours et formations sont lus en base pendant que le reste s'affiche.
+ * le proxy l'envoie vers l'accueil. Les formations sont lues en base pendant que le reste s'affiche, leur place
+ * réservée.
  */
 export default function Racine() {
   return (
     <CadrePublic>
       <ContenuLanding
-        parcours={
-          <Suspense fallback={<SectionParcours parcours={[]} />}>
-            <ParcoursDepuisBase />
-          </Suspense>
-        }
         formations={
-          <Suspense fallback={null}>
+          <Suspense fallback={<FormationsEnAttente />}>
             <FormationsDepuisBase />
           </Suspense>
         }

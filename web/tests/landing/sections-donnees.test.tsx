@@ -1,16 +1,13 @@
 // @vitest-environment jsdom
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { SectionFormations } from "@/components/landing/SectionFormations";
+import { FormationsEnAttente, SectionFormations } from "@/components/landing/SectionFormations";
 import { SectionParcours } from "@/components/landing/SectionParcours";
-import type { ParcoursCatalogue } from "@/lib/catalogue/types";
-import { CARTES_DESIGN, PARCOURS_DESIGN } from "../catalogue/cartes-design";
-
-const PARCOURS: ParcoursCatalogue[] = PARCOURS_DESIGN.map((p) => ({ ...p, description: `Description de ${p.nom} (base).` }));
+import { CARTES_DESIGN } from "../catalogue/cartes-design";
 
 describe("Les trois parcours (NdLanding §6)", () => {
-  it("une carte par parcours actif : nom et description de la base, six points, lien vers le catalogue filtré", () => {
-    render(<SectionParcours parcours={PARCOURS} />);
+  it("les trois parcours du lancement, avec les textes du design, sans attendre la base", () => {
+    render(<SectionParcours />);
     const section = document.getElementById("parcours") as HTMLElement;
     expect(section).toHaveAttribute("aria-labelledby", "titre-parcours");
     expect(within(section).getByRole("heading", { level: 2 })).toHaveTextContent("Choisissez la direction qui vous ressemble");
@@ -19,26 +16,18 @@ describe("Les trois parcours (NdLanding §6)", () => {
       "Compétences digitales",
       "Business & revenus en ligne",
     ]);
-    expect(screen.getByText("Description de Réussite académique (base).")).toBeInTheDocument();
+    expect(
+      screen.getByText("Les outils et méthodes pour réussir à l’université : bureautique, recherche documentaire, rédaction scientifique, mémoire et soutenance."),
+    ).toBeInTheDocument();
     expect(screen.getAllByRole("list")).toHaveLength(3);
     for (const liste of screen.getAllByRole("list")) expect(within(liste).getAllByRole("listitem")).toHaveLength(6);
-    expect(screen.getByText("Zotero et la recherche documentaire")).toBeInTheDocument();
-    for (const p of PARCOURS) {
-      expect(screen.getByRole("link", { name: `Voir les formations du parcours ${p.nom}` })).toHaveAttribute("href", `/formations?parcours=${p.slug}`);
+    for (const [nom, slug] of [
+      ["Réussite académique", "reussite-academique"],
+      ["Compétences digitales", "competences-digitales"],
+      ["Business & revenus en ligne", "business-revenus-en-ligne"],
+    ]) {
+      expect(screen.getByRole("link", { name: `Voir les formations du parcours ${nom}` })).toHaveAttribute("href", `/formations?parcours=${slug}`);
     }
-  });
-
-  it("un parcours ajouté plus tard garde sa carte, sans liste de points", () => {
-    render(<SectionParcours parcours={[{ slug: "langues", nom: "Langues", nomCourt: "Langues", couleur: "digital", ordre: 4, description: "Anglais." }]} />);
-    expect(screen.getByRole("heading", { level: 3, name: "Langues" })).toBeInTheDocument();
-    expect(screen.queryByRole("list")).toBeNull();
-    expect(screen.getByRole("link", { name: "Voir les formations du parcours Langues" })).toHaveAttribute("href", "/formations?parcours=langues");
-  });
-
-  it("sans parcours lus, la section garde son titre (l'ancre de l'en-tête reste valable)", () => {
-    render(<SectionParcours parcours={[]} />);
-    expect(document.getElementById("parcours")).not.toBeNull();
-    expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
   });
 });
 
@@ -50,6 +39,13 @@ describe("« Pour bien commencer » (NdLanding §8)", () => {
     expect(titres).toHaveLength(4);
     for (const titre of titres) expect(titre.closest("a")?.getAttribute("href")).toMatch(/^\/formations\/[a-z0-9-]+$/);
     expect(screen.getByRole("link", { name: "Voir tout le catalogue" })).toHaveAttribute("href", "/formations");
+  });
+
+  it("pendant la lecture, la place des quatre cartes est réservée (les ancres plus bas ne bougent pas)", () => {
+    render(<FormationsEnAttente />);
+    const section = screen.getByRole("region", { name: "Pour bien commencer" });
+    expect(section).toHaveAttribute("aria-busy", "true");
+    expect(section.querySelectorAll("[data-carte-en-attente]")).toHaveLength(4);
   });
 
   it("aucune formation publiée : la section disparaît", () => {

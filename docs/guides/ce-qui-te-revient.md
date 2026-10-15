@@ -751,9 +751,7 @@ Aucune migration. Ouvre le site **sans être connecté** (fenêtre de navigation
 3. **Les sections**, dans l'ordre du design :
    - hero, « Vous vous reconnaissez ? », « La solution », les trois parcours, « Comment ça marche » ;
    - « Pour bien commencer », Formules, Accompagnement, Communauté, questions fréquentes, appel final.
-4. **Ce qui vient de la base :**
-   - les parcours : nom, couleur, description (modifiables au back-office) ; leurs 6 points sont du texte fixe ;
-   - « Pour bien commencer » : 2 formations gratuites, puis les « Populaire », les plus récentes d'abord, 4 au plus. Sans formation publiée, la section disparaît.
+4. **Ce qui vient de la base :** seulement « Pour bien commencer » : 2 formations gratuites, puis les « Populaire », les plus récentes d'abord, 4 au plus. Sans formation publiée, la section disparaît. Les trois parcours (nom, description, 6 points) sont les textes du design, fixes comme « Trois parcours au lancement » : un 4e parcours demandera de me le dire.
 5. **Ce qui manque exprès :**
    - les prix : « Prix annoncés au lancement » (lot 2) ;
    - « Voir le détail » des formules (page Tarifs, lot 2) ;

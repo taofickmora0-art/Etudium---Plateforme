@@ -1,5 +1,7 @@
 // Textes fixes de la landing (NdLanding, annexe 1.12 §4 à §10) : ceux du design, tels quels (spec du lot 1, §9).
 
+import type { CouleurParcours } from "@/lib/contenus/libelles";
+
 type Bloc = { titre: string; texte: string };
 
 /** « Vous vous reconnaissez ? » (§4). */
@@ -74,3 +76,29 @@ export const POINTS_PARCOURS: Record<string, string[]> = {
   ],
   "business-revenus-en-ligne": ["Freelancing", "Produits digitaux", "E-commerce et vente en ligne", "Affiliation", "YouTube", "Acquisition de clients"],
 };
+
+/**
+ * Les trois parcours du lancement (§6), avec les textes de la maquette. Fixes comme « Trois parcours au lancement » :
+ * rien à lire en base, donc rien qui arrive après coup au-dessus des ancres « Tarifs » et « Questions fréquentes ».
+ * Les adresses (slugs) sont celles de la table `parcours`, pour le filtre du catalogue.
+ */
+export const PARCOURS_LANCEMENT: { slug: string; nom: string; couleur: CouleurParcours; description: string }[] = [
+  {
+    slug: "reussite-academique",
+    nom: "Réussite académique",
+    couleur: "academique",
+    description: "Les outils et méthodes pour réussir à l’université : bureautique, recherche documentaire, rédaction scientifique, mémoire et soutenance.",
+  },
+  {
+    slug: "competences-digitales",
+    nom: "Compétences digitales",
+    couleur: "digital",
+    description: "Les compétences numériques recherchées par les employeurs : design, intelligence artificielle, contenu et automatisation.",
+  },
+  {
+    slug: "business-revenus-en-ligne",
+    nom: "Business & revenus en ligne",
+    couleur: "business",
+    description: "Créer une activité et des revenus grâce au numérique : trouver des clients, vendre en ligne et lancer son business.",
+  },
+];

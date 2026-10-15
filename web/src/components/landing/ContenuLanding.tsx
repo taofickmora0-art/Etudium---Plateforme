@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { unstable_rethrow } from "next/navigation";
 import { BandeAppelAction } from "@/components/catalogue/BlocsFiche";
-import { listCatalogue, listParcoursCatalogue } from "@/lib/catalogue/data";
+import { listCatalogue } from "@/lib/catalogue/data";
 import { HeroLanding } from "./HeroLanding";
 import { SectionCommunaute } from "./SectionCommunaute";
 import { SectionFaq } from "./SectionFaq";
@@ -24,11 +24,6 @@ async function lireOuRien<T>(lire: () => Promise<T[]>, quoi: string): Promise<T[
   }
 }
 
-/** Les parcours actifs ; une lecture impossible laisse la section sans cartes (son ancre reste valable). */
-export async function ParcoursDepuisBase() {
-  return <SectionParcours parcours={await lireOuRien(listParcoursCatalogue, "parcours")} />;
-}
-
 /** « Pour bien commencer » ; une lecture impossible retire la section (comme une base sans formation publiée). */
 export async function FormationsDepuisBase() {
   return <SectionFormations cartes={await lireOuRien(listCatalogue, "formations")} />;
@@ -36,15 +31,16 @@ export async function FormationsDepuisBase() {
 
 /**
  * La landing (NdLanding, spec du lot 1 §9), dans l'ordre du design. Témoignages et chiffres sont absents tant qu'il
- * n'y a ni vrais témoignages ni chiffres parlants (Q11). Les sections lues en base arrivent en propriétés (Suspense).
+ * n'y a ni vrais témoignages ni chiffres parlants (Q11). Seules les formations sont lues en base : elles arrivent en
+ * propriété (Suspense).
  */
-export function ContenuLanding({ parcours, formations }: { parcours: ReactNode; formations: ReactNode }) {
+export function ContenuLanding({ formations }: { formations: ReactNode }) {
   return (
     <>
       <HeroLanding />
       <SectionProblemes />
       <SectionSolution />
-      {parcours}
+      <SectionParcours />
       <SectionEtapes />
       {formations}
       <SectionFormules />

@@ -3,10 +3,9 @@ import { ArrowRight02Icon } from "@hugeicons/core-free-icons";
 import { ListeCochee } from "@/components/catalogue/BlocsFiche";
 import { CourseIllustration } from "@/components/ui/CourseIllustration";
 import { Icon } from "@/components/ui/Icon";
-import type { ParcoursCatalogue } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
 import type { CouleurParcours } from "@/lib/contenus/libelles";
-import { POINTS_PARCOURS } from "@/lib/landing/textes";
+import { PARCOURS_LANCEMENT, POINTS_PARCOURS } from "@/lib/landing/textes";
 import { EnTeteSection, SECTION_BLANCHE } from "./BlocsLanding";
 
 /** Fond de la carte, couleur d'accent (surtitre, coches, survol du lien) selon la couleur du parcours. */
@@ -16,8 +15,8 @@ const COULEURS: Record<CouleurParcours, { fond: string; accent: string; survol: 
   business: { fond: "bg-[#FFF3E6]", accent: "text-business-texte", survol: "hover:text-business-texte" },
 };
 
-/** Carte d'un parcours (CARTE-PARCOURS) : nom et description de la base, six points fixes, lien vers ses formations. */
-function CarteParcours({ parcours }: { parcours: ParcoursCatalogue }) {
+/** Carte d'un parcours (CARTE-PARCOURS) : nom, description, six points et lien vers ses formations. */
+function CarteParcours({ parcours }: { parcours: (typeof PARCOURS_LANCEMENT)[number] }) {
   const { fond, accent, survol } = COULEURS[parcours.couleur] ?? COULEURS.academique;
   const points = POINTS_PARCOURS[parcours.slug] ?? [];
   return (
@@ -29,7 +28,7 @@ function CarteParcours({ parcours }: { parcours: ParcoursCatalogue }) {
       <h3 className="mt-1 mb-0 min-h-16 text-[26px] leading-8 font-semibold tracking-[-0.02em] text-encre max-sm:min-h-0 max-sm:text-[22px] max-sm:leading-7">
         {parcours.nom}
       </h3>
-      {parcours.description && <p className="mt-3 mb-0 min-h-24 text-[15px] leading-6 text-pretty text-texte max-sm:min-h-0">{parcours.description}</p>}
+      <p className="mt-3 mb-0 min-h-24 text-[15px] leading-6 text-pretty text-texte max-sm:min-h-0">{parcours.description}</p>
       <div className="flex-1">
         {points.length > 0 && (
           <>
@@ -55,11 +54,8 @@ function CarteParcours({ parcours }: { parcours: ParcoursCatalogue }) {
   );
 }
 
-/**
- * Les trois parcours (NdLanding §6), cible de « Parcours » : les parcours actifs de la base, dans leur ordre. Sans
- * parcours lus, la section garde son titre (l'ancre de l'en-tête reste valable).
- */
-export function SectionParcours({ parcours }: { parcours: ParcoursCatalogue[] }) {
+/** Les trois parcours du lancement (NdLanding §6), cible de « Parcours » dans l'en-tête et des puces du hero. */
+export function SectionParcours() {
   return (
     <section id="parcours" aria-labelledby="titre-parcours" className={SECTION_BLANCHE}>
       <EnTeteSection
@@ -69,13 +65,11 @@ export function SectionParcours({ parcours }: { parcours: ParcoursCatalogue[] })
         idTitre="titre-parcours"
         chapeau="Chaque parcours regroupe des formations qui se complètent. D’autres parcours arriveront."
       />
-      {parcours.length > 0 && (
-        <div className="mt-10 grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(290px,calc((100%-40px)/3))),1fr))] gap-5 max-sm:mt-6 max-sm:gap-3">
-          {parcours.map((p) => (
-            <CarteParcours key={p.slug} parcours={p} />
-          ))}
-        </div>
-      )}
+      <div className="mt-10 grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(290px,calc((100%-40px)/3))),1fr))] gap-5 max-sm:mt-6 max-sm:gap-3">
+        {PARCOURS_LANCEMENT.map((p) => (
+          <CarteParcours key={p.slug} parcours={p} />
+        ))}
+      </div>
     </section>
   );
 }
