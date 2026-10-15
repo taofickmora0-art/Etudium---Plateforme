@@ -23,7 +23,8 @@ export function FormationOnglets({
       defaultValue={ongletInitial}
       items={[
         { value: "informations", label: "Informations", content: informations },
-        { value: "programme", label: "Programme", content: programme },
+        // « Leçons », comme izimentor (refonte des formations, §3.1) ; l'adresse garde ?onglet=programme.
+        { value: "programme", label: "Leçons", content: programme },
         { value: "publication", label: "Publication", content: publication },
       ]}
     />

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { FormationInfosForm } from "@/components/admin/FormationInfosForm";
 import { FormationOnglets } from "@/components/admin/FormationOnglets";
 import { PageAdmin } from "@/components/admin/PageAdmin";
-import { ProgrammeEditor } from "@/components/admin/ProgrammeEditor";
+import { OngletLecons } from "@/components/admin/OngletLecons";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { Tag } from "@/components/ui/Tag";
 import { getFormationAdmin, listParcours } from "@/lib/admin/data";
@@ -40,7 +40,7 @@ export async function EditeurFormateur({ params, searchParams }: Params) {
       <FormationOnglets
         ongletInitial={onglet && ONGLETS.includes(onglet) ? onglet : "informations"}
         informations={<FormationInfosForm formation={formation} parcours={parcours} formateurs={[]} espace="formateur" />}
-        programme={<ProgrammeEditor formation={formation} base="/formateur/formations" />}
+        programme={<OngletLecons formation={formation} base="/formateur/formations" />}
         publication={<PublicationFormateur id={formation.id} formation={formation} />}
       />
     </PageAdmin>

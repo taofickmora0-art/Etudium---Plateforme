@@ -27,7 +27,7 @@ const routeur = { push: vi.fn(), replace: vi.fn(), refresh: vi.fn() };
 vi.mock("next/navigation", () => ({ useRouter: () => routeur, usePathname: () => "/admin/formations" }));
 
 const { FormationInfosForm } = await import("@/components/admin/FormationInfosForm");
-const { ProgrammeEditor } = await import("@/components/admin/ProgrammeEditor");
+const { OngletLecons } = await import("@/components/admin/OngletLecons");
 const { PublicationPanel } = await import("@/components/admin/PublicationPanel");
 const { FiltreStatut } = await import("@/components/admin/FiltreStatut");
 const { PageAdmin } = await import("@/components/admin/PageAdmin");
@@ -92,10 +92,12 @@ describe("Éditeur réglé par l'espace", () => {
     expect(screen.queryByRole("region", { name: "Réglé par l’équipe Étudium" })).not.toBeInTheDocument();
   });
 
-  it("le lien d'une leçon et l'ajout d'une leçon suivent l'espace", () => {
-    const { container } = avecToast(<ProgrammeEditor formation={FORMATION} base="/formateur/formations" />);
-    expect(screen.getByRole("link", { name: /Leçon/ })).toHaveAttribute("href", "/formateur/formations/f1/lecons/l1");
-    expect(container.querySelector('input[name="espace"][value="formateur"]')).not.toBeNull();
+  it("le lien d'une leçon et l'ajout d'une leçon suivent l'espace", async () => {
+    const user = userEvent.setup();
+    avecToast(<OngletLecons formation={FORMATION} base="/formateur/formations" />);
+    expect(screen.getByRole("link", { name: "Leçon" })).toHaveAttribute("href", "/formateur/formations/f1/lecons/l1");
+    await user.click(screen.getByRole("button", { name: /Ajouter une leçon à/ }));
+    expect(document.querySelector('input[name="espace"][value="formateur"]')).not.toBeNull();
   });
 
   it("le fil d'Ariane suit la racine de l'espace", () => {

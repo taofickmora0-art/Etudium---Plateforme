@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { FormationInfosForm } from "@/components/admin/FormationInfosForm";
 import { FormationOnglets } from "@/components/admin/FormationOnglets";
 import { PageAdmin } from "@/components/admin/PageAdmin";
-import { ProgrammeEditor } from "@/components/admin/ProgrammeEditor";
+import { OngletLecons } from "@/components/admin/OngletLecons";
 import { PublicationPanel } from "@/components/admin/PublicationPanel";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -39,7 +39,7 @@ async function FicheFormation({ params, searchParams }: Params) {
       <FormationOnglets
         ongletInitial={onglet && ONGLETS.includes(onglet) ? onglet : "informations"}
         informations={<FormationInfosForm formation={formation} parcours={parcours} formateurs={formateurs} />}
-        programme={<ProgrammeEditor formation={formation} />}
+        programme={<OngletLecons formation={formation} />}
         publication={<PublicationPanel id={formation.id} formation={formation} formateurNom={formateurs.find((f) => f.id === formation.formateurId)?.nom ?? null} />}
       />
     </PageAdmin>
