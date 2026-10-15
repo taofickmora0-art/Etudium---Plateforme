@@ -49,7 +49,7 @@ const donnees = (lecon: Partial<LeconDetail>, fiche = EXCEL_OUVERTE): DonneesLec
 
 describe("Page leçon : contenu", () => {
   it("un compte connecté suit la leçon : titre, vidéo, voisines, onglets et « Dans cette leçon »", () => {
-    render(<ContenuLecon donnees={donnees({})} connecte terminees={new Set()} />);
+    render(<ContenuLecon donnees={donnees({})} connecte />);
     expect(screen.getByRole("heading", { level: 1, name: "Saisir et mettre en forme des données" })).toBeInTheDocument();
     expect(screen.getByText("Leçon 2 sur 12")).toBeInTheDocument();
     expect(screen.getByText("12 min 30")).toBeInTheDocument();
@@ -61,7 +61,7 @@ describe("Page leçon : contenu", () => {
     expect(screen.getByRole("link", { name: "Leçon suivante" })).toHaveAttribute("href", `${ADRESSE}/${id(3)}`);
     const [ordinateur, telephone] = screen.getAllByRole("tablist", { name: "Contenu de la leçon" });
     expect(within(ordinateur).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Ressources", "Notes"]);
-    expect(within(telephone).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Programme", "Ressources", "Notes"]);
+    expect(within(telephone).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Ressources", "Notes"]);
     const carte = screen.getByRole("region", { name: "Dans cette leçon" });
     expect(within(carte).getByText("Saisir proprement, puis mettre en forme.")).toBeInTheDocument();
     expect(within(carte).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Saisir des dates", "Appliquer un format de nombre"]);
@@ -69,30 +69,30 @@ describe("Page leçon : contenu", () => {
   });
 
   it("une leçon sans vidéo affiche son texte", () => {
-    const { container } = render(<ContenuLecon donnees={donnees({ video: null, texte: "Ouvrez Excel.\nPuis créez un classeur." })} connecte terminees={new Set()} />);
+    const { container } = render(<ContenuLecon donnees={donnees({ video: null, texte: "Ouvrez Excel.\nPuis créez un classeur." })} connecte />);
     expect(container.querySelector("iframe")).toBeNull();
     expect(screen.getByText(/Ouvrez Excel\./)).toBeInTheDocument();
   });
 
   it("pour un compte connecté, le temps réellement regardé et le seuil s'affichent sous la vidéo", () => {
     const vu = { passages: [[0, 75]] as [number, number][], positionSecondes: 75, terminee: false };
-    const { unmount } = render(<ContenuLecon donnees={donnees({ visionnage: vu })} connecte terminees={new Set()} />);
+    const { unmount } = render(<ContenuLecon donnees={donnees({ visionnage: vu })} connecte />);
     expect(screen.getByText("Temps réellement regardé : 10 %")).toBeInTheDocument();
     expect(screen.getByText("Seuil de validation fixé par la formatrice : 90 %")).toBeInTheDocument();
     expect(screen.getByText("Avancer dans la barre ne compte pas")).toBeInTheDocument();
     unmount();
-    render(<ContenuLecon donnees={donnees({ visionnage: { ...vu, terminee: true } })} connecte terminees={new Set()} />);
+    render(<ContenuLecon donnees={donnees({ visionnage: { ...vu, terminee: true } })} connecte />);
     expect(screen.getByText("Leçon validée")).toBeInTheDocument();
   });
 
   it("sans la table du visionnage (migration 0007), la vidéo se lit sans mesure", () => {
-    render(<ContenuLecon donnees={donnees({ visionnage: null })} connecte terminees={new Set()} />);
+    render(<ContenuLecon donnees={donnees({ visionnage: null })} connecte />);
     expect(screen.getByRole("button", { name: "Lire la vidéo" })).toBeInTheDocument();
     expect(screen.queryByText(/Temps réellement regardé/)).toBeNull();
   });
 
   it("un visiteur sur un aperçu est invité à créer son compte, y compris dans l'onglet Notes", async () => {
-    render(<ContenuLecon donnees={donnees({ id: id(1), titre: "Découvrir l’interface" }, EXCEL)} connecte={false} terminees={new Set()} />);
+    render(<ContenuLecon donnees={donnees({ id: id(1), titre: "Découvrir l’interface" }, EXCEL)} connecte={false} />);
     expect(screen.getByText("Vous regardez un aperçu gratuit")).toBeInTheDocument();
     expect(screen.queryByText(/Temps réellement regardé/)).toBeNull();
     expect(screen.getByText("Créez votre compte gratuit pour enregistrer votre progression.")).toBeInTheDocument();
@@ -107,14 +107,14 @@ describe("Page leçon : contenu", () => {
       { id: id(3), titre: "Les formules essentielles", apercu: false, accessible: false, texte: "Texte secret de la leçon" },
       EXCEL,
     );
-    const { container } = render(<ContenuLecon donnees={fermee} connecte terminees={new Set()} />);
+    const { container } = render(<ContenuLecon donnees={fermee} connecte />);
     expect(screen.getByRole("heading", { name: "Cette leçon est verrouillée" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Voir les formules" })).toHaveAttribute("href", "/abonnement");
     expect(screen.getByRole("link", { name: "Voir l’aperçu gratuit" })).toHaveAttribute("href", `${ADRESSE}/${id(1)}`);
     expect(container.innerHTML).not.toMatch(/youtube|vimeo|dQw4w9WgXcQ|Texte secret|Classeur d’exemple/);
     expect(screen.queryByRole("tablist")).toBeNull();
-    // Sur téléphone, le programme reste accessible sous le verrou.
-    expect(screen.getByRole("heading", { name: "Programme de la formation" })).toBeInTheDocument();
+    // Sur téléphone, le programme est dans le tiroir « Leçons » de l'en-tête (refonte des formations, étape B).
+    expect(screen.queryByRole("heading", { name: "Programme de la formation" })).toBeNull();
   });
 
   it("un visiteur devant une leçon d'une formation gratuite est invité à créer son compte ou à se connecter", () => {
@@ -124,7 +124,7 @@ describe("Page leçon : contenu", () => {
       note: null,
       notesDisponibles: true,
     };
-    render(<ContenuLecon donnees={fermee} connecte={false} terminees={new Set()} />);
+    render(<ContenuLecon donnees={fermee} connecte={false} />);
     expect(screen.getByRole("heading", { name: "Cette leçon est réservée aux comptes Étudium" })).toBeInTheDocument();
     const suite = encodeURIComponent(`/formations/zotero-gerer-ses-references/lecons/${id(21)}`);
     expect(screen.getByRole("link", { name: "Se connecter" })).toHaveAttribute("href", `/connexion?next=${suite}`);
@@ -136,10 +136,10 @@ describe("Page leçon : programme", () => {
     render(<ProgrammeLecon fiche={EXCEL} leconId={id(2)} connecte terminees={new Set([id(1)])} />);
     expect(screen.getByRole("link", { name: "Mes formations" })).toHaveAttribute("href", "/mes-formations");
     expect(screen.getByRole("link", { name: "Maîtriser Microsoft Excel" })).toHaveAttribute("href", "/formations/maitriser-microsoft-excel");
-    const courante = screen.getByRole("link", { name: "Saisir et mettre en forme" });
+    const courante = screen.getByRole("link", { name: /^Saisir et mettre en forme/ });
     expect(courante).toHaveAttribute("aria-current", "page");
     expect(within(courante).getByText("Saisir et mettre en forme")).toHaveAttribute("title", "Saisir et mettre en forme des données");
-    expect(screen.queryByRole("link", { name: "Les formules essentielles" })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Les formules essentielles/ })).toBeNull();
     expect(screen.getByText("Les formules essentielles").closest("[aria-disabled]")).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByRole("progressbar", { name: "Progression de la formation" })).toHaveAttribute("aria-valuenow", "8");
     expect(screen.getByText("8 % terminé")).toBeInTheDocument();

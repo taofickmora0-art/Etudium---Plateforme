@@ -76,7 +76,7 @@ describe("Notes privées d'une leçon", () => {
     enregistrerNote.mockResolvedValue({ ok: true });
     render(
       <ToastProvider>
-        <ContenuLecon donnees={DONNEES} connecte terminees={new Set()} />
+        <ContenuLecon donnees={DONNEES} connecte />
       </ToastProvider>,
     );
     await ouvrir(0, "Notes");
@@ -96,7 +96,7 @@ describe("Notes privées d'une leçon", () => {
   it("les onglets de l'ordinateur et du téléphone montrent la même note", async () => {
     render(
       <ToastProvider>
-        <ContenuLecon donnees={DONNEES} connecte terminees={new Set()} />
+        <ContenuLecon donnees={DONNEES} connecte />
       </ToastProvider>,
     );
     await ouvrir(0, "Notes");

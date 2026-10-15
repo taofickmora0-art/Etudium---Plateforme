@@ -1,15 +1,16 @@
 import type { ReactNode } from "react";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
 
-type Props = { programme: ReactNode; ressources: ReactNode; notes: ReactNode };
+type Props = { ressources: ReactNode; notes: ReactNode };
 
 /**
  * Onglets sous la vidéo. Ordinateur (NdLecon §2.8) : Ressources (ouvert) et Notes, le programme étant à gauche.
- * Téléphone (NdMobLecon §3.4) : Programme (ouvert), Ressources et Notes, en pleine largeur.
+ * Téléphone (NdMobLecon §3.4) : Ressources et Notes, en pleine largeur ; le programme est dans le tiroir « Leçons »
+ * (refonte des formations, §1.4).
  * Deux blocs, l'un masqué selon la largeur : chaque écran garde son onglet ouvert par défaut, sans script.
  * L'onglet Questions arrive au lot 5 (spec Q9).
  */
-export function OngletsLecon({ programme, ressources, notes }: Props) {
+export function OngletsLecon({ ressources, notes }: Props) {
   return (
     <>
       <SegmentedTabs
@@ -25,7 +26,6 @@ export function OngletsLecon({ programme, ressources, notes }: Props) {
         pleineLargeur
         className="gap-5 lg:hidden"
         items={[
-          { value: "programme", label: "Programme", content: programme },
           { value: "ressources", label: "Ressources", content: ressources },
           { value: "notes", label: "Notes", content: notes },
         ]}

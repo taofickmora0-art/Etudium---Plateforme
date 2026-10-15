@@ -14,14 +14,12 @@ import { LecteurEtudium } from "./LecteurEtudium";
 import { NavigationLecon } from "./NavigationLecon";
 import { NoteProvider, NotesLecon } from "./NotesLecon";
 import { OngletsLecon } from "./OngletsLecon";
-import { ProgrammeMobile } from "./ProgrammeMobile";
 import { RessourcesLecon } from "./RessourcesLecon";
 import { VisiteLecon } from "./VisiteLecon";
 
 type Props = {
   donnees: DonneesLecon;
   connecte: boolean;
-  terminees: ReadonlySet<string>;
   /** L'équipe ou le formateur en aperçu (formation non publiée, leçon en brouillon) : rien n'est enregistré. */
   apercu?: Apercu | null;
   /** Le compte connecté, pour les discussions (0028). */
@@ -34,11 +32,10 @@ type Props = {
  * Le contenu de la page leçon (NdLecon, NdMobLecon) : vidéo, en-tête, navigation, onglets et « Dans cette leçon ».
  * Une leçon fermée n'affiche que son verrou, son en-tête et son résumé : jamais la vidéo, le texte ni les fichiers.
  */
-export function ContenuLecon({ donnees, connecte, terminees, apercu = null, moi = null, lienModifier = null }: Props) {
+export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lienModifier = null }: Props) {
   const { fiche, lecon, note, notesDisponibles } = donnees;
   const ouverte = lecon.accessible;
   const ou = situation(fiche.modules, lecon.id);
-  const programme = <ProgrammeMobile fiche={fiche} leconId={lecon.id} connecte={connecte} terminees={terminees} />;
   return (
     <div className="flex min-w-0 flex-col gap-6">
       {apercu && <BandeauApercu apercu={apercu} />}
@@ -82,24 +79,15 @@ export function ContenuLecon({ donnees, connecte, terminees, apercu = null, moi 
       <NavigationLecon fiche={fiche} leconId={lecon.id} />
       <div aria-hidden="true" className="h-px bg-separateur max-lg:hidden" />
       <div className="flex flex-wrap items-start gap-8">
-        {ouverte ? (
+        {ouverte && (
           <div className="flex min-w-0 flex-[999_1_420px] flex-col">
             <NoteProvider key={lecon.id} noteInitiale={note}>
               <OngletsLecon
-                programme={programme}
                 ressources={<RessourcesLecon ressources={lecon.ressources} />}
                 notes={<NotesLecon leconId={lecon.id} noteInitiale={note} connecte={connecte} disponible={notesDisponibles} />}
               />
             </NoteProvider>
           </div>
-        ) : (
-          // Sans onglets, le téléphone garde quand même le programme (il n'a pas de panneau à gauche).
-          <section aria-labelledby="programme-lecon" className="flex min-w-0 flex-[999_1_420px] flex-col gap-2 lg:hidden">
-            <h2 id="programme-lecon" className="m-0 text-base leading-6 font-semibold text-encre">
-              Programme de la formation
-            </h2>
-            {programme}
-          </section>
         )}
         <div className="min-w-0 flex-[1_1_300px] empty:hidden">
           <DansCetteLecon resume={lecon.resume} pointsCles={lecon.pointsCles} />

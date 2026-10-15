@@ -43,7 +43,7 @@ describe("La page leçon", () => {
   beforeEach(() => ouvrirLecon.mockClear());
 
   it("le texte de la leçon est mis en forme : titre, gras, liste", () => {
-    render(<ContenuLecon donnees={donnees()} connecte terminees={new Set()} />);
+    render(<ContenuLecon donnees={donnees()} connecte />);
     expect(screen.getByRole("heading", { name: "Étapes" })).toBeInTheDocument();
     expect(screen.getByText("Excel").tagName).toBe("STRONG");
     expect(screen.getByText("créez un classeur ;").closest("li")).not.toBeNull();
@@ -51,7 +51,7 @@ describe("La page leçon", () => {
   });
 
   it("aperçu d'une formation non publiée : le bandeau ; ni visite enregistrée, ni temps regardé mesuré", () => {
-    render(<ContenuLecon donnees={donnees()} connecte terminees={new Set()} apercu="formation" />);
+    render(<ContenuLecon donnees={donnees()} connecte apercu="formation" />);
     const bandeau = screen.getByRole("status", { name: "Aperçu : pas encore visible des étudiants" });
     expect(within(bandeau).getByText("Cette formation n’est pas encore publiée.")).toBeInTheDocument();
     expect(ouvrirLecon).not.toHaveBeenCalled();
@@ -60,15 +60,15 @@ describe("La page leçon", () => {
 
   it("les discussions sous le contenu quand la base les donne ; sinon, pas de section (étape B)", () => {
     const moi = { compteId: "moi", prenom: "Koffi", nom: "Dossou", initiales: "KD", photoUrl: null };
-    const { unmount } = render(<ContenuLecon donnees={{ ...donnees(), discussion: { total: 0, reponses: [] } }} connecte terminees={new Set()} moi={moi} />);
+    const { unmount } = render(<ContenuLecon donnees={{ ...donnees(), discussion: { total: 0, reponses: [] } }} connecte moi={moi} />);
     expect(screen.getByRole("region", { name: "Discussions de la leçon" })).toBeInTheDocument();
     unmount();
-    render(<ContenuLecon donnees={{ ...donnees(), discussion: null }} connecte terminees={new Set()} moi={moi} />);
+    render(<ContenuLecon donnees={{ ...donnees(), discussion: null }} connecte moi={moi} />);
     expect(screen.queryByRole("region", { name: "Discussions de la leçon" })).toBeNull();
   });
 
   it("aperçu d'une leçon en brouillon : le bandeau le dit", () => {
-    render(<ContenuLecon donnees={donnees()} connecte terminees={new Set()} apercu="lecon" />);
+    render(<ContenuLecon donnees={donnees()} connecte apercu="lecon" />);
     expect(within(screen.getByRole("status", { name: "Aperçu : pas encore visible des étudiants" })).getByText("Cette leçon est en brouillon.")).toBeInTheDocument();
   });
 

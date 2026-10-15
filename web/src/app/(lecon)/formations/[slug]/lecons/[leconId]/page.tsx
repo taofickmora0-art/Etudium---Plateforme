@@ -9,7 +9,9 @@ import { CadreLecon } from "@/components/lecon/CadreLecon";
 import { EtatLeconProvider } from "@/components/lecon/EtatLecon";
 import { ContenuLecon } from "@/components/lecon/ContenuLecon";
 import { BarreLecon } from "@/components/lecon/NavigationLecon";
-import { ProgrammeLecon } from "@/components/lecon/ProgrammeLecon";
+import { ProgrammeLecon, ProgressionCours } from "@/components/lecon/ProgrammeLecon";
+import { ProgrammeMobile } from "@/components/lecon/ProgrammeMobile";
+import { TiroirLecons } from "@/components/lecon/TiroirLecons";
 import { Skeleton } from "@/components/ui/Skeleton";
 import type { Apercu } from "@/components/lecon/BandeauApercu";
 import { ficheApercu, lienModifierLecon } from "@/lib/catalogue/apercu";
@@ -90,8 +92,13 @@ async function Lecon({ params }: Params) {
           />
         }
         barre={precedente || suivante || actif ? <BarreLecon fiche={donnees.fiche} leconId={leconId} /> : undefined}
+        tiroir={
+          <TiroirLecons pied={connecte ? <ProgressionCours fiche={donnees.fiche} terminees={terminees} /> : undefined}>
+            <ProgrammeMobile fiche={donnees.fiche} leconId={leconId} connecte={connecte} terminees={terminees} />
+          </TiroirLecons>
+        }
       >
-        <ContenuLecon donnees={donnees} connecte={connecte} terminees={terminees} apercu={apercu} moi={moi} lienModifier={lienModifier} />
+        <ContenuLecon donnees={donnees} connecte={connecte} apercu={apercu} moi={moi} lienModifier={lienModifier} />
       </CadreLecon>
     </EtatLeconProvider>
   );

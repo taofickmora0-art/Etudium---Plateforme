@@ -5,11 +5,13 @@ import { Couverture } from "@/components/ui/Couverture";
 import { Icon } from "@/components/ui/Icon";
 import { Tag } from "@/components/ui/Tag";
 import { ProgressBar } from "@/components/ui/Progress";
+import { formatDuree } from "@/lib/admin/duree";
 import { dureeLisible, parcoursPrincipal } from "@/lib/catalogue/regles";
 import type { FicheFormation, LeconFiche } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
 import { urlCouverture } from "@/lib/couvertures/adresse";
 import { etatLigne, tempsRestant, type EtatLigne } from "@/lib/lecon/regles";
+import { ModulesRepliables } from "./ModulesRepliables";
 
 type Props = { fiche: FicheFormation; leconId: string; connecte: boolean; terminees: ReadonlySet<string> };
 
@@ -19,6 +21,7 @@ const LIGNE = "focus-etudium flex h-12 items-center gap-2.5 rounded-bouton px-3 
 const ICONES = { courante: PlayCircleIcon, "a-venir": PlayCircleIcon, terminee: CheckmarkCircle02Icon, verrouillee: SquareLock02Icon };
 
 function Ligne({ fiche, lecon, etat }: { fiche: FicheFormation; lecon: LeconFiche; etat: EtatLigne }) {
+  const duree = formatDuree(lecon.dureeSecondes);
   const contenu = (
     <>
       <span className={cn("flex flex-none", etat === "terminee" && "text-reussite-texte")}>
@@ -27,12 +30,11 @@ function Ligne({ fiche, lecon, etat }: { fiche: FicheFormation; lecon: LeconFich
       <span title={lecon.titre} className="min-w-0 truncate">
         {lecon.titreCourt ?? lecon.titre}
       </span>
-      {/* Une leçon en brouillon : seuls l'équipe et le formateur la voient (0027). */}
-      {lecon.publiee === false && (
-        <Tag tone="enAttente" className="ml-auto flex-none">
-          Brouillon
-        </Tag>
-      )}
+      <span className="ml-auto flex flex-none items-center gap-2">
+        {/* Une leçon en brouillon : seuls l'équipe et le formateur la voient (0027). */}
+        {lecon.publiee === false && <Tag tone="enAttente">Brouillon</Tag>}
+        {duree && <span className="text-[13px] leading-5 font-normal text-ardoise tabular-nums">{duree}</span>}
+      </span>
     </>
   );
   if (etat === "verrouillee") {
@@ -53,59 +55,73 @@ function Ligne({ fiche, lecon, etat }: { fiche: FicheFormation; lecon: LeconFich
   );
 }
 
-/**
- * Panneau « Programme de la formation » (NdLecon §2.2), à la place de la barre latérale sur ordinateur : retour,
- * formation et progression (compte connecté), puis tous les modules, dépliés.
- */
-export function ProgrammeLecon({ fiche, leconId, connecte, terminees }: Props) {
+/** La progression du cours : la barre, « 8 % terminé » et le temps restant (bas du programme, bas du tiroir). */
+export function ProgressionCours({ fiche, terminees }: { fiche: FicheFormation; terminees: ReadonlySet<string> }) {
   const lecons = fiche.modules.flatMap((m) => m.lecons);
   const faites = lecons.filter((l) => terminees.has(l.id)).length;
   const pourcentage = lecons.length ? Math.round((100 * faites) / lecons.length) : 0;
   const restant = dureeLisible(tempsRestant(fiche.modules, terminees));
   return (
-    <>
-      <Link href={connecte ? "/mes-formations" : "/formations"} className={cn(LIGNE, "text-texte hover:bg-white/55")}>
-        <Icon icon={ArrowLeft02Icon} size={20} />
-        <span>{connecte ? "Mes formations" : "Toutes les formations"}</span>
-      </Link>
-      <div className="flex flex-col px-3 pt-1.5 pb-2.5">
-        <Couverture src={urlCouverture(fiche.couverture)} parcours={parcoursPrincipal(fiche)} sizes="280px" className="mb-3 rounded-[12px]" />
-        <Link href={`/formations/${fiche.slug}`} className="focus-etudium text-base leading-6 font-semibold text-encre no-underline hover:underline">
-          {fiche.titre}
-        </Link>
-        {connecte && (
+    <div className="flex flex-col">
+      <ProgressBar value={pourcentage} label="Progression de la formation" />
+      <div className="mt-2 flex flex-wrap items-center gap-[7px] text-xs leading-[18px] text-ardoise">
+        <span>{pourcentage} % terminé</span>
+        {restant && (
           <>
-            <ProgressBar value={pourcentage} label="Progression de la formation" className="mt-3" />
-            <div className="mt-2 flex flex-wrap items-center gap-[7px] text-xs leading-[18px] text-ardoise">
-              <span>{pourcentage} % terminé</span>
-              {restant && (
-                <>
-                  <span aria-hidden="true" className="size-[3px] flex-none rounded-full bg-ardoise" />
-                  <span className="flex items-center gap-1">
-                    <Icon icon={Clock01Icon} size={18} className="-mx-[1.5px]" />
-                    <span>{restant} restantes</span>
-                  </span>
-                </>
-              )}
-            </div>
+            <span aria-hidden="true" className="size-[3px] flex-none rounded-full bg-ardoise" />
+            <span className="flex items-center gap-1">
+              <Icon icon={Clock01Icon} size={18} className="-mx-[1.5px]" />
+              <span>{restant} restantes</span>
+            </span>
           </>
         )}
       </div>
-      {fiche.modules.map((module, index) => (
-        <div key={module.id} className="flex flex-col gap-3">
-          <div className="flex h-12 items-center gap-2.5 pr-1 pl-3">
-            <span className="text-[13.5px] tracking-[0.04em] whitespace-nowrap text-ardoise uppercase">{`${index + 1} · ${module.titre}`}</span>
-            <span aria-hidden="true" className="h-px flex-1 bg-[#DAE0EE]" />
-          </div>
-          <ul className="m-0 flex list-none flex-col gap-3 p-0">
-            {module.lecons.map((lecon) => (
-              <li key={lecon.id} className="flex min-w-0 flex-col">
-                <Ligne fiche={fiche} lecon={lecon} etat={etatLigne(lecon, leconId, terminees)} />
-              </li>
-            ))}
-          </ul>
+    </div>
+  );
+}
+
+/**
+ * Panneau « Programme de la formation » (NdLecon §2.2), à la place de la barre latérale sur ordinateur : retour et
+ * formation, puis les modules, repliables (celui de la leçon en cours ouvert), avec la durée de chaque leçon. Il défile
+ * seul ; la progression (compte connecté) reste en bas (refonte des formations, spec §1.4).
+ */
+export function ProgrammeLecon({ fiche, leconId, connecte, terminees }: Props) {
+  const enCours = fiche.modules.find((m) => m.lecons.some((l) => l.id === leconId)) ?? fiche.modules[0];
+  return (
+    <>
+      <div className="-m-1 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-1">
+        <Link href={connecte ? "/mes-formations" : "/formations"} className={cn(LIGNE, "flex-none text-texte hover:bg-white/55")}>
+          <Icon icon={ArrowLeft02Icon} size={20} />
+          <span>{connecte ? "Mes formations" : "Toutes les formations"}</span>
+        </Link>
+        <div className="flex flex-none flex-col px-3 pt-1.5 pb-1">
+          <Couverture src={urlCouverture(fiche.couverture)} parcours={parcoursPrincipal(fiche)} sizes="280px" className="mb-3 rounded-[12px]" />
+          <Link href={`/formations/${fiche.slug}`} className="focus-etudium text-base leading-6 font-semibold text-encre no-underline hover:underline">
+            {fiche.titre}
+          </Link>
         </div>
-      ))}
+        <ModulesRepliables
+          ouverts={enCours ? [enCours.id] : []}
+          sections={fiche.modules.map((module, index) => ({
+            cle: module.id,
+            titre: `${index + 1} · ${module.titre}`,
+            contenu: (
+              <ul className="m-0 flex list-none flex-col gap-3 p-0">
+                {module.lecons.map((lecon) => (
+                  <li key={lecon.id} className="flex min-w-0 flex-col">
+                    <Ligne fiche={fiche} lecon={lecon} etat={etatLigne(lecon, leconId, terminees)} />
+                  </li>
+                ))}
+              </ul>
+            ),
+          }))}
+        />
+      </div>
+      {connecte && (
+        <div className="flex-none border-t border-[#DAE0EE] px-3 pt-4">
+          <ProgressionCours fiche={fiche} terminees={terminees} />
+        </div>
+      )}
     </>
   );
 }
