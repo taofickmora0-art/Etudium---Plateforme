@@ -3,7 +3,8 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/formations" }));
+let chemin = "/formations";
+vi.mock("next/navigation", () => ({ usePathname: () => chemin }));
 
 const { EnTetePublic } = await import("@/components/site/EnTetePublic");
 const { PiedDePagePublic } = await import("@/components/site/PiedDePagePublic");
@@ -52,6 +53,19 @@ describe("En-tête public (NdLanding §2)", () => {
     await user.click(within(menu).getByRole("link", { name: "Tarifs" }));
     expect(screen.queryByRole("navigation", { name: "Menu du site" })).toBeNull();
     expect(bouton).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("le menu se referme quand on change de page (l'en-tête reste monté dans le catalogue)", async () => {
+    const user = userEvent.setup();
+    chemin = "/formations";
+    const { rerender } = render(<EnTetePublic />);
+    await user.click(screen.getByRole("button", { name: "Menu" }));
+    expect(screen.getByRole("navigation", { name: "Menu du site" })).toBeInTheDocument();
+    chemin = "/formations/maitriser-microsoft-excel";
+    rerender(<EnTetePublic />);
+    expect(screen.queryByRole("navigation", { name: "Menu du site" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Menu" })).toHaveAttribute("aria-expanded", "false");
+    chemin = "/formations";
   });
 
   it("la touche Échap referme le menu", async () => {

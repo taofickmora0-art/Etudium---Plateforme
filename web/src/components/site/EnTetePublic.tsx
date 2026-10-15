@@ -30,7 +30,11 @@ const INSCRIPTION =
  */
 export function EnTetePublic() {
   const pathname = usePathname() ?? "";
-  const [ouvert, setOuvert] = useState(false);
+  // Le menu est ouvert sur une page : l'en-tête reste monté d'une page à l'autre du catalogue (même mise en page),
+  // un changement d'adresse le referme donc de lui-même.
+  const [ouvertSur, setOuvertSur] = useState<string | null>(null);
+  const ouvert = ouvertSur === pathname;
+  const fermer = () => setOuvertSur(null);
   const idMenu = useId();
   const bouton = useRef<HTMLButtonElement>(null);
 
@@ -38,7 +42,7 @@ export function EnTetePublic() {
     if (!ouvert) return;
     const surTouche = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      setOuvert(false);
+      fermer();
       bouton.current?.focus();
     };
     document.addEventListener("keydown", surTouche);
@@ -82,7 +86,7 @@ export function EnTetePublic() {
           label="Menu"
           aria-expanded={ouvert}
           aria-controls={ouvert ? idMenu : undefined}
-          onClick={() => setOuvert((o) => !o)}
+          onClick={() => setOuvertSur((o) => (o === pathname ? null : pathname))}
           className="size-10 rounded-[14px] sm:hidden"
         />
       </div>
@@ -97,13 +101,13 @@ export function EnTetePublic() {
               key={lien.href}
               href={lien.href}
               aria-current={actif(lien.href) ? "page" : undefined}
-              onClick={() => setOuvert(false)}
+              onClick={fermer}
               className={cn(LIEN, "h-auto min-h-12 px-3 text-[15px]", actif(lien.href) && "bg-coque")}
             >
               {lien.label}
             </Link>
           ))}
-          <Link href="/inscription" onClick={() => setOuvert(false)} className={cn(INSCRIPTION, "mt-1 min-h-12 py-3 text-center text-[15px] leading-tight")}>
+          <Link href="/inscription" onClick={fermer} className={cn(INSCRIPTION, "mt-1 min-h-12 py-3 text-center text-[15px] leading-tight")}>
             Créer mon compte gratuit
           </Link>
         </nav>
