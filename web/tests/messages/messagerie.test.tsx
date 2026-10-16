@@ -130,6 +130,17 @@ describe("La conversation", () => {
     expect(champ).toHaveValue("");
   });
 
+  it("au téléphone (écran tactile), Entrée va à la ligne : on envoie avec le bouton", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("matchMedia", (requete: string) => ({ matches: requete === "(pointer: coarse)", media: requete, addEventListener: () => {}, removeEventListener: () => {} }));
+    afficher();
+    const champ = screen.getByRole("textbox", { name: "Message à Dr Mireille Adjovi" });
+    await user.type(champ, "Bonjour{Enter}Docteur");
+    expect(champ).toHaveValue("Bonjour\nDocteur");
+    expect(actions.envoyerMessage).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
   it("un refus s'affiche et le texte reste dans le champ", async () => {
     const user = userEvent.setup();
     vi.mocked(actions.envoyerMessage).mockResolvedValue({ ok: false, message: "Trop de messages en peu de temps : réessayez dans quelques minutes." });
@@ -172,6 +183,29 @@ describe("La conversation", () => {
     });
     expect(screen.getByText("Nouveau message du formateur")).toBeInTheDocument();
     expect(screen.getByText("Bonjour Aïcha. Votre tableau est validé.")).toBeInTheDocument();
+  });
+
+  it("les messages précédents chargés restent à la relecture suivante ; les charger ne fait pas redescendre", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const defiler = vi.fn();
+    Element.prototype.scrollIntoView = defiler;
+    const ancien = message({ texte: "Un message de la semaine dernière", creeLe: "2026-10-09T10:00:00Z" });
+    vi.mocked(actions.relireFil).mockImplementation(async (_c: string, avant?: string) => (avant ? { ...FIL, messages: [ancien], plusAnciens: false } : FIL));
+    afficher({ fil: { ...FIL, plusAnciens: true } });
+    const avantChargement = defiler.mock.calls.length;
+    await act(async () => {
+      screen.getByRole("button", { name: "Messages précédents" }).click();
+    });
+    expect(await screen.findByText("Un message de la semaine dernière")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Messages précédents" })).toBeNull();
+    expect(defiler.mock.calls.length).toBe(avantChargement);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    expect(actions.relireFil).toHaveBeenLastCalledWith(C);
+    expect(screen.getByText("Un message de la semaine dernière")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Messages précédents" })).toBeNull();
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
   });
 
   it("vu par l'équipe : le nom du membre qui a répondu sous sa bulle", () => {

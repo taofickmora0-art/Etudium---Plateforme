@@ -41,7 +41,7 @@ describe("Supprimer son compte", () => {
       "photos-profil u1/a.jpg",
       `profil {"photo_url":null}`,
       "rpc oublier_mes_rendus",
-      "rpc oublier_mes_messages",
+      "rpc fichiers_de_mes_messages",
       "rpc supprimer_mon_compte",
       "cookie sb-projet-auth-token",
       "cookie etudium-souvenir",
@@ -52,22 +52,30 @@ describe("Supprimer son compte", () => {
   it("ses travaux rendus (exercices) sont effacés avant le compte", async () => {
     rpc.mockImplementation(async (nom: string) => (appels.push(`rpc ${nom}`), nom === "oublier_mes_rendus" ? { data: ["u1/l1/v1.pdf"], error: null } : { error: null }));
     await deleteAccount();
-    expect(appels.slice(2, 5)).toEqual(["rpc oublier_mes_rendus", "rendus u1/l1/v1.pdf", "rpc oublier_mes_messages"]);
+    expect(appels.slice(2, 5)).toEqual(["rpc oublier_mes_rendus", "rendus u1/l1/v1.pdf", "rpc fichiers_de_mes_messages"]);
   });
 
-  it("ses conversations partent avec leurs fichiers, des deux côtés, avant le compte", async () => {
+  it("ses conversations partent avec le compte ; leurs fichiers, listés avant, sont effacés juste après", async () => {
     const fichiers = ["u1/c1/a.pdf", "f2/c1/b.pdf"];
-    rpc.mockImplementation(async (nom: string) => (appels.push(`rpc ${nom}`), nom === "oublier_mes_messages" ? { data: fichiers, error: null } : { error: null }));
+    rpc.mockImplementation(async (nom: string) => (appels.push(`rpc ${nom}`), nom === "fichiers_de_mes_messages" ? { data: fichiers, error: null } : { error: null }));
     await deleteAccount();
-    expect(appels.slice(3, 6)).toEqual(["rpc oublier_mes_messages", "messages u1/c1/a.pdf,f2/c1/b.pdf", "rpc supprimer_mon_compte"]);
+    expect(appels.slice(3, 6)).toEqual(["rpc fichiers_de_mes_messages", "rpc supprimer_mon_compte", "messages u1/c1/a.pdf,f2/c1/b.pdf"]);
   });
 
-  it("si les fichiers des messages ne peuvent pas être effacés, le compte n'est pas supprimé", async () => {
-    rpc.mockImplementation(async (nom: string) => (appels.push(`rpc ${nom}`), nom === "oublier_mes_messages" ? { data: ["u1/c1/a.pdf"], error: null } : { error: null }));
-    stockage.remove.mockImplementation(async (chemins: string[], espace: string) => (espace === "messages" ? { data: null, error: { message: "refus" } } : { error: null }));
+  it("compte refusé (suspendu) : aucun fichier des messages n'est effacé", async () => {
+    rpc.mockImplementation(async (nom: string) =>
+      nom === "fichiers_de_mes_messages" ? { data: ["u1/c1/a.pdf"], error: null } : nom === "supprimer_mon_compte" ? { error: { message: "Ce compte est suspendu." } } : { error: null },
+    );
     await expect(deleteAccount()).rejects.toThrow();
-    expect(appels).not.toContain("rpc supprimer_mon_compte");
-    expect(jar.has("sb-projet-auth-token")).toBe(true);
+    expect(appels.some((a) => a.startsWith("messages "))).toBe(false);
+  });
+
+  it("compte supprimé mais fichiers des messages non effacés : la session est fermée quand même", async () => {
+    rpc.mockImplementation(async (nom: string) => (appels.push(`rpc ${nom}`), nom === "fichiers_de_mes_messages" ? { data: ["u1/c1/a.pdf"], error: null } : { error: null }));
+    stockage.remove.mockImplementation(async (chemins: string[], espace: string) => (espace === "messages" ? { data: null, error: { message: "refus" } } : { error: null }));
+    await expect(deleteAccount()).resolves.toBeUndefined();
+    expect(appels).toContain("rpc supprimer_mon_compte");
+    expect(jar.size).toBe(0);
   });
 
   it("si la base refuse, rien n'est effacé sur l'appareil et l'erreur remonte", async () => {

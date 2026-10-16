@@ -1,3 +1,4 @@
+import { BubbleChatIcon } from "@hugeicons/core-free-icons";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fauxSupabase } from "../admin/faux-supabase";
 
@@ -8,7 +9,8 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: async () => faux.client 
 let demo = false;
 vi.mock("@/lib/auth/current-user", () => ({ demoModeActive: () => demo }));
 
-const { lireAnnonces, lireNotifications } = await import("@/lib/notifications/data");
+const { lireAnnonces, lireNotifications, versLot } = await import("@/lib/notifications/data");
+const { TON_CATEGORIE } = await import("@/components/notifications/affichage");
 
 const BRUT = {
   lignes: [
@@ -39,6 +41,16 @@ describe("Lecture des notifications", () => {
       },
     });
     expect(faux.de("rpc", "mes_notifications")[0].valeurs).toEqual({ p_non_lues: true, p_avant: 42, p_nombre: 8 });
+  });
+
+  it("une notification de message (lot 5) garde sa catégorie et s'affiche avec la bulle de discussion", () => {
+    const lot = versLot({
+      lignes: [{ id: 7, categorie: "messages", titre: "Nouveau message d’Aïcha Kpadé", texte: "Bonjour", lien: "/formateur/messages?c=c1", cree_le: "2026-10-16T09:00:00+00:00", lue: false }],
+      suite: false,
+      non_lues: 1,
+    });
+    expect(lot.lignes[0]).toMatchObject({ categorie: "messages", lien: "/formateur/messages?c=c1" });
+    expect(TON_CATEGORIE.messages).toEqual({ tone: "information", icon: BubbleChatIcon });
   });
 
   it("par défaut : toutes, depuis le début, 20 ; un curseur qui n'est pas un nombre est ignoré", async () => {

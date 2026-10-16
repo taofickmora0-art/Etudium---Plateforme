@@ -1,4 +1,4 @@
-import { BookOpen01Icon, Notification02Icon, Video01Icon } from "@hugeicons/core-free-icons";
+import { BookOpen01Icon, BubbleChatIcon, Notification02Icon, Video01Icon } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@/components/ui/Icon";
 import type { AppNotification, TonNotification } from "@/components/ui/NotificationsPanel";
 import { quand } from "@/lib/notifications/temps";
@@ -14,6 +14,7 @@ export const TON_CATEGORIE: Record<CategorieNotification, { tone: TonNotificatio
   service: { tone: "neutre", icon: Notification02Icon },
   sessions_live: { tone: "information", icon: Video01Icon },
   communaute: { tone: "neutre" },
+  messages: { tone: "information", icon: BubbleChatIcon },
   exercices: { tone: "reussite" },
   expiration_renouvellement: { tone: "attention" },
   rappels_apprentissage: { tone: "information" },

@@ -124,7 +124,10 @@ export function FilConversation({
       void relireFil(conversationId).then((fil) => {
         if (!fil) return;
         setMessages((avant) => {
-          const suivants = fusionner(fil.messages, locaux.current);
+          // Les messages précédents déjà chargés (plus anciens que le premier rendu par le serveur) restent.
+          const premier = fil.messages[0]?.creeLe;
+          const anciens = premier ? avant.filter((m) => m.creeLe < premier) : [];
+          const suivants = [...anciens, ...fusionner(fil.messages, locaux.current)];
           if (suivants.length !== avant.length) rafraichirMessagesNonLus(espace);
           return suivants;
         });
@@ -133,11 +136,11 @@ export function FilConversation({
     return () => clearInterval(minuterie);
   }, [conversationId, espace]);
 
-  // Le dernier message reste visible quand il en arrive un.
-  const nombre = messages.length;
+  // Le dernier message reste visible quand il en arrive un (pas quand on charge les précédents).
+  const dernier = messages.at(-1)?.id;
   useEffect(() => {
     fin.current?.scrollIntoView?.({ block: "nearest" });
-  }, [nombre]);
+  }, [dernier]);
 
   async function precedents() {
     const premier = messages[0];
@@ -194,8 +197,10 @@ export function FilConversation({
   }
 
   function touche(event: KeyboardEvent<HTMLTextAreaElement>) {
-    // Entrée envoie ; Maj+Entrée va à la ligne (et une saisie en cours, accents composés, n'est pas coupée).
-    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+    // Entrée envoie ; Maj+Entrée va à la ligne (et une saisie en cours, accents composés, n'est pas coupée). Sur un
+    // écran tactile, Entrée va à la ligne : on envoie avec le bouton, comme dans les messageries des téléphones.
+    const tactile = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+    if (event.key === "Enter" && !event.shiftKey && !tactile && !event.nativeEvent.isComposing) {
       event.preventDefault();
       void envoyer();
     }

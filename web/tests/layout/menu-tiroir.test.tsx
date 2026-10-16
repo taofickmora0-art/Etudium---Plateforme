@@ -16,6 +16,10 @@ vi.mock("@/lib/notifications/actions", () => ({ chargerCloche: async () => null,
 const sansEspaces = async (): Promise<{ ok: true; espaces: Espace[] }> => ({ ok: true, espaces: [] });
 const chargerEspaces = vi.fn(sansEspaces);
 vi.mock("@/lib/communaute/actions", () => ({ chargerEspaces: () => chargerEspaces() }));
+// Les conversations non lues (lot 5) : un point sur le bouton ≡.
+const compterMessagesNonLus = vi.fn<(espace: string) => Promise<number>>(async () => 0);
+vi.mock("@/lib/messages/actions", () => ({ compterMessagesNonLus: (espace: string) => compterMessagesNonLus(espace) }));
+const { reinitialiserMessagesNonLus } = await import("@/components/messages/useMessagesNonLus");
 
 const P = "22222222-2222-4222-8222-222222222222";
 const B = "44444444-4444-4444-8444-444444444444";
@@ -25,6 +29,8 @@ afterEach(() => {
   chemin = "/accueil";
   recherche = "";
   chargerEspaces.mockReset().mockImplementation(sansEspaces);
+  compterMessagesNonLus.mockReset().mockResolvedValue(0);
+  reinitialiserMessagesNonLus();
 });
 
 describe("Le menu du téléphone", () => {
@@ -45,6 +51,22 @@ describe("Le menu du téléphone", () => {
     await user.click(bouton);
     await user.click(within(screen.getByRole("dialog", { name: "Menu" })).getByRole("button", { name: "Fermer le menu" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("des conversations non lues : un point rouge sur le bouton ≡, décrit pour les lecteurs d'écran", async () => {
+    compterMessagesNonLus.mockResolvedValue(2);
+    chemin = "/formateur/etudiants";
+    render(<AppShell espace="formateur">Contenu</AppShell>);
+    const bouton = within(screen.getByRole("banner")).getByRole("button", { name: "Menu" });
+    await waitFor(() => expect(bouton).toHaveAccessibleDescription("2 conversations non lues"));
+    expect(compterMessagesNonLus).toHaveBeenCalledWith("formateur");
+  });
+
+  it("aucune conversation non lue : pas de point", async () => {
+    render(<AppShell espace="etudiant">Contenu</AppShell>);
+    const bouton = within(screen.getByRole("banner")).getByRole("button", { name: "Menu" });
+    await waitFor(() => expect(compterMessagesNonLus).toHaveBeenCalled());
+    expect(bouton).toHaveAccessibleDescription("");
   });
 
   it("le choix « réduite » de l'ordinateur ne touche pas le tiroir", async () => {

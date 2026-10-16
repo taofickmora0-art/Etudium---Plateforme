@@ -1,6 +1,7 @@
 // Centre de notifications (spec des notifications, migration 0016).
 
-/** Les 8 catégories de l'onglet Notifications du profil, plus « service » (compte et travail : toujours envoyée). */
+/** Les catégories de l'onglet Notifications du profil (dont « messages », lot 5), plus « service » (compte et travail :
+ * toujours envoyée). */
 export const CATEGORIES_NOTIFICATION = [
   "nouveaux_contenus",
   "sessions_live",
@@ -8,6 +9,7 @@ export const CATEGORIES_NOTIFICATION = [
   "exercices",
   "rappels_apprentissage",
   "communaute",
+  "messages",
   "recommandations",
   "annonces",
   "service",

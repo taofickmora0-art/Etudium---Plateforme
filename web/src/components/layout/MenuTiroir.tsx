@@ -1,10 +1,13 @@
 "use client";
 
-import { Suspense, useState, type MouseEvent } from "react";
+import { Suspense, useId, useState, type MouseEvent } from "react";
 import { usePathname } from "next/navigation";
 import { Cancel01Icon, Menu01Icon } from "@hugeicons/core-free-icons";
 import { Dialog } from "radix-ui";
+import { useMessagesNonLus } from "@/components/messages/useMessagesNonLus";
 import { IconButton } from "@/components/ui/IconButton";
+import { PastilleNombre } from "@/components/ui/PastilleNombre";
+import { spaceOf } from "@/lib/auth/permissions";
 import { cn } from "@/lib/cn";
 import { EspacesCommunaute } from "./EspacesCommunaute";
 import { SidebarNavLinks } from "./SidebarNav";
@@ -16,12 +19,27 @@ function EntreesActives() {
   return <SidebarNavLinks pathname={pathname} repliable={false} apresPremierGroupe={communaute ? <EspacesCommunaute pathname={pathname} /> : null} />;
 }
 
+/** Sur le bouton ≡ : le nombre de conversations non lues (l'entrée « Messages » est dans le tiroir), décrit par `id`. */
+function PastilleMessages({ id }: { id: string }) {
+  const actuel = spaceOf(usePathname());
+  const nonLus = useMessagesNonLus(actuel === "admin" ? "equipe" : actuel);
+  return (
+    <>
+      {nonLus > 0 && <PastilleNombre nombre={nonLus} className="pointer-events-none absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] ring-2 ring-page" />}
+      <span id={id} className="sr-only">
+        {nonLus > 0 ? `${nonLus} conversation${nonLus > 1 ? "s" : ""} non lue${nonLus > 1 ? "s" : ""}` : ""}
+      </span>
+    </>
+  );
+}
+
 /**
  * Le menu ≡ du téléphone (demande du 14 octobre 2026) : les mêmes entrées que la barre latérale de l'ordinateur, dans un
  * tiroir qui glisse depuis la gauche ; sur l'Accueil, les espaces de la communauté en plus. Choisir une entrée le referme.
  */
 export function MenuTiroir({ className }: { className?: string }) {
   const [ouvert, setOuvert] = useState(false);
+  const idPastille = useId();
 
   // Un lien choisi : le tiroir se ferme pendant que la page change.
   const fermerSurLien = (e: MouseEvent<HTMLDivElement>) => {
@@ -30,9 +48,20 @@ export function MenuTiroir({ className }: { className?: string }) {
 
   return (
     <Dialog.Root open={ouvert} onOpenChange={setOuvert}>
-      <Dialog.Trigger asChild>
-        <IconButton icon={Menu01Icon} label="Menu" variant="plein" className={cn("size-12 rounded-bouton max-sm:size-10 max-sm:rounded-champ max-sm:[&_svg]:size-[18px]", className)} />
-      </Dialog.Trigger>
+      <span className={cn("relative inline-flex flex-none", className)}>
+        <Dialog.Trigger asChild>
+          <IconButton
+            icon={Menu01Icon}
+            label="Menu"
+            variant="plein"
+            aria-describedby={idPastille}
+            className="size-12 rounded-bouton max-sm:size-10 max-sm:rounded-champ max-sm:[&_svg]:size-[18px]"
+          />
+        </Dialog.Trigger>
+        <Suspense fallback={<span id={idPastille} className="sr-only" />}>
+          <PastilleMessages id={idPastille} />
+        </Suspense>
+      </span>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-encre/40 motion-safe:animate-apparition" />
         <Dialog.Content

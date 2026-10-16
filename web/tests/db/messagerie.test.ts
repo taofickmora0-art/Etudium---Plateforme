@@ -109,7 +109,7 @@ describe("L'assistance", () => {
     const [vueA] = await liste(A, "equipe");
     expect(vueA).toMatchObject({ id: CA, avec: { nom: "Aïcha Kpadé", role: "Assistance" }, non_lu: true });
     expect(await nonLus(S, "equipe")).toBe(1);
-    expect((await notifs(A)).at(-1)).toMatchObject({ titre: "Nouvelle demande d’assistance de Aïcha Kpadé", lien: `/admin/messages?c=${CA}` });
+    expect((await notifs(A)).at(-1)).toMatchObject({ titre: "Nouvelle demande d’assistance d’Aïcha Kpadé", lien: `/admin/messages?c=${CA}` });
     expect((await notifs(S)).at(-1)).toMatchObject({ lien: `/admin/messages?c=${CA}` });
 
     await envoyer(A, CA, "Bonjour Aïcha, nous regardons.");
@@ -118,10 +118,14 @@ describe("L'assistance", () => {
     expect((await notifs(S)).at(-1)).toMatchObject({ lue: true });
     const vueE = (await liste(E, "etudiant")).find((c) => c.id === CA);
     expect(vueE).toMatchObject({ avec: { nom: "Équipe Étudium", role: "Assistance", equipe: true }, formation: null, non_lu: true });
-    expect((await notifs(E)).at(-1)).toMatchObject({ titre: "Nouveau message de Équipe Étudium", lien: `/messages?c=${CA}` });
+    expect((await notifs(E)).at(-1)).toMatchObject({ titre: "Nouveau message de l’Équipe Étudium", lien: `/messages?c=${CA}` });
     // Vu par un autre membre de l'équipe : le nom de celui qui a répondu.
     expect((await fil(S, CA))?.messages.at(-1)).toMatchObject({ de_moi: true, auteur: "Awa Diallo" });
     expect((await fil(A, CA))?.messages.at(-1)).toMatchObject({ de_moi: true, auteur: null });
+    // L'équipe relit la conversation : la notification de l'étudiante reste non lue.
+    expect((await notifs(E)).at(-1)).toMatchObject({ lien: `/messages?c=${CA}`, lue: false });
+    await fil(E, CA);
+    expect((await notifs(E)).at(-1)).toMatchObject({ lien: `/messages?c=${CA}`, lue: true });
 
     expect(await fil(X, CA)).toBeNull();
     expect(await fil(F, CA)).toBeNull();
@@ -130,6 +134,14 @@ describe("L'assistance", () => {
 });
 
 describe("Notifications et non-lus", () => {
+  it("« de » s'élide devant une voyelle, majuscule accentuée comprise", async () => {
+    const de = async (nom: string | null) => (await un<{ d: string | null }>("select public.de_nom($1) as d", [nom])).d;
+    expect(await de("Aïcha Kpadé")).toBe("d’Aïcha Kpadé");
+    expect(await de("Élodie Houngbo")).toBe("d’Élodie Houngbo");
+    expect(await de("Koffi Mensah")).toBe("de Koffi Mensah");
+    expect(await de("  ")).toBeNull();
+  });
+
   it("une seule notification non lue par conversation ; l'ouvrir la marque lue ; la préférence « messages » est respectée", async () => {
     await fil(F, CE);
     const avant = (await notifs(F)).length;
@@ -137,7 +149,7 @@ describe("Notifications et non-lus", () => {
     await envoyer(E, CE, "Second");
     const apres = await notifs(F);
     expect(apres.length).toBe(avant + 1);
-    expect(apres.filter((n) => !n.lue)).toEqual([{ titre: "Nouveau message de Aïcha Kpadé", texte: "Second", lien: `/formateur/messages?c=${CE}`, lue: false }]);
+    expect(apres.filter((n) => !n.lue)).toEqual([{ titre: "Nouveau message d’Aïcha Kpadé", texte: "Second", lien: `/formateur/messages?c=${CE}`, lue: false }]);
     await fil(F, CE);
     expect((await notifs(F)).filter((n) => !n.lue)).toEqual([]);
 
@@ -211,32 +223,47 @@ describe("Contacts", () => {
 });
 
 describe("Suppression du compte", () => {
-  it("les conversations de l'étudiante partent avec leurs fichiers, des deux côtés", async () => {
-    // Le formateur a joint un fichier à leur conversation : il part aussi, et l'étudiante peut l'effacer.
-    const sien = `${F}/${CE}/${randomUUID()}.pdf`;
-    await deposer(F, sien, "application/pdf");
-    await envoyer(F, CE, "Le corrigé", sien, "corrige.pdf");
-    const effacer = async (qui: string, chemin: string) =>
-      (await banc.en({ id: qui }, "delete from storage.objects where bucket_id = 'messages' and name = $1 returning name", [chemin])).length;
-    expect(await effacer(E, sien)).toBe(0); // tant que la conversation existe, chacun n'efface que son dossier
-    const chemins = (await banc.en<{ c: string[] }>({ id: E }, "select public.oublier_mes_messages() as c"))[0].c;
-    expect(chemins.filter((c) => c.startsWith(`${E}/`)).length).toBeGreaterThanOrEqual(2);
-    expect(chemins).toContain(sien);
-    expect(await liste(F, "formateur")).toEqual([]);
-    expect((await liste(A, "equipe")).some((c) => c.id === CA)).toBe(false);
-    expect(await effacer(X, sien)).toBe(0); // noté pour elle seule
-    expect(await effacer(E, sien)).toBe(1);
-    expect(await effacer(E, chemins.find((c) => c.startsWith(`${E}/`))!)).toBe(1);
-  });
+  const effacer = async (qui: string, chemin: string) =>
+    (await banc.en({ id: qui }, "delete from storage.objects where bucket_id = 'messages' and name = $1 returning name", [chemin])).length;
 
-  it("un fichier joint à une conversation qui existe encore ne s'efface que par son auteur", async () => {
+  it("une pièce jointe envoyée ne s'efface plus, même par son auteur ; un dépôt jamais envoyé, si", async () => {
     const conv = await ouvrir(X, G);
     const sien = `${G}/${conv}/${randomUUID()}.pdf`;
     await deposer(G, sien, "application/pdf");
     await envoyer(G, conv, "", sien, "plan.pdf");
-    const effacer = async (qui: string) =>
-      (await banc.en({ id: qui }, "delete from storage.objects where bucket_id = 'messages' and name = $1 returning name", [sien])).length;
-    expect(await effacer(E)).toBe(0);
-    expect(await effacer(X)).toBe(0);
+    expect(await effacer(G, sien)).toBe(0);
+    expect(await effacer(X, sien)).toBe(0);
+    const libre = `${G}/${conv}/${randomUUID()}.pdf`;
+    await deposer(G, libre, "application/pdf");
+    expect(await effacer(G, libre)).toBe(1);
+  });
+
+  it("lister ses fichiers n'efface rien ; supprimer le compte emporte ses conversations, leurs notifications et leurs fichiers, des deux côtés", async () => {
+    const sien = `${F}/${CE}/${randomUUID()}.pdf`;
+    await deposer(F, sien, "application/pdf");
+    await envoyer(F, CE, "Le corrigé", sien, "corrige.pdf");
+    await envoyer(E, CE, "Mon numéro perso est le 97 00 00 00");
+    const chemins = (await banc.en<{ c: string[] }>({ id: E }, "select public.fichiers_de_mes_messages() as c"))[0].c;
+    expect(chemins).toContain(sien);
+    const siens = chemins.filter((c) => c.startsWith(`${E}/`));
+    expect(siens.length).toBeGreaterThanOrEqual(2);
+    // Lister ne change rien : la conversation reste, et le fichier du formateur ne s'efface pas.
+    expect((await liste(F, "formateur")).map((c) => c.id)).toContain(CE);
+    expect(await effacer(E, sien)).toBe(0);
+    // Suspendue, elle ne peut pas supprimer son compte : rien ne part.
+    await banc.db.query("insert into public.suspensions (profil_id) values ($1)", [E]);
+    await expect(banc.en({ id: E }, "select public.supprimer_mon_compte()")).rejects.toThrow();
+    expect((await liste(F, "formateur")).map((c) => c.id)).toContain(CE);
+    await banc.db.query("delete from public.suspensions where profil_id = $1", [E]);
+
+    await banc.en({ id: E }, "select public.supprimer_mon_compte()");
+    expect(await liste(F, "formateur")).toEqual([]);
+    expect((await liste(A, "equipe")).some((c) => c.id === CA)).toBe(false);
+    expect((await notifs(F)).some((n) => n.lien.endsWith(CE))).toBe(false);
+    expect((await notifs(A)).some((n) => n.lien.endsWith(CA))).toBe(false);
+    // Son jeton vaut encore un instant : elle efface ses fichiers et ceux du formateur ; un tiers, non.
+    expect(await effacer(X, sien)).toBe(0);
+    expect(await effacer(E, sien)).toBe(1);
+    for (const c of siens) expect(await effacer(E, c)).toBe(1);
   });
 });

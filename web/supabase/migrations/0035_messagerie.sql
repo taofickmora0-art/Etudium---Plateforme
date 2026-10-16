@@ -210,6 +210,20 @@ as $$
     and exists (select 1 from public.messages m where m.conversation_id = c.id);
 $$;
 
+-- « de » devant un nom, élidé devant une voyelle : « d’Aïcha Kpadé », « de Koffi Mensah ». Null si le nom l'est.
+create or replace function public.de_nom(p_nom text)
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select case
+    when nullif(btrim(p_nom), '') is null then null
+    when left(btrim(p_nom), 1) ~ '^[AEIOUYÀÂÄÉÈÊËÎÏÔÖÙÛÜaeiouyàâäéèêëîïôöùûü]' then 'd’' || btrim(p_nom)
+    else 'de ' || btrim(p_nom)
+  end;
+$$;
+
 -- ─── Lire ───────────────────────────────────────────────────────────────────────────────────────────
 -- Les conversations d'un espace (« etudiant », « formateur », « equipe »), la plus récente d'abord.
 create or replace function public.mes_conversations(p_espace text)
@@ -265,10 +279,15 @@ begin
     else
       update public.conversations set lu_autre_le = now() where id = p_conversation;
     end if;
-    -- Ses notifications de cette conversation sont lues (pour l'équipe : celles de tous ses membres).
+    -- Ses notifications de cette conversation sont lues (pour l'équipe : celles de tous ses membres, jamais celle de
+    -- l'étudiant).
     update public.notifications n set lue_le = now()
     where n.categorie = 'messages' and n.lue_le is null
-      and n.lien like '%?c=' || p_conversation::text
+      and n.lien = case v_cote
+        when 'etudiant' then '/messages?c='
+        when 'formateur' then '/formateur/messages?c='
+        else '/admin/messages?c='
+      end || p_conversation::text
       and (n.destinataire = (select auth.uid()) or v_cote = 'equipe');
   end if;
   select * into v_conversation from public.conversations where id = p_conversation;
@@ -452,20 +471,20 @@ begin
 
   -- L'autre côté est prévenu : une seule notification non lue par conversation (la plus récente la remplace).
   if v_cote = 'etudiant' then
-    v_auteur := coalesce(public.nom_du_profil(v_uid), 'Un étudiant');
+    v_auteur := coalesce(public.de_nom(public.nom_du_profil(v_uid)), 'd’un étudiant');
     if v_conversation.formateur_id is null then
       v_destinataires := public.membres_equipe();
-      v_titre := 'Nouvelle demande d’assistance de ' || v_auteur;
+      v_titre := 'Nouvelle demande d’assistance ' || v_auteur;
       v_lien := '/admin/messages?c=' || p_conversation::text;
     else
       v_destinataires := array[v_conversation.formateur_id];
-      v_titre := 'Nouveau message de ' || v_auteur;
+      v_titre := 'Nouveau message ' || v_auteur;
       v_lien := '/formateur/messages?c=' || p_conversation::text;
     end if;
   else
-    v_auteur := case when v_cote = 'equipe' then 'Équipe Étudium' else coalesce(public.nom_du_formateur(v_uid), 'Votre formateur') end;
+    v_auteur := case when v_cote = 'equipe' then 'de l’Équipe Étudium' else coalesce(public.de_nom(public.nom_du_formateur(v_uid)), 'de votre formateur') end;
     v_destinataires := array[v_conversation.etudiant_id];
-    v_titre := 'Nouveau message de ' || v_auteur;
+    v_titre := 'Nouveau message ' || v_auteur;
     v_lien := '/messages?c=' || p_conversation::text;
     -- Une réponse de l'équipe : la demande est lue pour tous ses membres.
     if v_cote = 'equipe' then
@@ -490,44 +509,88 @@ end;
 $$;
 
 -- ─── La suppression d'un compte ─────────────────────────────────────────────────────────────────────
--- Ses conversations (comme étudiant ou formateur) partent, des deux côtés, avec tous leurs fichiers : ils sont rendus
--- pour être effacés de l'espace « messages ». Ceux de l'autre personne sont notés dans `messages_fichiers_a_effacer`,
--- ce qui permet à l'appelant, et à lui seul, de les effacer. Ceux qu'il a joints à l'assistance comme membre de
--- l'équipe sont détachés et rendus aussi.
+-- Ses conversations (comme étudiant ou formateur) partent avec son profil, des deux côtés, par la cascade : dans la
+-- transaction de `supprimer_mon_compte`, qui refuse un compte suspendu. Rien ne part avant : personne ne peut effacer
+-- une conversation sans supprimer son compte (Q6 : un message envoyé reste tel quel).
+-- Leurs fichiers sont notés dans `messages_fichiers_a_effacer` au même moment ; l'appli les efface juste après, avec
+-- la session qui vaut encore (le stockage n'efface que ce qu'on peut lire : voir `message_a_effacer`). Ceux qu'il a
+-- joints à l'assistance comme membre de l'équipe sont détachés et notés aussi. Sans clé étrangère vers le profil : la
+-- note survit à la suppression.
 create table if not exists public.messages_fichiers_a_effacer (
   chemin text primary key,
-  par uuid not null references public.profils (id) on delete cascade
+  par uuid not null
 );
 alter table public.messages_fichiers_a_effacer enable row level security;
 revoke all on public.messages_fichiers_a_effacer from public, anon, authenticated;
 
-create or replace function public.oublier_mes_messages()
+-- Les fichiers de ses conversations et ceux qu'il a joints ailleurs : ceux que la suppression de son compte emportera.
+-- La liste seule, sans rien changer (l'appli la lit avant de supprimer le compte).
+create or replace function public.fichiers_de_mes_messages()
 returns text[]
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(array_agg(m.fichier), '{}')
+  from public.messages m
+  join public.conversations c on c.id = m.conversation_id
+  where m.fichier is not null
+    and (
+      c.etudiant_id = (select auth.uid())
+      or c.formateur_id = (select auth.uid())
+      or (storage.foldername(m.fichier))[1] = (select auth.uid())::text
+    );
+$$;
+
+-- Avant que le profil parte : noter ses fichiers, détacher ceux qu'il a joints à l'assistance.
+create or replace function public.oublier_messages_du_compte()
+returns trigger
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
-  v_uid uuid := (select auth.uid());
   v_chemins text[];
 begin
-  if v_uid is null then
-    return '{}';
-  end if;
   select coalesce(array_agg(m.fichier), '{}') into v_chemins
   from public.messages m
   join public.conversations c on c.id = m.conversation_id
   where m.fichier is not null
-    and (c.etudiant_id = v_uid or c.formateur_id = v_uid or (storage.foldername(m.fichier))[1] = v_uid::text);
+    and (c.etudiant_id = old.id or c.formateur_id = old.id or (storage.foldername(m.fichier))[1] = old.id::text);
   insert into public.messages_fichiers_a_effacer (chemin, par)
-  select f, v_uid from unnest(v_chemins) f where (storage.foldername(f))[1] <> v_uid::text
+  select f, old.id from unnest(v_chemins) f
   on conflict (chemin) do update set par = excluded.par;
-  delete from public.conversations where etudiant_id = v_uid or formateur_id = v_uid;
   delete from public.messages where fichier = any (v_chemins) and texte = '';
   update public.messages set fichier = null, nom_fichier = '', format = '', taille_octets = 0 where fichier = any (v_chemins);
-  return v_chemins;
+  return old;
 end;
 $$;
+
+drop trigger if exists profils_oublier_messages on public.profils;
+create trigger profils_oublier_messages
+  before delete on public.profils
+  for each row execute function public.oublier_messages_du_compte();
+
+-- Une conversation qui part emporte ses notifications (leur texte reprend celui des messages).
+create or replace function public.oublier_notifications_conversation()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  delete from public.notifications
+  where categorie = 'messages'
+    and lien in ('/messages?c=' || old.id::text, '/formateur/messages?c=' || old.id::text, '/admin/messages?c=' || old.id::text);
+  return old;
+end;
+$$;
+
+drop trigger if exists conversations_oublier_notifications on public.conversations;
+create trigger conversations_oublier_notifications
+  after delete on public.conversations
+  for each row execute function public.oublier_notifications_conversation();
 
 -- ─── L'espace des pièces jointes ────────────────────────────────────────────────────────────────────
 -- Un fichier joint à une conversation dont on est participant.
@@ -541,7 +604,18 @@ as $$
   select exists (select 1 from public.messages m where m.fichier = p_nom and public.cote_conversation(m.conversation_id) is not null);
 $$;
 
--- Un fichier de l'autre personne, noté par `oublier_mes_messages` quand l'appelant supprime son compte.
+-- Un fichier joint à un message : il reste tel quel, son auteur ne l'efface ni ne le remplace (Q6).
+create or replace function public.message_attache(p_nom text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (select 1 from public.messages m where m.fichier = p_nom);
+$$;
+
+-- Un fichier noté quand l'appelant a supprimé son compte, et que plus aucun message ne joint.
 create or replace function public.message_a_effacer(p_nom text)
 returns boolean
 language sql
@@ -549,12 +623,13 @@ stable
 security definer
 set search_path = ''
 as $$
-  select exists (select 1 from public.messages_fichiers_a_effacer a where a.chemin = p_nom and a.par = (select auth.uid()));
+  select exists (select 1 from public.messages_fichiers_a_effacer a where a.chemin = p_nom and a.par = (select auth.uid()))
+     and not public.message_attache(p_nom);
 $$;
 
--- Privé, 10 Mo, les formats des rendus. Chacun dépose et supprime dans son dossier (« <compte>/… ») ; on lit le sien,
--- ou un fichier joint à une conversation dont on est participant. Qui supprime son compte lit et efface aussi les
--- fichiers que l'autre personne avait joints à leurs conversations (le stockage n'efface que ce qu'on peut lire).
+-- Privé, 10 Mo, les formats des rendus. Chacun dépose dans son dossier (« <compte>/… ») et y efface ce qu'il n'a pas
+-- envoyé ; on lit le sien, ou un fichier joint à une conversation dont on est participant. Qui vient de supprimer son
+-- compte lit et efface aussi les fichiers de leurs conversations (le stockage n'efface que ce qu'on peut lire).
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('messages', 'messages', false, 10485760, public.formats_rendu())
 on conflict (id) do update
@@ -588,7 +663,10 @@ create policy "messages : supprimer" on storage.objects
   for delete to authenticated
   using (
     bucket_id = 'messages'
-    and ((storage.foldername(name))[1] = (select auth.uid())::text or (select public.message_a_effacer(objects.name)))
+    and (
+      ((storage.foldername(name))[1] = (select auth.uid())::text and not (select public.message_attache(objects.name)))
+      or (select public.message_a_effacer(objects.name))
+    )
   );
 
 -- ─── Droits ─────────────────────────────────────────────────────────────────────────────────────────
@@ -603,6 +681,8 @@ revoke execute on function public.message_lisible(text) from public, anon;
 grant execute on function public.message_lisible(text) to authenticated;
 revoke execute on function public.message_a_effacer(text) from public, anon;
 grant execute on function public.message_a_effacer(text) to authenticated;
+revoke execute on function public.message_attache(text) from public, anon;
+grant execute on function public.message_attache(text) to authenticated;
 revoke execute on function public.mes_conversations(text) from public, anon;
 grant execute on function public.mes_conversations(text) to authenticated;
 revoke execute on function public.messages_non_lus(text) from public, anon;
@@ -617,7 +697,10 @@ revoke execute on function public.ouvrir_conversation(uuid) from public, anon;
 grant execute on function public.ouvrir_conversation(uuid) to authenticated;
 revoke execute on function public.envoyer_message(uuid, text, text, text) from public, anon;
 grant execute on function public.envoyer_message(uuid, text, text, text) to authenticated;
-revoke execute on function public.oublier_mes_messages() from public, anon;
-grant execute on function public.oublier_mes_messages() to authenticated;
+revoke execute on function public.fichiers_de_mes_messages() from public, anon;
+grant execute on function public.fichiers_de_mes_messages() to authenticated;
+revoke execute on function public.oublier_messages_du_compte() from public, anon, authenticated;
+revoke execute on function public.oublier_notifications_conversation() from public, anon, authenticated;
+revoke execute on function public.de_nom(text) from public, anon, authenticated;
 
 commit;

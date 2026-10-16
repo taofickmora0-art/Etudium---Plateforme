@@ -792,11 +792,12 @@ Aucune migration. Ouvre le site **sans être connecté** (fenêtre de navigation
 2. **Étudiant et formateur.** Prends un compte étudiant qui suit une formation de ton compte formateur.
    - **Côté étudiant, dans Messages** : « Nouveau message ». Choisis le formateur et écris-lui ; joins un PDF ou une image.
    - **Côté formateur** :
-     - la pastille rouge apparaît sur « Messages » (en moins d'une minute) ;
+     - la pastille rouge apparaît sur « Messages » (en moins d'une minute) ; au téléphone, elle est sur le bouton ≡ ;
      - la notification « Nouveau message de … » arrive ;
      - réponds, puis télécharge le fichier reçu.
    - **Depuis la fiche d'un étudiant** (Étudiants, puis un nom) : « Envoyer un message » ouvre la même conversation.
    - **Une conversation ouverte se met à jour toute seule** (toutes les 10 secondes). Garde les deux comptes ouverts côte à côte pour le voir.
+   - **Au téléphone, Entrée va à la ligne** ; on envoie avec le bouton. Sur ordinateur, Entrée envoie et Maj+Entrée va à la ligne.
 3. **L'assistance.**
    - **Côté étudiant** : dans Aide, « Contacter l'équipe ». Choisis un sujet et écris ; le message part dans la conversation « Équipe Étudium » de ses messages.
    - **Côté équipe, avec ton compte admin** : Back-office, puis « Messages ». Tous les membres de l'équipe voient la demande et y répondent au nom d'« Équipe Étudium ».
@@ -804,4 +805,4 @@ Aucune migration. Ouvre le site **sans être connecté** (fenêtre de navigation
    - La recherche filtre les questions, sans tenir compte des accents ; essaie « prelevement ».
    - Les questions sur les formules sont celles du design.
 5. **Les préférences.** Dans Mon profil, onglet Notifications, coupe « Messages ». Plus aucune notification de message n'arrive ; la pastille reste.
-6. **La suppression d'un compte de test.** Ses conversations disparaissent des deux côtés, avec leurs fichiers.
+6. **La suppression d'un compte de test.** Ses conversations disparaissent des deux côtés, avec leurs fichiers et leurs notifications. Rien ne part tant que le compte existe : un message envoyé reste tel quel, pièce jointe comprise.
