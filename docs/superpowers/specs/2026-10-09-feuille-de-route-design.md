@@ -4,6 +4,20 @@
 - **Statut :** à valider
 - **Sources :** `Projet Claude Code/doc/` (cahier des charges V1 et design system), maquette PNG à la racine du dossier
 
+> **Restructuration du 20 octobre 2026** (spec `2026-10-20-restructuration-design.md`) :
+> - un formateur n'a plus l'espace étudiant ;
+> - trois abonnements par durée (3 mois, 6 mois, 1 an) qui ouvrent tout ;
+> - des replays pour les lives ;
+> - le parcours Business devient la suite de Compétences digitales.
+>
+> Le lot 2 est réécrit en conséquence. La restructuration (lot R) passe avant la suite, dans cet ordre :
+> 1. le lot R ;
+> 2. les corrections de l'existant ;
+> 3. la fin du lot 5 ;
+> 4. le lot 2 ;
+> 5. le reste du lot 4 ;
+> 6. le lot 6.
+
 Ce document découpe la plateforme en **lots**, puis chaque lot en **tâches**. Chaque tâche indique ce que tu vérifies avant qu'on passe à la suivante. Il ne remplace pas le cahier des charges : c'est l'ordre dans lequel on va le construire.
 
 ---
@@ -43,7 +57,8 @@ Les tâches des lots 4 à 6 sont volontairement moins détaillées : elles seron
 |---|---|---|
 | 0. Fondations | On crée un compte et on navigue dans une appli vide, aux couleurs d'Étudium | |
 | 1. Catalogue + apprentissage | On suit des formations gratuites de bout en bout | Ouverture possible en version gratuite |
-| 2. Abonnements + paiement | On vend des abonnements et des formations complémentaires | Premiers revenus |
+| R. Restructuration | Le formateur sort de l'espace étudiant, le nouveau modèle s'affiche, les lives ont des replays | |
+| 2. Abonnements + paiement | On vend des abonnements de 3 mois, 6 mois ou 1 an qui ouvrent tout | Premiers revenus |
 | 3. Quiz, exercices, certificats | On délivre des certificats vérifiables | **Lancement public** |
 | 4. Espace formateur | Des formateurs externes créent et suivent leurs formations | |
 | 5. Communauté + accompagnement | Communauté, messagerie, sessions live, notifications | |
@@ -84,19 +99,32 @@ Les tâches des lots 4 à 6 sont volontairement moins détaillées : elles seron
 | 1.11 | Avis et notes : à partir de 50 % de progression, un avis par formation, modifiable ; note moyenne sur la fiche | Sous 50 %, tu ne peux pas noter ; au-dessus, ta note apparaît sur la fiche |
 | 1.12 | Landing page publique (les 14 sections du cahier) et FAQ ; bouton principal vers la création d'un compte gratuit | Tu as relu les textes et la mise en page sur téléphone et ordinateur |
 
+### Lot R — Restructuration (20 octobre 2026)
+
+| # | Tâche | Tu valides quand… |
+|---|---|---|
+| R1 | Le formateur n'est plus étudiant : son espace seul, avec Communauté, profil et notifications ; plus aucune formation des autres (0036) | Ton formateur de test ne trouve plus aucune formation d'un autre, et publie dans la communauté depuis son espace |
+| R2 | Le nouveau modèle dans les écrans (landing, FAQ, Aide, fiches, page Parcours) et le lien compétence → monétisation entre Digital et Business (0037) | La fiche de « Maîtriser Canva » propose sa formation Business, et les textes parlent de 3 mois, 6 mois et 1 an |
+| R3 | Les replays des lives, et « Rejoindre » avant l'heure qui dit dans combien de temps le live commence (0038) | Un replay ajouté apparaît dans l'onglet Replays, et « Rejoindre » trois heures avant dit « dans 3 h » |
+
 ### Lot 2 — Abonnements + paiement
+
+> Réécrit le 20 octobre 2026 :
+> - trois abonnements (Basique 3 mois, Standard 6 mois, Premium 1 an) ;
+> - chacun ouvre toutes les formations et tous les parcours ;
+> - plus de formation achetée seule, plus de changement de formule au prorata.
 
 | # | Tâche | Tu valides quand… |
 |---|---|---|
 | 2.0 | Spec détaillée du lot 2, avec étude de Payiz et SasPay (API, confirmation de paiement, frais, opérateurs couverts) | Tu as validé le rôle de chaque prestataire et la spec |
-| 2.1 | Formules réglables dans le back-office : prix, durée, nombre de parcours, limite de formations complémentaires, avantages, actif/inactif | Tu changes un prix dans l'admin et la page Tarifs se met à jour |
-| 2.2 | Page Tarifs et souscription : choix de la formule, choix des parcours, récapitulatif | Tu vas jusqu'au récapitulatif avec chacune des trois formules |
+| 2.1 | Abonnements réglables dans le back-office : prix, durée (3 mois, 6 mois, 1 an), avantages, actif/inactif | Tu changes un prix dans l'admin et la landing se met à jour |
+| 2.2 | Souscription : choix de l'abonnement, récapitulatif (pas de choix de parcours) | Tu vas jusqu'au récapitulatif avec chacun des trois abonnements |
 | 2.3 | Module de paiement + Payiz : paiement, confirmation, activation automatique, gestion des échecs. **(toi)** : saisir les clés Payiz | Un paiement de test réussi donne l'accès immédiatement ; un paiement échoué affiche un message clair et ne donne aucun accès |
 | 2.4 | Branchement de SasPay sur le même module. **(toi)** : saisir les clés SasPay | Mêmes vérifications qu'en 2.3, avec SasPay |
-| 2.5 | Droits d'accès : un abonnement actif ouvre ses parcours ; à l'expiration, formations verrouillées mais visibles, avec un bouton « Renouveler » | Sur un abonnement expiré (simulé), les formations sont verrouillées et rien n'est perdu |
-| 2.6 | Renouvellement : rappels par e-mail avant l'expiration, nouveau choix des parcours | Tu reçois le rappel et tu renouvelles avec d'autres parcours |
-| 2.7 | Formations complémentaires : achat unique, limite selon la formule, tarif de dépassement, accès restauré au renouvellement | Une formation achetée reste sur ton compte après expiration puis renouvellement, sans repayer |
-| 2.8 | Changement de formule : upgrade immédiat au prorata, downgrade au renouvellement suivant | Le montant au prorata est juste sur des exemples chiffrés |
+| 2.5 | Droits d'accès : un abonnement actif ouvre toutes les formations, tous les espaces de la communauté et les replays ; à l'expiration, formations verrouillées mais visibles, avec un bouton « Renouveler » | Sur un abonnement expiré (simulé), les formations sont verrouillées et rien n'est perdu |
+| 2.6 | Renouvellement : rappels par e-mail avant l'expiration ; un abonnement pris avant la fin s'ajoute à la date de fin | Tu reçois le rappel, tu renouvelles, et la nouvelle date de fin est juste |
+| ~~2.7~~ | ~~Formations complémentaires~~ : supprimé le 20 octobre 2026 (l'abonnement inclut tout) | |
+| ~~2.8~~ | ~~Changement de formule au prorata~~ : supprimé le 20 octobre 2026 (la durée s'ajoute) | |
 | 2.9 | Promotions et codes promo : pourcentage ou montant fixe, dates, limite d'utilisation | Un code promo valide réduit le prix ; un code expiré est refusé |
 | 2.10 | Espace Abonnement / Facturation (historique, reçus) et suivi des paiements dans le back-office | Tu retrouves chaque paiement de test, côté étudiant et côté admin |
 
