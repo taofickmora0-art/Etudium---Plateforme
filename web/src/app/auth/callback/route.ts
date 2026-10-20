@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { safeNext } from "@/lib/auth/messages";
+import { cheminFormateur, estFormateurConnecte } from "@/lib/auth/espace-formateur";
 import { estSuspendu } from "@/lib/auth/suspension";
 import { createClient } from "@/lib/supabase/server";
 
@@ -18,7 +19,8 @@ export async function GET(request: NextRequest) {
           await supabase.auth.signOut();
           return NextResponse.redirect(`${origin}/connexion?erreur=suspendu`);
         }
-        return NextResponse.redirect(`${origin}${next}`);
+        // Un formateur arrive dans son espace (restructuration R1).
+        return NextResponse.redirect(`${origin}${(await estFormateurConnecte(supabase)) ? cheminFormateur(next) : next}`);
       }
     } catch {
       // Base injoignable ou non configurée : même issue qu'un échec.

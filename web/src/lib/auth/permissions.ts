@@ -15,6 +15,8 @@ export const ACCES: Record<Espace, Role[] | "tous"> = {
 };
 
 export function canAccess(espace: Espace, roles: Role[]): boolean {
+  // Restructuration du 20 octobre 2026 (R1) : un formateur n'a plus l'espace étudiant ; l'équipe le garde.
+  if (espace === "etudiant") return !roles.includes("formateur");
   const autorises = ACCES[espace];
   return autorises === "tous" || roles.some((r) => autorises.includes(r));
 }

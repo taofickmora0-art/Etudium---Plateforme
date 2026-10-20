@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getShellUser, type ShellUser } from "./current-user";
+import { accueilDe } from "./espace-formateur";
 import { canAccess, type Espace } from "./permissions";
 import { redirectToSortie } from "./sortie";
 
@@ -11,6 +12,7 @@ import { redirectToSortie } from "./sortie";
 export async function requireSpace(espace: Espace): Promise<ShellUser> {
   const user = await getShellUser();
   if (!user) return redirectToSortie();
-  if (!canAccess(espace, user.roles)) redirect("/accueil");
+  // Refusé : l'accueil du compte (le tableau de bord pour un formateur, l'Accueil pour les autres).
+  if (!canAccess(espace, user.roles)) redirect(accueilDe(user.roles));
   return user;
 }

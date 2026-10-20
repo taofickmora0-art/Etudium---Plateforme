@@ -11,6 +11,7 @@ import { ficheApercu, lienModifierLecons } from "@/lib/catalogue/apercu";
 import { getFiche } from "@/lib/catalogue/data";
 import { metadonneesFiche } from "@/lib/catalogue/partage";
 import type { FicheFormation } from "@/lib/catalogue/types";
+import { renvoyerFormateur } from "@/lib/catalogue/garde-formateur";
 import { compteConnecte } from "@/lib/catalogue/visiteur";
 import { lireFavoris } from "@/lib/favoris/data";
 import { lireProgression } from "@/lib/progression/data";
@@ -46,6 +47,8 @@ async function Fiche({ params }: Params) {
   }
   // Brouillon (hors aperçu), formation archivée ou adresse inconnue : page introuvable.
   if (!fiche) notFound();
+  // Un formateur ne lit que ses formations (restructuration R1) : l'éditeur de la sienne, sinon son tableau de bord.
+  await renvoyerFormateur(compte, fiche.id);
   // Avis (1.11), progression (1.7) et favoris (1.9) : absents tant que leurs migrations ne sont pas appliquées.
   if (!compte) return <FichePublique fiche={fiche} avis={await lireAvis(fiche.id)} />;
   // Le meilleur score de chaque quiz, dans le programme (lot 3).

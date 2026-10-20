@@ -79,6 +79,16 @@ describe("Connexion", () => {
     expect(createClient).toHaveBeenCalledWith({ remember: true });
   });
 
+  it("un formateur arrive dans son espace : son tableau de bord, ou l'équivalent de la page demandée (R1)", async () => {
+    auth.signInWithPassword.mockResolvedValue({ error: null });
+    rpc.mockImplementation(async (nom: string) => ({ data: nom === "a_role", error: null }));
+    await expect(signIn(IDLE, form(BONS))).rejects.toThrow("NEXT_REDIRECT:/formateur");
+    await expect(signIn(IDLE, form({ ...BONS, next: "/profil" }))).rejects.toThrow("NEXT_REDIRECT:/formateur/profil");
+    auth.exchangeCodeForSession.mockResolvedValue({ error: null });
+    const reponse = await retourGoogle(new Request("http://localhost:3000/auth/callback?code=abc&next=/accueil") as never);
+    expect(reponse.headers.get("location")).toBe("http://localhost:3000/formateur");
+  });
+
   it("sans « Se souvenir de moi », la session s'arrête à la fermeture du navigateur", async () => {
     auth.signInWithPassword.mockResolvedValue({ error: null });
     await expect(signIn(IDLE, form({ email: BONS.email, password: BONS.password }))).rejects.toThrow("NEXT_REDIRECT:/accueil");

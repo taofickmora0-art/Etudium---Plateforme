@@ -7,6 +7,7 @@ import { clearLocalSession } from "./local-session";
 import { authErrorMessage, safeNext } from "./messages";
 import { codeSchema, fieldErrorsFrom, newPasswordSchema, resetRequestSchema, signInSchema, signUpSchema, type FormState } from "./schemas";
 import { PENDING_EMAIL_COOKIE, PENDING_EMAIL_MAX_AGE, REMEMBER_COOKIE } from "./session-cookies";
+import { cheminFormateur, estFormateurConnecte } from "./espace-formateur";
 import { estSuspendu, MESSAGE_SUSPENDU } from "./suspension";
 
 // Actions serveur des écrans de compte. `redirect()` est toujours appelé hors des blocs try (il lève une erreur).
@@ -46,6 +47,7 @@ export async function signIn(_prev: FormState, formData: FormData): Promise<Form
   let erreur: { code?: string; status?: number } | null = null;
   let nonVerifie = false;
   let suspendu = false;
+  let formateur = false;
   try {
     const supabase = await createClient({ remember });
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -59,6 +61,8 @@ export async function signIn(_prev: FormState, formData: FormData): Promise<Form
       // Compte suspendu (spec des utilisateurs, §4) : la session tout juste ouverte est aussitôt refermée.
       await supabase.auth.signOut();
       suspendu = true;
+    } else {
+      formateur = await estFormateurConnecte(supabase);
     }
   } catch {
     return { status: "error", message: authErrorMessage(null), values: { email, remember: souvenir } };
@@ -70,7 +74,9 @@ export async function signIn(_prev: FormState, formData: FormData): Promise<Form
   }
   if (erreur) return { status: "error", message: authErrorMessage(erreur), values: { email, remember: souvenir } };
   if (suspendu) return { status: "error", message: MESSAGE_SUSPENDU, values: { email, remember: souvenir } };
-  redirect(safeNext(texte(formData, "next")));
+  // Un formateur arrive dans son espace (restructuration R1) : l'équivalent de la page demandée, sinon son tableau de bord.
+  const cible = safeNext(texte(formData, "next"));
+  redirect(formateur ? cheminFormateur(cible) : cible);
 }
 
 /** « Continuer avec Google » : part chez Google, revient par /auth/callback. */

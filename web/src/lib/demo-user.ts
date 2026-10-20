@@ -4,14 +4,15 @@ import { readPreferences } from "@/lib/profile/preferences";
 
 /**
  * Utilisatrice des écrans du design, affichée uniquement en mode démonstration (base de test pas encore
- * configurée, sur l'ordinateur de développement). Les trois rôles montrent tout le menu du profil pendant la validation.
+ * configurée, sur l'ordinateur de développement). Étudiante et équipe : deux espaces au plus (0017), et un formateur
+ * n'a pas l'espace étudiant (restructuration R1).
  */
 export const DEMO_USER: ShellUser = {
   prenom: "Aïcha",
   nom: "Kpadé",
   initials: "AK",
   email: "aicha.k@exemple.com",
-  roles: ["etudiant", "formateur", "admin"],
+  roles: ["etudiant", "admin"],
   statut: "Étudiante",
   formule: "Standard",
   serie: 8,

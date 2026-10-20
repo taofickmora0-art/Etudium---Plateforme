@@ -25,7 +25,7 @@ export async function ficheApercu(slug: string): Promise<FicheFormation | null> 
  * L'éditeur d'une formation : celui du back-office pour l'équipe, celui de l'espace formateur pour le formateur de la
  * formation ; null pour tout autre compte (refonte des formations, §1.3 et §2).
  */
-async function editeurFormation(formationId: string): Promise<string | null> {
+export async function editeurFormation(formationId: string): Promise<string | null> {
   const compte = await getShellUser();
   if (!compte) return null;
   if (canAccess("admin", compte.roles)) return `/admin/formations/${formationId}`;

@@ -17,6 +17,7 @@ import type { Apercu } from "@/components/lecon/BandeauApercu";
 import { ficheApercu, lienModifierLecon } from "@/lib/catalogue/apercu";
 import { getFiche } from "@/lib/catalogue/data";
 import type { FicheFormation } from "@/lib/catalogue/types";
+import { apercuFormateur } from "@/lib/catalogue/garde-formateur";
 import { compteConnecte } from "@/lib/catalogue/visiteur";
 import { getLeconDans } from "@/lib/lecon/data";
 import { videoMesuree, voisines } from "@/lib/lecon/regles";
@@ -80,7 +81,10 @@ async function Lecon({ params }: Params) {
   const { lecon } = donnees;
   // Une leçon en brouillon n'est lue que par l'équipe et le formateur : c'est un aperçu, comme une formation non publiée.
   const enBrouillon = donnees.fiche.modules.some((m) => m.lecons.some((l) => l.id === leconId && l.publiee === false));
-  const apercu: Apercu | null = apercuFormation ? "formation" : enBrouillon ? "lecon" : null;
+  // Un formateur sur une leçon de sa formation la regarde en aperçu ; sur celle d'un autre, il va à son tableau de bord
+  // (restructuration R1 : il n'est plus étudiant).
+  const formateur = apercuFormateur(compte, lienModifier);
+  const apercu: Apercu | null = apercuFormation ? "formation" : enBrouillon ? "lecon" : formateur ? "formateur" : null;
   const terminees = lignes ? etatFormation(donnees.fiche, lignes).terminees : new Set<string>();
   const { precedente, suivante } = voisines(donnees.fiche.modules, leconId);
   // Bouton de fin : compte connecté, leçon ouverte, progression disponible en base (0007, 0008), et pas en aperçu.
@@ -92,7 +96,7 @@ async function Lecon({ params }: Params) {
       <CadreLecon
         connecte={connecte}
         titreFormation={donnees.fiche.titre}
-        retour={connecte ? "/mes-formations" : `/formations/${donnees.fiche.slug}`}
+        retour={formateur ? "/formateur/formations" : connecte ? "/mes-formations" : `/formations/${donnees.fiche.slug}`}
         programme={<ProgrammeLecon fiche={donnees.fiche} leconId={leconId} connecte={connecte} terminees={terminees} scores={scores} statuts={statuts} />}
         haut={
           <BarreHautLecon

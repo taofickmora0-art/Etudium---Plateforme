@@ -40,6 +40,12 @@ describe("Règles d'accès", () => {
     expect(canAccess("admin", ["etudiant", "super_admin"])).toBe(true);
   });
 
+  it("un formateur n'a plus l'espace étudiant ; l'équipe le garde (restructuration R1)", () => {
+    expect(canAccess("etudiant", ["etudiant", "formateur"])).toBe(false);
+    expect(canAccess("etudiant", ["etudiant", "admin"])).toBe(true);
+    expect(canAccess("etudiant", ["etudiant", "super_admin"])).toBe(true);
+  });
+
   it("l'espace se lit dans l'adresse", () => {
     expect(spaceOf("/admin")).toBe("admin");
     expect(spaceOf("/admin/utilisateurs")).toBe("admin");
@@ -57,6 +63,11 @@ describe("Pages réservées", () => {
   it("un étudiant qui tape /admin retourne à l'accueil", async () => {
     vi.mocked(getShellUser).mockResolvedValue(compte(["etudiant"]));
     await expect(requireSpace("admin")).rejects.toThrow("NEXT_REDIRECT:/accueil");
+  });
+
+  it("un formateur qui tape /admin retourne à son tableau de bord", async () => {
+    vi.mocked(getShellUser).mockResolvedValue(compte(["etudiant", "formateur"]));
+    await expect(requireSpace("admin")).rejects.toThrow("NEXT_REDIRECT:/formateur");
   });
 
   it("sans compte (ou session fermée ailleurs), passage par la sortie", async () => {

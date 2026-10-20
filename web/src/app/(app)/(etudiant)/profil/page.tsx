@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { SessionGuard } from "@/components/layout/SessionGuard";
 import { ProfileTabs } from "@/components/profile/ProfileTabs";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Heading, Lead } from "@/components/ui/Text";
@@ -29,6 +30,9 @@ export default function ProfilPage({ searchParams }: Params) {
           <ProfilDuCompte searchParams={searchParams} />
         </Suspense>
       </div>
+      <Suspense fallback={null}>
+        <SessionGuard />
+      </Suspense>
     </div>
   );
 }

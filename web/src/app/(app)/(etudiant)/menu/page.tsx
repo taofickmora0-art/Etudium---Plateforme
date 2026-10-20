@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { MobileProfileMenu } from "@/components/layout/MobileProfileMenu";
+import { SessionGuard } from "@/components/layout/SessionGuard";
 import { getShellUser } from "@/lib/auth/current-user";
 import { redirectToSortie } from "@/lib/auth/sortie";
 
@@ -16,8 +17,14 @@ async function MenuDuCompte() {
 /** Onglet « Profil » de la barre du bas : sur téléphone, il remplace le menu du rond de profil. */
 export default function MenuPage() {
   return (
-    <Suspense fallback={null}>
-      <MenuDuCompte />
-    </Suspense>
+    <>
+      <Suspense fallback={null}>
+        <MenuDuCompte />
+      </Suspense>
+      {/* Un formateur va au menu de son espace (restructuration R1). */}
+      <Suspense fallback={null}>
+        <SessionGuard />
+      </Suspense>
+    </>
   );
 }

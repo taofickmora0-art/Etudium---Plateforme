@@ -11,6 +11,7 @@ import { lireValidation, MIGRATION_CERTIFICATS } from "@/lib/certificats/data";
 import { ficheApercu } from "@/lib/catalogue/apercu";
 import { getFiche } from "@/lib/catalogue/data";
 import type { FicheFormation } from "@/lib/catalogue/types";
+import { renvoyerFormateur } from "@/lib/catalogue/garde-formateur";
 import { compteConnecte } from "@/lib/catalogue/visiteur";
 
 export const metadata: Metadata = { title: "Validation de votre formation · Étudium", robots: { index: false } };
@@ -25,6 +26,8 @@ async function Validation({ params }: Params) {
   try {
     fiche = (await getFiche(slug)) ?? (await ficheApercu(slug));
     if (!fiche) notFound();
+    // Un formateur ne suit pas de formation (restructuration R1) : l'éditeur de la sienne, sinon son tableau de bord.
+    await renvoyerFormateur(compte, fiche.id);
     lecture = await lireValidation(fiche.id);
   } catch (erreur) {
     return siTablesAbsentes(erreur);

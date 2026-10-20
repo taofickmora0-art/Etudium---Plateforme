@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { PageCatalogue } from "@/components/catalogue/PageCatalogue";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { renvoyerFormateur } from "@/lib/catalogue/garde-formateur";
 import { compteConnecte } from "@/lib/catalogue/visiteur";
 
 export const metadata: Metadata = {
@@ -13,6 +14,8 @@ type Recherche = { searchParams: Promise<Record<string, string | string[] | unde
 
 async function Contenu({ searchParams }: Recherche) {
   const [compte, params] = await Promise.all([compteConnecte(), searchParams]);
+  // Un formateur ne lit que ses formations (restructuration R1) : son tableau de bord.
+  await renvoyerFormateur(compte);
   // Compte connecté : la page Formations, avec « Mes formations » au-dessus du catalogue (spec Formations et Événements, §2).
   return <PageCatalogue params={params} variante={compte ? "connecte" : "public"} chemin="/formations" avecMesFormations={compte !== null} />;
 }

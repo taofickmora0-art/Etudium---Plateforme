@@ -144,7 +144,7 @@ describe("Compte affiché par la coque", () => {
     vi.stubEnv("NODE_ENV", "development");
     const user = await getShellUser();
     vi.unstubAllEnvs();
-    expect(user).toMatchObject({ prenom: "Aïcha", nom: "Kpadé", roles: ["etudiant", "formateur", "admin"] });
+    expect(user).toMatchObject({ prenom: "Aïcha", nom: "Kpadé", roles: ["etudiant", "admin"] });
     expect(auth.getUser).not.toHaveBeenCalled();
   });
 });
