@@ -73,6 +73,13 @@ describe("La page leçon", () => {
     expect(screen.queryByRole("region", { name: "Discussions de la leçon" })).toBeNull();
   });
 
+  it("le formateur sur sa leçon publiée (aperçu « formateur », R1) : les discussions restent, il y répond", () => {
+    const moi = { compteId: "moi", prenom: "Mireille", nom: "Adjovi", initiales: "MA", photoUrl: null };
+    render(<ContenuLecon donnees={{ ...donnees(), discussion: { total: 0, reponses: [] } }} connecte apercu="formateur" moi={moi} />);
+    expect(screen.getByRole("region", { name: "Discussions de la leçon" })).toBeInTheDocument();
+    expect(ouvrirLecon).not.toHaveBeenCalled();
+  });
+
   it("aperçu d'une leçon en brouillon : le bandeau le dit", () => {
     render(<ContenuLecon donnees={donnees()} connecte apercu="lecon" />);
     expect(within(screen.getByRole("status", { name: "Aperçu : pas encore visible des étudiants" })).getByText("Cette leçon est en brouillon.")).toBeInTheDocument();

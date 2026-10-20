@@ -134,3 +134,16 @@ describe("La communauté du formateur", () => {
     expect(publication).toContain('espace="formateur"');
   });
 });
+
+describe("Un espace fermé, côté formateur", () => {
+  it("il est réservé, sans l'invitation à commencer une formation", async () => {
+    const { EspaceVerrouille } = await import("@/components/communaute/EspaceVerrouille");
+    const espace: Espace = { id: "p1", nom: "Réussite académique", nomCourt: "Académique", couleur: "academique", slug: "reussite-academique", ouvert: false };
+    const { unmount } = render(<EspaceVerrouille espace={espace} espaceCompte="formateur" />);
+    expect(screen.getByText("Cet espace est réservé aux étudiants du parcours Réussite académique et à ses formateurs.")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Voir les formations du parcours" })).toBeNull();
+    unmount();
+    render(<EspaceVerrouille espace={espace} />);
+    expect(screen.getByRole("link", { name: "Voir les formations du parcours" })).toBeInTheDocument();
+  });
+});

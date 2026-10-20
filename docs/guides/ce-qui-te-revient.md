@@ -823,5 +823,7 @@ Depuis la restructuration du 20 octobre, un formateur ne voit plus que son espac
    - le rond de profil propose « Mon profil », sans « Espace étudiant » ni « Mon abonnement » ;
    - la cloche, puis « Voir toutes les notifications », reste dans son espace ;
    - au téléphone, l'onglet **Profil** propose ses raccourcis : Mon profil, Notifications, Communauté, Messages, Corrections.
+   - programme une session live pour lui depuis ton compte admin : il reçoit « Session live programmée : … », qui mène à ses Sessions live. Au début du live, il reçoit « C'est l'heure de votre live : … » ;
+   - sur l'une de ses leçons publiées, les discussions restent visibles, et il peut répondre aux commentaires.
 3. **Avec ton compte admin :** rien ne change. « Espace étudiant » et « Back-office » sont toujours dans le menu du profil.
 4. **Un formateur qui veut apprendre** crée un compte étudiant séparé, avec une autre adresse e-mail.

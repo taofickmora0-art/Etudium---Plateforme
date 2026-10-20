@@ -272,7 +272,7 @@ export function PageCommunaute({
         {/* Sur ordinateur, une largeur fixe : les vidéos et les images ne grandissent pas avec l'écran. */}
         <div className="flex w-full max-w-[720px] min-w-0 flex-1 flex-col gap-4">
           {!espace.ouvert ? (
-            <EspaceVerrouille espace={espace} />
+            <EspaceVerrouille espace={espace} espaceCompte={espaceCompte} />
           ) : (
             <>
               {onglet === ACTUALITES && annonce && <CarteAnnonce annonce={annonce} equipe={moi.equipe === true} />}

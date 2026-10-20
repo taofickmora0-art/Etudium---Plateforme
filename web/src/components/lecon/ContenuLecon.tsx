@@ -39,6 +39,12 @@ type Props = {
  * Un quiz (lot 3) : l'en-tête, puis le quiz ; ni texte, ni onglets, ni « Terminer la leçon ». Un exercice : l'en-tête,
  * la consigne et ses fichiers, puis le travail.
  */
+/**
+ * Les discussions sont masquées en aperçu (un commentaire de test deviendrait visible des étudiants), sauf pour le
+ * formateur sur sa leçon publiée (restructuration R1) : il y lit et répond aux commentaires de ses étudiants.
+ */
+const discussionsOuvertes = (apercu: Apercu | null) => !apercu || apercu === "formateur";
+
 export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lienModifier = null }: Props) {
   const { fiche, lecon, note, notesDisponibles } = donnees;
   const ouverte = lecon.accessible;
@@ -110,7 +116,7 @@ export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lie
       </div>
       {/* Les discussions, sous le contenu et visibles sans clic (refonte des formations, §1.6). Pas en aperçu : un
           commentaire de test y serait enregistré, et visible des étudiants à la publication. */}
-      {ouverte && !apercu && donnees.discussion && moi && (
+      {ouverte && discussionsOuvertes(apercu) && donnees.discussion && moi && (
         <DiscussionsLecon key={lecon.id} leconId={lecon.id} slug={fiche.slug} initial={donnees.discussion} moi={moi} maintenant={new Date()} />
       )}
     </div>
@@ -145,7 +151,7 @@ function ContenuQuiz({ donnees, connecte, apercu = null, moi = null, lienModifie
       <EnTeteLecon fiche={fiche} lecon={lecon} lienModifier={lienModifier} type="quiz" />
       {quiz}
       <NavigationLecon fiche={fiche} leconId={lecon.id} />
-      {lecon.accessible && !apercu && donnees.discussion && moi && (
+      {lecon.accessible && discussionsOuvertes(apercu) && donnees.discussion && moi && (
         <DiscussionsLecon key={lecon.id} leconId={lecon.id} slug={fiche.slug} initial={donnees.discussion} moi={moi} maintenant={new Date()} />
       )}
     </div>
@@ -202,7 +208,7 @@ function ContenuExercice({ donnees, connecte, apercu = null, moi = null, lienMod
       )}
       {travail}
       <NavigationLecon fiche={fiche} leconId={lecon.id} />
-      {lecon.accessible && !apercu && donnees.discussion && moi && (
+      {lecon.accessible && discussionsOuvertes(apercu) && donnees.discussion && moi && (
         <DiscussionsLecon key={lecon.id} leconId={lecon.id} slug={fiche.slug} initial={donnees.discussion} moi={moi} maintenant={new Date()} />
       )}
     </div>

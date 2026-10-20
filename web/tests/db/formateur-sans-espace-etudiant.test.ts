@@ -113,3 +113,46 @@ describe("Notifications", () => {
     expect(await recues(F, "messages")).toBe(messagesF + 1);
   });
 });
+
+// Relecture finale de R1 : un tiers (l'équipe, un autre formateur, le cron) met encore à jour les lignes d'un compte
+// devenu formateur ; et l'animateur garde les notifications de ses propres sessions.
+describe("Après la relecture", () => {
+  const fiche = async (compte: string) => (await un<{ id: string }>("select id from public.formateurs where compte_id = $1", [compte])).id;
+  const notifs = async (qui: string) =>
+    (await banc.db.query<{ categorie: string; titre: string; lien: string }>("select categorie, titre, lien from public.notifications where destinataire = $1 order by cree_le, id", [qui])).rows;
+
+  it("un tiers met à jour les lignes d'un compte devenu formateur ; les rappels des sessions partent pour les autres", async () => {
+    const Y = randomUUID();
+    await banc.creerCompte(Y, []);
+    const session = (await un<{ id: string }>(
+      "insert into public.sessions_live (titre, debut, lien) values ('Live bientôt', now() + interval '5 minutes', 'https://meet.google.com/abc-defg-hij') returning id",
+    )).id;
+    await banc.db.query("insert into public.inscriptions_sessions (session_id, profil_id) values ($1, $2), ($1, $3)", [session, E, Y]);
+    await banc.en({ id: S }, "select public.changer_role($1, 'formateur')", [Y]);
+    // Mise à jour par un autre que lui (ici sans compte : le cron) : acceptée.
+    await banc.db.query("update public.inscriptions_sessions set rappel_veille_le = now() where profil_id = $1", [Y]);
+    await banc.db.query("select public.traiter_sessions_live()");
+    expect((await notifs(E)).some((n) => n.titre === "Session live dans 10 minutes")).toBe(true);
+  });
+
+  it("l'animateur garde les notifications de ses sessions, dans son espace ; un autre formateur ne les reçoit pas", async () => {
+    const debut = new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString();
+    await banc.en(
+      { id: S },
+      "select public.creer_session('Live Excel', '', $1::timestamptz, 60, 'https://meet.google.com/abc-defg-hij', null, $2, null, null)",
+      [debut, await fiche(F)],
+    );
+    expect(await notifs(F)).toContainEqual({ categorie: "service", titre: "Session live programmée : Live Excel", lien: "/formateur/sessions" });
+    expect((await notifs(G)).some((n) => n.titre.includes("Live Excel"))).toBe(false);
+    expect((await notifs(E)).some((n) => n.titre === "Nouvelle session live : Live Excel")).toBe(true);
+
+    await banc.db.query(
+      "insert into public.sessions_live (titre, debut, lien, formateur_id) values ('Live en cours', now() - interval '5 minutes', 'https://meet.google.com/abc-defg-hij', $1)",
+      [await fiche(F)],
+    );
+    await banc.db.query("select public.traiter_sessions_live()");
+    expect(await notifs(F)).toContainEqual({ categorie: "service", titre: "C’est l’heure de votre live : Live en cours", lien: "/formateur/sessions" });
+    expect((await notifs(G)).some((n) => n.titre.includes("Live en cours"))).toBe(false);
+    expect((await notifs(E)).some((n) => n.titre === "C’est l’heure du live : Live en cours")).toBe(true);
+  });
+});
