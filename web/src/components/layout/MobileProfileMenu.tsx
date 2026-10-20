@@ -6,7 +6,7 @@ import { List, ListRow } from "@/components/ui/ListRow";
 import { PointsIcon, StreakIcon } from "@/components/ui/TopBarIcons";
 import type { ShellUser } from "@/lib/auth/current-user";
 import { canAccess } from "@/lib/auth/permissions";
-import { NAV_MENU_TELEPHONE } from "@/lib/navigation";
+import { NAV_MENU_FORMATEUR, NAV_MENU_TELEPHONE } from "@/lib/navigation";
 import { MenuLogout } from "./MenuLogout";
 
 function Tuile({ glyph, valeur, legende }: { glyph: ReactNode; valeur: string; legende: string }) {
@@ -21,8 +21,12 @@ function Tuile({ glyph, valeur, legende }: { glyph: ReactNode; valeur: string; l
   );
 }
 
-/** Page « Profil » du téléphone (NdMobMenu) : identité, série et points, raccourcis, déconnexion. */
-export function MobileProfileMenu({ user }: { user: ShellUser }) {
+/**
+ * Page « Profil » du téléphone (NdMobMenu) : identité, série et points, raccourcis, déconnexion. Côté formateur
+ * (restructuration R1) : ni série ni points, ses raccourcis, et pas de changement d'espace (il n'a que le sien).
+ */
+export function MobileProfileMenu({ user, espace = "etudiant" }: { user: ShellUser; espace?: "etudiant" | "formateur" }) {
+  const formateur = espace === "formateur";
   return (
     <div className="flex flex-col">
       <h1 className="sr-only">Profil</h1>
@@ -32,24 +36,24 @@ export function MobileProfileMenu({ user }: { user: ShellUser }) {
           <h2 className="m-0 truncate text-lg leading-[26px] font-semibold text-encre">
             {user.prenom} {user.nom}
           </h2>
-          <p className="m-0 truncate text-sm leading-[22px] text-discret">
-            {user.statut} · {user.formule}
-          </p>
+          <p className="m-0 truncate text-sm leading-[22px] text-discret">{formateur ? "Formateur·rice" : `${user.statut} · ${user.formule}`}</p>
         </div>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        <Tuile glyph={<StreakIcon />} valeur={`${user.serie} jours`} legende="Série d’apprentissage" />
-        <Tuile glyph={<PointsIcon />} valeur={`${user.points} points`} legende="Gagnés cette semaine" />
-      </div>
+      {!formateur && (
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <Tuile glyph={<StreakIcon />} valeur={`${user.serie} jours`} legende="Série d’apprentissage" />
+          <Tuile glyph={<PointsIcon />} valeur={`${user.points} points`} legende="Gagnés cette semaine" />
+        </div>
+      )}
       <List label="Raccourcis" className="mt-1">
-        {NAV_MENU_TELEPHONE.map((e) => (
+        {(formateur ? NAV_MENU_FORMATEUR : NAV_MENU_TELEPHONE).map((e) => (
           <ListRow key={e.href} href={e.href} leading={<Icon icon={e.icon} size={22} />} title={e.label} />
         ))}
         {/* Espaces selon les rôles, comme dans le menu du profil sur ordinateur. L'accès réel est vérifié par le serveur. */}
-        {canAccess("formateur", user.roles) && (
+        {!formateur && canAccess("formateur", user.roles) && (
           <ListRow href="/formateur" leading={<Icon icon={TeachingIcon} size={22} />} title="Espace formateur" />
         )}
-        {canAccess("admin", user.roles) && (
+        {!formateur && canAccess("admin", user.roles) && (
           <ListRow href="/admin" leading={<Icon icon={Shield01Icon} size={22} />} title="Back-office" />
         )}
         <MenuLogout />

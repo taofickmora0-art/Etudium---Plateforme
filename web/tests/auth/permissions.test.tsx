@@ -89,8 +89,9 @@ describe("Menus selon les rôles", () => {
     expect(screen.queryByRole("link", { name: /Espace formateur/ })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Back-office/ })).toHaveAttribute("href", "/admin");
     unmount();
-    render(<MobileProfileMenu user={compte(["etudiant", "formateur"])} />);
-    expect(screen.getByRole("link", { name: /Espace formateur/ })).toHaveAttribute("href", "/formateur");
+    // Un formateur n'a plus l'espace étudiant (R1) : son menu du téléphone ne propose aucun changement d'espace.
+    render(<MobileProfileMenu user={compte(["etudiant", "formateur"])} espace="formateur" />);
+    expect(screen.queryByRole("link", { name: /Espace formateur/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Back-office/ })).not.toBeInTheDocument();
   });
 

@@ -21,14 +21,16 @@ type ProfileMenuProps = {
 
 /** Menu du profil, ouvert depuis le rond de profil de la barre du haut (planche « Menus », « Menu du profil »). */
 export function ProfileMenu({ user, roles, currentSpace = "etudiant", onSignOut }: ProfileMenuProps) {
-  const espaces: MenuEntry[] = [{ label: "Espace étudiant", icon: Home03Icon, href: "/accueil", current: currentSpace === "etudiant" }];
+  // Un formateur n'a plus l'espace étudiant (restructuration R1) : ni lui, ni l'abonnement ; son profil est dans son espace.
+  const apprenant = canAccess("etudiant", roles);
+  const espaces: MenuEntry[] = apprenant ? [{ label: "Espace étudiant", icon: Home03Icon, href: "/accueil", current: currentSpace === "etudiant" }] : [];
   if (canAccess("formateur", roles)) espaces.push({ label: "Espace formateur", icon: TeachingIcon, href: "/formateur", current: currentSpace === "formateur" });
   if (canAccess("admin", roles))
     espaces.push({ label: "Back-office", icon: Shield01Icon, href: "/admin", current: currentSpace === "admin" });
 
   const items: MenuEntry[] = [
-    { label: "Mon profil", icon: UserIcon, href: "/profil" },
-    { label: "Mon abonnement", icon: CreditCardIcon, href: "/abonnement" },
+    { label: "Mon profil", icon: UserIcon, href: apprenant ? "/profil" : "/formateur/profil" },
+    ...(apprenant ? [{ label: "Mon abonnement", icon: CreditCardIcon, href: "/abonnement" }] : []),
     // Un seul espace : inutile de proposer d'en changer.
     ...(espaces.length > 1 ? espaces : []),
     { separator: true },

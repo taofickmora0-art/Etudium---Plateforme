@@ -12,6 +12,7 @@ import {
   HelpCircleIcon,
   Home03Icon,
   Megaphone01Icon,
+  Notification02Icon,
   Route01Icon,
   Search01Icon,
   Shield01Icon,
@@ -95,6 +96,18 @@ export const LIENS_ENTETE_TELEPHONE: NavEntry[] = [{ href: "/recherche", label: 
 const TABLEAU_ADMIN: NavEntry = { href: "/admin", label: "Tableau de bord", icon: DashboardSquare02Icon, exact: true };
 const TABLEAU_FORMATEUR: NavEntry = { href: "/formateur", label: "Tableau de bord", icon: DashboardSquare02Icon, exact: true };
 const PROFIL: NavEntry = { href: "/menu", label: "Profil", icon: UserIcon };
+// Le formateur n'a plus l'espace étudiant (restructuration R1) : sa page « Profil » est dans son espace.
+const PROFIL_FORMATEUR: NavEntry = { href: "/formateur/menu", label: "Profil", icon: UserIcon };
+const COMMUNAUTE_FORMATEUR: NavEntry = { href: "/formateur/communaute", label: "Communauté", icon: UserGroupIcon };
+
+/** Raccourcis de la page « Profil » du téléphone, côté formateur (restructuration R1). */
+export const NAV_MENU_FORMATEUR: NavEntry[] = [
+  { href: "/formateur/profil", label: "Mon profil", icon: UserIcon },
+  { href: "/formateur/notifications", label: "Notifications", icon: Notification02Icon },
+  COMMUNAUTE_FORMATEUR,
+  { href: "/formateur/messages", label: "Messages", icon: BubbleChatIcon },
+  { href: "/formateur/corrections", label: "Corrections", icon: AssignmentsIcon },
+];
 
 /** Un groupe de la barre latérale, avec son titre (« Mon espace ») ou sans. */
 export type GroupeNav = { titre?: string; entrees: NavEntry[] };
@@ -145,6 +158,7 @@ export const MENUS: Record<Espace, { libelle: string; groupes: GroupeNav[] }> = 
           { href: "/formateur/sessions", label: "Sessions live", icon: Video01Icon },
           { href: "/formateur/etudiants", label: "Étudiants", icon: StudentsIcon },
           { href: "/formateur/messages", label: "Messages", icon: BubbleChatIcon },
+          COMMUNAUTE_FORMATEUR,
         ],
       },
     ],
@@ -166,7 +180,7 @@ export const NAV_BAS_PAR_ESPACE: Record<Espace, NavEntry[]> = {
     { href: "/formateur/formations", label: "Formations", icon: CourseIcon },
     { href: "/formateur/etudiants", label: "Étudiants", icon: StudentsIcon },
     { href: "/formateur/sessions", label: "Sessions live", icon: Video01Icon },
-    PROFIL,
+    PROFIL_FORMATEUR,
   ],
 };
 

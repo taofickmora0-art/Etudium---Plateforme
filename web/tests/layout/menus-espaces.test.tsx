@@ -53,6 +53,7 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
       ["Sessions live", "/formateur/sessions"],
       ["Étudiants", "/formateur/etudiants"],
       ["Messages", "/formateur/messages"],
+      ["Communauté", "/formateur/communaute"],
     ]);
     expect(within(nav).getByRole("group", { name: "Enseignement" })).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "Étudiants" })).toHaveAttribute("aria-current", "page");
@@ -102,6 +103,8 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
     unmount();
     const formateur = render(<BottomNavLinks pathname="/formateur" />);
     expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual(["Tableau de bord", "Formations", "Étudiants", "Sessions live", "Profil"]);
+    // Son « Profil » est dans son espace (restructuration R1) ; l'équipe garde /menu.
+    expect(screen.getByRole("link", { name: "Profil" })).toHaveAttribute("href", "/formateur/menu");
     formateur.unmount();
     const etudiant = render(<BottomNavLinks pathname="/accueil" />);
     expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual(["Accueil", "Formations", "Événements", "Certificats", "Profil"]);

@@ -7,7 +7,7 @@ import { NotificationsPanel } from "@/components/ui/NotificationsPanel";
 import { ProfileMenu } from "@/components/ui/ProfileMenu";
 import { useToastFacultatif } from "@/components/ui/Toast";
 import type { ShellUser } from "@/lib/auth/current-user";
-import { spaceOf } from "@/lib/auth/permissions";
+import { canAccess, spaceOf } from "@/lib/auth/permissions";
 import { chargerCloche, marquerLues } from "@/lib/notifications/actions";
 import { EVENEMENT_NOTIFICATIONS } from "@/lib/notifications/regles";
 import type { LotNotifications, NotificationLue } from "@/lib/notifications/types";
@@ -123,6 +123,8 @@ export function HeaderActions({ user }: { user: ShellUser }) {
         unreadCount={cloche.nonLues}
         onMarkAllRead={toutLire}
         onSelect={lire}
+        // Un formateur a ses notifications dans son espace (restructuration R1).
+        allHref={canAccess("etudiant", user.roles) ? "/notifications" : "/formateur/notifications"}
       />
       {/* Sous 1024 px, le profil passe par l'onglet « Profil » de la barre du bas. */}
       <div ref={profil} className="hidden lg:-mt-0.5 lg:-mb-px lg:-ml-0.5 lg:flex">
