@@ -4,6 +4,7 @@ import { Video01Icon } from "@hugeicons/core-free-icons";
 import { Avatar } from "@/components/ui/Avatar";
 import { IconTile } from "@/components/ui/IconTile";
 import { texteBrut } from "@/lib/communaute/mise-en-forme";
+import { CHEMINS_COMMUNAUTE, type EspaceCommunaute } from "@/lib/communaute/chemins";
 import { moment } from "@/lib/communaute/regles";
 import type { Activite, Tendance } from "@/lib/communaute/types";
 import { dateSession } from "@/lib/sessions/regles";
@@ -34,12 +35,16 @@ export function ColonneCommunaute({
   tendances,
   activites,
   maintenant,
+  espace = "etudiant",
 }: {
   session: ProchaineSession | null;
   tendances: Tendance[] | null;
   activites: Activite[] | null;
   maintenant: Date;
+  /** Dans l'espace formateur (restructuration R1) : ses adresses, et pas de prochaine session (pas de page Événements). */
+  espace?: EspaceCommunaute;
 }) {
+  const chemins = CHEMINS_COMMUNAUTE[espace];
   return (
     <aside aria-label="Autour de la communauté" className="flex min-w-0 flex-col gap-4">
       {tendances && (
@@ -50,7 +55,7 @@ export function ColonneCommunaute({
             <ul className={LISTE}>
               {tendances.map((t) => (
                 <li key={t.id}>
-                  <Link href={`/communaute/publications/${t.id}`} className={LIGNE}>
+                  <Link href={chemins.publication(t.id)} className={LIGNE}>
                     <Avatar initials={t.auteur.equipe ? "É" : t.auteur.initiales} tone={t.auteur.equipe ? "bleu" : tonAvatar(t.auteur.nomCourt)} />
                     <span className="flex min-w-0 flex-col gap-1">
                       <span className="line-clamp-3 text-sm leading-[21px] wrap-anywhere text-encre">{texteBrut(t.extrait)}</span>
@@ -71,7 +76,7 @@ export function ColonneCommunaute({
             <ul className={LISTE}>
               {activites.map((a, i) => (
                 <li key={`${a.publicationId}-${a.creeLe}-${i}`}>
-                  <Link href={`/communaute/publications/${a.publicationId}`} className={LIGNE}>
+                  <Link href={chemins.publication(a.publicationId)} className={LIGNE}>
                     <Avatar initials={a.auteur.initiales} tone={tonAvatar(a.auteur.nomCourt)} />
                     <span className="flex min-w-0 flex-col gap-[3px]">
                       <span className="text-sm leading-[21px] wrap-anywhere text-texte">
@@ -86,6 +91,7 @@ export function ColonneCommunaute({
           )}
         </Bloc>
       )}
+      {chemins.evenements && (
       <Bloc titre="Prochaine session">
         {session ? (
           <>
@@ -97,7 +103,7 @@ export function ColonneCommunaute({
               </span>
             </div>
             <div className="pb-3 pl-1">
-              <Link href="/evenements" className={LIEN}>
+              <Link href={chemins.evenements} className={LIEN}>
                 Voir la session
               </Link>
             </div>
@@ -105,12 +111,13 @@ export function ColonneCommunaute({
         ) : (
           <div className="flex flex-col gap-2 px-1 pt-2 pb-3">
             <p className="m-0 text-sm leading-[22px] text-discret">Aucune session programmée pour l’instant.</p>
-            <Link href="/evenements" className={LIEN}>
+            <Link href={chemins.evenements} className={LIEN}>
               Voir les événements
             </Link>
           </div>
         )}
       </Bloc>
+      )}
     </aside>
   );
 }

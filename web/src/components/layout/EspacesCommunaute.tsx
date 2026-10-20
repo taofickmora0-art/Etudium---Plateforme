@@ -7,6 +7,7 @@ import { Icon, type IconSvgElement } from "@/components/ui/Icon";
 import { SidebarGroup } from "@/components/ui/SidebarGroup";
 import { SidebarItem } from "@/components/ui/SidebarItem";
 import { chargerEspaces } from "@/lib/communaute/actions";
+import { CHEMINS_COMMUNAUTE, espaceCommunauteDe } from "@/lib/communaute/chemins";
 import type { Espace } from "@/lib/communaute/types";
 
 const ICONES: Record<string, IconSvgElement> = { academique: Mortarboard02Icon, digital: ComputerIcon, business: Briefcase01Icon };
@@ -33,7 +34,9 @@ export function EspacesCommunaute({ pathname }: { pathname: string }) {
   }, []);
 
   if (!espaces || espaces.length === 0) return null;
-  const courant = pathname === "/accueil" ? (parametres.get("espace") ?? "tous") : null;
+  // L'Accueil de l'étudiant, ou la communauté du formateur (restructuration R1).
+  const racine = CHEMINS_COMMUNAUTE[espaceCommunauteDe(pathname)].accueil;
+  const courant = pathname === racine ? (parametres.get("espace") ?? "tous") : null;
   const entrees = [
     { valeur: "tous", libelle: "Actualités", icone: News01Icon, ouvert: true },
     ...espaces.map((e) => ({
@@ -48,7 +51,7 @@ export function EspacesCommunaute({ pathname }: { pathname: string }) {
       {entrees.map((e) => (
         <SidebarItem
           key={e.valeur}
-          href={`/accueil?espace=${encodeURIComponent(e.valeur)}`}
+          href={`${racine}?espace=${encodeURIComponent(e.valeur)}`}
           icon={e.icone}
           label={e.libelle}
           active={courant === e.valeur}

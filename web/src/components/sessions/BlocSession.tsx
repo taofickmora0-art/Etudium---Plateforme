@@ -22,12 +22,15 @@ export function BlocSession({
   session: s,
   maintenant,
   apercu = false,
+  lienSession = "/evenements",
   className,
 }: {
   session: SessionPublication;
   maintenant: Date;
   /** Dans l'aperçu du formulaire : « Voir la session » n'est pas un lien (la saisie n'est pas perdue). */
   apercu?: boolean;
+  /** La page des sessions ; null : pas de « Voir la session » (le formateur n'a pas la page Événements, R1). */
+  lienSession?: string | null;
   className?: string;
 }) {
   const { mois, jour } = jourCarte(s.debut);
@@ -85,11 +88,11 @@ export function BlocSession({
             )}
             {apercu ? (
               <span className={buttonVariants({ size: "sm" })}>Voir la session</span>
-            ) : (
+            ) : lienSession ? (
               <Button asChild size="sm">
-                <Link href="/evenements">Voir la session</Link>
+                <Link href={lienSession}>Voir la session</Link>
               </Button>
-            )}
+            ) : null}
           </>
         )}
       </div>

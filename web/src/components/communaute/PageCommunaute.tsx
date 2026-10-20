@@ -17,6 +17,7 @@ import { Heading, Lead } from "@/components/ui/Text";
 import { entrelacer, type ElementFil } from "@/lib/accueil/fil";
 import type { CarteCatalogue } from "@/lib/catalogue/types";
 import { chargerFil } from "@/lib/communaute/actions";
+import { CHEMINS_COMMUNAUTE, type EspaceCommunaute } from "@/lib/communaute/chemins";
 import { curseur } from "@/lib/communaute/regles";
 import type { Annonce, Espace, LotPublications, MoiCommunaute, SuiteFil, TriFil } from "@/lib/communaute/types";
 import { CarteAnnonce } from "./CarteAnnonce";
@@ -56,6 +57,7 @@ export function PageCommunaute({
   intro = INTRO,
   nouvelles = [],
   disponibles = [],
+  espace: espaceCompte = "etudiant",
 }: {
   espaces: Espace[];
   initial: LotPublications;
@@ -77,6 +79,8 @@ export function PageCommunaute({
   nouvelles?: CarteCatalogue[];
   /** « Formations disponibles » sous le fil (§3). */
   disponibles?: CarteCatalogue[];
+  /** L'espace qui l'affiche : ses adresses (restructuration R1 : la communauté du formateur). */
+  espace?: EspaceCommunaute;
 }) {
   const liste = espaces.length > 0 ? espaces : [GENERAL];
   const general = liste.find((e) => e.id === null) ?? GENERAL;
@@ -100,6 +104,8 @@ export function PageCommunaute({
   // L'onglet suit l'adresse : une entrée du menu ≡ (`?espace=`) ouvre le sien, sans recharger la page. L'adresse que la
   // page écrit elle-même (`replaceState`) est notée d'avance et ne relit rien ; une relecture du serveur garde tout.
   const demandee = useSearchParams()?.get("espace") ?? ACTUALITES;
+  // L'Accueil de l'étudiant, ou la communauté du formateur (restructuration R1).
+  const racine = CHEMINS_COMMUNAUTE[espaceCompte].accueil;
   const adresse = useRef(demandee);
 
   async function lire(cible: string, ordre: TriFil, depuis: SuiteFil) {
@@ -126,7 +132,7 @@ export function PageCommunaute({
     if (ecrireAdresse) {
       // L'adresse suit l'onglet (le menu ≡ le marque, un lien copié le rouvre) ; Next garde son routeur à jour.
       adresse.current = cible;
-      window.history.replaceState(null, "", cible === ACTUALITES ? "/accueil" : `/accueil?espace=${encodeURIComponent(cible)}`);
+      window.history.replaceState(null, "", cible === ACTUALITES ? racine : `${racine}?espace=${encodeURIComponent(cible)}`);
     }
     const choisi = cible === ACTUALITES ? general : liste.find((e) => valeur(e) === cible);
     if (!choisi?.ouvert) {
@@ -223,6 +229,7 @@ export function PageCommunaute({
               maintenant={maintenant}
               onSupprimee={retirer}
               onParue={vue === "programmees" ? retirer : undefined}
+              lienSession={CHEMINS_COMMUNAUTE[espaceCompte].evenements}
             />
           ),
         )

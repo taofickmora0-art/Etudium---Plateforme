@@ -15,7 +15,9 @@ import { SidebarNavLinks } from "./SidebarNav";
 function EntreesActives() {
   const pathname = usePathname();
   // Sur l'Accueil (la communauté) et la page d'une publication, ses espaces (spec du nouvel Accueil, §4).
-  const communaute = pathname === "/accueil" || pathname.startsWith("/communaute/");
+  // Et, pour le formateur, sa communauté et ses publications (restructuration R1).
+  const communaute =
+    pathname === "/accueil" || pathname.startsWith("/communaute/") || pathname === "/formateur/communaute" || pathname.startsWith("/formateur/communaute/");
   return <SidebarNavLinks pathname={pathname} repliable={false} apresPremierGroupe={communaute ? <EspacesCommunaute pathname={pathname} /> : null} />;
 }
 
