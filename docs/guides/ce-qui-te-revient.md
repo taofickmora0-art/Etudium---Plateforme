@@ -806,3 +806,22 @@ Aucune migration. Ouvre le site **sans être connecté** (fenêtre de navigation
    - Les questions sur les formules sont celles du design.
 5. **Les préférences.** Dans Mon profil, onglet Notifications, coupe « Messages ». Plus aucune notification de message n'arrive ; la pastille reste.
 6. **La suppression d'un compte de test.** Ses conversations disparaissent des deux côtés, avec leurs fichiers et leurs notifications. Rien ne part tant que le compte existe : un message envoyé reste tel quel, pièce jointe comprise.
+
+## 43. Valider le formateur sans espace étudiant (restructuration, R1), 15 minutes
+
+Depuis la restructuration du 20 octobre, un formateur ne voit plus que son espace : ses formations, ses étudiants, ses sessions, ses messages, et la communauté.
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0036_formateur_sans_espace_etudiant.sql` (après la 0035). Elle :
+   - ferme au formateur le contenu des formations des autres ;
+   - refuse ses actions d'étudiant : progression, favoris, avis, inscriptions aux sessions, quiz, rendus, messages écrits comme étudiant ;
+   - ne lui envoie plus les notifications d'apprentissage (nouvelle session, « C'est l'heure du live », nouveaux contenus…).
+2. **Avec ton compte formateur de test :**
+   - à la connexion, tu arrives sur son tableau de bord ;
+   - tape à la main `/formations`, `/accueil`, puis l'adresse d'une leçon d'une formation d'un autre : chaque fois, tu reviens dans son espace ;
+   - dans le menu, **Communauté** : publie, commente, change d'espace ;
+   - sur l'une de ses formations, « Voir comme un étudiant » : le bandeau « Aperçu de votre leçon… » s'affiche, sans « Terminer la leçon » ;
+   - le rond de profil propose « Mon profil », sans « Espace étudiant » ni « Mon abonnement » ;
+   - la cloche, puis « Voir toutes les notifications », reste dans son espace ;
+   - au téléphone, l'onglet **Profil** propose ses raccourcis : Mon profil, Notifications, Communauté, Messages, Corrections.
+3. **Avec ton compte admin :** rien ne change. « Espace étudiant » et « Back-office » sont toujours dans le menu du profil.
+4. **Un formateur qui veut apprendre** crée un compte étudiant séparé, avec une autre adresse e-mail.
