@@ -97,6 +97,22 @@ describe("La page Notifications", () => {
     window.removeEventListener(EVENEMENT_NOTIFICATIONS, evenements);
   });
 
+  it("le temps réel (0044) : une notification arrive, elle s'ajoute en tête ; les pages déjà chargées restent", async () => {
+    const PLUS: LotNotifications = { lignes: [...LOT.lignes, notif({ id: "0", titre: "Plus ancienne", creeLe: "2026-10-10T08:00:00Z" })], suite: false, nonLues: 3 };
+    render(<PageNotifications initial={PLUS} />);
+    vi.mocked(chargerNotifications).mockResolvedValue({
+      ok: true,
+      page: { lignes: [notif({ id: "4", titre: "Nouvelle réponse", creeLe: "2026-10-14T14:59:00Z" }), ...LOT.lignes], suite: true, nonLues: 3 },
+    });
+    act(() => {
+      window.dispatchEvent(new Event("etudium:temps-reel:notification"));
+    });
+    expect(await screen.findByText("Nouvelle réponse")).toBeInTheDocument();
+    expect(chargerNotifications).toHaveBeenCalledWith(false, null);
+    expect(screen.getByText("Plus ancienne")).toBeInTheDocument();
+    expect(screen.getAllByText("Nouvelle formation : Excel")).toHaveLength(1);
+  });
+
   it("une annonce sans lien se marque lue d'un clic, elle aussi", async () => {
     const user = userEvent.setup();
     render(<PageNotifications initial={{ lignes: [notif({ id: "9", categorie: "annonces", titre: "Nouveautés", lien: null })], suite: false, nonLues: 1 }} />);

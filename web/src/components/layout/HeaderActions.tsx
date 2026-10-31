@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { versPanneau } from "@/components/notifications/affichage";
+import { TempsReel } from "@/components/temps-reel/TempsReel";
+import { useTempsReel } from "@/components/temps-reel/evenements";
 import { NotificationsPanel } from "@/components/ui/NotificationsPanel";
 import { ProfileMenu } from "@/components/ui/ProfileMenu";
 import { useToastFacultatif } from "@/components/ui/Toast";
@@ -22,8 +24,9 @@ const plusGrand = (lignes: NotificationLue[]) => lignes.reduce((max, n) => Math.
 
 /**
  * Les 8 dernières notifications et le nombre de non lues (spec des notifications, §3). L'en-tête reste en place d'une
- * page à l'autre : la cloche se recharge à chaque changement de page, quand la page Notifications en marque lues, toutes
- * les minutes tant que l'onglet est visible, et au retour sur l'onglet. Une notification de session live arrivée depuis
+ * page à l'autre : la cloche se recharge aussitôt qu'une notification arrive ou qu'il en lit ailleurs (temps réel, 0044),
+ * à chaque changement de page, quand la page Notifications en marque lues, et, en secours, toutes les minutes tant que
+ * l'onglet est visible et au retour sur l'onglet. Une notification de session live arrivée depuis
  * (« C’est l’heure du live », rappel 10 min avant) s'annonce aussi en bas de l'écran.
  */
 function useCloche() {
@@ -86,6 +89,8 @@ function useCloche() {
     void charger();
   }, [chemin, charger]);
 
+  useTempsReel("notification", () => void charger());
+
   useEffect(() => {
     const recharger = () => void charger();
     window.addEventListener(EVENEMENT_NOTIFICATIONS, recharger);
@@ -118,6 +123,8 @@ export function HeaderActions({ user }: { user: ShellUser }) {
   const maintenant = new Date();
   return (
     <>
+      {/* Le temps réel (0044) : une seule connexion par page, ici, là où est la cloche. */}
+      <TempsReel />
       <NotificationsPanel
         notifications={cloche.lignes.map((n) => versPanneau(n, maintenant))}
         unreadCount={cloche.nonLues}

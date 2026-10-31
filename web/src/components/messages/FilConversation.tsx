@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useEffectEvent, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft01Icon, Attachment01Icon, Cancel01Icon, File02Icon, SentIcon } from "@hugeicons/core-free-icons";
+import { useTempsReel } from "@/components/temps-reel/evenements";
 import { Button, buttonVariants } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { IconButton } from "@/components/ui/IconButton";
@@ -118,20 +119,26 @@ export function FilConversation({
     rafraichirMessagesNonLus(espace);
   }, [espace, conversationId]);
 
+  /** Relit les derniers messages (la conversation est marquée lue) ; une relecture qui échoue ne change rien. */
+  function relire() {
+    void relireFil(conversationId).then((fil) => {
+      if (!fil) return;
+      setMessages((avant) => {
+        // Les messages précédents déjà chargés (plus anciens que le premier rendu par le serveur) restent.
+        const premier = fil.messages[0]?.creeLe;
+        const anciens = premier ? avant.filter((m) => m.creeLe < premier) : [];
+        const suivants = [...anciens, ...fusionner(fil.messages, locaux.current)];
+        if (suivants.length !== avant.length) rafraichirMessagesNonLus(espace);
+        return suivants;
+      });
+    });
+  }
+  // Un message arrive : aussitôt (temps réel, 0044). En secours, toutes les 10 s, onglet visible.
+  useTempsReel("message", relire);
+  const relireEnSecours = useEffectEvent(relire);
   useEffect(() => {
     const minuterie = setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      void relireFil(conversationId).then((fil) => {
-        if (!fil) return;
-        setMessages((avant) => {
-          // Les messages précédents déjà chargés (plus anciens que le premier rendu par le serveur) restent.
-          const premier = fil.messages[0]?.creeLe;
-          const anciens = premier ? avant.filter((m) => m.creeLe < premier) : [];
-          const suivants = [...anciens, ...fusionner(fil.messages, locaux.current)];
-          if (suivants.length !== avant.length) rafraichirMessagesNonLus(espace);
-          return suivants;
-        });
-      });
+      if (document.visibilityState === "visible") relireEnSecours();
     }, RELECTURE_MS);
     return () => clearInterval(minuterie);
   }, [conversationId, espace]);

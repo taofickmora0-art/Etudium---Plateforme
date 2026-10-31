@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Lecture } from "@/lib/utilisateurs/types";
 import type { ConversationResume } from "@/lib/messages/types";
@@ -78,6 +78,16 @@ describe("La pastille de « Messages »", () => {
     render(<SidebarNavLinks pathname="/accueil" />);
     expect(await screen.findByRole("link", { name: "Messages, 2 conversations non lues" })).toHaveAttribute("href", "/messages");
     await waitFor(() => expect(compterMessagesNonLus).toHaveBeenCalledWith("etudiant"));
+  });
+
+  it("le temps réel (0044) : un message arrive, la pastille se relit aussitôt", async () => {
+    render(<SidebarNavLinks pathname="/accueil" />);
+    await waitFor(() => expect(compterMessagesNonLus).toHaveBeenCalledTimes(1));
+    compterMessagesNonLus.mockResolvedValue(3);
+    act(() => {
+      window.dispatchEvent(new Event("etudium:temps-reel:message"));
+    });
+    expect(await screen.findByRole("link", { name: "Messages, 3 conversations non lues" })).toBeInTheDocument();
   });
 
   it("dans l'espace formateur, sur « Messages » du formateur", async () => {

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { BubbleChatIcon, PencilEdit02Icon } from "@hugeicons/core-free-icons";
+import { useTempsReel } from "@/components/temps-reel/evenements";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Heading, Lead } from "@/components/ui/Text";
@@ -49,13 +50,17 @@ export function Messagerie({
   const [nouveau, setNouveau] = useState(false);
   const ecrire = espace !== "equipe";
 
-  // La liste se relit chaque minute (onglet visible) ; une relecture qui échoue ne change rien.
+  // La liste se relit aussitôt qu'un message arrive ou qu'une conversation est lue ailleurs (temps réel, 0044), et chaque
+  // minute en secours (onglet visible) ; une relecture qui échoue ne change rien.
+  const relire = () =>
+    void relireConversations(espace).then((liste) => {
+      if (liste) setConversations(liste);
+    });
+  useTempsReel("message", relire);
+  const relireEnSecours = useEffectEvent(relire);
   useEffect(() => {
     const minuterie = setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      void relireConversations(espace).then((liste) => {
-        if (liste) setConversations(liste);
-      });
+      if (document.visibilityState === "visible") relireEnSecours();
     }, LISTE_MS);
     return () => clearInterval(minuterie);
   }, [espace]);

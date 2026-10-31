@@ -75,6 +75,15 @@ describe("La cloche se met à jour seule", () => {
     await waitFor(() => expect(chargerCloche).toHaveBeenCalledTimes(3));
   });
 
+  it("le temps réel (0044) : une notification arrive, la cloche se relit aussitôt", async () => {
+    afficher();
+    await waitFor(() => expect(chargerCloche).toHaveBeenCalledTimes(1));
+    act(() => {
+      window.dispatchEvent(new Event("etudium:temps-reel:notification"));
+    });
+    await waitFor(() => expect(chargerCloche).toHaveBeenCalledTimes(2));
+  });
+
   it("une nouvelle notification de session live : un message en bas de l'écran, « Voir » mène à la page Événements", async () => {
     afficher();
     await waitFor(() => expect(chargerCloche).toHaveBeenCalledTimes(1));

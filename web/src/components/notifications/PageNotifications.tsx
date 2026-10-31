@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { CheckmarkCircle02Icon, Settings02Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { useTempsReel } from "@/components/temps-reel/evenements";
 import { Button } from "@/components/ui/Button";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { Icon } from "@/components/ui/Icon";
@@ -56,6 +57,24 @@ export function PageNotifications({ initial, maintenant: heureServeur }: { initi
         : reponse.page,
     );
   }
+
+  // Une notification arrive, ou il en lit ailleurs (temps réel, 0044) : la première page est relue et prend la place des
+  // lignes les plus récentes ; les pages plus anciennes déjà chargées (« Voir plus ») restent. Pas pendant un chargement.
+  useTempsReel("notification", () => {
+    if (occupe) return;
+    const numero = demande.current;
+    void chargerNotifications(filtre === "non_lues", null)
+      .then((reponse) => {
+        if (!reponse.ok || numero !== demande.current) return;
+        const fraiches = reponse.page.lignes;
+        const plusAncienne = Math.min(...fraiches.map((n) => Number(n.id)));
+        setLot((actuel) => {
+          const anciennes = fraiches.length > 0 ? actuel.lignes.filter((n) => Number(n.id) < plusAncienne) : [];
+          return { lignes: [...fraiches, ...anciennes], suite: anciennes.length > 0 ? actuel.suite : reponse.page.suite, nonLues: reponse.page.nonLues };
+        });
+      })
+      .catch(() => undefined);
+  });
 
   const changerFiltre = (valeur: string) => {
     const nouveau: Filtre = valeur === "non_lues" ? "non_lues" : "toutes";

@@ -891,3 +891,19 @@ Depuis la restructuration du 20 octobre, un formateur ne voit plus que son espac
 5. **Ce qui ne déclenche pas le bandeau :**
    - une publication d'un autre espace que l'onglet ouvert ;
    - les tris « Les plus populaires » et « Mes enregistrements », et l'onglet « Programmées ».
+
+## 49. Les notifications en temps réel, 10 minutes
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0044_temps_reel.sql`, après la 0043.
+   - Si Supabase affiche « Temps réel indisponible : règle d'abonnement non créée », dis-le-moi.
+2. **Le réglage (recommandé).** Dans Supabase, **Realtime → Settings** : désactive **Allow public access**, puis enregistre.
+   - L'appli n'utilise que des canaux privés : chacun ne peut écouter que son compte et la communauté.
+3. **Recharge l'appli** une fois, sur l'ordinateur et sur le téléphone, pour qu'elle se connecte au temps réel.
+4. **Avec deux comptes A et B** (ou A sur l'ordinateur et B sur le téléphone) :
+   - B aime ou commente une publication de A : la cloche de A affiche la notification en une à deux secondes, sans recharger ;
+   - B écrit à A : la pastille « Messages » de A passe à 1, et la conversation ouverte affiche le message aussitôt ;
+   - A ouvre la conversation sur le téléphone : la pastille disparaît aussi sur l'ordinateur ;
+   - B publie : le bandeau « Nouvelles publications » apparaît aussitôt chez A ;
+   - A est sur la page Notifications : la nouvelle notification s'ajoute en tête.
+5. **À savoir :** on n'est jamais prévenu de ses propres actions (aimer sa propre publication, se répondre à soi-même). Pour tester, il faut deux comptes différents.
+6. **En secours,** si le temps réel est coupé (réseau instable), l'appli continue de se relire toute seule : cloche chaque minute, bandeau toutes les 30 s.

@@ -125,6 +125,17 @@ describe("Le bandeau « Nouvelles publications »", () => {
     expect(compter).not.toHaveBeenCalled();
   });
 
+  it("le temps réel (0044) : une publication paraît, la vérification part aussitôt, sans attendre les 30 s", async () => {
+    afficher(lot(pub("a", "2026-10-14T13:00:00Z")));
+    vi.mocked(compter).mockResolvedValue({ nombre: 1, auteurs: [] });
+    act(() => {
+      window.dispatchEvent(new Event("etudium:temps-reel:publication"));
+    });
+    await attendre(1_000);
+    expect(compter).toHaveBeenCalledTimes(1);
+    expect(bandeau()).toHaveAccessibleName("1 nouvelle publication");
+  });
+
   it("une relecture qui échoue : un message, le fil reste", async () => {
     afficher(lot(pub("a", "2026-10-14T13:00:00Z")));
     vi.mocked(compter).mockResolvedValue({ nombre: 3, auteurs: [] });

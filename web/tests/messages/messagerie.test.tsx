@@ -102,6 +102,20 @@ describe("La liste des conversations", () => {
   });
 });
 
+describe("Le temps réel (0044)", () => {
+  it("un message arrive : la conversation ouverte et la liste se relisent aussitôt", async () => {
+    vi.mocked(actions.relireFil).mockResolvedValue({ ...FIL, messages: [...FIL.messages, message({ texte: "Arrivé en direct", creeLe: aujourdhui(14, 3) })] });
+    vi.mocked(actions.relireConversations).mockResolvedValue([CONV, { ...EQUIPE, dernier: { ...EQUIPE.dernier!, texte: "Réponse en direct" } }]);
+    afficher();
+    act(() => {
+      window.dispatchEvent(new Event("etudium:temps-reel:message"));
+    });
+    expect(await screen.findByText("Arrivé en direct")).toBeInTheDocument();
+    expect(await screen.findByText(/Réponse en direct/)).toBeInTheDocument();
+    expect(actions.relireConversations).toHaveBeenCalledWith("etudiant");
+  });
+});
+
 describe("La conversation", () => {
   it("l'en-tête, les messages groupés par jour, la pièce jointe, « Vous · 11 h 42 »", () => {
     afficher();

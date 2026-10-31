@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
+import { useTempsReel } from "@/components/temps-reel/evenements";
 import { compterMessagesNonLus } from "@/lib/messages/actions";
 import type { EspaceMessages } from "@/lib/messages/types";
 
 // Le nombre de conversations non lues (pastille de l'entrée « Messages »), partagé par la page : la barre latérale et
 // le tiroir du téléphone lisent la même valeur. Une lecture à la fois, 20 s au moins entre deux lectures (sauf
-// relecture demandée par l'écran Messages après avoir lu une conversation) ; relue chaque minute, onglet visible.
+// relecture demandée par l'écran Messages après avoir lu une conversation, ou par le temps réel quand un message arrive
+// ou qu'une conversation est lue ailleurs, 0044) ; relue chaque minute en secours, onglet visible.
 
 const INTERVALLE_MS = 60_000;
 const ECART_MIN_MS = 20_000;
@@ -64,6 +66,9 @@ const sAbonner = (prevenir: () => void) => {
 /** Le nombre de conversations non lues de l'espace ; `actif` faux (pas de compte, autre espace) : 0, sans lecture. */
 export function useMessagesNonLus(espace: EspaceMessages | null, actif = true): number {
   const n = useSyncExternalStore(sAbonner, () => (espace && espace === espaceCourant ? nombre : 0), () => 0);
+  useTempsReel("message", () => {
+    if (actif && espace) void relire(espace, true);
+  });
   useEffect(() => {
     if (!actif || !espace) return;
     void relire(espace);
