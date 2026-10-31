@@ -54,15 +54,15 @@ describe("Route /auth/suspendu", () => {
 
   it("déconnecte un compte suspendu et l'envoie à la connexion avec le message", async () => {
     rpc.mockResolvedValue({ data: true, error: null });
-    const reponse = await routeSuspendu(new Request("http://localhost:3000/auth/suspendu") as never);
+    const reponse = await routeSuspendu();
     expect(auth.signOut).toHaveBeenCalled();
-    expect(reponse.headers.get("location")).toBe("http://localhost:3000/connexion?erreur=suspendu");
+    expect(reponse.headers.get("location")).toBe("/connexion?erreur=suspendu");
   });
 
   it("ne déconnecte jamais un compte actif (un lien ne suffit pas à déconnecter quelqu'un)", async () => {
     rpc.mockResolvedValue({ data: false, error: null });
-    const reponse = await routeSuspendu(new Request("http://localhost:3000/auth/suspendu") as never);
+    const reponse = await routeSuspendu();
     expect(auth.signOut).not.toHaveBeenCalled();
-    expect(reponse.headers.get("location")).toBe("http://localhost:3000/accueil");
+    expect(reponse.headers.get("location")).toBe("/accueil");
   });
 });

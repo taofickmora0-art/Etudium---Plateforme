@@ -61,14 +61,14 @@ describe("Connexion", () => {
     rpc.mockResolvedValue({ data: true, error: null });
     const reponse = await retourGoogle(new Request("http://localhost:3000/auth/callback?code=abc&next=/accueil") as never);
     expect(auth.signOut).toHaveBeenCalled();
-    expect(reponse.headers.get("location")).toBe("http://localhost:3000/connexion?erreur=suspendu");
+    expect(reponse.headers.get("location")).toBe("/connexion?erreur=suspendu");
   });
 
   it("au retour de Google, un compte actif va à la page demandée", async () => {
     auth.exchangeCodeForSession.mockResolvedValue({ error: null });
     const reponse = await retourGoogle(new Request("http://localhost:3000/auth/callback?code=abc&next=/certificats") as never);
     expect(auth.signOut).not.toHaveBeenCalled();
-    expect(reponse.headers.get("location")).toBe("http://localhost:3000/certificats");
+    expect(reponse.headers.get("location")).toBe("/certificats");
   });
 
   it("de bons identifiants mènent à l'accueil", async () => {
@@ -86,7 +86,7 @@ describe("Connexion", () => {
     await expect(signIn(IDLE, form({ ...BONS, next: "/profil" }))).rejects.toThrow("NEXT_REDIRECT:/formateur/profil");
     auth.exchangeCodeForSession.mockResolvedValue({ error: null });
     const reponse = await retourGoogle(new Request("http://localhost:3000/auth/callback?code=abc&next=/accueil") as never);
-    expect(reponse.headers.get("location")).toBe("http://localhost:3000/formateur");
+    expect(reponse.headers.get("location")).toBe("/formateur");
   });
 
   it("sans « Se souvenir de moi », la session s'arrête à la fermeture du navigateur", async () => {
@@ -131,7 +131,15 @@ describe("Connexion", () => {
     auth.signInWithOAuth.mockResolvedValue({ data: { url: null }, error: { status: 500 } });
     await expect(signInWithGoogle(form({ next: "/certificats" }))).rejects.toThrow("NEXT_REDIRECT:/connexion?erreur=google&next=%2Fcertificats");
     const reponse = await retourGoogle(new Request("http://localhost:3000/auth/callback?next=/certificats") as never);
-    expect(reponse.headers.get("location")).toBe("http://localhost:3000/connexion?erreur=google&next=%2Fcertificats");
+    expect(reponse.headers.get("location")).toBe("/connexion?erreur=google&next=%2Fcertificats");
+  });
+
+  it("le retour reste sur l'adresse par laquelle on est venu (le téléphone passe par l'adresse réseau de l'ordinateur)", async () => {
+    // En développement, request.url dit toujours localhost : une adresse relative laisse le navigateur garder la sienne.
+    const venu = new Request("http://localhost:3000/auth/callback?next=/certificats", { headers: { host: "192.168.0.3:3000" } });
+    const reponse = await retourGoogle(venu as never);
+    expect(reponse.status).toBe(307);
+    expect(reponse.headers.get("location")).toBe("/connexion?erreur=google&next=%2Fcertificats");
   });
 
   it("next ne fait pas sortir du site", async () => {

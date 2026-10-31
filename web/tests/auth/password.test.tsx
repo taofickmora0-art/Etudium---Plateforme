@@ -98,18 +98,18 @@ describe("Lien reçu par e-mail", () => {
     auth.verifyOtp.mockResolvedValue({ error: null });
     const res = await GET(new Request("http://localhost:3000/auth/confirm?token_hash=abc&type=recovery&next=/nouveau-mot-de-passe") as never);
     expect(auth.verifyOtp).toHaveBeenCalledWith({ type: "recovery", token_hash: "abc" });
-    expect(res.headers.get("location")).toBe("http://localhost:3000/nouveau-mot-de-passe");
+    expect(res.headers.get("location")).toBe("/nouveau-mot-de-passe");
   });
 
   it("/auth/confirm refuse un next extérieur", async () => {
     auth.verifyOtp.mockResolvedValue({ error: null });
     const res = await GET(new Request("http://localhost:3000/auth/confirm?token_hash=abc&type=recovery&next=https://pirate.example") as never);
-    expect(res.headers.get("location")).toBe("http://localhost:3000/accueil");
+    expect(res.headers.get("location")).toBe("/accueil");
   });
 
   it("un lien expiré mène à une nouvelle demande", async () => {
     auth.verifyOtp.mockResolvedValue({ error: { code: "otp_expired", status: 403 } });
     const res = await GET(new Request("http://localhost:3000/auth/confirm?token_hash=abc&type=recovery") as never);
-    expect(res.headers.get("location")).toBe("http://localhost:3000/mot-de-passe-oublie?lien=expire");
+    expect(res.headers.get("location")).toBe("/mot-de-passe-oublie?lien=expire");
   });
 });
