@@ -877,3 +877,18 @@ Depuis la restructuration du 20 octobre, un formateur ne voit plus que son espac
    - même chose pour un commentaire (« … aime votre commentaire »), dans la communauté comme dans une leçon.
 3. **Une publication programmée :** programme-en une dans quelques minutes. À l'heure dite, la cloche affiche « Votre publication programmée est parue » ; un clic ouvre la publication.
 4. **Ce qui prévenait déjà :** un commentaire, une réponse, la modération (« Publication en ligne », « Publication retirée ») et les sessions live.
+
+## 48. Le bandeau « Nouvelles publications » (liste du 31 octobre, tâche 9), 5 minutes
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0042_nouvelles_publications.sql`, après la 0041.
+2. **Avec deux comptes A et B :**
+   - A ouvre l'Accueil, onglet « Actualités », tri « Les plus récentes » ;
+   - B publie dans la communauté ;
+   - dans les 30 secondes, A voit en haut du fil, au milieu, « 1 nouvelle publication » avec la photo (ou les initiales) de B ;
+   - en descendant dans le fil, le bandeau reste collé sous la barre du haut.
+3. **Un appui sur le bandeau :** le fil se met à jour sans recharger la page, la publication de B apparaît en tête, le bandeau disparaît.
+4. **Ce qui ne déclenche pas le bandeau :**
+   - tes propres publications (elles s'ajoutent tout de suite au fil) ;
+   - une publication d'un autre espace que l'onglet ouvert ;
+   - les tris « Les plus populaires » et « Mes enregistrements », et l'onglet « Programmées ».
+5. **Ta publication programmée** qui paraît compte, elle : elle n'était pas encore dans ton fil.

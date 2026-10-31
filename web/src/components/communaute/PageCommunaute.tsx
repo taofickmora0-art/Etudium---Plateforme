@@ -21,11 +21,13 @@ import { chargerFil, masquerAnnonce } from "@/lib/communaute/actions";
 import { CHEMINS_COMMUNAUTE, type EspaceCommunaute } from "@/lib/communaute/chemins";
 import { curseur } from "@/lib/communaute/regles";
 import type { Annonce, Espace, LotPublications, MoiCommunaute, SuiteFil, TriFil } from "@/lib/communaute/types";
+import { BandeauNouvellesPublications } from "./BandeauNouvellesPublications";
 import { CarteAnnonce } from "./CarteAnnonce";
 import { CartePublication } from "./CartePublication";
 import { ChampPublication } from "./ChampPublication";
 import { EspaceVerrouille } from "./EspaceVerrouille";
 import { MenuTri } from "./MenuTri";
+import { useNouvellesPublications } from "./useNouvellesPublications";
 
 const GENERAL: Espace = { id: null, nom: "Général", nomCourt: "Général", couleur: null, slug: null, ouvert: true };
 const ECHEC = "Les publications n’ont pas pu être chargées. Réessayez.";
@@ -125,6 +127,11 @@ export function PageCommunaute({
   // L'Accueil de l'étudiant, ou la communauté du formateur (restructuration R1).
   const racine = CHEMINS_COMMUNAUTE[espaceCompte].accueil;
   const adresse = useRef(demandee);
+  // Le bandeau « Nouvelles publications » (liste du 31 octobre 2026, tâche 9) : seulement sous « Les plus récentes »,
+  // repéré sur la plus récente du fil affiché (null : fil vide, tout ce qui paraît est nouveau).
+  const filRef = useRef<HTMLDivElement>(null);
+  const repere = lot.publications.reduce<string | null>((max, p) => (max === null || Date.parse(p.creeLe) > Date.parse(max) ? p.creeLe : max), null);
+  const { nouvelles: parues, effacer } = useNouvellesPublications(onglet, repere, espace.ouvert && ordre === "recentes" && !chargement && !erreur);
 
   async function lire(cible: string, ordre: TriFil, depuis: SuiteFil) {
     const numero = ++demande.current;
@@ -198,6 +205,23 @@ export function PageCommunaute({
     if (reponse?.ok) setProgrammees(reponse.lot.publications.map(({ id, creeLe }) => ({ id, creeLe })));
   }
 
+  /** Le bandeau touché : le fil relu, sans squelette ; on remonte en haut du fil si l'on était descendu. */
+  async function actualiser() {
+    effacer();
+    const reponse = await lire(onglet, "recentes", {});
+    if (!reponse) return;
+    if (!reponse.ok) {
+      toast({ tone: "erreur", title: reponse.message });
+      return;
+    }
+    setErreur(null);
+    setPage(0);
+    setLot(reponse.lot);
+    const fil = filRef.current;
+    const entete = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--entete-app")) || 0;
+    if (fil && fil.getBoundingClientRect().top < entete) fil.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   async function voirPlus() {
     const derniere = lot.publications.at(-1);
     if (!derniere) return;
@@ -226,7 +250,8 @@ export function PageCommunaute({
 
   // Le fil : le même sous les deux onglets, lu selon `ordre`.
   const filAffiche = (
-    <div className="flex min-w-0 flex-col gap-4">
+    <div ref={filRef} className="flex min-w-0 scroll-mt-[calc(var(--entete-app)+16px)] flex-col gap-4">
+      <BandeauNouvellesPublications nouvelles={parues} onVoir={() => void actualiser()} />
       {erreur && <Banner tone="erreur" title={erreur} />}
       {chargement ? (
         <>

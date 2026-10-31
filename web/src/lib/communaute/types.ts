@@ -67,6 +67,9 @@ export type Sondage = {
 /** Une personne parmi les derniers qui aiment une publication : ses initiales et sa photo (0038). */
 export type Aimeur = { initiales: string; photoUrl: string | null };
 
+/** Le bandeau « Nouvelles publications » (0042) : combien sont parues depuis la plus récente du fil, et leurs trois derniers auteurs. */
+export type NouvellesPublications = { nombre: number; auteurs: Aimeur[] };
+
 export type Publication = {
   id: string;
   /** `photoUrl` : l'adresse publique de sa photo (0038) ; absente ou null sans photo. */

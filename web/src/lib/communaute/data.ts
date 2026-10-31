@@ -58,7 +58,7 @@ function avecPhoto(chemin: unknown): { photoUrl?: string } {
 }
 
 /** Les derniers qui aiment : des objets (initiales, photo) depuis la 0038 ; avant, des initiales seules. */
-function versAimeurs(valeur: unknown): Aimeur[] {
+export function versAimeurs(valeur: unknown): Aimeur[] {
   if (!Array.isArray(valeur)) return [];
   return valeur.flatMap((v): Aimeur[] => {
     if (typeof v === "string") return v ? [{ initiales: v, photoUrl: null }] : [];
