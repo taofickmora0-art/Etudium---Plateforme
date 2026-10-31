@@ -27,7 +27,7 @@ beforeAll(async () => {
       "0018_sessions_live", "0019_communaute", "0020_moderation", "0021_communaute_actualites", "0022_communaute_video", "0023_sessions_rappels",
       "0024_sessions_promotion", "0025_communaute_commentaires", "0026_communaute_sondages", "0027_lecons_statut", "0028_discussions_lecons",
       "0029_apprenants_formation", "0030_plateformes_video", "0031_quiz", "0032_exercices", "0033_certificats", "0034_finitions_lot_3",
-      "0035_messagerie", "0036_formateur_sans_espace_etudiant", "0037_reponses_aux_reponses", "0038_photos_communaute",
+      "0035_messagerie", "0036_formateur_sans_espace_etudiant", "0037_reponses_aux_reponses", "0038_photos_communaute", "0039_annonce_masquable", "0040_photos_colonne_communaute",
     ].map((m) => `supabase/migrations/${m}.sql`),
   ]);
   for (const [id, roles] of [[S, ["super_admin"]], [F, []], [A, []], [B, []], [C, []]] as const) await banc.creerCompte(id, [...roles]);
@@ -62,6 +62,15 @@ describe("Les photos de la communauté", () => {
       { initiales: "TM", photo: photo(B) },
     ]);
     expect(carte.dernieres_reponses[0].auteur.photo).toBe(photo(B));
+  });
+
+  it("la colonne de droite (0040) : les tendances et les activités récentes ont la photo de leur auteur", async () => {
+    type Auteur = { auteur: { initiales: string; photo: string | null } };
+    const tendances = (await banc.en<{ t: (Auteur & { id: string })[] }>({ id: C }, "select public.publications_tendances() as t"))[0].t;
+    expect(tendances.find((t) => t.auteur.initiales === "AK")?.auteur.photo).toBe(photo(A));
+    const activites = (await banc.en<{ a: (Auteur & { type: string })[] }>({ id: C }, "select public.activites_recentes() as a"))[0].a;
+    expect(activites.find((a) => a.type === "commentaire" && a.auteur.initiales === "TM")?.auteur.photo).toBe(photo(B));
+    expect(activites.find((a) => a.type === "publication" && a.auteur.initiales === "AK")?.auteur.photo).toBe(photo(A));
   });
 
   it("l'auteur d'un commentaire dans les discussions d'une leçon a sa photo", async () => {

@@ -278,7 +278,11 @@ export async function lireTendances(): Promise<Lecture<Tendance[]>> {
       migrationAbsente: false,
       donnees: liste(data).map((l) => {
         const auteur = un(l.auteur);
-        return { id: texte(l.id), extrait: texte(l.extrait), auteur: { nomCourt: texte(auteur?.nom_court), initiales: texte(auteur?.initiales), equipe: auteur?.equipe === true } };
+        return {
+          id: texte(l.id),
+          extrait: texte(l.extrait),
+          auteur: { nomCourt: texte(auteur?.nom_court), initiales: texte(auteur?.initiales), equipe: auteur?.equipe === true, ...avecPhoto(auteur?.photo) },
+        };
       }),
     }
   );
@@ -297,7 +301,7 @@ export async function lireActivites(): Promise<Lecture<Activite[]>> {
         return {
           type: l.type === "commentaire" ? "commentaire" : "publication",
           publicationId: texte(l.publication_id),
-          auteur: { nomCourt: texte(auteur?.nom_court), initiales: texte(auteur?.initiales) },
+          auteur: { nomCourt: texte(auteur?.nom_court), initiales: texte(auteur?.initiales), ...avecPhoto(auteur?.photo) },
           extrait: texte(l.extrait),
           creeLe: texte(l.cree_le),
         };

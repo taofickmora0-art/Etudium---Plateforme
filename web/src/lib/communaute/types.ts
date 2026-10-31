@@ -119,13 +119,14 @@ export type Curseur = { avant: string; avantId: string };
 export type SuiteFil = { curseur?: Curseur | null; page?: number };
 
 /** Une publication tendance (0021) : les plus aimées et commentées des 7 derniers jours. */
-export type Tendance = { id: string; extrait: string; auteur: { nomCourt: string; initiales: string; equipe: boolean } };
+export type Tendance = { id: string; extrait: string; auteur: { nomCourt: string; initiales: string; equipe: boolean; photoUrl?: string } };
 
 /** Une activité récente (0021) : une publication ou une réponse, dans un espace ouvert au compte. */
 export type Activite = {
   type: "publication" | "commentaire";
   publicationId: string;
-  auteur: { nomCourt: string; initiales: string };
+  /** `photoUrl` : sa photo (0040), seulement s'il en a une. */
+  auteur: { nomCourt: string; initiales: string; photoUrl?: string };
   extrait: string;
   creeLe: string;
 };

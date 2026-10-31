@@ -56,7 +56,8 @@ export function ColonneCommunaute({
               {tendances.map((t) => (
                 <li key={t.id}>
                   <Link href={chemins.publication(t.id)} className={LIGNE}>
-                    <Avatar initials={t.auteur.equipe ? "É" : t.auteur.initiales} tone={t.auteur.equipe ? "bleu" : tonAvatar(t.auteur.nomCourt)} />
+                    {/* L'équipe garde son « É » ; un membre, sa photo (0040) ou ses initiales. */}
+                    <Avatar initials={t.auteur.equipe ? "É" : t.auteur.initiales} tone={t.auteur.equipe ? "bleu" : tonAvatar(t.auteur.nomCourt)} src={t.auteur.equipe ? null : t.auteur.photoUrl} />
                     <span className="flex min-w-0 flex-col gap-1">
                       <span className="line-clamp-3 text-sm leading-[21px] wrap-anywhere text-encre">{texteBrut(t.extrait)}</span>
                       <span className="text-xs leading-[17px] text-discret">{t.auteur.nomCourt}</span>
@@ -77,7 +78,7 @@ export function ColonneCommunaute({
               {activites.map((a, i) => (
                 <li key={`${a.publicationId}-${a.creeLe}-${i}`}>
                   <Link href={chemins.publication(a.publicationId)} className={LIGNE}>
-                    <Avatar initials={a.auteur.initiales} tone={tonAvatar(a.auteur.nomCourt)} />
+                    <Avatar initials={a.auteur.initiales} tone={tonAvatar(a.auteur.nomCourt)} src={a.auteur.photoUrl} />
                     <span className="flex min-w-0 flex-col gap-[3px]">
                       <span className="text-sm leading-[21px] wrap-anywhere text-texte">
                         <strong className="font-semibold text-encre">{a.auteur.nomCourt}</strong> {a.type === "commentaire" ? "a commenté" : "a publié"} « {extraitCourt(texteBrut(a.extrait))} »
