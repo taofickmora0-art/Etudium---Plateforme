@@ -7,16 +7,17 @@ import type { NouvellesPublications } from "@/lib/communaute/types";
 import { tonAvatar } from "./outils";
 
 /**
- * « 2 nouvelles publications » (liste du 31 octobre 2026, tâche 9) : collé en haut, au milieu du fil, sous la barre du
- * haut quand la page défile. Les photos (ou initiales) des derniers auteurs, puis le nombre ; un appui relit le fil.
+ * « 2 nouvelles publications » (liste du 31 octobre 2026, tâche 9) : en haut de l'écran, au milieu de la page, juste
+ * sous la barre du haut, et il y reste quand la page défile (placé en tête de la page, pas du fil : sinon on ne le voyait
+ * pas depuis le haut de l'Accueil). Les photos (ou initiales) des derniers auteurs, puis le nombre ; un appui relit le fil.
  * La zone est annoncée poliment aux lecteurs d'écran quand le bandeau apparaît.
  */
 export function BandeauNouvellesPublications({ nouvelles, onVoir }: { nouvelles: NouvellesPublications; onVoir: () => void }) {
   const { nombre, auteurs } = nouvelles;
   const libelle = nombre === 1 ? "1 nouvelle publication" : `${nombre > 99 ? "99+" : nombre} nouvelles publications`;
   return (
-    // Sans hauteur : le bandeau flotte au-dessus du fil sans le pousser.
-    <div aria-live="polite" className="pointer-events-none sticky top-[calc(var(--entete-app)+12px)] z-20 -mb-4 flex h-0 justify-center">
+    // Sans hauteur : le bandeau flotte au-dessus de la page sans la pousser.
+    <div aria-live="polite" className="pointer-events-none sticky top-[calc(var(--entete-app)+12px)] z-20 flex h-0 justify-center">
       {nombre > 0 && (
         <button
           type="button"

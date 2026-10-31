@@ -251,7 +251,6 @@ export function PageCommunaute({
   // Le fil : le même sous les deux onglets, lu selon `ordre`.
   const filAffiche = (
     <div ref={filRef} className="flex min-w-0 scroll-mt-[calc(var(--entete-app)+16px)] flex-col gap-4">
-      <BandeauNouvellesPublications nouvelles={parues} onVoir={() => void actualiser()} />
       {erreur && <Banner tone="erreur" title={erreur} />}
       {chargement ? (
         <>
@@ -299,6 +298,8 @@ export function PageCommunaute({
   return (
     // Le fil (720 px) et sa colonne (320 px) restent au milieu de l'écran, l'en-tête aligné sur eux.
     <div className="mx-auto flex w-full max-w-[720px] min-w-0 flex-col xl:max-w-[1064px]">
+      {/* Tout en haut de la page, sous la barre du haut, où que l'on soit dans le fil (demande du 31 octobre 2026). */}
+      <BandeauNouvellesPublications nouvelles={parues} onVoir={() => void actualiser()} />
       <Heading level="page">{titre}</Heading>
       <Lead className="mt-2.5">{intro}</Lead>
       {/* Les espaces, et à droite (dessous sur téléphone) « Sessions live programmées » s'il y en a une à venir. */}
