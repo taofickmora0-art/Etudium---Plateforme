@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import Link from "next/link";
 import { Calendar03Icon, CheckmarkCircle02Icon, UserIcon, UserMultipleIcon, Video01Icon } from "@hugeicons/core-free-icons";
 import { useFuseau } from "@/components/dates/useFuseau";
 import { Button } from "@/components/ui/Button";
@@ -41,6 +42,8 @@ type Props = {
   onDesinscrire: (session: SessionCarte) => void;
   /** L'inscription ou la désinscription est en cours d'envoi. */
   occupe?: boolean;
+  /** Une fois la session terminée : « Voir le replay », vers l'onglet des replays de la communauté (0046). */
+  lienReplays?: string;
 };
 
 /**
@@ -49,7 +52,7 @@ type Props = {
  * tous ; avant l'heure du début, il n'ouvre rien et dit le temps qui reste (tâche 10 du 31 octobre 2026), même si la
  * base a déjà livré le lien (10 min avant).
  */
-export function CarteSession({ session: s, maintenant, onInscrire, onDesinscrire, occupe = false }: Props) {
+export function CarteSession({ session: s, maintenant, onInscrire, onDesinscrire, occupe = false, lienReplays = "/accueil?espace=replays" }: Props) {
   const titreId = useId();
   const fuseau = useFuseau();
   const [attente, setAttente] = useState<string | null>(null);
@@ -102,6 +105,11 @@ export function CarteSession({ session: s, maintenant, onInscrire, onDesinscrire
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {annulee && <Tag tone="echoue">Annulée</Tag>}
+          {finie && !annulee && (
+            <Button variant="contour" asChild>
+              <Link href={lienReplays}>Voir le replay</Link>
+            </Button>
+          )}
           {ouverte && enCours(s, maintenant) && <Tag tone="compteur">En cours</Tag>}
           {ouverte &&
             (commencee && s.lien ? (

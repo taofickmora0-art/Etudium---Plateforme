@@ -8,13 +8,19 @@ export type { Apercu, SessionPublication, Video };
 
 /** Un espace : le général (id null) ou celui d'un parcours ; `ouvert` dit si le compte peut y lire et publier. */
 export type Espace = {
+  /** null : Général ; « replays » : les replays des lives (0046) ; sinon l'identifiant d'un parcours. */
   id: string | null;
   nom: string;
   nomCourt: string;
   couleur: string | null;
   slug: string | null;
   ouvert: boolean;
+  /** Faux : le compte le lit sans pouvoir y publier (les replays, réservés à l'équipe et aux formateurs). */
+  peutPublier?: boolean;
 };
+
+/** L'espace des replays des lives (0046). */
+export const REPLAYS = "replays";
 
 /** Le fichier joint d'une publication ; `url` est un lien temporaire (1 h), null s'il n'a pas pu être obtenu. */
 export type PieceJointe = { chemin: string; nom: string; type: string; taille: number; url: string | null };

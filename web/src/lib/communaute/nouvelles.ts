@@ -4,7 +4,7 @@ import { getShellUser } from "@/lib/auth/current-user";
 import { un } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import { UUID, versAimeurs } from "./data";
-import type { NouvellesPublications } from "./types";
+import { REPLAYS, type NouvellesPublications } from "./types";
 
 // Le bandeau « Nouvelles publications » (liste du 31 octobre 2026, tâche 9 ; migration 0042) : le fil demande de temps en
 // temps ce qui est paru depuis la plus récente qu'il montre. Une erreur ou l'absence de la 0042 donne 0, sans rien casser.
@@ -12,11 +12,12 @@ import type { NouvellesPublications } from "./types";
 const RIEN: NouvellesPublications = { nombre: 0, auteurs: [] };
 
 /**
- * Les publications parues dans `espace` (« tous », « general » ou l'identifiant d'un parcours) après `apres` (ISO ; null
- * pour un fil vide : toutes), et leurs trois derniers auteurs ; rien sans session ou si la base ne répond pas.
+ * Les publications parues dans `espace` (« tous », « general », « replays » ou l'identifiant d'un parcours) après
+ * `apres` (ISO ; null pour un fil vide : toutes), et leurs trois derniers auteurs ; rien sans session ou si la base ne
+ * répond pas.
  */
 export async function compterNouvellesPublications(espace: string, apres: string | null): Promise<NouvellesPublications> {
-  if (espace !== "tous" && espace !== "general" && !UUID.test(espace)) return RIEN;
+  if (espace !== "tous" && espace !== "general" && espace !== REPLAYS && !UUID.test(espace)) return RIEN;
   if (apres !== null && Number.isNaN(Date.parse(apres))) return RIEN;
   if (!(await getShellUser())) return RIEN;
   try {

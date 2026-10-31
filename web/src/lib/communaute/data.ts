@@ -24,6 +24,7 @@ import type {
   Tendance,
   TriFil,
 } from "./types";
+import { REPLAYS } from "./types";
 
 // Lectures de la communauté (migration 0019 ; fil « Actualités », 0021). La base ne rend que les espaces ouverts au
 // compte, et jamais d'adresse e-mail ; les fichiers joints reçoivent ici un lien temporaire (1 h), demandé en une fois
@@ -48,6 +49,7 @@ export function versEspace(l: Ligne): Espace {
     couleur: texteOuNull(l.couleur),
     slug: texteOuNull(l.slug),
     ouvert: l.ouvert === true,
+    ...(l.publier === false ? { peutPublier: false } : {}),
   };
 }
 
@@ -210,7 +212,7 @@ const TRIS: TriFil[] = ["recentes", "populaires", "enregistrees", "programmees"]
 
 /** Lit un lot du fil ; sert aussi à l'action « Voir plus ». Avant la 0021, l'ancien fil (le plus récent d'abord). */
 export async function lireLot(supabase: Client, espace: FiltreFil, tri: TriFil = "recentes", suite: SuiteFil = {}) {
-  const filtre = espace === "tous" || espace === "general" || UUID.test(espace) ? espace : "tous";
+  const filtre = espace === "tous" || espace === "general" || espace === REPLAYS || UUID.test(espace) ? espace : "tous";
   const curseur = suite.curseur ?? null;
   const avant = curseur?.avant ?? null;
   const avantId = curseur && UUID.test(curseur.avantId) ? curseur.avantId : null;

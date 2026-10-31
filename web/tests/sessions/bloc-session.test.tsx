@@ -26,7 +26,7 @@ describe("Le bloc de session", () => {
     expect(within(bloc).getByRole("link", { name: "Voir la session" })).toHaveAttribute("href", "/evenements");
   });
 
-  it("inscrit : « Inscription confirmée » ; annulée : « Annulée » sans lien ; terminée : « Terminée »", () => {
+  it("inscrit : « Inscription confirmée » ; annulée : « Annulée » sans lien ; terminée : « Terminée » et « Voir le replay »", () => {
     const { unmount } = render(<BlocSession session={{ ...S, inscrit: true }} maintenant={new Date("2026-10-14T15:00:00Z")} />);
     expect(screen.getByText("Inscription confirmée")).toBeInTheDocument();
     unmount();
@@ -36,7 +36,8 @@ describe("Le bloc de session", () => {
     annulee.unmount();
     render(<BlocSession session={S} maintenant={new Date("2026-10-25T15:00:00Z")} />);
     expect(screen.getByText("Terminée")).toBeInTheDocument();
-    expect(screen.queryByRole("link")).toBeNull();
+    // Plus de « Voir la session » ; ses replays (0046, tâche 11 du 31 octobre 2026).
+    expect(screen.getAllByRole("link").map((l) => [l.textContent, l.getAttribute("href")])).toEqual([["Voir le replay", "/accueil?espace=replays"]]);
   });
 
   it("dans l'aperçu du formulaire, « Voir la session » n'est pas un lien (la saisie n'est pas perdue)", () => {

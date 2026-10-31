@@ -16,7 +16,7 @@ import { premiereAdresseDuTexte } from "./mise-en-forme";
 import { reconnaitreVideo, type Video } from "./video";
 import { nomCourt, refusPiece, refusPublication, refusReponse } from "./regles";
 import { refusProgrammation, refusSondage, TOLERANCE_PROGRAMMATION, versBase, type SondageEnvoye } from "./sondage";
-import type { Apercu, Espace, FiltreFil, LotPublications, PieceEnvoyee, Reponse, Sondage, SuiteFil, TriFil } from "./types";
+import { REPLAYS, type Apercu, type Espace, type FiltreFil, type LotPublications, type PieceEnvoyee, type Reponse, type Sondage, type SuiteFil, type TriFil } from "./types";
 
 // Actions de la communauté (spec, §2 à §4). La base revérifie tout (migration 0019) et ses messages (P0001, 42501)
 // sont faits pour être affichés tels quels.
@@ -26,6 +26,7 @@ const MIGRATION_ACTUALITES = "Appliquez la migration 0021 (guide « Ce qui te re
 const MIGRATION_VIDEO = "Appliquez la migration 0022 (guide « Ce qui te revient », section 27).";
 const MIGRATION_COMMENTAIRES = "Appliquez la migration 0025 (guide « Ce qui te revient », section 30).";
 const MIGRATION_SONDAGES = "Appliquez la migration 0026 (guide « Ce qui te revient », section 31).";
+const MIGRATION_REPLAYS = "Appliquez la migration 0046 (guide « Ce qui te revient », section 51).";
 const UN_SEUL_AJOUT = "Une publication porte un seul ajout : une image, un fichier, une vidéo, un sondage ou un quiz.";
 const ADRESSE_VIDEO = "Collez l’adresse complète de la vidéo (https://…).";
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
@@ -209,6 +210,8 @@ export async function publierPublication(
   const videoReconnue = adresseVideo?.trim() ? reconnaitreVideo(adresseVideo) : null;
   if (adresseVideo?.trim() && !videoReconnue) return refuser(ADRESSE_VIDEO);
   const parcours = espaceId && UUID.test(espaceId) ? espaceId : null;
+  // Un replay (0046) : dans aucun parcours ; la base vérifie que le compte peut en publier.
+  const replay = espaceId === REPLAYS;
   // La page d'un lien n'est lue qu'une fois les droits et les limites vérifiés par la base.
   const preparation = await preparerApercu(supabase, texte.trim(), { publication: null, parcours });
   if ("refus" in preparation) {
@@ -256,13 +259,20 @@ export async function publierPublication(
     // Les images d'un sondage ne passent pas par l'IA : l'équipe les vérifie avant la mise en ligne.
     if (sondage?.type === "images") verdict = IMAGES_A_VERIFIER;
     verdict ??= await analyserPublication(
-      { titre: titre.trim(), texte: texteAnalyse(texte, sondage), espace: await nomDeLEspace(supabase, parcours), fichier, ...lienAnalyse(await apercu), ...videoAnalyse(video) },
+      { titre: titre.trim(), texte: texteAnalyse(texte, sondage), espace: replay ? "Replays de live" : await nomDeLEspace(supabase, parcours), fichier, ...lienAnalyse(await apercu), ...videoAnalyse(video) },
       reglage.config,
     );
     // Sans verdict (clé refusée, refus de l'IA), la base met la publication en attente de l'équipe.
     analyse = verdict ? { jeton: reglage.config.jeton, ...verdict, objet } : null;
   }
-  const parametres = { p_parcours: parcours, p_titre: titre.trim(), p_texte: texte.trim(), p_piece: pieceEnvoyee, ...(reglage ? { p_analyse: analyse } : {}) };
+  const parametres = {
+    p_parcours: parcours,
+    p_titre: titre.trim(),
+    p_texte: texte.trim(),
+    p_piece: pieceEnvoyee,
+    ...(reglage ? { p_analyse: analyse } : {}),
+    ...(replay ? { p_replay: true } : {}),
+  };
   const apercuLu = await apercu;
   // Avec une vidéo (0022), un sondage ou une heure de parution (0026) : pas de repli silencieux qui les perdrait.
   const etendu = video !== null || sondage !== null || publieLe !== null;
@@ -280,6 +290,7 @@ export async function publierPublication(
     : await avecApercu(supabase, "publier", parametres, apercuLu);
   if (error) {
     await retirer();
+    if (estFonctionAbsente(error) && replay) return { ok: false, message: MIGRATION_REPLAYS };
     if (estFonctionAbsente(error) && (sondage || publieLe)) return { ok: false, message: MIGRATION_SONDAGES };
     return { ok: false, message: video && estFonctionAbsente(error) ? MIGRATION_VIDEO : message(error) };
   }

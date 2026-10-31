@@ -35,6 +35,7 @@ export function DetailPublication({
       maintenant={maintenant}
       onSupprimee={() => router.push(accueil)}
       lienSession={CHEMINS_COMMUNAUTE[espace].evenements}
+      lienReplays={`${CHEMINS_COMMUNAUTE[espace].accueil}?espace=replays`}
     />
   );
 }

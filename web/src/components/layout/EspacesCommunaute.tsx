@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Book02Icon, Briefcase01Icon, ComputerIcon, Mortarboard02Icon, News01Icon, SquareLock02Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { Book02Icon, Briefcase01Icon, ComputerIcon, Mortarboard02Icon, News01Icon, SquareLock02Icon, UserGroupIcon, Video01Icon } from "@hugeicons/core-free-icons";
 import { Icon, type IconSvgElement } from "@/components/ui/Icon";
 import { SidebarGroup } from "@/components/ui/SidebarGroup";
 import { SidebarItem } from "@/components/ui/SidebarItem";
 import { chargerEspaces } from "@/lib/communaute/actions";
 import { CHEMINS_COMMUNAUTE, espaceCommunauteDe } from "@/lib/communaute/chemins";
-import type { Espace } from "@/lib/communaute/types";
+import { REPLAYS, type Espace } from "@/lib/communaute/types";
 
 const ICONES: Record<string, IconSvgElement> = { academique: Mortarboard02Icon, digital: ComputerIcon, business: Briefcase01Icon };
 
@@ -42,7 +42,8 @@ export function EspacesCommunaute({ pathname }: { pathname: string }) {
     ...espaces.map((e) => ({
       valeur: e.id ?? "general",
       libelle: e.nomCourt,
-      icone: e.id ? (ICONES[e.couleur ?? ""] ?? Book02Icon) : UserGroupIcon,
+      // Les replays des lives (0046) : la caméra des sessions live.
+      icone: e.id === REPLAYS ? Video01Icon : e.id ? (ICONES[e.couleur ?? ""] ?? Book02Icon) : UserGroupIcon,
       ouvert: e.ouvert,
     })),
   ];

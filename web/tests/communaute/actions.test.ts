@@ -56,6 +56,14 @@ describe("Publier", () => {
     expect(refresh).toHaveBeenCalled();
   });
 
+  it("un replay (0046) : sans parcours, avec p_replay ; avant la 0046, la migration à appliquer", async () => {
+    faux.repondre("rpc.publier", { data: ID });
+    expect(await publierPublication("replays", "", "Le replay du live Excel", null)).toMatchObject({ ok: true, id: ID });
+    expect(faux.de("rpc", "publier")[0].valeurs).toEqual({ p_parcours: null, p_titre: "", p_texte: "Le replay du live Excel", p_piece: null, p_analyse: null, p_replay: true });
+    faux.repondre("rpc.publier", { error: { code: "PGRST202", message: "Could not find the function" } });
+    expect(await publierPublication("replays", "", "Le replay", null)).toEqual({ ok: false, message: "Appliquez la migration 0046 (guide « Ce qui te revient », section 51)." });
+  });
+
   it("refusée par la base après l'envoi du fichier : le fichier est retiré, le message affiché", async () => {
     faux.repondre("rpc.publier", { error: { code: "42501", message: FERME } });
     expect(await publierPublication(P, "", "Texte", PIECE)).toEqual({ ok: false, message: FERME });

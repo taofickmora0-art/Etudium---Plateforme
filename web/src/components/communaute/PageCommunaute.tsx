@@ -20,7 +20,7 @@ import type { CarteCatalogue } from "@/lib/catalogue/types";
 import { chargerFil, masquerAnnonce } from "@/lib/communaute/actions";
 import { CHEMINS_COMMUNAUTE, type EspaceCommunaute } from "@/lib/communaute/chemins";
 import { curseur } from "@/lib/communaute/regles";
-import type { Annonce, Espace, LotPublications, MoiCommunaute, SuiteFil, TriFil } from "@/lib/communaute/types";
+import { REPLAYS, type Annonce, type Espace, type LotPublications, type MoiCommunaute, type SuiteFil, type TriFil } from "@/lib/communaute/types";
 import { BandeauNouvellesPublications } from "./BandeauNouvellesPublications";
 import { CarteAnnonce } from "./CarteAnnonce";
 import { CartePublication } from "./CartePublication";
@@ -283,6 +283,7 @@ export function PageCommunaute({
               onSupprimee={retirer}
               onParue={vue === "programmees" ? retirer : undefined}
               lienSession={CHEMINS_COMMUNAUTE[espaceCompte].evenements}
+              lienReplays={`${racine}?espace=${REPLAYS}`}
             />
           ),
         )
@@ -331,24 +332,32 @@ export function PageCommunaute({
           ) : (
             <>
               {onglet === ACTUALITES && annonce && !annonceMasquee && <CarteAnnonce annonce={annonce} equipe={moi.equipe === true} onMasquer={() => void masquer()} />}
-              <ChampPublication
-                key={onglet}
-                espace={espace}
-                espaces={liste.filter((e) => e.ouvert)}
-                moi={moi}
-                analyseActive={analyseActive}
-                // Une nouvelle publication s'ajoute au fil affiché s'il la contient (pas « Mes enregistrements », ni un autre espace).
-                onPubliee={(p) => {
-                  if (vue === "programmees" || tri === "enregistrees" || (onglet !== ACTUALITES && (p.espace.id ?? "general") !== onglet)) return false;
-                  setLot((actuel) => ({ ...actuel, publications: [p, ...actuel.publications] }));
-                  return true;
-                }}
-                onProgrammee={() => {
-                  if (vue === "programmees") void recharger(onglet, "programmees");
-                  // La pastille : relue si la liste affichée n'est pas celle de tous les espaces.
-                  if (vue !== "programmees" || onglet !== ACTUALITES) void relireProgrammees();
-                }}
-              />
+              {espace.peutPublier === false ? (
+                // Les replays (0046) : l'équipe et les formateurs y publient ; les autres les lisent.
+                <p className="m-0 rounded-2xl border border-bordure-carte bg-panneau px-5 py-4 text-sm leading-[22px] text-discret">
+                  Les replays des lives sont publiés ici par l’équipe Étudium et les formateurs.
+                </p>
+              ) : (
+                <ChampPublication
+                  key={onglet}
+                  espace={espace}
+                  // « Publication dans » : les espaces où le compte peut publier (pas les replays pour un étudiant).
+                  espaces={liste.filter((e) => e.ouvert && e.peutPublier !== false)}
+                  moi={moi}
+                  analyseActive={analyseActive}
+                  // Une nouvelle publication s'ajoute au fil affiché s'il la contient (pas « Mes enregistrements », ni un autre espace).
+                  onPubliee={(p) => {
+                    if (vue === "programmees" || tri === "enregistrees" || (onglet !== ACTUALITES && (p.espace.id ?? "general") !== onglet)) return false;
+                    setLot((actuel) => ({ ...actuel, publications: [p, ...actuel.publications] }));
+                    return true;
+                  }}
+                  onProgrammee={() => {
+                    if (vue === "programmees") void recharger(onglet, "programmees");
+                    // La pastille : relue si la liste affichée n'est pas celle de tous les espaces.
+                    if (vue !== "programmees" || onglet !== ACTUALITES) void relireProgrammees();
+                  }}
+                />
+              )}
               <SegmentedTabs
                 label="Afficher les publications"
                 value={vue}

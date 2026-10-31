@@ -45,6 +45,12 @@ describe("Les nouvelles publications", () => {
     expect(faux.appels).toEqual([]);
   });
 
+  it("l'espace des replays (0046) est demandé tel quel", async () => {
+    faux.repondre("rpc.nouvelles_publications", { data: { nombre: 2, auteurs: [] } });
+    expect((await compterNouvellesPublications("replays", null)).nombre).toBe(2);
+    expect(faux.de("rpc", "nouvelles_publications").map((a) => a.valeurs)).toEqual([{ p_espace: "replays", p_apres: null }]);
+  });
+
   it("rien sans session, avant la 0042, en erreur ou pour une réponse inattendue", async () => {
     faux.repondre("rpc.nouvelles_publications", { error: { code: "PGRST202" } });
     expect(await compterNouvellesPublications("general", null)).toEqual(RIEN);

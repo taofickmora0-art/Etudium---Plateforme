@@ -920,3 +920,19 @@ Depuis la restructuration du 20 octobre, un formateur ne voit plus que son espac
    - Pour l'essayer : dans les réglages de date et heure de l'ordinateur, choisis un autre fuseau (par exemple Lomé ou Paris), puis recharge la page Événements.
 4. **Le formateur** saisit la date et l'heure à l'heure de son appareil ; le formulaire l'indique sous le champ « Heure » (« À l'heure de votre appareil (GMT+1) »).
 5. **Les notifications** (« Nouvelle session live », rappels) sont écrites par la base à l'heure du Bénin, et le disent : « à 15 h 00 (GMT+1) ». Le rappel de 10 minutes ne dit plus que le lien est ouvert : on rejoint à l'heure du début.
+
+## 51. Les replays des lives (liste du 31 octobre, tâche 11), 10 minutes
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0046_replays.sql`, après la 0045.
+2. **L'onglet.** Sur l'Accueil, un onglet **Replays** vient après Business. Il est aussi dans le menu ≡ du téléphone, sous « Espaces de la communauté ».
+3. **Publier un replay, avec un compte de l'équipe ou de formateur :**
+   - dans l'onglet Replays, le champ de publication choisit « Replays » d'office ;
+   - colle le lien de la vidéo (YouTube…) ou joins un fichier, puis publie ;
+   - le replay paraît dans Replays et dans Actualités, plus dans Général ; sur la carte : « Publié dans Replays de live ».
+4. **Avec un compte étudiant :**
+   - l'onglet Replays se lit, s'aime et se commente ;
+   - pas de champ de publication, mais la phrase « Les replays des lives sont publiés ici par l'équipe Étudium et les formateurs. » ;
+   - « Replays » n'est pas proposé dans « Publication dans » des autres onglets.
+5. **« Voir le replay » :**
+   - sur la page Événements, onglet « Passées », un live terminé a le bouton « Voir le replay », qui ouvre l'onglet Replays de l'Accueil ;
+   - dans la communauté, la publication d'une session terminée affiche « Terminée » et « Voir le replay ».

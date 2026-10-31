@@ -26,6 +26,7 @@ export function BlocSession({
   maintenant,
   apercu = false,
   lienSession = "/evenements",
+  lienReplays = "/accueil?espace=replays",
   className,
 }: {
   session: SessionPublication;
@@ -34,6 +35,8 @@ export function BlocSession({
   apercu?: boolean;
   /** La page des sessions ; null : pas de « Voir la session » (le formateur n'a pas la page Événements, R1). */
   lienSession?: string | null;
+  /** Une fois la session terminée : « Voir le replay », vers l'onglet des replays de la communauté (0046). */
+  lienReplays?: string | null;
   className?: string;
 }) {
   // À l'heure de l'appareil, avec son décalage GMT (tâche 10 du 31 octobre 2026).
@@ -82,7 +85,14 @@ export function BlocSession({
         {annulee ? (
           <Tag tone="echoue">Annulée</Tag>
         ) : finie ? (
-          <Tag tone="enAttente">Terminée</Tag>
+          <>
+            <Tag tone="enAttente">Terminée</Tag>
+            {!apercu && lienReplays && (
+              <Button asChild size="sm" variant="contour">
+                <Link href={lienReplays}>Voir le replay</Link>
+              </Button>
+            )}
+          </>
         ) : (
           <>
             {s.inscrit && (

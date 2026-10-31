@@ -129,6 +129,7 @@ export function CartePublication({
   onSupprimee,
   onParue,
   lienSession,
+  lienReplays,
 }: {
   publication: Publication;
   moi: MoiCommunaute;
@@ -139,6 +140,8 @@ export function CartePublication({
   onParue?: (id: string) => void;
   /** La page des sessions pour le bloc d'une session ; null : pas de lien (le formateur, restructuration R1). */
   lienSession?: string | null;
+  /** L'onglet des replays (0046), pour « Voir le replay » d'une session terminée. */
+  lienReplays?: string | null;
 }) {
   // Sur sa propre page (tous les commentaires), la publication supprimée n'est pas relue : on revient à la Communauté.
   const relire = !toutesReponses;
@@ -402,7 +405,7 @@ export function CartePublication({
       {p.apercu?.type === "youtube" && !(p.video?.plateforme === "youtube" && p.video.id === p.apercu.id) && <VideoYoutube id={p.apercu.id} className="mt-3.5 rounded-[14px]" />}
       {p.apercu?.type === "lien" && p.apercu.url !== p.video?.url && <ApercuLien apercu={p.apercu} />}
       {/* Une session live programmée : son bloc (date, plateforme, « Voir la session »). */}
-      {p.session && <BlocSession session={p.session} maintenant={maintenant} lienSession={lienSession} />}
+      {p.session && <BlocSession session={p.session} maintenant={maintenant} lienSession={lienSession} lienReplays={lienReplays} />}
 
       {/* Pas encore en ligne : ni J’aime ni commentaires. */}
       {enLigne && (

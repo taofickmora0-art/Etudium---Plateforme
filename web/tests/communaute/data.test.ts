@@ -73,6 +73,19 @@ describe("Lectures de la communauté", () => {
     });
   });
 
+  it("l'espace des replays (0046) : « publier » faux devient peutPublier ; le fil « replays » est demandé tel quel", async () => {
+    faux.repondre("rpc.espaces_communaute", {
+      data: [{ id: "replays", nom: "Replays de live", nom_court: "Replays", couleur: null, slug: null, ouvert: true, publier: false }],
+    });
+    expect(await lireEspaces()).toEqual({
+      migrationAbsente: false,
+      donnees: [{ id: "replays", nom: "Replays de live", nomCourt: "Replays", couleur: null, slug: null, ouvert: true, peutPublier: false }],
+    });
+    faux.repondre("rpc.fil_communaute", { data: { publications: [], suite: false } });
+    await lireFil("replays");
+    expect(faux.de("rpc", "fil_communaute").at(-1)?.valeurs).toMatchObject({ p_espace: "replays" });
+  });
+
   it("le fil : conversion, curseur transmis, un seul appel de liens temporaires pour les fichiers", async () => {
     faux.repondre("rpc.fil_communaute", { data: { publications: [BRUTE, { ...BRUTE, id: "b", piece_jointe: null }], suite: true } });
     faux.repondre("storage.communaute.createSignedUrls", { data: [{ path: CHEMIN, signedUrl: "https://stockage/affiche.png?jeton", error: null }] });
