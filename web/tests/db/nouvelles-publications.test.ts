@@ -2,9 +2,10 @@ import { randomUUID } from "node:crypto";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { creerBanc, MIGRATIONS_LOT_0, type Banc } from "./banc";
 
-// Migration 0042 (liste du 31 octobre 2026, tâche 9) : le bandeau « Nouvelles publications ». La base compte les
+// Migrations 0042 et 0043 (liste du 31 octobre 2026, tâche 9) : le bandeau « Nouvelles publications ». La base compte les
 // publications parues dans le fil affiché depuis la plus récente qu'il montre (ou toutes, s'il est vide), et rend les
-// trois derniers auteurs (initiales, photo). Pas les siennes, sauf une programmée qui vient de paraître.
+// trois derniers auteurs (initiales, photo). Les siennes comptent aussi (0043) : publiées depuis un autre appareil, ce fil
+// ne les a pas ; l'appareil qui publie les a déjà en tête, et son repère avance avec elles.
 
 let banc: Banc;
 const S = randomUUID();
@@ -37,7 +38,7 @@ beforeAll(async () => {
       "0024_sessions_promotion", "0025_communaute_commentaires", "0026_communaute_sondages", "0027_lecons_statut", "0028_discussions_lecons",
       "0029_apprenants_formation", "0030_plateformes_video", "0031_quiz", "0032_exercices", "0033_certificats", "0034_finitions_lot_3",
       "0035_messagerie", "0036_formateur_sans_espace_etudiant", "0037_reponses_aux_reponses", "0038_photos_communaute", "0039_annonce_masquable",
-      "0040_photos_colonne_communaute", "0041_notifications_communaute", "0042_nouvelles_publications",
+      "0040_photos_colonne_communaute", "0041_notifications_communaute", "0042_nouvelles_publications", "0043_nouvelles_publications_siennes",
     ].map((m) => `supabase/migrations/${m}.sql`),
   ]);
   for (const [id, roles] of [[S, ["super_admin"]], [A, ["admin"]], [F, []], [E1, []], [E2, []]] as const) await banc.creerCompte(id, [...roles]);
@@ -60,16 +61,22 @@ beforeEach(async () => {
 });
 
 describe("Les nouvelles publications du fil", () => {
-  it("celles des autres, parues après le repère ; ni les siennes, ni les programmées à venir, ni celles en attente", async () => {
+  it("celles parues après le repère, les siennes comprises ; ni les programmées à venir, ni celles en attente", async () => {
     await poster(E2, { il_y_a: 600 }); // avant le repère
     await poster(E2, { il_y_a: 60 });
     await poster(A, { il_y_a: 30 });
     await poster(E2, { il_y_a: 20, statut: "en_attente" });
     await poster(E2, { il_y_a: -3600, ecrite: 60 }); // programmée, à venir
-    await poster(E1, { il_y_a: 10 }); // la sienne
+    await poster(E1, { il_y_a: 10 }); // la sienne, publiée depuis son téléphone
     const repere = await ilYA(300);
-    expect(await nouvelles(E1, "tous", repere)).toEqual({ nombre: 2, auteurs: [{ initiales: "RH", photo: null }, { initiales: "AK", photo: null }] });
-    expect((await nouvelles(E1, "general", repere)).nombre).toBe(2);
+    expect(await nouvelles(E1, "tous", repere)).toEqual({
+      nombre: 3,
+      auteurs: [{ initiales: "KD", photo: null }, { initiales: "RH", photo: null }, { initiales: "AK", photo: null }],
+    });
+    expect((await nouvelles(E1, "general", repere)).nombre).toBe(3);
+    // L'appareil qui l'a publiée l'a déjà en tête : son repère est sa date, rien de nouveau.
+    const sienne = (await un<{ t: string }>("select cree_le::text as t from public.publications where auteur = $1", [E1])).t;
+    expect((await nouvelles(E1, "tous", sienne)).nombre).toBe(0);
     expect(await nouvelles(E1, P, repere)).toEqual({ nombre: 0, auteurs: [] });
   });
 
