@@ -1,32 +1,21 @@
-import type { ReactNode } from "react";
-import { Shield01Icon, TeachingIcon } from "@hugeicons/core-free-icons";
+import { Home03Icon, Shield01Icon } from "@hugeicons/core-free-icons";
 import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
 import { List, ListRow } from "@/components/ui/ListRow";
-import { PointsIcon, StreakIcon } from "@/components/ui/TopBarIcons";
 import type { ShellUser } from "@/lib/auth/current-user";
 import { canAccess } from "@/lib/auth/permissions";
 import { NAV_MENU_FORMATEUR, NAV_MENU_TELEPHONE } from "@/lib/navigation";
 import { MenuLogout } from "./MenuLogout";
 
-function Tuile({ glyph, valeur, legende }: { glyph: ReactNode; valeur: string; legende: string }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-0.5 rounded-bouton bg-coque px-3.5 py-2.5">
-      <span className="flex items-center gap-2 text-base leading-6 font-medium text-texte">
-        {glyph}
-        <span className="truncate">{valeur}</span>
-      </span>
-      <span className="text-xs leading-[18px] text-ardoise">{legende}</span>
-    </div>
-  );
-}
-
 /**
- * Page « Profil » du téléphone (NdMobMenu) : identité, série et points, raccourcis, déconnexion. Côté formateur
- * (restructuration R1) : ni série ni points, ses raccourcis, et pas de changement d'espace (il n'a que le sien).
+ * Page « Profil » du téléphone (NdMobMenu, simplifiée le 31 octobre 2026) : le compte seulement, comme le menu du rond
+ * de profil sur ordinateur. Son profil, son abonnement, le changement d'espace s'il en a plusieurs (l'équipe : Espace
+ * étudiant et Back-office), la déconnexion. Le reste (parcours, exercices, certificats…) est dans le menu ≡. Côté
+ * formateur (restructuration R1) : son profil, sans abonnement ni changement d'espace (il n'a que le sien).
  */
 export function MobileProfileMenu({ user, espace = "etudiant" }: { user: ShellUser; espace?: "etudiant" | "formateur" }) {
   const formateur = espace === "formateur";
+  const equipe = !formateur && canAccess("admin", user.roles);
   return (
     <div className="flex flex-col">
       <h1 className="sr-only">Profil</h1>
@@ -39,23 +28,13 @@ export function MobileProfileMenu({ user, espace = "etudiant" }: { user: ShellUs
           <p className="m-0 truncate text-sm leading-[22px] text-discret">{formateur ? "Formateur·rice" : `${user.statut} · ${user.formule}`}</p>
         </div>
       </div>
-      {!formateur && (
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <Tuile glyph={<StreakIcon />} valeur={`${user.serie} jours`} legende="Série d’apprentissage" />
-          <Tuile glyph={<PointsIcon />} valeur={`${user.points} points`} legende="Gagnés cette semaine" />
-        </div>
-      )}
-      <List label="Raccourcis" className="mt-1">
+      <List label="Mon compte" className="mt-1">
         {(formateur ? NAV_MENU_FORMATEUR : NAV_MENU_TELEPHONE).map((e) => (
           <ListRow key={e.href} href={e.href} leading={<Icon icon={e.icon} size={22} />} title={e.label} />
         ))}
-        {/* Espaces selon les rôles, comme dans le menu du profil sur ordinateur. L'accès réel est vérifié par le serveur. */}
-        {!formateur && canAccess("formateur", user.roles) && (
-          <ListRow href="/formateur" leading={<Icon icon={TeachingIcon} size={22} />} title="Espace formateur" />
-        )}
-        {!formateur && canAccess("admin", user.roles) && (
-          <ListRow href="/admin" leading={<Icon icon={Shield01Icon} size={22} />} title="Back-office" />
-        )}
+        {/* Deux espaces : l'équipe passe de l'un à l'autre (comme dans le menu du profil sur ordinateur). */}
+        {equipe && <ListRow href="/accueil" leading={<Icon icon={Home03Icon} size={22} />} title="Espace étudiant" />}
+        {equipe && <ListRow href="/admin" leading={<Icon icon={Shield01Icon} size={22} />} title="Back-office" />}
         <MenuLogout />
       </List>
     </div>

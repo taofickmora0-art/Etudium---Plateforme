@@ -79,16 +79,10 @@ describe("L'en-tête de l'espace formateur", () => {
 });
 
 describe("La page « Profil » du téléphone, côté formateur", () => {
-  it("ses raccourcis, sans série ni points ni changement d'espace", () => {
+  it("son profil seulement (le reste est dans le menu ≡, demande du 31 octobre), sans série ni points ni changement d'espace", () => {
     render(<MobileProfileMenu user={FORMATEUR} espace="formateur" />);
-    const raccourcis = within(screen.getByRole("list", { name: "Raccourcis" }));
-    expect(raccourcis.getAllByRole("link").map((l) => [l.textContent, l.getAttribute("href")])).toEqual([
-      ["Mon profil", "/formateur/profil"],
-      ["Notifications", "/formateur/notifications"],
-      ["Communauté", "/formateur/communaute"],
-      ["Messages", "/formateur/messages"],
-      ["Corrections", "/formateur/corrections"],
-    ]);
+    const compte = within(screen.getByRole("list", { name: "Mon compte" }));
+    expect(compte.getAllByRole("link").map((l) => [l.textContent, l.getAttribute("href")])).toEqual([["Mon profil", "/formateur/profil"]]);
     expect(screen.queryByText("Série d’apprentissage")).toBeNull();
     expect(screen.getByText(/Formateur·rice/)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Espace formateur|Back-office/ })).toBeNull();

@@ -12,7 +12,6 @@ import {
   HelpCircleIcon,
   Home03Icon,
   Megaphone01Icon,
-  Notification02Icon,
   Route01Icon,
   Search01Icon,
   Shield01Icon,
@@ -73,20 +72,12 @@ export const NAV_BAS: NavEntry[] = [
 ];
 
 /**
- * Liste de la page « Profil » du téléphone (NdMobMenu), complétée des entrées de la barre latérale
- * que la barre du bas n'a pas (Exercices, formations gratuites…) : sur téléphone, tout reste accessible.
+ * Le compte, sur la page « Profil » du téléphone (NdMobMenu, simplifiée le 31 octobre 2026) : comme le menu du rond de
+ * profil sur ordinateur. Les autres entrées (parcours, exercices, certificats…) sont dans le menu ≡.
  */
 export const NAV_MENU_TELEPHONE: NavEntry[] = [
   { href: "/profil", label: "Mon profil", icon: UserIcon },
   { href: "/abonnement", label: "Mon abonnement", icon: CreditCardIcon },
-  { href: "/parcours", label: "Mes parcours", icon: Route01Icon },
-  { href: "/exercices", label: "Exercices", icon: AssignmentsIcon },
-  { href: "/certificats", label: "Certificats", icon: Certificate01Icon },
-  { href: "/formations-gratuites", label: "Formations gratuites", icon: GiftIcon },
-  { href: "/favoris", label: "Favoris", icon: FavouriteIcon },
-  { href: "/evenements", label: "Événements", icon: Calendar03Icon },
-  { href: "/messages", label: "Messages", icon: BubbleChatIcon },
-  { href: "/aide", label: "Aide", icon: HelpCircleIcon },
 ];
 
 /** Raccourcis de l'en-tête du téléphone (la recherche, que la barre du bas n'a pas). */
@@ -100,14 +91,8 @@ const PROFIL: NavEntry = { href: "/menu", label: "Profil", icon: UserIcon };
 const PROFIL_FORMATEUR: NavEntry = { href: "/formateur/menu", label: "Profil", icon: UserIcon };
 const COMMUNAUTE_FORMATEUR: NavEntry = { href: "/formateur/communaute", label: "Communauté", icon: UserGroupIcon };
 
-/** Raccourcis de la page « Profil » du téléphone, côté formateur (restructuration R1). */
-export const NAV_MENU_FORMATEUR: NavEntry[] = [
-  { href: "/formateur/profil", label: "Mon profil", icon: UserIcon },
-  { href: "/formateur/notifications", label: "Notifications", icon: Notification02Icon },
-  COMMUNAUTE_FORMATEUR,
-  { href: "/formateur/messages", label: "Messages", icon: BubbleChatIcon },
-  { href: "/formateur/corrections", label: "Corrections", icon: AssignmentsIcon },
-];
+/** Le compte, sur la page « Profil » du téléphone, côté formateur (restructuration R1 ; simplifiée le 31 octobre 2026). */
+export const NAV_MENU_FORMATEUR: NavEntry[] = [{ href: "/formateur/profil", label: "Mon profil", icon: UserIcon }];
 
 /** Un groupe de la barre latérale, avec son titre (« Mon espace ») ou sans. */
 export type GroupeNav = { titre?: string; entrees: NavEntry[] };

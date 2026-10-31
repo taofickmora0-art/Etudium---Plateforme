@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { AppShell } from "@/components/layout/AppShell";
@@ -29,19 +31,24 @@ describe("Corrections de la relecture de la coque", () => {
     expect(screen.getAllByRole("link").filter((a) => a.hasAttribute("aria-current"))).toHaveLength(0);
   });
 
-  it("sur téléphone, toutes les entrées de la barre latérale restent accessibles", () => {
-    const telephone = new Set([...NAV_BAS, ...NAV_MENU_TELEPHONE, ...LIENS_ENTETE_TELEPHONE].map((e) => e.href));
-    const manquantes = [...NAV_PRINCIPALE, ...NAV_MON_ESPACE, { href: "/recherche" }].map((e) => e.href).filter((h) => !telephone.has(h));
-    expect(manquantes).toEqual([]);
+  it("sur téléphone, toutes les entrées de la barre latérale restent accessibles : le menu ≡ les reprend toutes", () => {
+    // Le menu ≡ affiche la barre latérale de l'espace (SidebarNavLinks) ; la page Profil n'a plus que le compte (31 octobre).
+    expect(readFileSync(join(process.cwd(), "src/components/layout/MenuTiroir.tsx"), "utf8")).toContain("<SidebarNavLinks");
+    expect(NAV_MENU_TELEPHONE.map((e) => e.href)).toEqual(["/profil", "/abonnement"]);
+    const telephone = new Set([...NAV_BAS, ...NAV_PRINCIPALE, ...NAV_MON_ESPACE, ...LIENS_ENTETE_TELEPHONE].map((e) => e.href));
+    expect(telephone.has("/recherche")).toBe(true);
   });
 
   it("la page Profil du téléphone propose les espaces selon les rôles", () => {
     const { unmount } = render(<MobileProfileMenu user={{ ...DEMO_USER, roles: ["etudiant"] }} />);
-    expect(screen.queryByRole("link", { name: "Espace formateur" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Espace étudiant" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Back-office" })).not.toBeInTheDocument();
     unmount();
-    render(<MobileProfileMenu user={{ ...DEMO_USER, roles: ["etudiant", "formateur", "admin"] }} />);
-    expect(screen.getByRole("link", { name: "Espace formateur" })).toHaveAttribute("href", "/formateur");
+    // Un seul rôle en plus d'étudiant (0017) ; le formateur n'a pas l'espace étudiant (R1) : seule l'équipe change d'espace.
+    render(<MobileProfileMenu user={{ ...DEMO_USER, roles: ["etudiant", "admin"] }} />);
+    expect(screen.getByRole("link", { name: "Espace étudiant" })).toHaveAttribute("href", "/accueil");
     expect(screen.getByRole("link", { name: "Back-office" })).toHaveAttribute("href", "/admin");
+    expect(screen.queryByRole("link", { name: "Espace formateur" })).not.toBeInTheDocument();
   });
 
   it("chaque onglet de la barre du bas prend la largeur de son libellé : « Événements » ne déborde pas de sa pastille", () => {

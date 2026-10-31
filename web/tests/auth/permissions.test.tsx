@@ -87,6 +87,7 @@ describe("Menus selon les rôles", () => {
   it("chacun voit ses espaces dans le menu du téléphone : deux au plus", () => {
     const { unmount } = render(<MobileProfileMenu user={compte(["etudiant", "super_admin"])} />);
     expect(screen.queryByRole("link", { name: /Espace formateur/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Espace étudiant/ })).toHaveAttribute("href", "/accueil");
     expect(screen.getByRole("link", { name: /Back-office/ })).toHaveAttribute("href", "/admin");
     unmount();
     // Un formateur n'a plus l'espace étudiant (R1) : son menu du téléphone ne propose aucun changement d'espace.
