@@ -49,13 +49,16 @@ const pub = (id: string, o: Partial<Publication> = {}): Publication => ({
   ...o,
 });
 const lot = (...publications: Publication[]): LotPublications => ({ publications, suite: false });
-function afficher() {
+function afficher(programmees?: { id: string; creeLe: string }[]) {
   render(
     <ToastProvider>
-      <PageCommunaute espaces={ESPACES} initial={lot(pub("parue"))} moi={MOI} maintenant="2026-10-14T15:00:00Z" />
+      <PageCommunaute espaces={ESPACES} initial={lot(pub("parue"))} moi={MOI} maintenant="2026-10-14T15:00:00Z" programmees={programmees} />
     </ToastProvider>,
   );
 }
+// Les dates de la pastille se comparent à l'heure réelle (l'horloge de la page) : relatives à maintenant.
+const dans = (jours: number) => new Date(Date.now() + jours * 86_400_000).toISOString();
+const pastille = () => within(screen.getByRole("tab", { name: /Programmées/ })).queryByText(/^\d+\+?$/);
 
 describe("Publiées / Programmées", () => {
   beforeEach(() => {
@@ -120,5 +123,50 @@ describe("Publiées / Programmées", () => {
     await user.click(screen.getByRole("button", { name: "Programmer" }));
     await waitFor(() => expect(actions.chargerFil).toHaveBeenCalledTimes(2));
     expect(actions.chargerFil).toHaveBeenLastCalledWith("tous", "programmees", {});
+  });
+
+  it("une pastille en haut de « Programmées » compte ses publications à venir (demande du 31 octobre)", async () => {
+    afficher([
+      { id: "a", creeLe: dans(1) },
+      { id: "b", creeLe: dans(6) },
+      { id: "passee", creeLe: dans(-1) },
+    ]);
+    expect(pastille()).toHaveTextContent("2");
+    expect(screen.getByRole("tab", { name: "Programmées, 2 publications programmées" })).toBeInTheDocument();
+  });
+
+  it("aucune à venir : pas de pastille", () => {
+    afficher([]);
+    expect(pastille()).toBeNull();
+    expect(screen.getByRole("tab", { name: "Programmées" })).toBeInTheDocument();
+  });
+
+  it("« Publier maintenant » : la pastille diminue ; programmer depuis « Publiées » : elle se relit", async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.chargerFil).mockResolvedValueOnce({ ok: true, lot: lot(pub("future", { programmee: true, creeLe: dans(2) })) });
+    vi.mocked(actions.reprogrammer).mockResolvedValueOnce({ ok: true });
+    afficher([{ id: "future", creeLe: dans(2) }]);
+    expect(pastille()).toHaveTextContent("1");
+    await user.click(screen.getByRole("tab", { name: /Programmées/ }));
+    await screen.findByText("Texte future");
+    await user.click(screen.getByRole("button", { name: /Actions sur la publication/ }));
+    await user.click(screen.getByRole("menuitem", { name: "Publier maintenant" }));
+    await waitFor(() => expect(pastille()).toBeNull());
+
+    vi.mocked(actions.chargerFil).mockReset().mockResolvedValue({ ok: true, lot: lot(pub("n2", { programmee: true, creeLe: dans(2) })) });
+    vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n2", statut: "publiee", apercu: null, video: null });
+    await user.click(screen.getByRole("tab", { name: "Publiées" }));
+    await user.click(screen.getByRole("button", { name: "Quoi de neuf, Koffi ?" }));
+    await user.type(await screen.findByRole("textbox", { name: "Nouvelle publication" }), "Bientôt");
+    await user.click(screen.getByRole("button", { name: "Plus d’options de publication" }));
+    await user.click(screen.getByRole("menuitem", { name: "Programmer…" }));
+    const fenetre = screen.getByRole("dialog", { name: "Programmer la publication" });
+    const jour = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Porto-Novo" }).format(new Date(Date.now() + 2 * 86_400_000));
+    fireEvent.change(within(fenetre).getByLabelText("Date"), { target: { value: jour } });
+    fireEvent.change(within(fenetre).getByLabelText("Heure"), { target: { value: "15:00" } });
+    await user.click(within(fenetre).getByRole("button", { name: "Programmer" }));
+    await user.click(screen.getByRole("button", { name: "Programmer" }));
+    await waitFor(() => expect(actions.chargerFil).toHaveBeenCalledWith("tous", "programmees", {}));
+    await waitFor(() => expect(pastille()).toHaveTextContent("1"));
   });
 });

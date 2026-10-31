@@ -4,9 +4,13 @@ import { useState, type ReactNode } from "react";
 import { Tabs } from "radix-ui";
 import { cn } from "@/lib/cn";
 import { Icon, type IconSvgElement } from "./Icon";
+import { PastilleNombre } from "./PastilleNombre";
 
-/** `icon` : petite icône avant le libellé (cadenas d'un parcours non inclus, NdParcours). */
-export type TabItem = { value: string; label: string; content: ReactNode; icon?: IconSvgElement };
+/**
+ * `icon` : petite icône avant le libellé (cadenas d'un parcours non inclus, NdParcours). `pastille` : un nombre en haut
+ * à droite de l'onglet (les publications programmées), dont `libelle` complète le nom (« 2 publications programmées »).
+ */
+export type TabItem = { value: string; label: string; content: ReactNode; icon?: IconSvgElement; pastille?: { nombre: number; libelle: string } };
 
 type SegmentedTabsProps = {
   /** Nom de la liste d'onglets pour les lecteurs d'écran. */
@@ -48,6 +52,12 @@ export function SegmentedTabs({ label, items, defaultValue, value, onValueChange
           {/* Masquée sur téléphone : les onglets tiennent sur une ligne (l'icône est décorative). */}
           {item.icon && <Icon icon={item.icon} size={16} className="mr-1.5 max-sm:hidden" />}
           {item.label}
+          {item.pastille && item.pastille.nombre > 0 && (
+            <>
+              <PastilleNombre nombre={item.pastille.nombre} className="pointer-events-none absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 text-[10px] ring-2 ring-coque" />
+              <span className="sr-only">, {item.pastille.libelle}</span>
+            </>
+          )}
         </Tabs.Trigger>
       ))}
     </Tabs.List>

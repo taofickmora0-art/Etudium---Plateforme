@@ -524,7 +524,8 @@ describe("La page Communauté", () => {
     unmount();
 
     afficher(await ContenuCommunaute({ searchParams: Promise.resolve({ espace: "general" }) }));
-    expect(lireFil).toHaveBeenLastCalledWith("general");
+    // (La page lit aussi ses programmées, pour la pastille : le fil de l'onglet n'est plus forcément la dernière lecture.)
+    expect(lireFil).toHaveBeenCalledWith("general");
     expect(onglet("Général")).toHaveAttribute("aria-pressed", "true");
     cleanup();
 

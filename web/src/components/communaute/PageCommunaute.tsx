@@ -58,6 +58,7 @@ export function PageCommunaute({
   nouvelles = [],
   disponibles = [],
   espace: espaceCompte = "etudiant",
+  programmees: programmeesInitiales = [],
 }: {
   espaces: Espace[];
   initial: LotPublications;
@@ -81,6 +82,8 @@ export function PageCommunaute({
   disponibles?: CarteCatalogue[];
   /** L'espace qui l'affiche : ses adresses (restructuration R1 : la communauté du formateur). */
   espace?: EspaceCommunaute;
+  /** Ses publications programmées (tous les espaces) : la pastille de « Programmées » compte celles encore à venir. */
+  programmees?: { id: string; creeLe: string }[];
 }) {
   const liste = espaces.length > 0 ? espaces : [GENERAL];
   const general = liste.find((e) => e.id === null) ?? GENERAL;
@@ -100,6 +103,9 @@ export function PageCommunaute({
   // Seule la dernière lecture compte : un onglet ou un tri changé deux fois de suite ne mélange pas les réponses.
   const demande = useRef(0);
   const maintenant = useMaintenant(heureServeur);
+  // Ses programmées encore à venir (demande du 31 octobre 2026) : une qui paraît quitte le compte à l'heure dite.
+  const [programmees, setProgrammees] = useState(programmeesInitiales);
+  const aVenir = programmees.filter((p) => new Date(p.creeLe) > maintenant).length;
   const espace = onglet === ACTUALITES ? general : (liste.find((e) => valeur(e) === onglet) ?? general);
   // L'onglet suit l'adresse : une entrée du menu ≡ (`?espace=`) ouvre le sien, sans recharger la page. L'adresse que la
   // page écrit elle-même (`replaceState`) est notée d'avance et ne relit rien ; une relecture du serveur garde tout.
@@ -123,8 +129,10 @@ export function PageCommunaute({
     const reponse = await lire(cible, ordre, {});
     if (!reponse) return;
     setChargement(false);
-    if (reponse.ok) setLot(reponse.lot);
-    else setErreur(reponse.message);
+    if (!reponse.ok) return setErreur(reponse.message);
+    setLot(reponse.lot);
+    // Les programmées de tous les espaces viennent d'être lues : la pastille suit.
+    if (ordre === "programmees" && cible === ACTUALITES) setProgrammees(reponse.lot.publications.map(({ id, creeLe }) => ({ id, creeLe })));
   }
 
   function changerOnglet(cible: string, ecrireAdresse = true) {
@@ -167,7 +175,16 @@ export function PageCommunaute({
     void recharger(onglet, nouvelle === "programmees" ? "programmees" : tri);
   }
 
-  const retirer = (id: string) => setLot((actuel) => ({ ...actuel, publications: actuel.publications.filter((x) => x.id !== id) }));
+  const retirer = (id: string) => {
+    setLot((actuel) => ({ ...actuel, publications: actuel.publications.filter((x) => x.id !== id) }));
+    setProgrammees((actuelles) => actuelles.filter((p) => p.id !== id));
+  };
+
+  /** Relit ses programmées (tous les espaces), pour la pastille ; un échec ne change rien. */
+  async function relireProgrammees() {
+    const reponse = await chargerFil(ACTUALITES, "programmees", {}).catch(() => null);
+    if (reponse?.ok) setProgrammees(reponse.lot.publications.map(({ id, creeLe }) => ({ id, creeLe })));
+  }
 
   async function voirPlus() {
     const derniere = lot.publications.at(-1);
@@ -290,6 +307,8 @@ export function PageCommunaute({
                 }}
                 onProgrammee={() => {
                   if (vue === "programmees") void recharger(onglet, "programmees");
+                  // La pastille : relue si la liste affichée n'est pas celle de tous les espaces.
+                  if (vue !== "programmees" || onglet !== ACTUALITES) void relireProgrammees();
                 }}
               />
               <SegmentedTabs
@@ -300,7 +319,12 @@ export function PageCommunaute({
                 aCote={vue === "publiees" ? <MenuTri valeur={tri} onChange={changerTri} /> : null}
                 items={[
                   { value: "publiees", label: "Publiées", content: filAffiche },
-                  { value: "programmees", label: "Programmées", content: filAffiche },
+                  {
+                    value: "programmees",
+                    label: "Programmées",
+                    content: filAffiche,
+                    pastille: { nombre: aVenir, libelle: `${aVenir} publication${aVenir > 1 ? "s" : ""} programmée${aVenir > 1 ? "s" : ""}` },
+                  },
                 ]}
               />
               <FormationsDisponibles cartes={disponibles} />

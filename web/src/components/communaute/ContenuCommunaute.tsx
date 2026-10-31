@@ -66,7 +66,7 @@ export async function ContenuCommunaute({
   const formateur = espace === "formateur";
   const brut = (await searchParams)?.espace;
   const demande = typeof brut === "string" && (brut === "tous" || brut === "general" || UUID.test(brut)) ? brut : "tous";
-  const [espaces, filDemande, tendances, activites, session, moi, analyseActive, annonce, cartes] = await Promise.all([
+  const [espaces, filDemande, tendances, activites, session, moi, analyseActive, annonce, cartes, programmees] = await Promise.all([
     lireEspaces(),
     lireFil(demande),
     facultatif("des tendances", lireTendances),
@@ -76,6 +76,8 @@ export async function ContenuCommunaute({
     lireAnalyseActive(),
     lireAnnonce(),
     formateur ? [] : catalogue(),
+    // Ses publications programmées, pour la pastille de « Programmées » (demande du 31 octobre 2026).
+    facultatif("des publications programmées", () => lireFil("tous", "programmees")),
   ]);
   if (espaces.migrationAbsente || filDemande.migrationAbsente) return <MigrationCommunauteAbsente />;
   // Un parcours inconnu (ou qui n'est plus actif) : les Actualités.
@@ -102,6 +104,7 @@ export async function ContenuCommunaute({
       disponibles={formationsDisponibles(cartes)}
       colonne={<ColonneCommunaute session={session} tendances={tendances} activites={activites} maintenant={maintenant} espace={espace} />}
       espace={espace}
+      programmees={(programmees?.publications ?? []).map(({ id, creeLe }) => ({ id, creeLe }))}
     />
   );
 }
