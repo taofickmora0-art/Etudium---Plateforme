@@ -31,6 +31,7 @@ Ces tables se remplissent toutes seules : chaque nouveau compte reçoit son prof
 
 - **Site URL** : `http://localhost:3000`
 - **Redirect URLs** → **Add URL** : `http://localhost:3000/**`
+- **Pour tester sur ton téléphone** (même Wi-Fi que l'ordinateur), ajoute aussi l'adresse réseau qu'affiche le serveur au démarrage (« Network »), par exemple `http://192.168.0.3:3000/**`.
 
 Sans cette adresse, le retour de Google et le lien « mot de passe oublié » sont refusés. On changera ces deux réglages pour l’adresse définitive quand le site sera mis en ligne.
 
@@ -210,6 +211,7 @@ Les autres rôles se donnent ensuite dans l’application : Back-office → **Ut
 | « Trop de demandes. Patientez une minute, puis réessayez. » | La limite d’envoi de Supabase est atteinte : attends un peu (étape 6). |
 | Google affiche « redirect_uri_mismatch » | L’adresse de retour copiée dans Google (étape 7) doit être **exactement** la *Callback URL* de Supabase. |
 | Retour sur la connexion avec « La connexion avec Google n’a pas abouti » | Vérifie `http://localhost:3000/**` dans les **Redirect URLs** (étape 2). Si tu as fermé la fenêtre Google, recommence simplement. |
+| Sur téléphone, après Google : « Ce site est inaccessible », adresse `localhost:3000` | Le téléphone est passé par l'adresse réseau (`http://192.168.…:3000`), absente des **Redirect URLs** : Supabase renvoie alors vers la **Site URL**, et `localhost` désigne le téléphone lui-même. Ajoute l'adresse réseau (étape 2). Si la box change l'adresse de l'ordinateur, mets la nouvelle. |
 | Google refuse ton compte (« accès bloqué ») | Ajoute ton adresse dans **Audience → Test users** (étape 7). |
 | La page `/etat` dit « Base non connectée » | Le projet est peut-être en pause (Supabase met en pause un projet gratuit inactif une semaine) : **Restore project** dans le tableau de bord. |
 
