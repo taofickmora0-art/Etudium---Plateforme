@@ -131,7 +131,8 @@ export type Activite = {
 };
 
 /** L'annonce épinglée en tête des Actualités (0021), telle que la voit un membre ; `image` est un lien temporaire. */
-export type Annonce = { titre: string; texte: string; media: "youtube" | "image" | null; youtubeId: string | null; image: string | null };
+/** `masquable` (0039) : l'équipe permet aux membres de la masquer (une croix) ; absent : non. */
+export type Annonce = { titre: string; texte: string; media: "youtube" | "image" | null; youtubeId: string | null; image: string | null; masquable?: boolean };
 
 /** Le réglage complet de l'annonce, pour l'équipe. */
 export type AnnonceEquipe = Annonce & { active: boolean; imageChemin: string | null; public: "tous" | "parcours"; parcoursId: string | null };
@@ -146,6 +147,8 @@ export type DonneesAnnonce = {
   imageChemin: string | null;
   public: "tous" | "parcours";
   parcoursId: string | null;
+  /** Les membres peuvent la masquer (0039). */
+  masquable?: boolean;
 };
 
 /** Le compte connecté, pour l'avatar du champ de publication et le dossier de ses fichiers. */

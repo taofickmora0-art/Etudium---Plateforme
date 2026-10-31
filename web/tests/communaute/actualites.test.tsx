@@ -16,6 +16,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: 
 vi.mock("@/components/communaute/EditeurTexte", () => import("./editeur-simule"));
 vi.mock("@/lib/communaute/actions", () => ({
   chargerFil: vi.fn(),
+  masquerAnnonce: vi.fn(),
   chargerReponses: vi.fn(),
   publierPublication: vi.fn(),
   modifierPublication: vi.fn(),
@@ -92,6 +93,29 @@ beforeEach(() => {
   recherche = "";
 });
 afterEach(() => vi.useRealTimers());
+
+describe("L'annonce masquable (liste du 31 octobre, tâche 6)", () => {
+  it("masquable : une croix la masque aussitôt ; non masquable : pas de croix", async () => {
+    const user = userEvent.setup({ delay: null });
+    const { unmount } = page(lot([pub()]), { annonce: ANNONCE });
+    expect(screen.queryByRole("button", { name: "Masquer l’annonce" })).toBeNull();
+    unmount();
+    vi.mocked(actions.masquerAnnonce).mockResolvedValueOnce({ ok: true });
+    page(lot([pub()]), { annonce: { ...ANNONCE, masquable: true } });
+    await user.click(screen.getByRole("button", { name: "Masquer l’annonce" }));
+    expect(annonce()).toBeNull();
+    expect(actions.masquerAnnonce).toHaveBeenCalled();
+  });
+
+  it("un refus : l'annonce revient, avec le message", async () => {
+    const user = userEvent.setup({ delay: null });
+    vi.mocked(actions.masquerAnnonce).mockResolvedValueOnce({ ok: false, message: "Cette annonce ne peut pas être masquée." });
+    page(lot([pub()]), { annonce: { ...ANNONCE, masquable: true } });
+    await user.click(screen.getByRole("button", { name: "Masquer l’annonce" }));
+    await waitFor(() => expect(annonce()).not.toBeNull());
+    expect(await screen.findByText("Cette annonce ne peut pas être masquée.")).toBeInTheDocument();
+  });
+});
 
 describe("L'annonce épinglée", () => {
   it("en tête des Actualités : l'étiquette, le titre, le texte ; la vidéo se charge au clic, sans cookies ; absente de Général", async () => {

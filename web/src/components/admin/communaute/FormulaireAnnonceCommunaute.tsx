@@ -48,6 +48,7 @@ function depuis(a: AnnonceEquipe) {
     affiche: (a.imageChemin ? { chemin: a.imageChemin, fichier: null, type: "", extension: "", url: a.image } : null) as Affiche | null,
     public: a.public,
     parcoursId: a.parcoursId ?? "",
+    masquable: a.masquable === true,
   };
 }
 
@@ -118,6 +119,7 @@ export function FormulaireAnnonceCommunaute({ initial, parcours, compteId }: { i
         imageChemin,
         public: r.public,
         parcoursId: r.public === "parcours" && r.parcoursId ? r.parcoursId : null,
+        masquable: r.masquable,
       };
       const reponse = await enregistrerAnnonce(donnees).catch(() => ({ ok: false as const, message: ECHEC }));
       if (!reponse.ok) {
@@ -163,6 +165,12 @@ export function FormulaireAnnonceCommunaute({ initial, parcours, compteId }: { i
           description="Désactivée, elle disparaît du fil sans être supprimée."
           checked={r.active}
           onCheckedChange={(active) => setR({ ...r, active })}
+        />
+        <Switch
+          label="Les membres peuvent la masquer"
+          description="Une croix sur l’annonce. Si vous la modifiez, elle réapparaît pour tous."
+          checked={r.masquable}
+          onCheckedChange={(masquable) => setR({ ...r, masquable })}
         />
         <div className="h-px bg-bordure-carte" />
         <Field label="Titre" htmlFor={ids.titre}>
@@ -283,7 +291,10 @@ export function FormulaireAnnonceCommunaute({ initial, parcours, compteId }: { i
               media: media === "youtube" && !idVideo ? null : media,
               youtubeId: idVideo,
               image: media === "image" ? (r.affiche?.url ?? null) : null,
+              masquable: r.masquable,
             }}
+            // L'aperçu montre la croix, sans effet.
+            onMasquer={() => undefined}
           />
         </div>
         {!r.active && <p className="m-0 text-[13px] leading-5 text-discret">Interrupteur coupé : l’annonce n’apparaît pas dans le fil.</p>}

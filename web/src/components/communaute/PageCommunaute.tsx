@@ -14,9 +14,10 @@ import { FilterChips } from "@/components/ui/FilterChips";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Heading, Lead } from "@/components/ui/Text";
+import { useToast } from "@/components/ui/Toast";
 import { entrelacer, type ElementFil } from "@/lib/accueil/fil";
 import type { CarteCatalogue } from "@/lib/catalogue/types";
-import { chargerFil } from "@/lib/communaute/actions";
+import { chargerFil, masquerAnnonce } from "@/lib/communaute/actions";
 import { CHEMINS_COMMUNAUTE, type EspaceCommunaute } from "@/lib/communaute/chemins";
 import { curseur } from "@/lib/communaute/regles";
 import type { Annonce, Espace, LotPublications, MoiCommunaute, SuiteFil, TriFil } from "@/lib/communaute/types";
@@ -103,6 +104,17 @@ export function PageCommunaute({
   // Seule la dernière lecture compte : un onglet ou un tri changé deux fois de suite ne mélange pas les réponses.
   const demande = useRef(0);
   const maintenant = useMaintenant(heureServeur);
+  const { toast } = useToast();
+  // L'annonce masquée par le compte (0039) : elle disparaît aussitôt ; un refus la fait revenir.
+  const [annonceMasquee, setAnnonceMasquee] = useState(false);
+  async function masquer() {
+    setAnnonceMasquee(true);
+    const reponse = await masquerAnnonce().catch(() => ({ ok: false as const, message: "L’opération n’a pas abouti. Réessayez." }));
+    if (!reponse.ok) {
+      setAnnonceMasquee(false);
+      toast({ tone: "erreur", title: reponse.message });
+    }
+  }
   // Ses programmées encore à venir (demande du 31 octobre 2026) : une qui paraît quitte le compte à l'heure dite.
   const [programmees, setProgrammees] = useState(programmeesInitiales);
   const aVenir = programmees.filter((p) => new Date(p.creeLe) > maintenant).length;
@@ -292,7 +304,7 @@ export function PageCommunaute({
             <EspaceVerrouille espace={espace} espaceCompte={espaceCompte} />
           ) : (
             <>
-              {onglet === ACTUALITES && annonce && <CarteAnnonce annonce={annonce} equipe={moi.equipe === true} />}
+              {onglet === ACTUALITES && annonce && !annonceMasquee && <CarteAnnonce annonce={annonce} equipe={moi.equipe === true} onMasquer={() => void masquer()} />}
               <ChampPublication
                 key={onglet}
                 espace={espace}

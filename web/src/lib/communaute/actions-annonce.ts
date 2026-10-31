@@ -43,6 +43,7 @@ export async function enregistrerAnnonce(d: DonneesAnnonce): Promise<Resultat> {
     p_image_chemin: affiche,
     p_public: d.public === "parcours" ? "parcours" : "tous",
     p_parcours: d.public === "parcours" && d.parcoursId && UUID.test(d.parcoursId) ? d.parcoursId : null,
+    p_masquable: d.masquable === true,
   });
   if (error) {
     // L'affiche tout juste déposée n'est attachée à rien.

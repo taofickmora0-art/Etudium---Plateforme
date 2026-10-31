@@ -1,16 +1,17 @@
 import Link from "next/link";
-import { MoreHorizontalIcon, PinIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, MoreHorizontalIcon, PinIcon } from "@hugeicons/core-free-icons";
 import { Icon } from "@/components/ui/Icon";
-import { iconButtonVariants } from "@/components/ui/IconButton";
+import { IconButton, iconButtonVariants } from "@/components/ui/IconButton";
 import { Tag } from "@/components/ui/Tag";
 import type { Annonce } from "@/lib/communaute/types";
 import { VideoYoutube } from "./VideoYoutube";
 
 /**
  * L'annonce épinglée en tête des Actualités (design NdCommunaute ; spec du fil « Actualités », §2) : la vidéo (au clic)
- * ou l'affiche, l'étiquette, le titre et le texte ; pour l'équipe, ⋮ « Gérer l’annonce » vers le back-office.
+ * ou l'affiche, l'étiquette, le titre et le texte ; pour l'équipe, ⋮ « Gérer l’annonce » vers le back-office. Si l'équipe
+ * l'a permis (0039), une croix la masque pour soi (`onMasquer`).
  */
-export function CarteAnnonce({ annonce, equipe = false }: { annonce: Annonce; equipe?: boolean }) {
+export function CarteAnnonce({ annonce, equipe = false, onMasquer }: { annonce: Annonce; equipe?: boolean; onMasquer?: () => void }) {
   return (
     <article aria-label="Annonce de l’équipe Étudium" className="box-border flex min-w-0 flex-col overflow-hidden rounded-2xl border border-bordure-carte bg-panneau">
       {annonce.media === "youtube" && annonce.youtubeId && <VideoYoutube id={annonce.youtubeId} libelle="Lire la vidéo" accent lien={false} />}
@@ -24,11 +25,14 @@ export function CarteAnnonce({ annonce, equipe = false }: { annonce: Annonce; eq
           <Tag tone="nouveau" icon={PinIcon}>
             Annonce épinglée
           </Tag>
-          {equipe && (
-            <Link href="/admin/communaute" aria-label="Gérer l’annonce" className={iconButtonVariants({ variant: "discret", size: "sm" })}>
-              <Icon icon={MoreHorizontalIcon} size={18} />
-            </Link>
-          )}
+          <span className="flex items-center gap-1">
+            {equipe && (
+              <Link href="/admin/communaute" aria-label="Gérer l’annonce" className={iconButtonVariants({ variant: "discret", size: "sm" })}>
+                <Icon icon={MoreHorizontalIcon} size={18} />
+              </Link>
+            )}
+            {annonce.masquable && onMasquer && <IconButton icon={Cancel01Icon} label="Masquer l’annonce" variant="discret" size="sm" onClick={onMasquer} />}
+          </span>
         </div>
         {annonce.titre && <h2 className="m-0 text-2xl leading-8 font-semibold tracking-[-0.01em] text-balance wrap-anywhere text-encre max-sm:text-lg max-sm:leading-[26px]">{annonce.titre}</h2>}
         {annonce.texte && <p className="m-0 text-sm leading-[22px] whitespace-pre-line text-pretty wrap-anywhere text-discret max-sm:text-[13px] max-sm:leading-5">{annonce.texte}</p>}

@@ -13,6 +13,7 @@ vi.mock("next/cache", () => ({ refresh: () => refresh() }));
 
 const { lireAnnonce, lireAnnonceEquipe } = await import("@/lib/communaute/annonce");
 const { enregistrerAnnonce, retirerAnnonce } = await import("@/lib/communaute/actions-annonce");
+const { masquerAnnonce } = await import("@/lib/communaute/actions");
 
 const P = "22222222-2222-4222-8222-222222222222";
 const DONNEES = { active: true, titre: " Bienvenue ", texte: "Le texte", media: "youtube" as const, youtube: "https://youtu.be/dQw4w9WgXcQ", imageChemin: null, public: "tous" as const, parcoursId: null };
@@ -48,6 +49,24 @@ describe("Lire l'annonce", () => {
   });
 });
 
+describe("L'annonce masquable (0039)", () => {
+  it("lue avec sa case ; l'équipe l'enregistre ; un membre la masque, refus affiché", async () => {
+    faux.repondre("rpc.annonce_communaute", { data: { titre: "Bienvenue", texte: "", media: null, youtube_id: null, image_chemin: null, masquable: true } });
+    expect(await lireAnnonce()).toEqual({ titre: "Bienvenue", texte: "", media: null, youtubeId: null, image: null, masquable: true });
+    faux.repondre("rpc.annonce_equipe", { data: { active: true, titre: "Bienvenue", texte: "", media: null, public: "tous", masquable: true } });
+    expect(await lireAnnonceEquipe()).toMatchObject({ donnees: { masquable: true } });
+    faux.repondre("rpc.annonce_equipe", { data: { image_chemin: null } });
+    await enregistrerAnnonce({ ...DONNEES, masquable: true });
+    expect(faux.de("rpc", "enregistrer_annonce")[0].valeurs).toMatchObject({ p_masquable: true });
+
+    getShellUser.mockResolvedValue({ prenom: "Koffi", nom: "D", roles: ["etudiant"] });
+    faux.repondre("rpc.masquer_annonce", { data: null });
+    expect(await masquerAnnonce()).toEqual({ ok: true });
+    faux.repondre("rpc.masquer_annonce", { error: { code: "P0001", message: "Cette annonce ne peut pas être masquée." } });
+    expect(await masquerAnnonce()).toEqual({ ok: false, message: "Cette annonce ne peut pas être masquée." });
+  });
+});
+
 describe("Régler l'annonce", () => {
   it("hors équipe : refusé sans appel ; adresse YouTube lue ; adresse non reconnue refusée sans appel", async () => {
     getShellUser.mockResolvedValue({ prenom: "Koffi", nom: "D", roles: ["etudiant"] });
@@ -67,6 +86,7 @@ describe("Régler l'annonce", () => {
       p_image_chemin: null,
       p_public: "tous",
       p_parcours: null,
+      p_masquable: false,
     });
     expect(refresh).toHaveBeenCalled();
   });

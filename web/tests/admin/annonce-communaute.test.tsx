@@ -81,8 +81,17 @@ describe("L'annonce de la communauté au back-office", () => {
       imageChemin: null,
       public: "tous",
       parcoursId: null,
+      masquable: false,
     });
     expect(await screen.findByText("Annonce enregistrée")).toBeInTheDocument();
+    // Les membres peuvent la masquer (liste du 31 octobre, tâche 6) : la case, puis l'enregistrement.
+    const masquable = screen.getByRole("switch", { name: "Les membres peuvent la masquer" });
+    expect(masquable).toHaveAttribute("aria-checked", "false");
+    await user.click(masquable);
+    expect(within(apercu()).getByRole("button", { name: "Masquer l’annonce" })).toBeInTheDocument();
+    vi.mocked(enregistrerAnnonce).mockResolvedValueOnce({ ok: true });
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect(enregistrerAnnonce).toHaveBeenLastCalledWith(expect.objectContaining({ masquable: true }));
     expect(screen.queryByRole("alert")).toBeNull();
     expect(upload).not.toHaveBeenCalled();
   });

@@ -467,6 +467,17 @@ export async function basculerEnregistrement(publicationId: string): Promise<{ o
   return { ok: true, enregistree: data === true };
 }
 
+const MIGRATION_ANNONCE = "Appliquez la migration 0039 (guide « Ce qui te revient », section 46).";
+
+/** Masquer l'annonce de l'Accueil pour soi (0039), si l'équipe l'a permis ; elle revient si l'équipe la modifie. */
+export async function masquerAnnonce(): Promise<Resultat> {
+  if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("masquer_annonce");
+  if (error) return { ok: false, message: estFonctionAbsente(error) ? MIGRATION_ANNONCE : message(error) };
+  return { ok: true };
+}
+
 /** Le texte jugé par l'IA : la publication et, pour un sondage ou un quiz, ses options. */
 function texteAnalyse(texte: string, sondage: SondageEnvoye | null): string {
   const options = (sondage?.options ?? []).map((o) => o.texte.trim()).filter(Boolean);

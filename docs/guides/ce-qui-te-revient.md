@@ -849,3 +849,16 @@ Depuis la restructuration du 20 octobre, un formateur ne voit plus que son espac
    - sur la publication, tu vois la photo de son auteur, celle de qui l'a aimée (à côté de « 2 J'aime ») et celle de qui l'a commentée ;
    - un compte sans photo garde ses initiales ;
    - même chose dans les discussions d'une leçon.
+
+## 46. L'annonce de l'Accueil masquable (liste du 31 octobre, tâche 6), 5 minutes
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0039_annonce_masquable.sql`, après la 0038.
+2. **Côté équipe :** Back-office, puis « Communauté ».
+   - Active « Les membres peuvent la masquer » et enregistre.
+   - L'aperçu montre la croix en haut à droite de l'annonce.
+3. **Avec un compte étudiant :**
+   - sur l'Accueil, la croix masque l'annonce ;
+   - elle ne revient pas après un rechargement de la page ;
+   - un autre compte la voit toujours.
+4. **Modifie l'annonce depuis le back-office :** elle réapparaît pour tout le monde, y compris pour qui l'avait masquée.
+5. **Case décochée :** pas de croix, personne ne peut la masquer.

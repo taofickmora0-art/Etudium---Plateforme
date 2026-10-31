@@ -26,6 +26,8 @@ async function versAnnonce(supabase: Client, l: Ligne): Promise<Annonce> {
     media: type,
     youtubeId: type === "youtube" ? texteOuNull(l.youtube_id) : null,
     image: type === "image" ? await lienAffiche(supabase, texteOuNull(l.image_chemin)) : null,
+    // Masquable par les membres (0039) : seulement si l'équipe l'a permis.
+    ...(l.masquable === true ? { masquable: true } : {}),
   };
 }
 
