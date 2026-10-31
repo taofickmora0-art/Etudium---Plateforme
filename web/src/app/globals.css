@@ -146,6 +146,12 @@ body {
   }
 }
 
+/* La hauteur de l'en-tête de l'espace connecté, figé en haut (31 octobre 2026) : mesurée par MesureEntete ; avant la mesure,
+   celle de l'ordinateur. La barre latérale figée se colle juste dessous. */
+:root {
+  --entete-app: 89px;
+}
+
 /* Barre latérale repliable (grand écran ; bouton de l'en-tête, lib/menu-lateral.ts). Ouverte : 337 px. Réduite : la
    colonne d'icônes (84 px), qui ne se déplie ni au survol ni au clavier (demande du 31 octobre 2026) : on la rouvre avec
    son bouton. */

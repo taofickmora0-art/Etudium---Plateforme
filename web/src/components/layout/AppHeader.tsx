@@ -8,6 +8,7 @@ import { LIENS_ENTETE_TELEPHONE } from "@/lib/navigation";
 import { BoutonAjouterFormation } from "./BoutonAjouterFormation";
 import { BoutonMenuLateral } from "./BoutonMenuLateral";
 import { MenuTiroir } from "./MenuTiroir";
+import { MesureEntete } from "./MesureEntete";
 import { HeaderActions } from "./HeaderActions";
 
 /**
@@ -19,7 +20,12 @@ import { HeaderActions } from "./HeaderActions";
 export function AppHeader({ account, espace }: { account?: ReactNode; espace?: Espace }) {
   const formateur = espace === "formateur";
   return (
-    <header className="relative z-30 flex flex-none items-center justify-between gap-2 px-4 py-3 max-sm:gap-1.5 max-sm:px-3 max-sm:py-2.5 max-lg:sticky max-lg:top-0 max-lg:bg-page lg:flex-wrap lg:gap-3 lg:py-5 lg:pr-6 lg:pl-0">
+    // Collé en haut quand la page défile, sur téléphone comme sur ordinateur (demande du 31 octobre 2026).
+    <header
+      data-entete-app=""
+      className="sticky top-0 z-30 flex flex-none items-center justify-between gap-2 bg-page px-4 py-3 max-sm:gap-1.5 max-sm:px-3 max-sm:py-2.5 lg:flex-wrap lg:gap-3 lg:py-5 lg:pr-6 lg:pl-0"
+    >
+      <MesureEntete />
       <div className="flex min-w-0 flex-wrap items-center gap-2 lg:gap-3">
         {/* Grand écran : réduire la barre latérale à ses icônes, ou la rouvrir. */}
         <BoutonMenuLateral className="hidden lg:inline-flex" />

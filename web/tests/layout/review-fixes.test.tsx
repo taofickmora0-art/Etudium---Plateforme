@@ -16,7 +16,9 @@ describe("Corrections de la relecture de la coque", () => {
   it("sur téléphone, c'est la page qui défile : en-tête et barre du bas restent collés", () => {
     render(<AppShell>Contenu</AppShell>);
     expect(screen.getByRole("main")).not.toHaveClass("overflow-y-auto");
-    expect(screen.getByRole("banner")).toHaveClass("max-lg:sticky", "max-lg:top-0");
+    // L'en-tête reste collé en haut, sur téléphone comme sur ordinateur (demande du 31 octobre 2026).
+    expect(screen.getByRole("banner")).toHaveClass("sticky", "top-0", "bg-page");
+    expect(screen.getByRole("banner")).toHaveAttribute("data-entete-app");
     expect(screen.getByRole("navigation", { name: "Navigation" }).parentElement).toHaveClass("sticky", "bottom-0");
   });
 

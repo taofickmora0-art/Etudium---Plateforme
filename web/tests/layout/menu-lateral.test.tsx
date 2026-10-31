@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppShell } from "@/components/layout/AppShell";
@@ -58,9 +58,35 @@ describe("La barre latérale repliable", () => {
     // Demande du 15 octobre 2026 : « figer » la barre latérale, dans l'espace étudiant, formateur et back-office.
     const { container } = render(<AppShell espace="etudiant">Contenu</AppShell>);
     const barre = container.querySelector(".menu-lateral");
-    expect(barre).toHaveClass("sticky", "top-0", "max-h-dvh", "overflow-y-auto");
+    // Sous l'en-tête, lui aussi figé (31 octobre) : à sa hauteur, mesurée dans le navigateur (--entete-app).
+    expect(barre).toHaveClass("sticky", "top-[var(--entete-app)]", "max-h-[calc(100dvh-var(--entete-app))]", "overflow-y-auto");
     // Sur un écran bas (portable en 1366 × 768), une barre de défilement fine et discrète, pas celle, épaisse, de Windows.
     expect(barre?.className).toContain("[scrollbar-width:thin]");
+  });
+
+  it("la hauteur de l'en-tête est mesurée et posée sur la page (--entete-app), pour la barre figée dessous", async () => {
+    const { MesureEntete } = await import("@/components/layout/MesureEntete");
+    const observe = vi.fn();
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(private rappel: () => void) {}
+        observe(el: Element) {
+          observe(el);
+          this.rappel();
+        }
+        disconnect() {}
+      },
+    );
+    const entete = document.createElement("header");
+    entete.setAttribute("data-entete-app", "");
+    vi.spyOn(entete, "getBoundingClientRect").mockReturnValue({ height: 89 } as DOMRect);
+    document.body.appendChild(entete);
+    render(<MesureEntete />);
+    await waitFor(() => expect(document.documentElement.style.getPropertyValue("--entete-app")).toBe("89px"));
+    expect(observe).toHaveBeenCalledWith(entete);
+    entete.remove();
+    vi.unstubAllGlobals();
   });
 
   it("au chargement, le choix mémorisé s'applique avant l'affichage ; sans stockage lisible, rien ne casse", () => {
