@@ -198,7 +198,7 @@ describe("Le formulaire", () => {
   it("modification : les champs repris (heure du Bénin) ; Enregistrer appelle modifierSession", async () => {
     const user = userEvent.setup({ delay: null });
     render(<FormulaireSession espace="formateur" parcours={PARCOURS} initial={DETAIL} />);
-    expect(screen.getByLabelText("Date")).toHaveValue("2026-10-24");
+    expect(screen.getByLabelText("Date")).toHaveValue("24/10/2026");
     expect(screen.getByLabelText("Heure")).toHaveValue("15:00");
     expect(screen.getByLabelText("Durée")).toHaveValue("90");
     expect(screen.getByLabelText("Parcours")).toHaveValue(P);

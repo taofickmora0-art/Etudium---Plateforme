@@ -244,7 +244,7 @@ describe("Une publication programmée", () => {
     await user.click(screen.getByRole("button", { name: /Actions sur la publication/ }));
     await user.click(screen.getByRole("menuitem", { name: "Modifier la date" }));
     const fenetre = screen.getByRole("dialog", { name: "Modifier la date" });
-    expect(within(fenetre).getByLabelText("Date")).toHaveValue("2026-10-16");
+    expect(within(fenetre).getByLabelText("Date")).toHaveValue("16/10/2026");
     expect(within(fenetre).getByLabelText("Heure")).toHaveValue("15:00");
     // Une date lointaine reste dans les 3 mois qui suivent le vrai « maintenant » du test.
     const jour = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Porto-Novo" }).format(new Date(Date.now() + 5 * 86_400_000));

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Cancel01Icon, Image01Icon, Video01Icon } from "@hugeicons/core-free-icons";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
+import { ChampDate } from "@/components/ui/ChampDate";
+import { ChampHeure } from "@/components/ui/ChampHeure";
 import { Field } from "@/components/ui/Field";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
@@ -29,6 +31,7 @@ import {
   TITRE_MAX,
 } from "@/lib/sessions/regles";
 import type { DonneesSession, PieceSession, SessionDetail } from "@/lib/sessions/types";
+import { aujourdhui } from "@/lib/dates/saisie";
 import { createClient } from "@/lib/supabase/client";
 import { ApercuSessionCommunaute } from "./ApercuSessionCommunaute";
 import { baseSessions } from "./cadre";
@@ -200,10 +203,10 @@ export function FormulaireSession({ espace, parcours, formateurs, initial, moi =
         </Field>
         <div className="flex flex-wrap gap-4">
           <Field label="Date" htmlFor={`${id}-date`} className="min-w-0 flex-[1_1_180px]">
-            <TextInput id={`${id}-date`} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <ChampDate id={`${id}-date`} value={date} onChange={setDate} min={aujourdhui()} />
           </Field>
           <Field label="Heure" htmlFor={`${id}-heure`} hint="Heure du Bénin." className="min-w-0 flex-[1_1_140px]">
-            <TextInput id={`${id}-heure`} type="time" value={heure} onChange={(e) => setHeure(e.target.value)} />
+            <ChampHeure id={`${id}-heure`} value={heure} onChange={setHeure} />
           </Field>
           <Field label="Durée" htmlFor={`${id}-duree`} className="min-w-0 flex-[1_1_140px]">
             <Select id={`${id}-duree`} value={duree} onChange={(e) => setDuree(e.target.value)} options={DUREES.map((m) => ({ value: String(m), label: dureeLisible(m) }))} />

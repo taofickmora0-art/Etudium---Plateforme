@@ -5,7 +5,9 @@ import { CalendarClockIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Field } from "@/components/ui/Field";
-import { TextInput } from "@/components/ui/TextInput";
+import { ChampDate } from "@/components/ui/ChampDate";
+import { ChampHeure } from "@/components/ui/ChampHeure";
+import { aujourdhui } from "@/lib/dates/saisie";
 import { refusProgrammation } from "@/lib/communaute/sondage";
 import { champsDepuis, debutDepuis } from "@/lib/sessions/regles";
 
@@ -86,10 +88,10 @@ export function FenetreProgrammation({
     >
       <div className="flex flex-wrap gap-3">
         <Field label="Date" htmlFor={`${id}-date`} className="min-w-0 flex-[1_1_160px]">
-          <TextInput id={`${id}-date`} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <ChampDate id={`${id}-date`} value={date} onChange={setDate} min={aujourdhui()} />
         </Field>
         <Field label="Heure" htmlFor={`${id}-heure`} className="min-w-0 flex-[1_1_120px]">
-          <TextInput id={`${id}-heure`} type="time" value={heure} onChange={(e) => setHeure(e.target.value)} />
+          <ChampHeure id={`${id}-heure`} value={heure} onChange={setHeure} />
         </Field>
       </div>
       {erreur && (
