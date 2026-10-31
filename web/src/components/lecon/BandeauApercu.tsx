@@ -13,12 +13,12 @@ export type Apercu = "formation" | "lecon" | "formateur";
  */
 export function BandeauApercu({ apercu }: { apercu: Apercu }) {
   return (
-    <div role="status" aria-label={apercu === "formateur" ? "Aperçu de votre leçon" : "Aperçu : pas encore visible des étudiants"} className="flex items-start gap-3 rounded-carte border border-attention-texte/30 bg-attention-fond px-4 py-3 text-attention-texte">
-      <Icon icon={ViewIcon} size={20} className="mt-0.5 flex-none" />
+    <div role="status" aria-label={apercu === "formateur" ? "Aperçu de votre leçon" : "Aperçu : pas encore visible des étudiants"} className="flex items-start gap-3 rounded-carte border border-attention-texte/30 bg-attention-fond px-4 py-3 text-attention-texte max-sm:gap-2.5 max-sm:px-3 max-sm:py-2.5">
+      <Icon icon={ViewIcon} size={20} className="mt-0.5 flex-none max-sm:size-[18px]" />
       {apercu === "formateur" ? (
-        <span className="min-w-0 text-sm leading-5">Aperçu de votre leçon, telle que la voit un étudiant : votre progression n’est pas enregistrée.</span>
+        <span className="min-w-0 text-sm leading-5 max-sm:text-[13px]">Aperçu de votre leçon, telle que la voit un étudiant : votre progression n’est pas enregistrée.</span>
       ) : (
-      <span className="flex min-w-0 flex-col text-sm leading-5">
+      <span className="flex min-w-0 flex-col text-sm leading-5 max-sm:text-[13px]">
         <span className="font-semibold">Aperçu : pas encore visible des étudiants</span>
         <span>{apercu === "formation" ? "Cette formation n’est pas encore publiée." : "Cette leçon est en brouillon."}</span>
         <span>Votre progression n’y est pas enregistrée.</span>

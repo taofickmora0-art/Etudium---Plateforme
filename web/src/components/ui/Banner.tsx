@@ -27,12 +27,13 @@ export function Banner({ tone, title, children, action, className }: BannerProps
   return (
     <div
       role={tone === "erreur" ? "alert" : "status"}
-      className={cn("flex flex-wrap items-center gap-3 rounded-carte px-4 py-3.5", t.box, className)}
+      // Plus compacte sur téléphone (comme le reste de l'appli).
+      className={cn("flex flex-wrap items-center gap-3 rounded-carte px-4 py-3.5 max-sm:gap-2.5 max-sm:px-3 max-sm:py-2.5", t.box, className)}
     >
       <span className={cn("flex-none", t.icon)}>
-        <Icon icon={t.glyph} size={22} />
+        <Icon icon={t.glyph} size={22} className="max-sm:size-5" />
       </span>
-      <span className="min-w-0 flex-[1_1_240px] text-sm leading-[22px] text-encre">
+      <span className="min-w-0 flex-[1_1_240px] text-sm leading-[22px] text-encre max-sm:text-[13px] max-sm:leading-5">
         {title && <strong className="font-semibold">{title}</strong>}
         {title && children && " "}
         {children}

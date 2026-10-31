@@ -11,25 +11,12 @@ type Props = { ressources: ReactNode; notes: ReactNode };
  * L'onglet Questions arrive au lot 5 (spec Q9).
  */
 export function OngletsLecon({ ressources, notes }: Props) {
+  // Sans notes (aperçu du formateur ou de l'équipe, tâche 12) : l'onglet Ressources seul.
+  const items = [{ value: "ressources", label: "Ressources", content: ressources }, ...(notes ? [{ value: "notes", label: "Notes", content: notes }] : [])];
   return (
     <>
-      <SegmentedTabs
-        label="Contenu de la leçon"
-        className="hidden gap-5 lg:flex"
-        items={[
-          { value: "ressources", label: "Ressources", content: ressources },
-          { value: "notes", label: "Notes", content: notes },
-        ]}
-      />
-      <SegmentedTabs
-        label="Contenu de la leçon"
-        pleineLargeur
-        className="gap-5 lg:hidden"
-        items={[
-          { value: "ressources", label: "Ressources", content: ressources },
-          { value: "notes", label: "Notes", content: notes },
-        ]}
-      />
+      <SegmentedTabs label="Contenu de la leçon" className="hidden gap-5 lg:flex" items={items} />
+      <SegmentedTabs label="Contenu de la leçon" pleineLargeur className="gap-5 lg:hidden" items={items} />
     </>
   );
 }

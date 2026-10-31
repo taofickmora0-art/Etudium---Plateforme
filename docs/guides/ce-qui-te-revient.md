@@ -936,3 +936,20 @@ Depuis la restructuration du 20 octobre, un formateur ne voit plus que son espac
 5. **« Voir le replay » :**
    - sur la page Événements, onglet « Passées », un live terminé a le bouton « Voir le replay », qui ouvre l'onglet Replays de l'Accueil ;
    - dans la communauté, la publication d'une session terminée affiche « Terminée » et « Voir le replay ».
+
+## 52. Les aperçus de leçon revus (liste du 31 octobre, tâche 12), 10 minutes
+
+Pas de migration. Recharge l'appli, puis :
+
+1. **En aperçu, avec un compte formateur (ses leçons) ou de l'équipe (une leçon en brouillon, une formation non publiée) :**
+   - un quiz se parcourt question par question, mais rien n'est envoyé ni noté : la dernière question ramène à l'accueil du quiz ;
+   - un exercice n'a plus de bouton d'envoi : une phrase dit ce que fera l'étudiant ; aucun travail n'arrive plus chez le formateur ;
+   - plus d'onglet « Notes » (les ressources restent), plus de progression (« 0 % terminé », « Validation et certificat ») ;
+   - en haut du programme, « Retour à l'édition » ramène à l'onglet Programme de l'éditeur ; sur téléphone, la flèche de retour aussi ;
+   - pour le formateur, le logo de l'en-tête ramène à son tableau de bord ;
+   - sur téléphone, le tiroir « Leçons » montre l'étiquette « Brouillon ».
+2. **Avec un compte étudiant sans accès à une formation payante :**
+   - dans le programme de la leçon, les leçons d'aperçu portent l'étiquette « Aperçu », au milieu des cadenas ;
+   - sur une leçon d'aperçu, un bandeau dit « Vous regardez un aperçu gratuit », avec « Voir les formules ».
+3. **« Leçon suivante » (visiteur ou compte sans accès) :** elle mène à la prochaine leçon ouverte, jamais à un cadenas ; après le dernier aperçu, elle disparaît. Sur une leçon fermée, « Voir l'aperçu gratuit » propose l'aperçu suivant.
+4. **Sur téléphone,** les bandeaux (aperçu, informations) sont plus compacts.

@@ -10,6 +10,8 @@ import { ArriveeLecon } from "./ArriveeLecon";
 
 type Props = {
   connecte: boolean;
+  /** Un formateur (en aperçu de ses leçons) : l'en-tête de son espace (logo vers son tableau de bord, sans recherche). */
+  espace?: "formateur";
   titreFormation: string;
   /** Bouton « Retour » du téléphone : Mes formations (compte connecté) ou la fiche (visiteur). */
   retour: string;
@@ -32,7 +34,7 @@ type Props = {
  * - Téléphone (NdMobLecon §1.2) : en-tête « détail » (retour, titre de la formation, « Leçons »), sans barre du bas ; le panneau
  *   blanc descend jusqu'en bas, avec la barre d'action collée en bas de l'écran.
  */
-export function CadreLecon({ connecte, titreFormation, retour, programme, haut, barre, tiroir, children }: Props) {
+export function CadreLecon({ connecte, espace, titreFormation, retour, programme, haut, barre, tiroir, children }: Props) {
   const cadre = (
     <div className="flex min-h-dvh flex-col bg-page lg:h-dvh lg:px-5 lg:pb-5">
       <a
@@ -44,6 +46,7 @@ export function CadreLecon({ connecte, titreFormation, retour, programme, haut, 
       <div className="hidden lg:block">
         {connecte ? (
           <AppHeader
+            espace={espace}
             account={
               <Suspense fallback={null}>
                 <CompteDeLEntete />

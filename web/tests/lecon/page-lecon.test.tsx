@@ -172,7 +172,7 @@ describe("Page leçon : programme", () => {
     expect(screen.getByRole("link", { name: "Leçon suivante" })).toHaveAttribute("href", `${ADRESSE}/${id(2)}`);
     rerender(
       <ToastProvider>
-        <BarreLecon fiche={EXCEL} leconId={id(12)} />
+        <BarreLecon fiche={EXCEL_OUVERTE} leconId={id(12)} />
       </ToastProvider>,
     );
     expect(screen.getByRole("link", { name: "Leçon précédente" })).toHaveAttribute("href", `${ADRESSE}/${id(11)}`);

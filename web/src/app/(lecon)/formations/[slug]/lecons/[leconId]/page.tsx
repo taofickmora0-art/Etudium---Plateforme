@@ -85,6 +85,10 @@ async function Lecon({ params }: Params) {
   // (restructuration R1 : il n'est plus étudiant).
   const formateur = apercuFormateur(compte, lienModifier);
   const apercu: Apercu | null = apercuFormation ? "formation" : enBrouillon ? "lecon" : formateur ? "formateur" : null;
+  // En aperçu, le retour mène à l'onglet Programme de l'éditeur de la formation, pour l'équipe comme pour le formateur, et
+  // la progression ne s'affiche pas : rien n'y est enregistré (tâche 12 du 31 octobre 2026).
+  const retourEdition = apercu && lienModifier ? lienModifier.replace(/\/lecons\/[^/?]+$/, "?onglet=programme") : null;
+  const progression = connecte && !apercu;
   const terminees = lignes ? etatFormation(donnees.fiche, lignes).terminees : new Set<string>();
   const { precedente, suivante } = voisines(donnees.fiche.modules, leconId);
   // Bouton de fin : compte connecté, leçon ouverte, progression disponible en base (0007, 0008), et pas en aperçu.
@@ -95,9 +99,21 @@ async function Lecon({ params }: Params) {
     <EtatLeconProvider key={leconId} termineeInitiale={terminees.has(leconId)} avecVideo={videoMesuree(lecon)} seuil={donnees.fiche.seuilVideo} actif={actif}>
       <CadreLecon
         connecte={connecte}
+        espace={formateur ? "formateur" : undefined}
         titreFormation={donnees.fiche.titre}
-        retour={formateur ? "/formateur/formations" : connecte ? "/mes-formations" : `/formations/${donnees.fiche.slug}`}
-        programme={<ProgrammeLecon fiche={donnees.fiche} leconId={leconId} connecte={connecte} terminees={terminees} scores={scores} statuts={statuts} />}
+        retour={retourEdition ?? (connecte ? "/mes-formations" : `/formations/${donnees.fiche.slug}`)}
+        programme={
+          <ProgrammeLecon
+            fiche={donnees.fiche}
+            leconId={leconId}
+            connecte={connecte}
+            terminees={terminees}
+            scores={scores}
+            statuts={statuts}
+            retour={retourEdition ? { href: retourEdition, libelle: "Retour à l’édition" } : undefined}
+            progression={progression}
+          />
+        }
         haut={
           <BarreHautLecon
             titreFormation={donnees.fiche.titre}
@@ -108,8 +124,8 @@ async function Lecon({ params }: Params) {
         }
         barre={precedente || suivante || actif ? <BarreLecon fiche={donnees.fiche} leconId={leconId} /> : undefined}
         tiroir={
-          <TiroirLecons pied={connecte ? <ProgressionCours fiche={donnees.fiche} terminees={terminees} /> : undefined}>
-            <ProgrammeMobile fiche={donnees.fiche} leconId={leconId} connecte={connecte} terminees={terminees} scores={scores} statuts={statuts} />
+          <TiroirLecons pied={progression ? <ProgressionCours fiche={donnees.fiche} terminees={terminees} /> : undefined}>
+            <ProgrammeMobile fiche={donnees.fiche} leconId={leconId} connecte={connecte} terminees={terminees} scores={scores} statuts={statuts} progression={progression} />
           </TiroirLecons>
         }
       >

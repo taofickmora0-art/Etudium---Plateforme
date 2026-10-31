@@ -11,7 +11,7 @@ import { verrou } from "@/lib/lecon/regles";
  * Rien du contenu de la leçon n'est envoyé.
  */
 export function LeconVerrouillee({ fiche, leconId, connecte }: { fiche: FicheFormation; leconId: string; connecte: boolean }) {
-  const v = verrou(fiche, connecte);
+  const v = verrou(fiche, connecte, leconId);
   const suite = encodeURIComponent(adresseLecon(fiche.slug, leconId));
   return (
     <EmptyState

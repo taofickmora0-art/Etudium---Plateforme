@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
 import { QuizLecon } from "@/components/quiz/QuizLecon";
 import { ExerciceLecon } from "@/components/exercices/ExerciceLecon";
-import { videoMesuree, voisines } from "@/lib/lecon/regles";
+import { formationPartielle, videoMesuree, voisines } from "@/lib/lecon/regles";
 import type { DonneesLecon } from "@/lib/lecon/types";
 import { DansCetteLecon } from "./DansCetteLecon";
 import { EnTeteLecon } from "./EnTeteLecon";
@@ -56,6 +56,20 @@ export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lie
     <div className="flex min-w-0 flex-col gap-6">
       {apercu && <BandeauApercu apercu={apercu} />}
       {ouverte && connecte && !apercu && <VisiteLecon leconId={lecon.id} />}
+      {ouverte && connecte && !apercu && lecon.apercu && formationPartielle(fiche) && (
+        // Un compte sans accès à la formation sur une leçon d'aperçu (tâche 12) : il le sait, et sait comment tout ouvrir.
+        <Banner
+          tone="information"
+          title="Vous regardez un aperçu gratuit"
+          action={
+            <Button asChild size="sm">
+              <Link href="/abonnement">Voir les formules</Link>
+            </Button>
+          }
+        >
+          Les autres leçons de cette formation s’ouvrent avec une formule.
+        </Banner>
+      )}
       {ouverte && !connecte && (
         // Spec Q1 : le visiteur regarde l'aperçu ; on l'invite à créer son compte pour garder sa progression.
         <Banner
@@ -105,7 +119,8 @@ export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lie
             <NoteProvider key={lecon.id} noteInitiale={note}>
               <OngletsLecon
                 ressources={<RessourcesLecon ressources={lecon.ressources} />}
-                notes={<NotesLecon leconId={lecon.id} noteInitiale={note} connecte={connecte} disponible={notesDisponibles} />}
+                // En aperçu, pas de notes : celles du formateur ou de l'équipe ne se retrouveraient nulle part (tâche 12).
+                notes={apercu ? null : <NotesLecon leconId={lecon.id} noteInitiale={note} connecte={connecte} disponible={notesDisponibles} />}
               />
             </NoteProvider>
           </div>
@@ -138,6 +153,7 @@ function ContenuQuiz({ donnees, connecte, apercu = null, moi = null, lienModifie
         key={lecon.id}
         leconId={lecon.id}
         quiz={donnees.quiz}
+        apercu={apercu !== null}
         precedente={precedente ? adresseLecon(fiche.slug, precedente.id) : undefined}
         suivante={suivante ? adresseLecon(fiche.slug, suivante.id) : undefined}
       />
@@ -186,6 +202,18 @@ function ContenuExercice({ donnees, connecte, apercu = null, moi = null, lienMod
     travail = <LeconVerrouillee fiche={fiche} leconId={lecon.id} connecte={connecte} />;
   } else if (!connecte) {
     travail = <InviterConnexion fiche={fiche} leconId={lecon.id} titre="Connectez-vous pour faire cet exercice." />;
+  } else if (apercu) {
+    // En aperçu, rien ne s'envoie : un travail rendu par l'équipe arriverait chez le formateur à corriger (tâche 12).
+    travail = (
+      <Banner
+        tone="information"
+        title={
+          donnees.exercice?.genre === "simple"
+            ? "Aperçu : ici, l’étudiant marque l’exercice comme terminé. Rien n’est enregistré depuis l’aperçu."
+            : "Aperçu : ici, l’étudiant dépose son travail et suit sa correction. Rien n’est envoyé depuis l’aperçu."
+        }
+      />
+    );
   } else if (donnees.exercice) {
     travail = <ExerciceLecon key={lecon.id} leconId={lecon.id} exercice={donnees.exercice} />;
   } else {

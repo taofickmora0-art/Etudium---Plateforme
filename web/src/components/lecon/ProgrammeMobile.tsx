@@ -8,7 +8,7 @@ import { estLeconDeContenu, libelleExercice, libelleQuiz } from "@/lib/catalogue
 import type { StatutRendu } from "@/lib/exercices/types";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
-import { etatLigne, type EtatLigne } from "@/lib/lecon/regles";
+import { etatLigne, type EtatLigne, formationPartielle } from "@/lib/lecon/regles";
 
 type Props = {
   fiche: FicheFormation;
@@ -19,6 +19,8 @@ type Props = {
   scores?: Readonly<Record<string, number>>;
   /** Le dernier statut du compte à chaque exercice (lot 3). */
   statuts?: Readonly<Record<string, StatutRendu>>;
+  /** Les compteurs « 1/4 » des modules ; par défaut pour un compte connecté. Jamais en aperçu (tâche 12). */
+  progression?: boolean;
 };
 
 const TUILES: Record<EtatLigne, { classe: string; icone: IconSvgElement }> = {
@@ -33,7 +35,8 @@ const LIGNE = "flex min-h-12 items-center gap-3.5 px-1 py-3.5";
 /**
  * Onglet « Programme » du téléphone (NdMobLecon §3.5). Tous les modules : rien ne se verrouille (spec du lot 3, choix 2).
  */
-export function ProgrammeMobile({ fiche, leconId, connecte, terminees, scores = {}, statuts = {} }: Props) {
+export function ProgrammeMobile({ fiche, leconId, connecte, terminees, scores = {}, statuts = {}, progression = connecte }: Props) {
+  const partielle = formationPartielle(fiche);
   return (
     <div className="flex min-w-0 flex-col">
       {fiche.modules.map((module, index) => (
@@ -41,7 +44,7 @@ export function ProgrammeMobile({ fiche, leconId, connecte, terminees, scores = 
           {index > 0 && <div aria-hidden="true" className="mt-1.5 mb-2.5 h-px bg-bordure-carte" />}
           <div className="flex items-center justify-between gap-3 px-1 pt-1.5 pb-0.5">
             <h3 className="m-0 text-base leading-6 font-semibold text-encre">{`Module ${index + 1} : ${module.titre}`}</h3>
-            {connecte && (
+            {progression && (
               <span className="text-xs leading-[18px] whitespace-nowrap text-discret">
                 {`${module.lecons.filter((l) => estLeconDeContenu(l) && terminees.has(l.id)).length}/${module.lecons.filter(estLeconDeContenu).length}`}
               </span>
@@ -62,10 +65,13 @@ export function ProgrammeMobile({ fiche, leconId, connecte, terminees, scores = 
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className={cn("text-[15px] leading-[22px] font-medium", etat === "verrouillee" ? "text-discret" : "text-encre")}>{lecon.titre}</span>
-                    {(duree || etat === "courante") && (
+                    {(duree || etat === "courante" || lecon.publiee === false || (partielle && lecon.apercu)) && (
                       <span className="inline-flex flex-wrap items-center gap-2 text-[13px] leading-5 text-discret">
                         {duree && <span>{etat === "terminee" ? `${duree} · terminée` : duree}</span>}
                         {etat === "courante" && <Tag tone="nouveau">En cours</Tag>}
+                        {/* Comme sur ordinateur : une leçon en brouillon (équipe, formateur), une leçon d'aperçu (tâche 12). */}
+                        {lecon.publiee === false && <Tag tone="enAttente">Brouillon</Tag>}
+                        {partielle && lecon.apercu && lecon.accessible && etat !== "courante" && <Tag tone="nouveau">Aperçu</Tag>}
                       </span>
                     )}
                   </span>

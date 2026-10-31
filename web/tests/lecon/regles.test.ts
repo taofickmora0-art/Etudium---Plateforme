@@ -1,15 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { dureeLecon, etatLigne, metaRessource, situation, tempsRestant, urlIntegration, verrou, voisines } from "@/lib/lecon/regles";
-import { EXCEL, id, ZOTERO } from "./donnees";
+import { EXCEL, EXCEL_OUVERTE, id, ZOTERO } from "./donnees";
 
 const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 describe("Règles de la page leçon", () => {
-  it("les leçons voisines suivent le programme, d'un module à l'autre", () => {
-    expect(voisines(EXCEL.modules, id(1))).toMatchObject({ precedente: null, suivante: { id: id(2) } });
-    expect(voisines(EXCEL.modules, id(4))).toMatchObject({ precedente: { id: id(3) }, suivante: { id: id(5) } });
-    expect(voisines(EXCEL.modules, id(12))).toMatchObject({ precedente: { id: id(11) }, suivante: null });
-    expect(voisines(EXCEL.modules, id(99))).toEqual({ precedente: null, suivante: null });
+  it("les leçons voisines suivent le programme, d'un module à l'autre (toutes ouvertes)", () => {
+    expect(voisines(EXCEL_OUVERTE.modules, id(1))).toMatchObject({ precedente: null, suivante: { id: id(2) } });
+    expect(voisines(EXCEL_OUVERTE.modules, id(4))).toMatchObject({ precedente: { id: id(3) }, suivante: { id: id(5) } });
+    expect(voisines(EXCEL_OUVERTE.modules, id(12))).toMatchObject({ precedente: { id: id(11) }, suivante: null });
+    expect(voisines(EXCEL_OUVERTE.modules, id(99))).toEqual({ precedente: null, suivante: null });
+    // Les leçons fermées sont sautées (tâche 12) : depuis la 4e, fermée, la précédente ouverte est le 2e aperçu.
+    expect(voisines(EXCEL.modules, id(4))).toMatchObject({ precedente: { id: id(2) }, suivante: null });
   });
 
   it("la leçon se situe dans son module : « Leçon 2 sur 4 »", () => {

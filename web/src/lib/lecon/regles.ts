@@ -25,7 +25,15 @@ export function voisines(modules: ModuleFiche[], leconId: string): { precedente:
   const lecons = modules.flatMap((m) => m.lecons);
   const i = lecons.findIndex((l) => l.id === leconId);
   if (i < 0) return { precedente: null, suivante: null };
-  return { precedente: lecons[i - 1] ?? null, suivante: lecons[i + 1] ?? null };
+  // Les leçons fermées au compte sont sautées : « Leçon suivante » ne mène jamais à un cadenas (tâche 12).
+  const precedente = lecons.slice(0, i).findLast((l) => l.accessible) ?? null;
+  const suivante = lecons.slice(i + 1).find((l) => l.accessible) ?? null;
+  return { precedente, suivante };
+}
+
+/** Une partie seulement des leçons est ouverte au compte (les leçons d'aperçu, au milieu des cadenas). */
+export function formationPartielle(fiche: Pick<FicheFormation, "modules">): boolean {
+  return fiche.modules.some((m) => m.lecons.some((l) => !l.accessible));
 }
 
 /** « Leçon 4 sur 22 » : le rang de la leçon dans toute la formation (refonte des formations, spec §1.3). */
@@ -104,6 +112,8 @@ export function metaRessource(r: RessourceLecon): string {
 export function verrou(
   fiche: Pick<FicheFormation, "gratuite" | "modules">,
   connecte: boolean,
+  /** La leçon fermée : l'aperçu proposé est le prochain après elle (sinon le premier). */
+  leconId?: string,
 ): { titre: string; texte: string; inscription: boolean; connexion: boolean; formules: boolean; apercu: LeconFiche | null } {
   if (fiche.gratuite && !connecte) {
     return {
@@ -121,6 +131,14 @@ export function verrou(
     inscription: !connecte,
     connexion: false,
     formules: connecte,
-    apercu: leconsApercu(fiche)[0] ?? null,
+    apercu: apercuSuivant(fiche, leconId),
   };
+}
+
+/** Le prochain aperçu après la leçon donnée, sinon le premier de la formation. */
+function apercuSuivant(fiche: Pick<FicheFormation, "modules">, leconId?: string): LeconFiche | null {
+  const apercus = leconsApercu(fiche);
+  const ordre = fiche.modules.flatMap((m) => m.lecons).map((l) => l.id);
+  const rang = leconId ? ordre.indexOf(leconId) : -1;
+  return apercus.find((a) => ordre.indexOf(a.id) > rang) ?? apercus[0] ?? null;
 }

@@ -53,6 +53,24 @@ beforeEach(() => {
   refresh.mockReset();
 });
 
+describe("Un quiz en aperçu (formateur, équipe ; tâche 12 du 31 octobre 2026)", () => {
+  it("il se parcourt question par question, mais rien n'est envoyé ni noté", async () => {
+    const user = userEvent.setup();
+    const un: QuizAPasser = { ...QUIZ, questions: [QUIZ.questions[0]] };
+    render(
+      <ToastProvider>
+        <QuizLecon leconId="l9" quiz={un} apercu />
+      </ToastProvider>,
+    );
+    expect(screen.getByText("Aperçu : parcourez les questions comme un étudiant ; vos réponses ne sont ni envoyées ni notées.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Commencer" }));
+    await user.click(reponse("Zotero"));
+    await user.click(screen.getByRole("button", { name: "Valider" }));
+    expect(envoyerQuiz).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Commencer" })).toBeInTheDocument();
+  });
+});
+
 describe("Passer un quiz", () => {
   it("l'accueil : nombre de questions, meilleur score, score minimal ; « Commencer », puis « Recommencer »", () => {
     const { unmount } = afficher();

@@ -11,7 +11,7 @@ import type { StatutRendu } from "@/lib/exercices/types";
 import type { FicheFormation, LeconFiche } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
 import { urlCouverture } from "@/lib/couvertures/adresse";
-import { etatLigne, tempsRestant, type EtatLigne } from "@/lib/lecon/regles";
+import { etatLigne, formationPartielle, tempsRestant, type EtatLigne } from "@/lib/lecon/regles";
 import { ModulesRepliables } from "./ModulesRepliables";
 
 type Props = {
@@ -23,6 +23,10 @@ type Props = {
   scores?: Readonly<Record<string, number>>;
   /** Le dernier statut du compte à chaque exercice (lot 3). */
   statuts?: Readonly<Record<string, StatutRendu>>;
+  /** Le lien du haut ; par défaut « Mes formations » (connecté) ou « Toutes les formations ». En aperçu : l'éditeur. */
+  retour?: { href: string; libelle: string };
+  /** La progression en bas ; par défaut pour un compte connecté. Jamais en aperçu : rien n'y est enregistré. */
+  progression?: boolean;
 };
 
 // Ligne du panneau : le style des entrées de la barre latérale (48 px, rayon 14, icône 20, texte 16).
@@ -30,7 +34,21 @@ const LIGNE = "focus-etudium flex h-12 items-center gap-2.5 rounded-bouton px-3 
 
 const ICONES = { courante: PlayCircleIcon, "a-venir": PlayCircleIcon, terminee: CheckmarkCircle02Icon, verrouillee: SquareLock02Icon };
 
-function Ligne({ fiche, lecon, etat, meilleur, statut }: { fiche: FicheFormation; lecon: LeconFiche; etat: EtatLigne; meilleur?: number; statut?: StatutRendu }) {
+function Ligne({
+  fiche,
+  lecon,
+  etat,
+  meilleur,
+  statut,
+  signalerApercu = false,
+}: {
+  fiche: FicheFormation;
+  lecon: LeconFiche;
+  etat: EtatLigne;
+  meilleur?: number;
+  statut?: StatutRendu;
+  signalerApercu?: boolean;
+}) {
   const quiz = lecon.type === "quiz";
   const exercice = lecon.type === "exercice";
   const duree = quiz ? libelleQuiz(meilleur) : exercice ? libelleExercice(statut) : formatDuree(lecon.dureeSecondes);
@@ -45,6 +63,7 @@ function Ligne({ fiche, lecon, etat, meilleur, statut }: { fiche: FicheFormation
       <span className="ml-auto flex flex-none items-center gap-2">
         {/* Une leçon en brouillon : seuls l'équipe et le formateur la voient (0027). */}
         {lecon.publiee === false && <Tag tone="enAttente">Brouillon</Tag>}
+        {signalerApercu && <Tag tone="nouveau">Aperçu</Tag>}
         {duree && <span className="text-[13px] leading-5 font-normal text-ardoise tabular-nums">{duree}</span>}
       </span>
     </>
@@ -108,14 +127,16 @@ export function ProgressionCours({ fiche, terminees }: { fiche: FicheFormation; 
  * formation, puis les modules, repliables (celui de la leçon en cours ouvert), avec la durée de chaque leçon. Il défile
  * seul ; la progression (compte connecté) reste en bas (refonte des formations, spec §1.4).
  */
-export function ProgrammeLecon({ fiche, leconId, connecte, terminees, scores = {}, statuts = {} }: Props) {
+export function ProgrammeLecon({ fiche, leconId, connecte, terminees, scores = {}, statuts = {}, retour, progression = connecte }: Props) {
   const enCours = fiche.modules.find((m) => m.lecons.some((l) => l.id === leconId)) ?? fiche.modules[0];
+  const haut = retour ?? (connecte ? { href: "/mes-formations", libelle: "Mes formations" } : { href: "/formations", libelle: "Toutes les formations" });
+  const partielle = formationPartielle(fiche);
   return (
     <>
       <div className="-m-1 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-1">
-        <Link href={connecte ? "/mes-formations" : "/formations"} className={cn(LIGNE, "flex-none text-texte hover:bg-white/55")}>
+        <Link href={haut.href} className={cn(LIGNE, "flex-none text-texte hover:bg-white/55")}>
           <Icon icon={ArrowLeft02Icon} size={20} />
-          <span>{connecte ? "Mes formations" : "Toutes les formations"}</span>
+          <span>{haut.libelle}</span>
         </Link>
         <div className="flex flex-none flex-col px-3 pt-1.5 pb-1">
           <Couverture src={urlCouverture(fiche.couverture)} parcours={parcoursPrincipal(fiche)} sizes="280px" className="mb-3 rounded-[12px]" />
@@ -132,7 +153,14 @@ export function ProgrammeLecon({ fiche, leconId, connecte, terminees, scores = {
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
                 {module.lecons.map((lecon) => (
                   <li key={lecon.id} className="flex min-w-0 flex-col">
-                    <Ligne fiche={fiche} lecon={lecon} etat={etatLigne(lecon, leconId, terminees)} meilleur={scores[lecon.id]} statut={statuts[lecon.id]} />
+                    <Ligne
+                      fiche={fiche}
+                      lecon={lecon}
+                      etat={etatLigne(lecon, leconId, terminees)}
+                      meilleur={scores[lecon.id]}
+                      statut={statuts[lecon.id]}
+                      signalerApercu={partielle && lecon.apercu && lecon.accessible}
+                    />
                   </li>
                 ))}
               </ul>
@@ -140,7 +168,7 @@ export function ProgrammeLecon({ fiche, leconId, connecte, terminees, scores = {
           }))}
         />
       </div>
-      {connecte && (
+      {progression && (
         <div className="flex-none border-t border-[#DAE0EE] px-3 pt-4">
           <ProgressionCours fiche={fiche} terminees={terminees} />
         </div>

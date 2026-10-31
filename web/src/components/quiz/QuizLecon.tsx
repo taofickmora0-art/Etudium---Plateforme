@@ -49,6 +49,8 @@ type QuizLeconProps = {
   precedente?: string;
   /** « Continuer » : l'élément qui suit. */
   suivante?: string;
+  /** L'équipe ou le formateur en aperçu : les questions se parcourent, rien n'est envoyé ni noté (tâche 12). */
+  apercu?: boolean;
 };
 
 /**
@@ -56,7 +58,7 @@ type QuizLeconProps = {
  * minimal), puis une question à la fois, puis le résultat corrigé par la base et le détail des réponses. Tentatives
  * illimitées ; quitter en cours de route n'enregistre rien.
  */
-export function QuizLecon({ leconId, quiz, precedente, suivante }: QuizLeconProps) {
+export function QuizLecon({ leconId, quiz, precedente, suivante, apercu = false }: QuizLeconProps) {
   const router = useRouter();
   const [etape, setEtape] = useState<Etape>({ vue: "accueil" });
   const [reponses, setReponses] = useState<Record<string, Reponse>>({});
@@ -88,6 +90,8 @@ export function QuizLecon({ leconId, quiz, precedente, suivante }: QuizLeconProp
 
   const envoyer = (toutes: Record<string, Reponse>) => {
     setErreur(null);
+    // En aperçu, la dernière question ramène à l'accueil du quiz : rien n'est envoyé.
+    if (apercu) return setEtape({ vue: "accueil" });
     demarrer(async () => {
       const envoyees: ReponsesQuiz = Object.fromEntries(
         Object.entries(toutes)
@@ -133,6 +137,11 @@ export function QuizLecon({ leconId, quiz, precedente, suivante }: QuizLeconProp
             </p>
           </div>
         </div>
+        {apercu && (
+          <p className="m-0 rounded-champ bg-attention-fond px-3 py-2.5 text-[13px] leading-5 text-attention-texte">
+            Aperçu : parcourez les questions comme un étudiant ; vos réponses ne sont ni envoyées ni notées.
+          </p>
+        )}
         {quiz.questions.length === 0 ? (
           <p className="m-0 text-sm leading-[22px] text-discret">Ce quiz n’a pas encore de questions.</p>
         ) : (
