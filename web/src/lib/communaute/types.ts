@@ -24,7 +24,8 @@ export type PieceEnvoyee = Omit<PieceJointe, "url">;
 
 export type Reponse = {
   id: string;
-  auteur: { prenom: string; nomCourt: string };
+  /** `photoUrl` : l'adresse publique de sa photo (0038) ; absente ou null sans photo. */
+  auteur: { prenom: string; nomCourt: string; photoUrl?: string | null };
   estMoi: boolean;
   texte: string;
   creeLe: string;
@@ -63,9 +64,13 @@ export type Sondage = {
   explication?: string | null;
 };
 
+/** Une personne parmi les derniers qui aiment une publication : ses initiales et sa photo (0038). */
+export type Aimeur = { initiales: string; photoUrl: string | null };
+
 export type Publication = {
   id: string;
-  auteur: { prenom: string; nom: string; role: RoleAuteur };
+  /** `photoUrl` : l'adresse publique de sa photo (0038) ; absente ou null sans photo. */
+  auteur: { prenom: string; nom: string; role: RoleAuteur; photoUrl?: string | null };
   estMoi: boolean;
   espace: { id: string | null; nom: string };
   titre: string;
@@ -85,8 +90,8 @@ export type Publication = {
   apercu: Apercu | null;
   /** Dans les signets du compte (0021). */
   enregistree: boolean;
-  /** Les initiales des trois derniers qui l'aiment (0021). */
-  aimeePar: string[];
+  /** Les trois derniers qui l'aiment (0021) : initiales, et photo depuis la 0038. */
+  aimeePar: Aimeur[];
   /** La vidéo jointe (0022) ; null sans vidéo ou avant la 0022. */
   video: Video | null;
   /** Le bloc de la session live qu'annonce la publication (migration 0024) ; absent sinon. */

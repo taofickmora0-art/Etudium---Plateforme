@@ -224,7 +224,7 @@ describe("Le tri, le signet, les J’aime", () => {
 
   it("les initiales des derniers qui aiment ; mon J’aime ajoute les miennes", async () => {
     const user = userEvent.setup({ delay: null });
-    page(lot([pub({ reactions: 2, aimeePar: ["FA", "MA"] })]));
+    page(lot([pub({ reactions: 2, aimeePar: [{ initiales: "FA", photoUrl: null }, { initiales: "MA", photoUrl: null }] })]));
     expect(within(carte()).getByText("FA")).toBeInTheDocument();
     expect(within(carte()).getAllByText("KD")).toHaveLength(1);
     expect(within(carte()).getByText("2 J’aime")).toBeInTheDocument();
@@ -233,6 +233,43 @@ describe("Le tri, le signet, les J’aime", () => {
     await waitFor(() => expect(within(carte()).getByText("3 J’aime")).toBeInTheDocument());
     // Mes initiales s'ajoutent aux leurs (en plus de celles du champ du commentaire).
     expect(within(carte()).getAllByText("KD")).toHaveLength(2);
+  });
+});
+
+describe("Les photos de profil (liste du 31 octobre, tâche 5)", () => {
+  it("l'auteur, ceux qui aiment et l'auteur d'un commentaire : leur photo ; sans photo, leurs initiales", () => {
+    const PHOTO_A = "https://projet.supabase.co/storage/v1/object/public/photos-profil/a/a.jpg";
+    const PHOTO_T = "https://projet.supabase.co/storage/v1/object/public/photos-profil/t/t.jpg";
+    page(
+      lot([
+        pub({
+          auteur: { prenom: "Mireille", nom: "Adjovi", role: "formateur", photoUrl: PHOTO_A },
+          reactions: 2,
+          aimeePar: [{ initiales: "TM", photoUrl: PHOTO_T }, { initiales: "NS", photoUrl: null }],
+          reponses: 1,
+          dernieresReponses: [
+            {
+              id: "r1",
+              auteur: { prenom: "Taofick", nomCourt: "Taofick M.", photoUrl: PHOTO_T },
+              estMoi: false,
+              texte: "Bravo",
+              creeLe: "2026-10-14T13:30:00Z",
+              peutSupprimer: false,
+              peutSignaler: true,
+              parentId: null,
+              reactions: 0,
+              jAime: false,
+              modifie: false,
+              peutModifier: false,
+            },
+          ],
+        }),
+      ]),
+    );
+    const images = [...carte().querySelectorAll("img")].map((i) => i.getAttribute("src"));
+    expect(images).toContain(PHOTO_A);
+    expect(images.filter((s) => s === PHOTO_T)).toHaveLength(2);
+    expect(within(carte()).getByText("NS")).toBeInTheDocument();
   });
 });
 

@@ -256,7 +256,7 @@ export function Reponses({
     const occupe = occupes.includes(r.id);
     return (
       <div className="flex min-w-0 items-start gap-2.5">
-        <Avatar initials={initialesReponse(nom)} size={32} tone={tonAvatar(nom)} src={r.estMoi ? moi.photoUrl : null} className="max-sm:size-7 max-sm:text-[11px]" />
+        <Avatar initials={initialesReponse(nom)} size={32} tone={tonAvatar(nom)} src={r.auteur.photoUrl ?? (r.estMoi ? moi.photoUrl : null)} className="max-sm:size-7 max-sm:text-[11px]" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           {edition?.id === r.id ? (
             <form className="flex min-w-0 flex-col gap-2" onSubmit={(e) => void enregistrer(e)}>

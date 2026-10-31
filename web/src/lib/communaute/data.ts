@@ -1,10 +1,12 @@
 import { demoModeActive } from "@/lib/auth/current-user";
-import { estFonctionAbsente, liste, texte, textes, un, type Ligne } from "@/lib/contenus/lecture";
+import { estFonctionAbsente, liste, texte, un, type Ligne } from "@/lib/contenus/lecture";
+import { photoPublicUrl } from "@/lib/profile/photo-url";
 import { createClient } from "@/lib/supabase/server";
 import type { Lecture } from "@/lib/utilisateurs/types";
 import { NOMBRE_FIL, UUID } from "./regles";
 import { videoRangee } from "./video";
 import type {
+  Aimeur,
   Activite,
   Apercu,
   Espace,
@@ -49,11 +51,27 @@ export function versEspace(l: Ligne): Espace {
   };
 }
 
+/** La photo d'un auteur (0038), seulement s'il en a une. */
+function avecPhoto(chemin: unknown): { photoUrl?: string } {
+  const photoUrl = photoPublicUrl(texte(chemin) || null);
+  return photoUrl ? { photoUrl } : {};
+}
+
+/** Les derniers qui aiment : des objets (initiales, photo) depuis la 0038 ; avant, des initiales seules. */
+function versAimeurs(valeur: unknown): Aimeur[] {
+  if (!Array.isArray(valeur)) return [];
+  return valeur.flatMap((v): Aimeur[] => {
+    if (typeof v === "string") return v ? [{ initiales: v, photoUrl: null }] : [];
+    const o = un(v);
+    return o && texte(o.initiales) ? [{ initiales: texte(o.initiales), photoUrl: photoPublicUrl(texte(o.photo) || null) }] : [];
+  });
+}
+
 export function versReponse(l: Ligne): Reponse {
   const auteur = un(l.auteur);
   return {
     id: texte(l.id),
-    auteur: { prenom: texte(auteur?.prenom), nomCourt: texte(auteur?.nom_court) },
+    auteur: { prenom: texte(auteur?.prenom), nomCourt: texte(auteur?.nom_court), ...avecPhoto(auteur?.photo) },
     estMoi: l.est_moi === true,
     texte: texte(l.texte),
     creeLe: texte(l.cree_le),
@@ -129,7 +147,7 @@ export function versPublication(l: Ligne): Publication {
   const espace = un(l.espace);
   return {
     id: texte(l.id),
-    auteur: { prenom: texte(auteur?.prenom), nom: texte(auteur?.nom), role: role(auteur?.role) },
+    auteur: { prenom: texte(auteur?.prenom), nom: texte(auteur?.nom), role: role(auteur?.role), ...avecPhoto(auteur?.photo) },
     estMoi: l.est_moi === true,
     espace: { id: texteOuNull(espace?.id), nom: texte(espace?.nom) },
     titre: texte(l.titre),
@@ -146,7 +164,7 @@ export function versPublication(l: Ligne): Publication {
     peutSignaler: l.peut_signaler === true,
     apercu: versApercu(l.apercu),
     enregistree: l.enregistree === true,
-    aimeePar: textes(l.aimee_par),
+    aimeePar: versAimeurs(l.aimee_par),
     video: videoRangee(l.video),
     session: versSessionPublication(l.session),
     ...(l.programmee === true ? { programmee: true } : {}),

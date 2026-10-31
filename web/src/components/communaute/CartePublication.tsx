@@ -29,7 +29,7 @@ import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
 import { aimer, basculerEnregistrement, modifierPublication, reprogrammer, supprimerPublication } from "@/lib/communaute/actions";
 import { moment, refusPublication, tailleLisible, TITRE_MAX } from "@/lib/communaute/regles";
-import type { MoiCommunaute, PieceJointe, Publication, Reponse } from "@/lib/communaute/types";
+import type { Aimeur, MoiCommunaute, PieceJointe, Publication, Reponse } from "@/lib/communaute/types";
 import { phraseSession } from "@/lib/sessions/regles";
 import { ApercuLien } from "./ApercuLien";
 import { CarteQuiz } from "./CarteQuiz";
@@ -108,10 +108,10 @@ function reparaitre(p: Publication, iso: string): Publication {
   return { ...p, creeLe: iso, ...(p.sondage && fin ? { sondage: { ...p.sondage, finLe: new Date(Date.parse(fin) + ecart).toISOString() } } : {}) };
 }
 
-/** Mes initiales en tête des derniers qui aiment, ou retirées. */
-function avecMoi(aimeePar: string[], miennes: string, jAime: boolean): string[] {
-  if (jAime) return [miennes, ...aimeePar.filter((i) => i !== miennes)].slice(0, 3);
-  const position = aimeePar.indexOf(miennes);
+/** Moi (initiales et photo) en tête des derniers qui aiment, ou retiré. */
+function avecMoi(aimeePar: Aimeur[], moi: Aimeur, jAime: boolean): Aimeur[] {
+  if (jAime) return [moi, ...aimeePar.filter((a) => a.initiales !== moi.initiales)].slice(0, 3);
+  const position = aimeePar.findIndex((a) => a.initiales === moi.initiales);
   return position < 0 ? aimeePar : aimeePar.filter((_, i) => i !== position);
 }
 
@@ -285,7 +285,7 @@ export function CartePublication({
       return;
     }
     setErreur(null);
-    setP((actuelle) => ({ ...actuelle, jAime: reponse.jAime, reactions: reponse.reactions, aimeePar: avecMoi(actuelle.aimeePar, moi.initiales, reponse.jAime) }));
+    setP((actuelle) => ({ ...actuelle, jAime: reponse.jAime, reactions: reponse.reactions, aimeePar: avecMoi(actuelle.aimeePar, { initiales: moi.initiales, photoUrl: moi.photoUrl }, reponse.jAime) }));
   }
 
   async function basculerSignet() {
@@ -318,7 +318,7 @@ export function CartePublication({
   return (
     <article aria-label={`Publication de ${nom}`} className="box-border flex min-w-0 flex-col rounded-2xl border border-bordure-carte bg-panneau px-5 pt-[18px] pb-3.5 max-sm:px-4">
       <div className="flex min-w-0 items-start gap-3">
-        <Avatar initials={initiales(p.auteur.prenom, p.auteur.nom)} size={44} tone={tonAvatar(nom)} src={p.estMoi ? moi.photoUrl : null} className="max-sm:size-10 max-sm:text-sm" />
+        <Avatar initials={initiales(p.auteur.prenom, p.auteur.nom)} size={44} tone={tonAvatar(nom)} src={p.auteur.photoUrl ?? (p.estMoi ? moi.photoUrl : null)} className="max-sm:size-10 max-sm:text-sm" />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
             <span className="text-[15px] leading-[22px] font-semibold wrap-anywhere text-encre max-sm:text-sm max-sm:leading-5">{nom}</span>
@@ -422,8 +422,8 @@ export function CartePublication({
           {p.aimeePar.length > 0 && (
             <span aria-hidden className="max-[359px]:hidden">
               <AvatarGroup>
-                {p.aimeePar.map((i, n) => (
-                  <Avatar key={`${i}-${n}`} initials={i} size={22} tone={tonAvatar(i)} />
+                {p.aimeePar.map((a, n) => (
+                  <Avatar key={`${a.initiales}-${n}`} initials={a.initiales} size={22} tone={tonAvatar(a.initiales)} src={a.photoUrl} />
                 ))}
               </AvatarGroup>
             </span>

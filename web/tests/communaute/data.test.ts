@@ -133,7 +133,8 @@ describe("Lectures de la communauté", () => {
     const lecture = await lireFil(P, "populaires", { page: 2 });
     const publications = lecture.migrationAbsente ? [] : lecture.donnees.publications;
     expect(publications.map((p) => [p.apercu, p.enregistree, p.aimeePar])).toEqual([
-      [{ type: "youtube", id: "dQw4w9WgXcQ" }, true, ["KD", "MA"]],
+      // Avant la 0038, des initiales seules : sans photo.
+      [{ type: "youtube", id: "dQw4w9WgXcQ" }, true, [{ initiales: "KD", photoUrl: null }, { initiales: "MA", photoUrl: null }]],
       [{ type: "lien", url: "https://meet.google.com/x", titre: "Google Meet", description: "Vidéo", image: null }, false, []],
       [null, false, []],
     ]);
@@ -177,6 +178,35 @@ describe("Lectures de la communauté", () => {
   });
 });
 
+
+describe("Les photos de profil (0038)", () => {
+  it("l'auteur, les derniers qui aiment et l'auteur d'une réponse : l'adresse publique de leur photo ; sinon null", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://projet.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test");
+    const PHOTO = "11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222.jpg";
+    const URL_PHOTO = `https://projet.supabase.co/storage/v1/object/public/photos-profil/${PHOTO}`;
+    faux.repondre("rpc.fil_communaute", {
+      data: {
+        publications: [
+          {
+            ...BRUTE,
+            piece_jointe: null,
+            auteur: { prenom: "Aïcha", nom: "Kpadé", role: null, photo: PHOTO },
+            aimee_par: [{ initiales: "TM", photo: PHOTO }, { initiales: "NS", photo: null }],
+            dernieres_reponses: [{ id: "r1", auteur: { prenom: "Taofick", nom_court: "Taofick M.", photo: PHOTO }, texte: "Bravo", cree_le: "2026-10-31T10:00:00Z" }],
+          },
+        ],
+        suite: false,
+      },
+    });
+    const lecture = await lireFil("tous");
+    const [p] = lecture.migrationAbsente ? [] : lecture.donnees.publications;
+    expect(p.auteur.photoUrl).toBe(URL_PHOTO);
+    expect(p.aimeePar).toEqual([{ initiales: "TM", photoUrl: URL_PHOTO }, { initiales: "NS", photoUrl: null }]);
+    expect(p.dernieresReponses[0].auteur.photoUrl).toBe(URL_PHOTO);
+    vi.unstubAllEnvs();
+  });
+});
 
 describe("Le sondage d'une publication (0026)", () => {
   it("la conversion, et un lien temporaire pour chaque image d'option, dans le même appel que les pièces jointes", async () => {

@@ -840,3 +840,12 @@ Depuis la restructuration du 20 octobre, un formateur ne voit plus que son espac
    - A reçoit « Nouvelle réponse dans votre discussion » ;
    - l'auteur de la publication reçoit « Nouvelle réponse ».
    Pareil dans les discussions d'une leçon ; là, c'est le formateur qui reçoit « Nouveau commentaire sur votre leçon ».
+
+## 45. Les photos de profil dans la communauté (liste du 31 octobre, tâche 5), 5 minutes
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0038_photos_communaute.sql`, après la 0037.
+2. **L'essai, avec deux comptes qui ont une photo de profil :**
+   - l'un publie, l'autre aime la publication et la commente ;
+   - sur la publication, tu vois la photo de son auteur, celle de qui l'a aimée (à côté de « 2 J'aime ») et celle de qui l'a commentée ;
+   - un compte sans photo garde ses initiales ;
+   - même chose dans les discussions d'une leçon.
