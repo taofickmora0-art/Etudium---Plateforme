@@ -7,7 +7,7 @@ export const NOTIFICATION_CATEGORIES = [
   { key: "expiration_renouvellement", label: "Expiration et renouvellement", description: "Rappels avant la fin de votre abonnement" },
   { key: "exercices", label: "Exercices", description: "Corrections et remarques de vos formateurs" },
   { key: "rappels_apprentissage", label: "Rappels d’apprentissage", description: "Pour garder votre série active" },
-  { key: "communaute", label: "Communauté", description: "Réponses et mentions dans vos publications" },
+  { key: "communaute", label: "Communauté", description: "Commentaires, réponses et J’aime sur vos publications" },
   { key: "messages", label: "Messages", description: "Messages de vos formateurs et de l’équipe" },
   { key: "recommandations", label: "Recommandations", description: "Formations suggérées selon votre progression" },
   { key: "annonces", label: "Annonces", description: "Nouveautés d’Étudium" },

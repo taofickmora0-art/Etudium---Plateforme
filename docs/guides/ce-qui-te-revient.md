@@ -865,3 +865,15 @@ Depuis la restructuration du 20 octobre, un formateur ne voit plus que son espac
    - un autre compte la voit toujours.
 4. **Modifie l'annonce depuis le back-office :** elle réapparaît pour tout le monde, y compris pour qui l'avait masquée.
 5. **Case décochée :** pas de croix, personne ne peut la masquer.
+
+## 47. Les notifications de la communauté (liste du 31 octobre, tâche 8), 10 minutes
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0041_notifications_communaute.sql`, après la 0040.
+   - Elle crée une tâche planifiée, qui tourne chaque minute (comme celle des sessions live, section 28).
+   - Si Supabase signale « pg_cron indisponible », va dans **Integrations → Cron → Enable**, puis relance le dernier bloc du fichier.
+2. **Les J'aime, avec deux comptes A et B :**
+   - B aime une publication de A : A reçoit « B aime votre publication » ;
+   - un troisième compte l'aime aussi : A garde une seule notification, « … et une autre personne aiment votre publication » ;
+   - même chose pour un commentaire (« … aime votre commentaire »), dans la communauté comme dans une leçon.
+3. **Une publication programmée :** programme-en une dans quelques minutes. À l'heure dite, la cloche affiche « Votre publication programmée est parue » ; un clic ouvre la publication.
+4. **Ce qui prévenait déjà :** un commentaire, une réponse, la modération (« Publication en ligne », « Publication retirée ») et les sessions live.

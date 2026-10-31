@@ -45,6 +45,8 @@ describe("Préférences de notification", () => {
     ]);
     expect(NOTIFICATION_CATEGORIES[1]).toEqual({ key: "sessions_live", label: "Sessions live", description: "Programmation et rappels 1 h avant" });
     expect(NOTIFICATION_CATEGORIES[6]).toEqual({ key: "messages", label: "Messages", description: "Messages de vos formateurs et de l’équipe" });
+    // La communauté prévient aussi des J'aime et des publications programmées qui paraissent (liste du 31 octobre).
+    expect(NOTIFICATION_CATEGORIES[5]).toEqual({ key: "communaute", label: "Communauté", description: "Commentaires, réponses et J’aime sur vos publications" });
     expect(CHANNELS.map((c) => c.label)).toEqual(["Notifications dans l’appli", "Notifications push"]);
   });
 
