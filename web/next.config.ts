@@ -10,7 +10,9 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   // Tests sur téléphone, sur le même Wi-Fi (http://192.168.x.x:3000) : sans cela, Next bloque ses fichiers de
   // développement pour toute autre adresse que localhost, et la page reste sans réaction. Sans effet en production.
-  allowedDevOrigins: ["192.168.*.*"],
+  // `nip.io` donne un nom à l'adresse (http://192.168.0.3.nip.io:3000) : Supabase refuse tout retour de connexion
+  // (Google) vers une adresse en chiffres autre que localhost, mais accepte un nom inscrit dans ses Redirect URLs.
+  allowedDevOrigins: ["192.168.*.*", "**.nip.io"],
   // Le rond « N » de Next en bas de l'écran recouvrait la barre du bas sur téléphone : masqué (développement seulement ;
   // une erreur s'affiche toujours en plein écran).
   devIndicators: false,
