@@ -827,3 +827,16 @@ Depuis la restructuration du 20 octobre, un formateur ne voit plus que son espac
    - sur l'une de ses leçons publiées, les discussions restent visibles, et il peut répondre aux commentaires.
 3. **Avec ton compte admin :** rien ne change. « Espace étudiant » et « Back-office » sont toujours dans le menu du profil.
 4. **Un formateur qui veut apprendre** crée un compte étudiant séparé, avec une autre adresse e-mail.
+
+## 44. Répondre à une réponse prévient la bonne personne (liste du 31 octobre, tâche 4), 5 minutes
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0037_reponses_aux_reponses.sql`, après la 0036.
+2. **L'essai, avec trois comptes** (A, B, C) :
+   - A commente une publication ;
+   - B lui répond ;
+   - C touche « Répondre » sous la réponse de B : le champ commence par « @B… », et la réponse se range sous le commentaire de A.
+3. **Le résultat attendu :**
+   - B reçoit « Nouvelle réponse à votre commentaire » ;
+   - A reçoit « Nouvelle réponse dans votre discussion » ;
+   - l'auteur de la publication reçoit « Nouvelle réponse ».
+   Pareil dans les discussions d'une leçon ; là, c'est le formateur qui reçoit « Nouveau commentaire sur votre leçon ».
