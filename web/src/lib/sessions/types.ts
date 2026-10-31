@@ -84,6 +84,8 @@ export type DonneesSession = {
   date: string;
   /** « 15:00 ». */
   heure: string;
+  /** Le fuseau dans lequel la date et l'heure sont saisies (celui de l'appareil du formateur) ; le Bénin à défaut. */
+  fuseau?: string;
   dureeMinutes: number;
   lien: string;
   parcoursId: string | null;

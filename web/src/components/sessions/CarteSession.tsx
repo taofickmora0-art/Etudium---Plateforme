@@ -1,15 +1,17 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState } from "react";
 import { Calendar03Icon, CheckmarkCircle02Icon, UserIcon, UserMultipleIcon, Video01Icon } from "@hugeicons/core-free-icons";
+import { useFuseau } from "@/components/dates/useFuseau";
 import { Button } from "@/components/ui/Button";
 import { Icon, type IconSvgElement } from "@/components/ui/Icon";
 import { Tag, type TagTone } from "@/components/ui/Tag";
-import { dateSession, enCours, jourCarte, libelleInscriptions, terminee } from "@/lib/sessions/regles";
+import { commenceDans, enCours, jourCarte, libelleInscriptions, quandSession, terminee } from "@/lib/sessions/regles";
 import type { SessionCarte } from "@/lib/sessions/types";
 import { AjouterAgenda } from "./AjouterAgenda";
 
 const TONS_PARCOURS: Record<string, TagTone> = { academique: "academique", digital: "digital", business: "business" };
+const LIEN_EN_ROUTE = "Le lien du live arrive. Réessayez dans un instant.";
 
 /** Une information de la ligne du dessous : icône, texte (date, plateforme, animateur). */
 function Info({ icon, children }: { icon: IconSvgElement; children: string }) {
@@ -43,15 +45,30 @@ type Props = {
 
 /**
  * Une session (design NdEvenements) : le jour, le parcours, « Session live », les inscriptions, le titre, la date, la
- * plateforme, l'animateur. Rejoindre apparaît dès que la base livre le lien (10 min avant, jusqu'à la fin), pour tous.
+ * plateforme, l'animateur, à l'heure de l'appareil avec son décalage GMT. « Rejoindre » est là jusqu'à la fin, pour
+ * tous ; avant l'heure du début, il n'ouvre rien et dit le temps qui reste (tâche 10 du 31 octobre 2026), même si la
+ * base a déjà livré le lien (10 min avant).
  */
 export function CarteSession({ session: s, maintenant, onInscrire, onDesinscrire, occupe = false }: Props) {
   const titreId = useId();
-  const { mois, jour } = jourCarte(s.debut);
+  const fuseau = useFuseau();
+  const [attente, setAttente] = useState<string | null>(null);
+  const { mois, jour } = jourCarte(s.debut, fuseau);
   const annulee = s.statut === "annulee";
   const finie = terminee(s, maintenant);
   const commencee = Date.parse(s.debut) <= maintenant.getTime();
   const ouverte = !annulee && !finie;
+
+  /** « Rejoindre » sans lien ouvrable : trop tôt (le temps qui reste, depuis l'instant du clic), ou le lien en route. */
+  function rejoindreTropTot() {
+    const instant = new Date();
+    if (Date.parse(s.debut) <= instant.getTime()) {
+      if (s.lien) window.open(s.lien, "_blank", "noopener,noreferrer");
+      else setAttente(LIEN_EN_ROUTE);
+      return;
+    }
+    setAttente(`Le live n’a pas encore commencé. Il commence dans ${commenceDans(s.debut, instant)} : ${quandSession(s.debut, fuseau, "phrase")}.`);
+  }
 
   return (
     <article aria-labelledby={titreId} className="box-border flex min-w-0 flex-col rounded-2xl border border-bordure-carte bg-panneau px-[19px] py-5">
@@ -75,7 +92,7 @@ export function CarteSession({ session: s, maintenant, onInscrire, onDesinscrire
             {s.titre}
           </h3>
           <div className="flex flex-wrap items-center gap-x-[7px] gap-y-1 text-[13px] leading-[18px] text-discret">
-            <Info icon={Calendar03Icon}>{dateSession(s.debut)}</Info>
+            <Info icon={Calendar03Icon}>{quandSession(s.debut, fuseau)}</Info>
             <Point />
             <Info icon={Video01Icon}>{s.plateforme}</Info>
             <Point />
@@ -86,13 +103,18 @@ export function CarteSession({ session: s, maintenant, onInscrire, onDesinscrire
         <div className="flex flex-wrap items-center gap-2">
           {annulee && <Tag tone="echoue">Annulée</Tag>}
           {ouverte && enCours(s, maintenant) && <Tag tone="compteur">En cours</Tag>}
-          {ouverte && s.lien && (
-            <Button asChild>
-              <a href={s.lien} target="_blank" rel="noopener noreferrer">
+          {ouverte &&
+            (commencee && s.lien ? (
+              <Button asChild>
+                <a href={s.lien} target="_blank" rel="noopener noreferrer">
+                  Rejoindre
+                </a>
+              </Button>
+            ) : (
+              <Button variant={commencee ? "principal" : "contour"} onClick={rejoindreTropTot}>
                 Rejoindre
-              </a>
-            </Button>
-          )}
+              </Button>
+            ))}
           {ouverte &&
             (s.inscrit ? (
               <>
@@ -107,12 +129,17 @@ export function CarteSession({ session: s, maintenant, onInscrire, onDesinscrire
                 )}
               </>
             ) : (
-              <Button variant={s.lien ? "contour" : "principal"} loading={occupe} onClick={() => onInscrire(s)}>
+              <Button variant={commencee ? "contour" : "principal"} loading={occupe} onClick={() => onInscrire(s)}>
                 Je m’inscris
               </Button>
             ))}
         </div>
       </div>
+      {ouverte && attente && !(commencee && s.lien) && (
+        <p role="status" className="m-0 mt-4 rounded-champ bg-coque px-3.5 py-2.5 text-[13px] leading-5 text-texte">
+          {attente}
+        </p>
+      )}
     </article>
   );
 }

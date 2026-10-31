@@ -1,5 +1,6 @@
 "use server";
 
+import { FUSEAU_BENIN, fuseauValide } from "@/lib/dates/fuseau";
 import { refresh } from "next/cache";
 import { exigerEditeur, SESSION_EXPIREE } from "@/lib/admin/garde";
 import { getShellUser } from "@/lib/auth/current-user";
@@ -82,7 +83,8 @@ function parametres(d: DonneesSession, equipe: boolean) {
   return {
     p_titre: d.titre.trim(),
     p_description: d.description.trim(),
-    p_debut: debutDepuis(d.date, d.heure),
+    // Le fuseau du formateur (son appareil) ; le Bénin s'il manque ou n'existe pas.
+    p_debut: debutDepuis(d.date, d.heure, fuseauValide(d.fuseau) ? d.fuseau : FUSEAU_BENIN),
     p_duree: d.dureeMinutes,
     p_lien: d.lien.trim(),
     p_parcours: uuidOuNull(d.parcoursId),

@@ -473,7 +473,7 @@ describe("La page Communauté", () => {
     expect(danilo).toHaveTextContent("il y a 23 min");
     expect(screen.getByRole("link", { name: /Maos T\./ })).toHaveTextContent("Maos T. a commenté « TikTok, un jeu d’enfant »");
     expect(screen.getByText("Excel avancé : analyse de données")).toBeInTheDocument();
-    expect(screen.getByText("Samedi 24 octobre · 15 h 00")).toBeInTheDocument();
+    expect(screen.getByText("Samedi 24 octobre · 15 h 00 (GMT+1)")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Voir la session" })).toHaveAttribute("href", "/evenements");
     unmount();
     render(<ColonneCommunaute session={null} tendances={[]} activites={[]} maintenant={maintenant} />);

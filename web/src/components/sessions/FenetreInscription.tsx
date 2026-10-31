@@ -1,9 +1,10 @@
 "use client";
 
 import { CheckmarkCircle02Icon } from "@hugeicons/core-free-icons";
+import { useFuseau } from "@/components/dates/useFuseau";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
-import { phraseSession } from "@/lib/sessions/regles";
+import { quandSession } from "@/lib/sessions/regles";
 import type { SessionCarte } from "@/lib/sessions/types";
 import { AjouterAgenda, FichierAgenda } from "./AjouterAgenda";
 
@@ -12,6 +13,7 @@ import { AjouterAgenda, FichierAgenda } from "./AjouterAgenda";
  * mon agenda », qui ouvre Google Agenda, et le fichier .ics pour les autres agendas.
  */
 export function FenetreInscription({ session, onFermer }: { session: SessionCarte | null; onFermer: () => void }) {
+  const fuseau = useFuseau();
   return (
     <Dialog
       open={session !== null}
@@ -21,7 +23,7 @@ export function FenetreInscription({ session, onFermer }: { session: SessionCart
       iconTone="reussite"
       description={
         session
-          ? `${session.titre}, ${phraseSession(session.debut)}, sur ${session.plateforme}. Un rappel vous sera envoyé la veille, 1 h avant et 10 min avant.`
+          ? `${session.titre}, ${quandSession(session.debut, fuseau, "phrase")}, sur ${session.plateforme}. Un rappel vous sera envoyé la veille, 1 h avant et 10 min avant.`
           : undefined
       }
       footer={

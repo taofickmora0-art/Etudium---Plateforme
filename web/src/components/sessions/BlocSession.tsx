@@ -1,10 +1,13 @@
+"use client";
+
 import Link from "next/link";
+import { useFuseau } from "@/components/dates/useFuseau";
 import { CheckmarkCircle02Icon, UserIcon, UserMultipleIcon, Video01Icon } from "@hugeicons/core-free-icons";
 import { Button, buttonVariants } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Tag } from "@/components/ui/Tag";
 import { cn } from "@/lib/cn";
-import { dateSession, jourCarte, libelleInscriptions, phraseSession, terminee } from "@/lib/sessions/regles";
+import { jourCarte, libelleInscriptions, quandSession, terminee } from "@/lib/sessions/regles";
 import type { SessionPublication } from "@/lib/sessions/types";
 
 // La plateforme, reconnaissable d'un coup d'œil (« la séance sera sur Google Meet ou sur Zoom »).
@@ -33,13 +36,15 @@ export function BlocSession({
   lienSession?: string | null;
   className?: string;
 }) {
-  const { mois, jour } = jourCarte(s.debut);
+  // À l'heure de l'appareil, avec son décalage GMT (tâche 10 du 31 octobre 2026).
+  const fuseau = useFuseau();
+  const { mois, jour } = jourCarte(s.debut, fuseau);
   const annulee = s.statut === "annulee";
   const finie = terminee(s, maintenant);
   return (
     <div
       role="group"
-      aria-label={`Session live du ${phraseSession(s.debut)}`}
+      aria-label={`Session live du ${quandSession(s.debut, fuseau, "phrase")}`}
       className={cn("mt-3.5 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3 rounded-[14px] border border-bordure-carte bg-coque/60 p-3.5 max-sm:p-3", className)}
     >
       <span aria-hidden="true" className="flex size-14 flex-none flex-col items-center justify-center rounded-[14px] bg-panneau max-sm:size-12">
@@ -61,7 +66,7 @@ export function BlocSession({
             {s.plateforme}
           </span>
         </div>
-        <p className="m-0 text-[15px] leading-[22px] font-semibold text-encre max-sm:text-sm">{dateSession(s.debut)}</p>
+        <p className="m-0 text-[15px] leading-[22px] font-semibold text-encre max-sm:text-sm">{quandSession(s.debut, fuseau)}</p>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] leading-[18px] text-discret">
           <span className="flex min-w-0 items-center gap-1">
             <Icon icon={UserIcon} size={14} className="flex-none" />

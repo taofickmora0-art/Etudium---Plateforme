@@ -907,3 +907,16 @@ Depuis la restructuration du 20 octobre, un formateur ne voit plus que son espac
    - A est sur la page Notifications : la nouvelle notification s'ajoute en tête.
 5. **À savoir :** on n'est jamais prévenu de ses propres actions (aimer sa propre publication, se répondre à soi-même). Pour tester, il faut deux comptes différents.
 6. **En secours,** si le temps réel est coupé (réseau instable), l'appli continue de se relire toute seule : cloche chaque minute, bandeau toutes les 30 s.
+
+## 50. Les lives : « Rejoindre » à l'heure, et l'heure de chacun (liste du 31 octobre, tâche 10), 10 minutes
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0045_sessions_fuseaux.sql`, après la 0044.
+2. **« Rejoindre » avant l'heure.** Sur la page Événements, un live à venir a toujours son bouton « Rejoindre ».
+   - Avant l'heure du début, il n'ouvre rien. Il affiche par exemple « Le live n'a pas encore commencé. Il commence dans 2 h 15 : samedi 24 octobre à 15 h 00 (GMT+1). » Le temps se compte depuis le moment du clic.
+   - À l'heure du début, il ouvre le lien du live dans un nouvel onglet.
+3. **L'heure de chacun.** Toutes les heures des lives s'affichent à l'heure de l'appareil, avec le décalage GMT :
+   - au Bénin : « Samedi 24 octobre · 15 h 00 (GMT+1) » ;
+   - au Togo, le même live : « Samedi 24 octobre · 14 h 00 (GMT) ».
+   - Pour l'essayer : dans les réglages de date et heure de l'ordinateur, choisis un autre fuseau (par exemple Lomé ou Paris), puis recharge la page Événements.
+4. **Le formateur** saisit la date et l'heure à l'heure de son appareil ; le formulaire l'indique sous le champ « Heure » (« À l'heure de votre appareil (GMT+1) »).
+5. **Les notifications** (« Nouvelle session live », rappels) sont écrites par la base à l'heure du Bénin, et le disent : « à 15 h 00 (GMT+1) ». Le rappel de 10 minutes ne dit plus que le lien est ouvert : on rejoint à l'heure du début.

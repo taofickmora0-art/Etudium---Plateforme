@@ -7,7 +7,7 @@ import { texteBrut } from "@/lib/communaute/mise-en-forme";
 import { CHEMINS_COMMUNAUTE, type EspaceCommunaute } from "@/lib/communaute/chemins";
 import { moment } from "@/lib/communaute/regles";
 import type { Activite, Tendance } from "@/lib/communaute/types";
-import { dateSession } from "@/lib/sessions/regles";
+import { QuandSession } from "@/components/sessions/QuandSession";
 import type { ProchaineSession } from "@/lib/sessions/types";
 import { extraitCourt, tonAvatar } from "./outils";
 
@@ -100,7 +100,7 @@ export function ColonneCommunaute({
               <IconTile icon={Video01Icon} tone="information" />
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="text-[15px] leading-[22px] font-medium wrap-anywhere text-encre max-sm:text-sm max-sm:leading-5">{session.titre}</span>
-                <span className="text-[13px] leading-5 text-discret max-sm:text-xs">{dateSession(session.debut)}</span>
+                <span className="text-[13px] leading-5 text-discret max-sm:text-xs"><QuandSession debut={session.debut} /></span>
               </span>
             </div>
             <div className="pb-3 pl-1">

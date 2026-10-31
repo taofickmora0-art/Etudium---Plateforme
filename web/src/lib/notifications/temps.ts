@@ -1,3 +1,4 @@
+import { formatDe } from "@/lib/dates/fuseau";
 import { dateCourte } from "@/lib/utilisateurs/regles";
 
 // Le temps des notifications, à l'heure du Bénin (UTC+1 toute l'année) : « Il y a 5 min », « Hier », groupes par jour.
@@ -28,9 +29,10 @@ export function quand(iso: string, maintenant: Date): string {
   return libelleJour(iso, maintenant);
 }
 
-/** « 14 h 05 », « 9 h 05 ». */
-export function heure(iso: string): string {
-  const parties = HEURE.formatToParts(new Date(iso));
+/** « 14 h 05 », « 9 h 05 » ; à l'heure du Bénin, ou du fuseau donné (sessions live, tâche 10). */
+export function heure(iso: string, fuseau = FUSEAU): string {
+  const format = fuseau === FUSEAU ? HEURE : formatDe("heure", fuseau, { hour: "numeric", minute: "2-digit", hourCycle: "h23" });
+  const parties = format.formatToParts(new Date(iso));
   const valeur = (type: string) => parties.find((p) => p.type === type)?.value ?? "";
   return `${Number(valeur("hour"))} h ${valeur("minute")}`;
 }

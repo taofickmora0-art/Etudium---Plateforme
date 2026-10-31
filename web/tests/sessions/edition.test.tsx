@@ -98,7 +98,7 @@ describe("La liste des sessions", () => {
     const aVenir = screen.getByRole("table", { name: "Sessions à venir" });
     expect(within(aVenir).getAllByRole("columnheader").map((c) => c.textContent)).toEqual(["Date", "Titre", "Plateforme", "Inscriptions", "État"]);
     const [premiere, annulee, enDirect] = within(aVenir).getAllByRole("row").slice(1);
-    expect(within(premiere).getAllByRole("cell").map((c) => c.textContent)).toEqual(["Samedi 24 octobre · 15 h 00", "Excel avancé", "Google Meet", "12", "Programmée"]);
+    expect(within(premiere).getAllByRole("cell").map((c) => c.textContent)).toEqual(["Samedi 24 octobre · 15 h 00 (GMT+1)", "Excel avancé", "Google Meet", "12", "Programmée"]);
     expect(within(premiere).getByRole("link", { name: "Excel avancé" })).toHaveAttribute("href", `/formateur/sessions/${ID}`);
     expect(annulee).toHaveTextContent("Annulée");
     expect(enDirect).toHaveTextContent("En cours");
@@ -156,6 +156,8 @@ describe("Le formulaire", () => {
       description: "",
       date: "2026-10-24",
       heure: "15:00",
+      // Saisies à l'heure de l'appareil (tâche 10 du 31 octobre 2026) : ici, celle du Bénin.
+      fuseau: "Africa/Porto-Novo",
       dureeMinutes: 60,
       lien: "https://meet.google.com/abc-defg-hij",
       parcoursId: P,
@@ -215,7 +217,7 @@ describe("La fiche d'une session", () => {
     avecToast(await FicheSession({ espace: "formateur", id: ID }));
     expect(screen.getByRole("heading", { level: 1, name: "Excel avancé" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "https://meet.google.com/abc-defg-hij" })).toHaveAttribute("href", "https://meet.google.com/abc-defg-hij");
-    expect(screen.getByText("Samedi 24 octobre · 15 h 00")).toBeInTheDocument();
+    expect(screen.getByText("Samedi 24 octobre · 15 h 00 (GMT+1)")).toBeInTheDocument();
     const inscriptions = screen.getByRole("region", { name: "Inscriptions" });
     expect(within(inscriptions).getByText("Fifamè Adjovi")).toBeInTheDocument();
     expect(inscriptions.textContent).not.toContain("@");

@@ -19,8 +19,8 @@ const S: SessionPublication = {
 describe("Le bloc de session", () => {
   it("la date, « Session live », la plateforme bien visible, l'animateur, les inscriptions et « Voir la session »", () => {
     render(<BlocSession session={S} maintenant={new Date("2026-10-14T15:00:00Z")} />);
-    const bloc = screen.getByRole("group", { name: "Session live du samedi 24 octobre à 15 h 00" });
-    for (const texte of ["OCT.", "24", "Session live", "Samedi 24 octobre · 15 h 00", "Google Meet", "Dr Mireille Adjovi", "12 inscriptions"]) {
+    const bloc = screen.getByRole("group", { name: "Session live du samedi 24 octobre à 15 h 00 (GMT+1)" });
+    for (const texte of ["OCT.", "24", "Session live", "Samedi 24 octobre · 15 h 00 (GMT+1)", "Google Meet", "Dr Mireille Adjovi", "12 inscriptions"]) {
       expect(within(bloc).getByText(texte)).toBeInTheDocument();
     }
     expect(within(bloc).getByRole("link", { name: "Voir la session" })).toHaveAttribute("href", "/evenements");

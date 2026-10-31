@@ -4,7 +4,8 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Tag } from "@/components/ui/Tag";
-import { dansJours, dateSession } from "@/lib/sessions/regles";
+import { dansJours } from "@/lib/sessions/regles";
+import { QuandSession } from "./QuandSession";
 import type { LigneSessionEdition } from "@/lib/sessions/types";
 import { initialesCompte } from "@/lib/utilisateurs/regles";
 
@@ -35,7 +36,7 @@ export function CarteSessionFormateur({ session, inscrits }: { session: LigneSes
       <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] leading-[18px] text-discret">
         <span className="flex items-center gap-1">
           <Icon icon={Calendar03Icon} size={14} />
-          {dateSession(session.debut)}
+          <QuandSession debut={session.debut} />
         </span>
         <span className="flex items-center gap-1">
           <Icon icon={Video01Icon} size={14} />

@@ -33,16 +33,55 @@ const S: SessionCarte = {
 
 describe("La carte d'une session", () => {
   const rien = () => {};
+  afterEach(() => vi.useRealTimers());
 
   it("la carte du design : OCT. 24, Académique, Session live, 128 inscriptions, date, plateforme, animateur", () => {
     render(<CarteSession session={S} maintenant={MAINTENANT} onInscrire={rien} onDesinscrire={rien} />);
     const carte = screen.getByRole("article", { name: S.titre });
-    for (const texte of ["OCT.", "24", "Académique", "Session live", "128 inscriptions", "Samedi 24 octobre · 15 h 00", "Google Meet", "Dr Mireille Adjovi", S.description]) {
+    for (const texte of ["OCT.", "24", "Académique", "Session live", "128 inscriptions", "Samedi 24 octobre · 15 h 00 (GMT+1)", "Google Meet", "Dr Mireille Adjovi", S.description]) {
       expect(within(carte).getByText(texte)).toBeInTheDocument();
     }
     expect(within(carte).getByRole("heading", { level: 3, name: S.titre })).toBeInTheDocument();
     expect(within(carte).getByRole("button", { name: "Je m’inscris" })).toBeInTheDocument();
+    // Rejoindre est là dès maintenant, mais n'ouvre rien avant l'heure (tâche 10 du 31 octobre 2026).
+    expect(within(carte).getByRole("button", { name: "Rejoindre" })).toBeInTheDocument();
     expect(within(carte).queryByRole("link", { name: "Rejoindre" })).toBeNull();
+  });
+
+  it("à l'heure de l'appareil : au Togo, le même live est à 14 h 00 (GMT)", () => {
+    const options = Intl.DateTimeFormat.prototype.resolvedOptions;
+    const espion = vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockImplementation(function (this: Intl.DateTimeFormat) {
+      return { ...options.call(this), timeZone: "Africa/Lome" };
+    });
+    render(<CarteSession session={S} maintenant={MAINTENANT} onInscrire={rien} onDesinscrire={rien} />);
+    expect(screen.getByText("Samedi 24 octobre · 14 h 00 (GMT)")).toBeInTheDocument();
+    espion.mockRestore();
+  });
+
+  it("Rejoindre avant l'heure n'ouvre rien : « Le live n'a pas encore commencé », et le temps qui reste", async () => {
+    // Le temps qui reste se compte depuis l'instant du clic.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(MAINTENANT);
+    const user = userEvent.setup();
+    const { unmount } = render(<CarteSession session={S} maintenant={MAINTENANT} onInscrire={rien} onDesinscrire={rien} />);
+    await user.click(screen.getByRole("button", { name: "Rejoindre" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Le live n’a pas encore commencé. Il commence dans 9 jours : samedi 24 octobre à 15 h 00 (GMT+1).");
+    unmount();
+    // Dans les 10 min d'avant, la base a déjà livré le lien : il ne s'ouvre pas pour autant.
+    const bientot = { ...S, debut: "2026-10-14T15:05:00Z", lien: "https://meet.google.com/abc-defg-hij" };
+    render(<CarteSession session={bientot} maintenant={MAINTENANT} onInscrire={rien} onDesinscrire={rien} />);
+    expect(screen.queryByRole("link", { name: "Rejoindre" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Rejoindre" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Il commence dans 5 min");
+  });
+
+  it("commencée, mais le lien pas encore reçu : le dire, sans rien ouvrir", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(MAINTENANT);
+    const user = userEvent.setup();
+    render(<CarteSession session={{ ...S, debut: "2026-10-14T14:55:00Z" }} maintenant={MAINTENANT} onInscrire={rien} onDesinscrire={rien} />);
+    await user.click(screen.getByRole("button", { name: "Rejoindre" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Le lien du live arrive. Réessayez dans un instant.");
   });
 
   it("sans parcours : « Tous les parcours » ; inscrit : Inscription confirmée et Se désinscrire", () => {
@@ -97,7 +136,7 @@ describe("La page Événements", () => {
     await user.click(screen.getByRole("button", { name: "Je m’inscris" }));
     expect(sinscrire).toHaveBeenCalledWith(S.id);
     const fenetre = await screen.findByRole("dialog", { name: "Inscription confirmée" });
-    expect(fenetre).toHaveTextContent(`${S.titre}, samedi 24 octobre à 15 h 00, sur Google Meet. Un rappel vous sera envoyé la veille, 1 h avant et 10 min avant.`);
+    expect(fenetre).toHaveTextContent(`${S.titre}, samedi 24 octobre à 15 h 00 (GMT+1), sur Google Meet. Un rappel vous sera envoyé la veille, 1 h avant et 10 min avant.`);
     const agenda = within(fenetre).getByRole("link", { name: "Ajouter à mon agenda" });
     expect(agenda.getAttribute("href")).toMatch(/^https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE&.*dates=20261024T140000Z%2F20261024T150000Z/);
     expect(agenda).toHaveAttribute("target", "_blank");
@@ -143,7 +182,7 @@ describe("La page Événements", () => {
     expect(within(filtres).getByRole("button", { name: "À venir" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("page ouverte 15 min avant : à 10 min, l'onglet est relu et Rejoindre apparaît", async () => {
+  it("page ouverte 15 min avant : à 10 min, l'onglet est relu (le lien arrive) ; Rejoindre ne l'ouvre qu'au début", async () => {
     vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
     vi.setSystemTime(MAINTENANT);
     const bientot = { ...S, debut: "2026-10-14T15:15:00Z" };
@@ -156,10 +195,14 @@ describe("La page Événements", () => {
     });
     expect(chargerSessions).toHaveBeenCalledWith("a_venir");
     await act(async () => {});
+    expect(screen.queryByRole("link", { name: "Rejoindre" })).toBeNull();
+    await act(async () => {
+      vi.advanceTimersByTime(10 * 60_000);
+    });
     expect(screen.getByRole("link", { name: "Rejoindre" })).toHaveAttribute("href", "https://meet.google.com/abc-defg-hij");
   });
 
-  it("page ouverte 2 h avant : Rejoindre finit par apparaître à l'ouverture du lien", async () => {
+  it("page ouverte 2 h avant : Rejoindre finit par ouvrir le lien, au début", async () => {
     vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
     vi.setSystemTime(MAINTENANT);
     const tard = { ...S, debut: "2026-10-14T17:00:00Z" };
@@ -173,6 +216,9 @@ describe("La page Événements", () => {
     });
     await act(async () => {});
     expect(chargerSessions).toHaveBeenCalledWith("a_venir");
+    await act(async () => {
+      vi.advanceTimersByTime(10 * 60_000);
+    });
     expect(screen.getByRole("link", { name: "Rejoindre" })).toBeInTheDocument();
   });
 
@@ -195,6 +241,9 @@ describe("La page Événements", () => {
     });
     await act(async () => {});
     expect(chargerSessions).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      vi.advanceTimersByTime(10 * 60_000);
+    });
     expect(screen.getByRole("link", { name: "Rejoindre" })).toBeInTheDocument();
   });
 
@@ -218,10 +267,12 @@ describe("La page Événements", () => {
     });
     expect(screen.getByText("En cours")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Se désinscrire" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Rejoindre" })).toBeInTheDocument();
     await act(async () => {
       vi.advanceTimersByTime(30 * 60_000);
     });
     expect(screen.queryByRole("link", { name: "Rejoindre" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Rejoindre" })).toBeNull();
   });
 
   it("avant la 0018 : le bandeau", async () => {

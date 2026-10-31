@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/Button";
 import { Tag } from "@/components/ui/Tag";
 import type { EspaceEdition } from "@/lib/admin/espace";
 import { lireSessionDetail } from "@/lib/sessions/data";
-import { dateSession, dureeLisible, enCours, terminee } from "@/lib/sessions/regles";
+import { dureeLisible, enCours, terminee } from "@/lib/sessions/regles";
 import { nomAffiche } from "@/lib/utilisateurs/regles";
 import { AnnulerSession } from "./AnnulerSession";
 import { baseSessions, filSessions, MigrationSessionsAbsente, racineSessions } from "./cadre";
+import { QuandSession } from "./QuandSession";
 
 function Ligne({ libelle, children }: { libelle: string; children: React.ReactNode }) {
   return (
@@ -58,7 +59,9 @@ export async function FicheSession({ espace, id }: { espace: EspaceEdition; id: 
         <Section titre="La session">
           <dl className="m-0 flex flex-col gap-2">
             <Ligne libelle="État">{etat}</Ligne>
-            <Ligne libelle="Date">{dateSession(s.debut)}</Ligne>
+            <Ligne libelle="Date">
+              <QuandSession debut={s.debut} />
+            </Ligne>
             <Ligne libelle="Durée">{dureeLisible(s.dureeMinutes)}</Ligne>
             <Ligne libelle="Plateforme">{s.plateforme}</Ligne>
             {s.lien && (

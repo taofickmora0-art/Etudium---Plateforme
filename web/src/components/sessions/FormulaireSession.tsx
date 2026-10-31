@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Cancel01Icon, Image01Icon, Video01Icon } from "@hugeicons/core-free-icons";
+import { useFuseauConnu } from "@/components/dates/useFuseau";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { ChampDate } from "@/components/ui/ChampDate";
@@ -10,6 +11,7 @@ import { ChampHeure } from "@/components/ui/ChampHeure";
 import { Field } from "@/components/ui/Field";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { Heading } from "@/components/ui/Text";
 import { Textarea } from "@/components/ui/Textarea";
 import { TextInput } from "@/components/ui/TextInput";
@@ -31,6 +33,7 @@ import {
   TITRE_MAX,
 } from "@/lib/sessions/regles";
 import type { DonneesSession, PieceSession, SessionDetail } from "@/lib/sessions/types";
+import { decalageGmt } from "@/lib/dates/fuseau";
 import { aujourdhui } from "@/lib/dates/saisie";
 import { createClient } from "@/lib/supabase/client";
 import { ApercuSessionCommunaute } from "./ApercuSessionCommunaute";
@@ -62,12 +65,19 @@ type Affiche = { deposee: PieceSession | null; fichier: File | null; type: strin
  * Programmer ou modifier une session live (spec des sessions live, §2 et §4 ; promotion, §1). Le formateur anime toujours
  * ses sessions ; l'équipe choisit l'animateur. Le visuel de promotion (une affiche ou une vidéo) paraît avec la session
  * dans la communauté ; à droite, l'aperçu de cette publication. Les limites sont vérifiées ici puis par la base.
+ * La date et l'heure se saisissent à l'heure de l'appareil (tâche 10 du 31 octobre 2026) : le formulaire attend de la
+ * connaître (le serveur ne la connaît pas) pour remplir et lire ses champs.
  */
-export function FormulaireSession({ espace, parcours, formateurs, initial, moi = SANS_COMPTE }: Props) {
+export function FormulaireSession(props: Props) {
+  const fuseau = useFuseauConnu();
+  return fuseau ? <Formulaire {...props} fuseau={fuseau} /> : <Skeleton className="h-[640px] rounded-2xl" />;
+}
+
+function Formulaire({ espace, parcours, formateurs, initial, moi = SANS_COMPTE, fuseau }: Props & { fuseau: string }) {
   const router = useRouter();
   const id = useId();
   const champFichier = useRef<HTMLInputElement>(null);
-  const champs = initial ? champsDepuis(initial.debut) : { date: "", heure: "" };
+  const champs = initial ? champsDepuis(initial.debut, fuseau) : { date: "", heure: "" };
   const [titre, setTitre] = useState(initial?.titre ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [date, setDate] = useState(champs.date);
@@ -139,6 +149,7 @@ export function FormulaireSession({ espace, parcours, formateurs, initial, moi =
       description: description.trim(),
       date,
       heure,
+      fuseau,
       dureeMinutes: Number(duree),
       lien: lien.trim(),
       parcoursId: parcoursId || null,
@@ -147,7 +158,7 @@ export function FormulaireSession({ espace, parcours, formateurs, initial, moi =
       video: adresseVideo || null,
     };
     // En modification, le début n'est revérifié que s'il change (corriger le lien d'une session en cours).
-    const debut = debutDepuis(date, heure);
+    const debut = debutDepuis(date, heure, fuseau);
     const verifierDebut = !initial || debut === null || Date.parse(debut) !== Date.parse(initial.debut);
     const refusVideo = !adresseVideo ? null : plateformeDepuisLien(adresseVideo) !== "En ligne" ? LIEN_LIVE : !reconnaitreVideo(adresseVideo) ? ADRESSE_VIDEO : null;
     const refus = refusSession(d, new Date(), { verifierDebut }) ?? refusVideo;
@@ -180,7 +191,8 @@ export function FormulaireSession({ espace, parcours, formateurs, initial, moi =
   }
 
   // L'aperçu : la publication telle qu'elle paraîtra (espace du parcours, plateforme d'après le lien).
-  const debutApercu = debutDepuis(date, heure);
+  const debutApercu = debutDepuis(date, heure, fuseau);
+  const decalage = decalageGmt(debutApercu ?? maintenant.toISOString(), fuseau);
   const nomAnimateur =
     espace === "admin" ? (formateurs?.find((f) => f.id === formateurId)?.nom ?? "Équipe Étudium") : `${moi.prenom} ${moi.nom}`.trim() || "Formateur";
   const videoApercu = videoOuverte && video.trim() ? reconnaitreVideo(video.trim()) : null;
@@ -205,14 +217,14 @@ export function FormulaireSession({ espace, parcours, formateurs, initial, moi =
           <Field label="Date" htmlFor={`${id}-date`} className="min-w-0 flex-[1_1_180px]">
             <ChampDate id={`${id}-date`} value={date} onChange={setDate} min={aujourdhui()} />
           </Field>
-          <Field label="Heure" htmlFor={`${id}-heure`} hint="Heure du Bénin." className="min-w-0 flex-[1_1_140px]">
+          <Field label="Heure" htmlFor={`${id}-heure`} hint={`À l’heure de votre appareil (${decalage}) ; chacun la verra à l’heure de son pays.`} className="min-w-0 flex-[1_1_140px]">
             <ChampHeure id={`${id}-heure`} value={heure} onChange={setHeure} />
           </Field>
           <Field label="Durée" htmlFor={`${id}-duree`} className="min-w-0 flex-[1_1_140px]">
             <Select id={`${id}-duree`} value={duree} onChange={(e) => setDuree(e.target.value)} options={DUREES.map((m) => ({ value: String(m), label: dureeLisible(m) }))} />
           </Field>
         </div>
-        <Field label="Lien du live" htmlFor={`${id}-lien`} hint="Google Meet, Zoom… Il s’affiche aux participants 10 min avant le début.">
+        <Field label="Lien du live" htmlFor={`${id}-lien`} hint="Google Meet, Zoom… Les participants le rejoignent à l’heure du début.">
           <TextInput id={`${id}-lien`} type="url" value={lien} onChange={(e) => setLien(e.target.value)} placeholder="https://meet.google.com/…" maxLength={500} />
         </Field>
         <Field label="Parcours" htmlFor={`${id}-parcours`}>

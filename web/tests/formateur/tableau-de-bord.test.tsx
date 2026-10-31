@@ -127,7 +127,7 @@ describe("Tableau de bord du formateur", () => {
     });
     render(await TableauDeBordFormateur());
     const carte = screen.getByRole("region", { name: "Prochaine session live" });
-    for (const texte of ["Dans 2 jours", "Excel avancé : analyse de données", "Samedi 24 octobre · 15 h 00", "Google Meet", "RH", "FA"]) expect(within(carte).getByText(texte)).toBeInTheDocument();
+    for (const texte of ["Dans 2 jours", "Excel avancé : analyse de données", "Samedi 24 octobre · 15 h 00 (GMT+1)", "Google Meet", "RH", "FA"]) expect(within(carte).getByText(texte)).toBeInTheDocument();
     expect(within(carte).getByRole("link", { name: "Voir la session" })).toHaveAttribute("href", "/formateur/sessions/s1");
     expect(lireSessionDetail).toHaveBeenCalledWith("s1");
     vi.useRealTimers();

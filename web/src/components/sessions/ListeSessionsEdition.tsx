@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/Button";
 import { CELLULE_TABLEAU, TableauListe } from "@/components/ui/TableauListe";
 import { Tag, type TagTone } from "@/components/ui/Tag";
 import type { EspaceEdition } from "@/lib/admin/espace";
-import { dateSession, enCours, terminee } from "@/lib/sessions/regles";
+import { enCours, terminee } from "@/lib/sessions/regles";
 import type { LigneSessionEdition, ListeSessionsEdition as Liste } from "@/lib/sessions/types";
 import { baseSessions } from "./cadre";
+import { QuandSession } from "./QuandSession";
 
 function etat(s: LigneSessionEdition, maintenant: Date): { libelle: string; ton: TagTone } {
   if (s.statut === "annulee") return { libelle: "Annulée", ton: "echoue" };
@@ -25,7 +26,7 @@ function Tableau({ nom, espace, sessions, maintenant }: { nom: string; espace: E
         const { libelle, ton } = etat(s, maintenant);
         return (
           <tr key={s.id}>
-            <td className={`${CELLULE_TABLEAU} whitespace-nowrap`}>{dateSession(s.debut)}</td>
+            <td className={`${CELLULE_TABLEAU} whitespace-nowrap`}><QuandSession debut={s.debut} /></td>
             <td className={`${CELLULE_TABLEAU} font-medium wrap-anywhere text-encre`}>
               <Link href={`${base}/${s.id}`} className="focus-etudium text-encre no-underline hover:underline">
                 {s.titre}

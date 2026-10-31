@@ -88,6 +88,15 @@ describe("Programmer, modifier, annuler", () => {
     expect(faux.de("rpc", "creer_session")[1].valeurs).toMatchObject({ p_formateur: FICHE });
   });
 
+  it("le début se lit dans le fuseau du formateur (son appareil) ; un fuseau inconnu : le Bénin", async () => {
+    getShellUser.mockResolvedValue({ roles: ["etudiant", "formateur"] });
+    faux.repondre("rpc.creer_session", { data: ID });
+    await creerSession({ ...D, fuseau: "Africa/Lome" });
+    expect(faux.de("rpc", "creer_session")[0].valeurs).toMatchObject({ p_debut: `${D.date}T15:00:00+00:00` });
+    await creerSession({ ...D, fuseau: "Pas/Un_Fuseau" });
+    expect(faux.de("rpc", "creer_session")[1].valeurs).toMatchObject({ p_debut: `${D.date}T15:00:00+01:00` });
+  });
+
   it("modifier : sans revérifier le début (la base le fait s'il change) ; annuler ; refus et migration absente", async () => {
     getShellUser.mockResolvedValue({ roles: ["etudiant", "formateur"] });
     expect(await modifierSession(ID, { ...D, date: "2020-01-01" })).toEqual({ ok: true });
