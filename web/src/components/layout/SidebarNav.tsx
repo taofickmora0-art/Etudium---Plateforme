@@ -10,8 +10,8 @@ import { spaceOf, type Espace } from "@/lib/auth/permissions";
 import { cn } from "@/lib/cn";
 import { MENUS, entreeActive, type NavEntry } from "@/lib/navigation";
 
-// La barre garde toujours 337 px de contenu : réduite, sa place n'en montre que la colonne d'icônes (84 px), et elle se
-// déplie par-dessus la page au survol ou au clavier (règles « menu-lateral » de globals.css).
+// La barre garde toujours 337 px de contenu : réduite, sa place n'en montre que la colonne d'icônes (84 px), sans se
+// déplier au survol ni au clavier : on la rouvre avec son bouton (règles « menu-lateral » de globals.css).
 const NAV = "box-border flex w-[337px] flex-col gap-3 pt-5 pr-[18px] pb-5 pl-5";
 
 /**

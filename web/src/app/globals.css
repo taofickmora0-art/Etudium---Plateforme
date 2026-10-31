@@ -147,33 +147,34 @@ body {
 }
 
 /* Barre latérale repliable (grand écran ; bouton de l'en-tête, lib/menu-lateral.ts). Ouverte : 337 px. Réduite : la
-   colonne d'icônes (84 px) ; au survol, ou quand le clavier y entre, elle se déplie par-dessus la page. */
+   colonne d'icônes (84 px), qui ne se déplie ni au survol ni au clavier (demande du 31 octobre 2026) : on la rouvre avec
+   son bouton. */
 .menu-lateral-place {
   width: 337px;
   transition: width 200ms ease;
 }
 .menu-lateral {
   width: 100%;
-  transition:
-    width 200ms ease,
-    box-shadow 200ms ease;
+  transition: width 200ms ease;
 }
 html[data-menu="reduit"] .menu-lateral-place {
   width: 84px;
 }
-html[data-menu="reduit"] .menu-lateral:hover,
-html[data-menu="reduit"] .menu-lateral:has(:focus-visible) {
-  width: 337px;
-  border-radius: var(--radius-coque);
-  box-shadow: var(--shadow-menu);
-  /* Un passage rapide de la souris vers la page ne la déplie pas. */
-  transition-delay: 120ms;
-}
-/* Réduite et au repos : un carré d'icône par entrée (pastille de la page courante comprise), sans libellé ni intertitre. */
-html[data-menu="reduit"] .menu-lateral:not(:hover):not(:has(:focus-visible)) :is(.menu-lateral-intertitre, .menu-lateral-libelle, .menu-lateral-etiquette) {
+/* Réduite : un carré d'icône par entrée (pastille de la page courante comprise), sans intertitre ni étiquette. */
+html[data-menu="reduit"] .menu-lateral :is(.menu-lateral-intertitre, .menu-lateral-etiquette) {
   display: none;
 }
-html[data-menu="reduit"] .menu-lateral:not(:hover):not(:has(:focus-visible)) .menu-lateral-entree {
+/* Le libellé disparaît de l'écran mais reste le nom du lien pour les lecteurs d'écran. */
+html[data-menu="reduit"] .menu-lateral .menu-lateral-libelle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+html[data-menu="reduit"] .menu-lateral .menu-lateral-entree {
   width: 44px;
 }
 @media (prefers-reduced-motion: reduce) {

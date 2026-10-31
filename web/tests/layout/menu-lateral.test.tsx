@@ -7,8 +7,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppShell } from "@/components/layout/AppShell";
 import { CLE_MENU, SCRIPT_MENU } from "@/lib/menu-lateral";
 
-// La barre latérale repliable (demande du 14 octobre 2026) : un bouton de l'en-tête la réduit à ses icônes ; au survol
-// ou au clavier, elle se déplie par-dessus la page ; le choix est mémorisé sur l'appareil.
+// La barre latérale repliable (demande du 14 octobre 2026) : un bouton de l'en-tête la réduit à ses icônes ; le choix
+// est mémorisé sur l'appareil. Réduite, elle ne se déplie plus au survol ni au clavier (demande du 31 octobre 2026) :
+// on la rouvre avec son bouton.
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/accueil", useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/lib/notifications/actions", () => ({ chargerCloche: async () => null, marquerLues: async () => ({ ok: true }) }));
@@ -79,12 +80,15 @@ describe("La barre latérale repliable", () => {
     expect(lire("src/app/layout.tsx")).toContain("SCRIPT_MENU");
   });
 
-  it("la feuille de style : la place réduite, le dépliement au survol et au clavier, sans animation si on la refuse", () => {
+  it("la feuille de style : réduite, une colonne d'icônes qui ne se déplie ni au survol ni au clavier ; le libellé reste lu", () => {
     const css = lire("src/app/globals.css");
     expect(css).toContain('html[data-menu="reduit"] .menu-lateral-place');
-    expect(css).toContain('html[data-menu="reduit"] .menu-lateral:hover');
-    expect(css).toContain('html[data-menu="reduit"] .menu-lateral:has(:focus-visible)');
-    expect(css).toMatch(/\.menu-lateral-libelle[\s\S]*display: none/);
+    expect(css).not.toContain(".menu-lateral:hover");
+    expect(css).not.toContain(".menu-lateral:has(:focus-visible)");
+    // Les intertitres et étiquettes disparaissent ; le libellé est masqué à l'écran mais garde le nom du lien.
+    expect(css).toMatch(/\.menu-lateral-intertitre, \.menu-lateral-etiquette\) \{\s*display: none/);
+    expect(css).toMatch(/\.menu-lateral-libelle \{[^}]*clip-path: inset\(50%\)/);
+    expect(css).not.toMatch(/\.menu-lateral-libelle[^{]*\{[^}]*display: none/);
     expect(css).toMatch(/\.menu-lateral-entree \{\s*width: 44px/);
     expect(css).toMatch(/prefers-reduced-motion[\s\S]*menu-lateral/);
   });
