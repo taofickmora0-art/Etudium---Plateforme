@@ -993,3 +993,62 @@ Pas de migration. Recharge l'appli, connecté avec un compte étudiant :
 2. **Mes formations :** même badge sur chaque formation commencée (à côté de « Verrouillée » s'il y a lieu).
 3. **Le fil de l'Accueil :** la carte « Nouvelle formation » montre son parcours en badge coloré.
 4. **La page Favoris** garde ses cartes sans badge : le cœur occupe le coin.
+
+## 56. Lot 2 : abonnements et paiement Payiz, 45 minutes
+
+Tout se passe en **mode test** : le simulateur de Payiz ne prend aucun argent. Les secrets vont dans `web/.env.local`, que tu remplis toi-même (ne les colle jamais dans une conversation).
+
+1. **Ton compte Payiz.**
+   - Crée ton compte sur payiz.app (le mode test ne demande aucune vérification).
+   - Dans les réglages, active le **paiement direct** : sans lui, Payiz refuse les paiements (`direct_not_enabled`).
+   - Copie ta clé secrète `sk_test_…` (Développeurs › Clés) dans `web/.env.local` :
+     ```
+     PAYIZ_CLE_SECRETE=sk_test_…
+     ```
+2. **Le jeton du serveur.** Dans un terminal, génère une longue chaîne au hasard :
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+   Colle-la dans `web/.env.local` :
+   ```
+   PAIEMENT_JETON=la-chaîne-obtenue
+   ```
+   Puis arrête et relance `npm run dev` (les variables ne sont lues qu'au démarrage).
+3. **Les migrations.** Dans l'éditeur SQL de Supabase, applique dans l'ordre, après la 0048 :
+   - `web/supabase/migrations/0049_abonnements_paiements.sql` (formules, codes promo, paiements, abonnements) ;
+   - `web/supabase/migrations/0050_acces_abonnes.sql` (ce qu'ouvre un abonnement) ;
+   - `web/supabase/migrations/0051_paiements_equipe.sql` (le back-office et le tableau de bord) ;
+   - `web/supabase/migrations/0052_rappels_abonnements.sql` (les rappels d'expiration ; sa dernière partie crée la tâche planifiée, comme en section 47).
+4. **Au back-office, avec ton compte administrateur** (menu « Abonnements et paiements ») :
+   - onglet « Abonnements » : fixe les prix (par exemple Basique 9 000, Standard 15 000, Premium 25 000), puis « Enregistrer » sur chaque ligne ;
+   - en haut, « Activer les paiements » : la base garde l'empreinte de ton jeton (jamais le jeton lui-même) ;
+   - onglet « Codes promo » : crée par exemple `PROMO20` (pourcentage, 20).
+5. **La page d'accueil** (déconnecté) : les cartes Formules affichent tes prix, et « Choisir Standard » mène à la création de compte, puis à la souscription.
+6. **Un paiement de test**, avec un compte étudiant (menu « Mon abonnement », puis « S'abonner ») :
+   - choisis Standard, saisis `PROMO20` puis « Appliquer » : le récapitulatif affiche la remise et le total ;
+   - numéro **01 42 00 00 00** (MTN) : ce sont **les deux derniers chiffres qui décident du résultat** dans le simulateur :
+     - `00` : réussi en 5 secondes ;
+     - `01` : solde insuffisant ;
+     - `02` : refusé par le payeur ;
+     - `03` : sans réponse, expiré en 90 secondes ;
+     - `04` : incertain, puis réussi en 2 minutes ;
+     - `05` : opérateur injoignable ;
+     - `06` : réussi sans notification ;
+   - avec Moov : **01 55 00 00 00** ;
+   - « Payer » ouvre l'attente (le numéro masqué, le compte à rebours), puis « Paiement confirmé » avec « Voir le reçu » ; une formation payante s'ouvre aussitôt ;
+   - avec un numéro finissant par `01` : « Votre solde Mobile Money est insuffisant… », puis « Réessayer ».
+7. **Vérifie le montant chez Payiz :** dans ton tableau de bord Payiz, un paiement de 12 000 doit apparaître comme 12 000 F CFA. Si Payiz affiche 120 F CFA ou 1 200 000, dis-le-moi : c'est l'unité de `amount`.
+8. **Ce qui s'ouvre avec l'abonnement :** les formations payantes (« Incluse dans votre abonnement »), tous les espaces de la communauté, l'inscription aux lives et l'espace « Replays ». Avec un compte gratuit, les lives et les replays portent un cadenas et « Voir les abonnements ».
+9. **Une prolongation :** reprends un abonnement (Basique, par exemple) : « Mon abonnement » montre une date de fin repoussée de 3 mois.
+10. **Une expiration simulée.** Dans l'éditeur SQL, en remplaçant l'adresse par celle de ton compte de test :
+    ```sql
+    update public.abonnements set debut = debut - interval '7 months', fin = fin - interval '7 months'
+    where profil_id = (select id from auth.users where email = 'ton-adresse-de-test');
+    ```
+    Recharge : les formations payantes sont reverrouillées, l'Accueil montre « Votre abonnement Standard a expiré le … » avec « Renouveler », et « Mon abonnement » dit « Expiré ». La cloche reçoit « Votre abonnement Standard a expiré ».
+11. **Au back-office :** chaque paiement de test est dans l'onglet « Paiements » (filtres, recherche par numéro de reçu, détail) ; le tableau de bord remplit « Utilisateurs payants », « Taux de conversion », « Chiffre d'affaires » et « Revenus par formule » ; la liste des utilisateurs montre la formule de chacun.
+12. **Plus tard, une fois le site en ligne :**
+    - dans Payiz (Développeurs › Webhooks), déclare l'adresse `https://<ton-domaine>/api/paiements/payiz` avec les événements `payment.succeeded`, `payment.attempt_failed`, `payment.expired` et `payment.canceled` ;
+    - copie le secret de cette adresse dans `PAYIZ_SECRET_WEBHOOK` ;
+    - après la vérification de ton compte par Payiz, remplace la clé par `sk_live_…`.
+    En local, pas besoin de notifications : l'écran d'attente et « Mon abonnement » relisent chaque paiement chez Payiz.
