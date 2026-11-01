@@ -8,7 +8,7 @@ const getShellUser = vi.fn();
 vi.mock("@/lib/auth/current-user", () => ({ getShellUser: () => getShellUser(), demoModeActive: () => false }));
 vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 
-const { addLecon, saveLecon, saveFormationInfos, changerStatutLecon, setStatutFormation } = await import("@/lib/admin/actions");
+const { addLecon, saveFormationInfos, changerStatutLecon, setStatutFormation } = await import("@/lib/admin/actions");
 const { getFormationAdmin, getLeconAdmin, listFormations } = await import("@/lib/admin/data");
 const { IDLE } = await import("@/lib/auth/schemas");
 
@@ -21,7 +21,6 @@ const form = (valeurs: Record<string, string>) => {
   for (const [k, v] of Object.entries(valeurs)) fd.set(k, v);
   return fd;
 };
-const QUESTIONS = [{ genre: "unique", enonce: "Quel outil ?", choix: [{ texte: "Zotero", correcte: true }, { texte: "Excel", correcte: false }], reponses: [], explication: "" }];
 
 beforeEach(() => {
   faux.vider();
@@ -46,26 +45,6 @@ describe("Créer un quiz", () => {
     faux.repondre("modules.select", { data: { formation_id: F, formations: { publiee_le: null } } });
     faux.repondre("lecons.insert", { error: { code: "PGRST204", message: "Could not find the 'type' column of 'lecons'" } });
     expect(await addLecon(IDLE, form({ module_id: M, titre: "Quiz", type: "quiz" }))).toMatchObject({ status: "error", message: MIGRATION });
-  });
-});
-
-describe("Enregistrer un quiz", () => {
-  const saisie = { id: L, titre: "Quiz du module 1", titre_court: "", duree: "0:00", video: "", resume: "", points_cles: "", texte: "" };
-
-  it("les questions partent à la base avec la leçon", async () => {
-    expect(await saveLecon(IDLE, form({ ...saisie, questions: JSON.stringify(QUESTIONS) }))).toMatchObject({ status: "success" });
-    expect(faux.de("rpc", "enregistrer_quiz")[0].valeurs).toEqual({ p_lecon: L, p_questions: QUESTIONS });
-  });
-
-  it("une question refusée par la base : son message sur le champ des questions ; une saisie illisible, refusée", async () => {
-    faux.repondre("rpc.enregistrer_quiz", { error: { code: "P0001", message: "La question 1 doit avoir une seule bonne réponse." } });
-    expect(await saveLecon(IDLE, form({ ...saisie, questions: JSON.stringify(QUESTIONS) }))).toMatchObject({
-      status: "error",
-      fieldErrors: { questions: "La question 1 doit avoir une seule bonne réponse." },
-    });
-    faux.vider();
-    expect(await saveLecon(IDLE, form({ ...saisie, questions: "pas du json" }))).toMatchObject({ status: "error", fieldErrors: { questions: expect.any(String) } });
-    expect(faux.de("rpc", "enregistrer_quiz")).toEqual([]);
   });
 });
 

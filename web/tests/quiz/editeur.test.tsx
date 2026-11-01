@@ -7,8 +7,15 @@ import type { FormationAdmin, LeconAdmin } from "@/lib/admin/types";
 import type { QuestionQuiz } from "@/lib/quiz/types";
 
 // Lot 3, étape A : le formateur écrit un quiz (quatre types de questions) et l'ajoute au programme.
+vi.mock("@/lib/editeur/actions", () => ({
+  enregistrerLecon: vi.fn(async () => ({ ok: true, revision: 1, brouillon: false, enregistreLe: "2026-11-01T14:32:00" })),
+  reglerLecon: vi.fn(async () => ({ ok: true })),
+  enregistrerQuestions: vi.fn(),
+  abandonnerModifications: vi.fn(),
+  publierModifications: vi.fn(),
+  lireModificationsEnAttente: vi.fn(async () => ({ migrationAbsente: false, donnees: [] })),
+}));
 vi.mock("@/lib/admin/actions", () => ({
-  saveLecon: vi.fn(),
   changerStatutLecon: vi.fn(),
   addRessource: vi.fn(),
   updateRessource: vi.fn(),
@@ -27,6 +34,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }
 vi.mock("@/components/communaute/EditeurTexte", () => import("../communaute/editeur-simule"));
 vi.mock("@/components/editeur/EditeurRiche", () => import("../editeur/editeur-riche-simule"));
 const actions = await import("@/lib/admin/actions");
+const editeur = await import("@/lib/editeur/actions");
 const { EditeurLecon } = await import("@/components/admin/EditeurLecon");
 const { OngletLecons } = await import("@/components/admin/OngletLecons");
 
@@ -66,14 +74,15 @@ function afficher(quiz: { migrationAbsente: true } | { migrationAbsente: false; 
     </ToastProvider>,
   );
 }
-const envoye = () => vi.mocked(actions.saveLecon).mock.calls.at(-1)![1] as FormData;
-const questionsEnvoyees = () => JSON.parse(envoye().get("questions") as string);
+// Les questions partent par « Enregistrer les questions » (fin du lot 4), à part du reste qui s'enregistre seul.
+const questionsEnvoyees = () => vi.mocked(editeur.enregistrerQuestions).mock.calls.at(-1)![1];
 const question = (n: number) => screen.getByRole("group", { name: `Question ${n}` });
 
 beforeEach(() => {
   for (const f of Object.values(actions)) vi.mocked(f as (...a: unknown[]) => unknown).mockReset();
   push.mockReset();
-  vi.mocked(actions.saveLecon).mockResolvedValue({ status: "success" });
+  vi.mocked(editeur.enregistrerQuestions).mockReset();
+  vi.mocked(editeur.enregistrerQuestions).mockResolvedValue({ ok: true });
 });
 
 describe("L'éditeur d'un quiz", () => {
@@ -96,10 +105,11 @@ describe("L'éditeur d'un quiz", () => {
     expect(within(question(2)).getByText("Corrigée sans tenir compte des majuscules, des accents ni des espaces en trop.")).toBeInTheDocument();
     expect(within(question(2)).getByRole("textbox", { name: "Explication (facultative)" })).toHaveValue("Elle remplace RECHERCHEV.");
 
-    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
-    await waitFor(() => expect(actions.saveLecon).toHaveBeenCalled());
+    await user.click(screen.getByRole("button", { name: "Enregistrer les questions" }));
+    await waitFor(() => expect(editeur.enregistrerQuestions).toHaveBeenCalled());
+    expect(vi.mocked(editeur.enregistrerQuestions).mock.calls[0][0]).toBe("q1");
     expect(questionsEnvoyees()).toEqual(ENVOYEES);
-    expect(await screen.findByText("Le quiz a bien été mis à jour.")).toBeInTheDocument();
+    expect(await screen.findByText("Les questions ont bien été enregistrées.")).toBeInTheDocument();
   });
 
   it("pas de case « Leçon d’aperçu gratuite » pour un quiz (l'aperçu concerne les leçons)", () => {
@@ -153,8 +163,9 @@ describe("L'éditeur d'un quiz", () => {
     await user.click(within(question(2)).getByRole("button", { name: "Ajouter une réponse acceptée" }));
     await saisir(within(question(2)).getByRole("textbox", { name: "Réponse acceptée 2" }), "XLOOKUP");
 
-    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
-    await waitFor(() => expect(actions.saveLecon).toHaveBeenCalled());
+    expect(screen.getByText("Questions modifiées, pas encore enregistrées")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Enregistrer les questions" }));
+    await waitFor(() => expect(editeur.enregistrerQuestions).toHaveBeenCalled());
     expect(questionsEnvoyees()).toEqual([
       ENVOYEES[0],
       { ...ENVOYEES[1], reponses: ["RECHERCHEX", "XLOOKUP"] },
@@ -201,9 +212,9 @@ describe("L'éditeur d'un quiz", () => {
 
   it("le refus de la base s'affiche sur les questions ; un quiz vide ; avant la 0031", async () => {
     const user = userEvent.setup();
-    vi.mocked(actions.saveLecon).mockResolvedValue({ status: "error", fieldErrors: { questions: "La question 1 doit avoir une seule bonne réponse." } });
+    vi.mocked(editeur.enregistrerQuestions).mockResolvedValue({ ok: false, message: "La question 1 doit avoir une seule bonne réponse." });
     const { unmount } = afficher();
-    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await user.click(screen.getByRole("button", { name: "Enregistrer les questions" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("La question 1 doit avoir une seule bonne réponse.");
     unmount();
 
@@ -212,13 +223,10 @@ describe("L'éditeur d'un quiz", () => {
     expect(screen.getByRole("button", { name: "Ajouter une question" })).toBeInTheDocument();
     vide.unmount();
 
-    vi.mocked(actions.saveLecon).mockResolvedValue({ status: "success" });
     afficher({ migrationAbsente: true });
     expect(screen.getByText("Appliquez la migration 0031 (guide « Ce qui te revient », section 37).")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ajouter une question" })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
-    await waitFor(() => expect(actions.saveLecon).toHaveBeenCalled());
-    expect(envoye().has("questions")).toBe(false);
+    expect(screen.queryByRole("button", { name: "Enregistrer les questions" })).toBeNull();
   });
 });
 

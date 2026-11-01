@@ -9,7 +9,7 @@ vi.mock("@/lib/auth/current-user", () => ({ getShellUser: () => getShellUser(), 
 const refresh = vi.fn();
 vi.mock("next/cache", () => ({ refresh: () => refresh() }));
 
-const { addLecon, changerStatutLecon, ranger, saveLecon, setStatutFormation } = await import("@/lib/admin/actions");
+const { addLecon, changerStatutLecon, ranger, setStatutFormation } = await import("@/lib/admin/actions");
 const { getFormationAdmin, getLeconAdmin } = await import("@/lib/admin/data");
 const { IDLE } = await import("@/lib/auth/schemas");
 
@@ -61,19 +61,6 @@ describe("Le statut d'une leçon", () => {
     faux.repondre("lecons.insert", (appel) => (avecColonne("publiee")(appel) ? { error: COLONNE_ABSENTE } : { data: { id: L } }));
     expect(await addLecon(IDLE, form({ module_id: M1, titre: "Nouvelle" }))).toMatchObject({ status: "success" });
     expect(faux.de("lecons", "insert").map((a) => a.valeurs)).toEqual([expect.objectContaining({ publiee: false }), expect.not.objectContaining({ publiee: expect.anything() })]);
-  });
-
-  it("enregistrer une leçon : « Activer les commentaires » transmis ; avant la 0027, enregistrée sans", async () => {
-    const saisie = { id: L, titre: "Titre", titre_court: "", duree: "0:00", video: "", resume: "", points_cles: "", texte: "**Gras**" };
-    expect(await saveLecon(IDLE, form({ ...saisie, commentaires_actifs: "on" }))).toMatchObject({ status: "success" });
-    expect(faux.de("lecons", "update")[0].valeurs).toMatchObject({ commentaires_actifs: true });
-    faux.vider();
-    await saveLecon(IDLE, form(saisie));
-    expect(faux.de("lecons", "update")[0].valeurs).toMatchObject({ commentaires_actifs: false });
-    faux.vider();
-    faux.repondre("lecons.update", (appel) => (avecColonne("commentaires_actifs")(appel) ? { error: { code: "PGRST204", message: "Could not find the 'commentaires_actifs' column" } } : {}));
-    expect(await saveLecon(IDLE, form(saisie))).toMatchObject({ status: "success" });
-    expect(faux.de("lecons", "update")).toHaveLength(2);
   });
 
   it("publier une formation : au moins une leçon publiée ; avant la 0027, toutes comptent", async () => {

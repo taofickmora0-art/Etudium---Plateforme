@@ -1,13 +1,21 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import type { LeconAdmin } from "@/lib/admin/types";
 
-// L'éditeur de leçon en deux colonnes (refonte des formations, étape A, spec §3.4, d'après izimentor).
+// L'éditeur de leçon en deux colonnes (refonte des formations, étape A, spec §3.4, d'après izimentor), enregistré tout
+// seul, dans un brouillon si la leçon est en ligne (fin du lot 4, spec §2).
+vi.mock("@/lib/editeur/actions", () => ({
+  enregistrerLecon: vi.fn(),
+  reglerLecon: vi.fn(),
+  enregistrerQuestions: vi.fn(),
+  abandonnerModifications: vi.fn(),
+  publierModifications: vi.fn(),
+  lireModificationsEnAttente: vi.fn(async () => ({ migrationAbsente: false, donnees: [] })),
+}));
 vi.mock("@/lib/admin/actions", () => ({
-  saveLecon: vi.fn(),
   changerStatutLecon: vi.fn(),
   addRessource: vi.fn(),
   updateRessource: vi.fn(),
@@ -22,6 +30,7 @@ vi.mock("@/components/editeur/EditeurRiche", () => import("../editeur/editeur-ri
 const creerAdaptateur = vi.fn();
 vi.mock("@/lib/video/adaptateurs", () => ({ creerAdaptateur: (...a: unknown[]) => creerAdaptateur(...a) }));
 const actions = await import("@/lib/admin/actions");
+const editeur = await import("@/lib/editeur/actions");
 const { EditeurLecon } = await import("@/components/admin/EditeurLecon");
 
 const LECON: LeconAdmin = {
@@ -49,6 +58,23 @@ const LECON: LeconAdmin = {
   voisines: { precedente: "l1", suivante: "l3" },
 };
 
+const EDITION: NonNullable<LeconAdmin["edition"]> = {
+  donnees: {
+    titre: "Les formules",
+    titreCourt: "",
+    resume: "",
+    pointsCles: [],
+    lienVideo: "https://youtu.be/dQw4w9WgXcQ",
+    duree: "12:40",
+    document: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Un texte" }] }] },
+  },
+  revision: 0,
+  brouillon: false,
+  enLigne: false,
+  modifiePar: null,
+  modifieLe: null,
+};
+
 function afficher(lecon: LeconAdmin = LECON, base?: "/admin/formations" | "/formateur/formations") {
   return render(
     <ToastProvider>
@@ -56,13 +82,16 @@ function afficher(lecon: LeconAdmin = LECON, base?: "/admin/formations" | "/form
     </ToastProvider>,
   );
 }
-const envoye = () => vi.mocked(actions.saveLecon).mock.calls.at(-1)![1] as FormData;
+const OK = { ok: true as const, revision: 1, brouillon: false, enregistreLe: "2026-11-01T14:32:00" };
+const envoye = () => vi.mocked(editeur.enregistrerLecon).mock.calls.at(-1)!;
 
 describe("L'éditeur de leçon", () => {
   beforeEach(() => {
-    for (const f of Object.values(actions)) vi.mocked(f as (...a: unknown[]) => unknown).mockReset();
+    for (const f of [...Object.values(actions), editeur.enregistrerLecon, editeur.reglerLecon, editeur.enregistrerQuestions]) vi.mocked(f as (...a: unknown[]) => unknown).mockReset();
     push.mockReset();
-    vi.mocked(actions.saveLecon).mockResolvedValue({ status: "success" });
+    localStorage.clear();
+    vi.mocked(editeur.enregistrerLecon).mockResolvedValue(OK);
+    vi.mocked(editeur.reglerLecon).mockResolvedValue({ ok: true });
     creerAdaptateur.mockReset();
     creerAdaptateur.mockImplementation(async (_v: unknown, _c: HTMLElement, ev: { pret(): void }) => {
       queueMicrotask(() => ev.pret());
@@ -95,43 +124,95 @@ describe("L'éditeur de leçon", () => {
     expect(await screen.findByRole("textbox", { name: "Texte de la leçon" })).toHaveValue("Un texte");
   });
 
-  it("« Enregistrer » envoie tout ; « La leçon a bien été mise à jour. »", async () => {
+  it("plus de bouton Enregistrer : modifier le contenu l'enregistre seul, avec la révision ; l'indicateur le dit", async () => {
     const user = userEvent.setup();
-    afficher();
+    afficher({ ...LECON, edition: { ...EDITION, revision: 7 } });
+    expect(screen.queryByRole("button", { name: "Enregistrer" })).toBeNull();
+    expect(screen.getByText("Enregistré")).toHaveAttribute("role", "status");
     await user.clear(screen.getByRole("textbox", { name: "Titre de la leçon" }));
     await user.type(screen.getByRole("textbox", { name: "Titre de la leçon" }), "Les formules essentielles");
     await user.clear(screen.getByRole("spinbutton", { name: "Minutes" }));
     await user.type(screen.getByRole("spinbutton", { name: "Minutes" }), "3");
     await user.clear(screen.getByRole("spinbutton", { name: "Secondes" }));
     await user.type(screen.getByRole("spinbutton", { name: "Secondes" }), "5");
-    await user.click(screen.getByRole("checkbox", { name: "Activer les commentaires" }));
-    await user.click(screen.getByRole("checkbox", { name: "Leçon d’aperçu gratuite" }));
     await user.type(await screen.findByRole("textbox", { name: "Texte de la leçon" }), " !");
     await user.click(screen.getByRole("button", { name: "Dans cette leçon" }));
     await user.type(screen.getByRole("textbox", { name: "Résumé" }), "Les bases du calcul.");
-    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
-    await waitFor(() => expect(actions.saveLecon).toHaveBeenCalled());
-    const fd = envoye();
-    expect({
-      id: fd.get("id"),
-      titre: fd.get("titre"),
-      duree: fd.get("duree"),
-      video: fd.get("video"),
-      commentaires: fd.get("commentaires_actifs"),
-      apercu: fd.get("apercu"),
-      document: JSON.parse(String(fd.get("document"))),
-      resume: fd.get("resume"),
-    }).toEqual({
-      id: "l2",
-      titre: "Les formules essentielles",
-      duree: "3:05",
-      video: "https://youtu.be/dQw4w9WgXcQ",
-      commentaires: null,
-      apercu: "on",
-      document: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Un texte !" }] }] },
-      resume: "Les bases du calcul.",
-    });
-    expect(await screen.findByText("La leçon a bien été mise à jour.")).toBeInTheDocument();
+    await waitFor(
+      () =>
+        expect(envoye()[1]).toMatchObject({
+          titre: "Les formules essentielles",
+          duree: "3:05",
+          lienVideo: "https://youtu.be/dQw4w9WgXcQ",
+          resume: "Les bases du calcul.",
+          document: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Un texte !" }] }] },
+        }),
+      { timeout: 3000 },
+    );
+    // La première sauvegarde part avec la révision lue à l'ouverture ; les suivantes, avec celle rendue par la base.
+    const appels = vi.mocked(editeur.enregistrerLecon).mock.calls;
+    expect(appels[0][0]).toBe("l2");
+    expect(appels[0][2]).toBe(7);
+    expect(appels.slice(1).every((c) => c[2] === 1)).toBe(true);
+    expect(await screen.findByText("Enregistré à 14 h 32")).toBeInTheDocument();
+  });
+
+  it("leçon ancienne ouverte sans modification : aucune sauvegarde (Review Focus 5)", async () => {
+    afficher();
+    await screen.findByRole("textbox", { name: "Texte de la leçon" });
+    await new Promise((r) => setTimeout(r, 1800));
+    expect(editeur.enregistrerLecon).not.toHaveBeenCalled();
+  });
+
+  it("leçon en ligne : « Brouillon enregistré », le bandeau Publier / Abandonner", async () => {
+    const user = userEvent.setup();
+    vi.mocked(editeur.enregistrerLecon).mockResolvedValue({ ...OK, brouillon: true });
+    afficher();
+    await user.type(screen.getByRole("textbox", { name: "Titre de la leçon" }), " !");
+    expect(await screen.findByText("Brouillon enregistré à 14 h 32", undefined, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByText("Modifications non publiées.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Publier les modifications" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Abandonner" }));
+    expect(screen.getByRole("dialog", { name: "Abandonner les modifications de cette leçon ?" })).toBeInTheDocument();
+  });
+
+  it("un brouillon déjà là s'ouvre avec le bandeau", () => {
+    afficher({ ...LECON, edition: { ...EDITION, brouillon: true, enLigne: true, donnees: { ...EDITION.donnees, titre: "Titre du brouillon" } } });
+    expect(screen.getByRole("textbox", { name: "Titre de la leçon" })).toHaveValue("Titre du brouillon");
+    expect(screen.getByText("Modifications non publiées.")).toBeInTheDocument();
+  });
+
+  it("conflit : le bandeau et « Recharger »", async () => {
+    const user = userEvent.setup();
+    vi.mocked(editeur.enregistrerLecon).mockResolvedValue({ ok: false, code: "conflit", par: "Aïcha Kpadé" });
+    afficher();
+    await user.type(screen.getByRole("textbox", { name: "Titre de la leçon" }), " !");
+    expect(await screen.findByText("Cette leçon vient d’être modifiée par Aïcha Kpadé.", undefined, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Recharger" })).toBeInTheDocument();
+  });
+
+  it("les réglages s'enregistrent aussitôt, sans brouillon ; un refus les remet", async () => {
+    const user = userEvent.setup();
+    afficher();
+    await user.click(screen.getByRole("checkbox", { name: "Leçon d’aperçu gratuite" }));
+    expect(editeur.reglerLecon).toHaveBeenCalledWith("l2", { commentairesActifs: true, apercu: true });
+    vi.mocked(editeur.reglerLecon).mockResolvedValue({ ok: false, message: "Refusé." });
+    await user.click(screen.getByRole("checkbox", { name: "Activer les commentaires" }));
+    expect(await screen.findByText("Refusé.")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Activer les commentaires" })).toBeChecked();
+    expect(editeur.enregistrerLecon).not.toHaveBeenCalled();
+  });
+
+  it("une copie de l'appareil non enregistrée se propose ; Récupérer la remet", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(
+      "etudium-editeur:lecon:l2",
+      JSON.stringify({ revision: 0, le: "2026-11-01T14:00:00Z", valeur: { ...EDITION.donnees, titre: "Titre perdu" } }),
+    );
+    afficher();
+    expect(await screen.findByText("Des modifications de cet appareil n’ont pas été enregistrées.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Récupérer" }));
+    expect(screen.getByRole("textbox", { name: "Titre de la leçon" })).toHaveValue("Titre perdu");
   });
 
   it("le statut change aussitôt, sans enregistrer", async () => {
@@ -142,58 +223,39 @@ describe("L'éditeur de leçon", () => {
     await user.click(screen.getByRole("menuitem", { name: "Publier" }));
     expect(actions.changerStatutLecon).toHaveBeenCalledWith("l2", true);
     expect(await screen.findByRole("button", { name: "Statut : Publiée" })).toBeInTheDocument();
-    expect(actions.saveLecon).not.toHaveBeenCalled();
+    expect(editeur.enregistrerLecon).not.toHaveBeenCalled();
   });
 
-  it("des changements non enregistrés : quitter demande confirmation (lien et fermeture de l'onglet)", async () => {
+  it("quelque chose à enregistrer : le navigateur retient l'onglet ; les liens ne demandent plus rien", async () => {
     const user = userEvent.setup();
+    vi.mocked(editeur.enregistrerLecon).mockReturnValue(new Promise(() => {}));
     afficher();
-    // Sans changement : on part sans question.
-    await user.click(screen.getByRole("link", { name: "Leçon suivante" }));
-    expect(screen.queryByRole("dialog")).toBeNull();
     await user.type(screen.getByRole("textbox", { name: "Titre de la leçon" }), " (modifiée)");
     const quitter = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(quitter);
     expect(quitter.defaultPrevented).toBe(true);
     await user.click(screen.getByRole("link", { name: "Retour aux leçons (Maîtriser Excel)" }));
-    const fenetre = screen.getByRole("dialog", { name: "Quitter sans enregistrer ?" });
-    await user.click(within(fenetre).getByRole("button", { name: "Quitter" }));
-    expect(push).toHaveBeenCalledWith("/admin/formations/f1?onglet=programme");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("une durée qui n'est pas en nombres entiers est refusée avant l'envoi (revue finale)", async () => {
+  it("une durée qui n'est pas en nombres entiers : le message, et la base refuse la saisie", async () => {
     const user = userEvent.setup();
     afficher();
     await user.clear(screen.getByRole("spinbutton", { name: "Minutes" }));
     await user.type(screen.getByRole("spinbutton", { name: "Minutes" }), "12.40");
-    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
     expect(await screen.findByText("Minutes et secondes : des nombres entiers (secondes de 0 à 59).")).toBeInTheDocument();
-    expect(actions.saveLecon).not.toHaveBeenCalled();
+    await waitFor(() => expect(editeur.enregistrerLecon).toHaveBeenCalled(), { timeout: 3000 });
+    expect(envoye()[1].duree).toBe("invalide");
   });
 
-  it("une erreur dans « Dans cette leçon » déplie la section (revue finale)", async () => {
+  it("une erreur dans « Dans cette leçon » déplie la section", async () => {
     const user = userEvent.setup();
-    vi.mocked(actions.saveLecon).mockResolvedValue({ status: "error", fieldErrors: { points_cles: "20 points clés au plus." } });
+    vi.mocked(editeur.enregistrerLecon).mockResolvedValue({ ok: false, code: "invalide", erreurs: { points_cles: "20 lignes au maximum." } });
     afficher();
     expect(screen.getByRole("button", { name: "Dans cette leçon" })).toHaveAttribute("aria-expanded", "false");
-    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
-    expect(await screen.findByText("20 points clés au plus.")).toBeVisible();
+    await user.type(screen.getByRole("textbox", { name: "Titre de la leçon" }), " !");
+    expect(await screen.findByText("20 lignes au maximum.", undefined, { timeout: 3000 })).toBeVisible();
     expect(screen.getByRole("button", { name: "Dans cette leçon" })).toHaveAttribute("aria-expanded", "true");
-  });
-
-  it("des changements non enregistrés : un lien du menu demande aussi confirmation (revue finale)", async () => {
-    const user = userEvent.setup();
-    render(
-      <ToastProvider>
-        <a href="/accueil">Accueil</a>
-        <EditeurLecon lecon={LECON} />
-      </ToastProvider>,
-    );
-    await user.type(screen.getByRole("textbox", { name: "Titre de la leçon" }), " (modifiée)");
-    await user.click(screen.getByRole("link", { name: "Accueil" }));
-    const fenetre = screen.getByRole("dialog", { name: "Quitter sans enregistrer ?" });
-    await user.click(within(fenetre).getByRole("button", { name: "Quitter" }));
-    expect(push).toHaveBeenCalledWith("/accueil");
   });
 
   it("la durée saisie (12:40) ne correspond pas à la vidéo (7:42) : l'éditeur le dit et propose de la reprendre", async () => {
@@ -205,8 +267,8 @@ describe("L'éditeur de leçon", () => {
     expect(screen.getByRole("spinbutton", { name: "Minutes" })).toHaveValue(7);
     expect(screen.getByRole("spinbutton", { name: "Secondes" })).toHaveValue(42);
     expect(screen.queryByText(/La vidéo dure/)).toBeNull();
-    await user.click(screen.getAllByRole("button", { name: "Enregistrer" })[0]);
-    expect(envoye().get("duree")).toBe("7:42");
+    await waitFor(() => expect(editeur.enregistrerLecon).toHaveBeenCalled(), { timeout: 3000 });
+    expect(envoye()[1].duree).toBe("7:42");
   });
 
   it("retoucher le lien de la même vidéo (?t=5) ne relance rien et garde l'avertissement (revue)", async () => {
@@ -300,6 +362,5 @@ describe("L'éditeur de leçon", () => {
     afficher({ ...LECON, voisines: { precedente: null, suivante: null }, position: { rang: 1, total: 1, module: { rang: 1, titre: "Les bases" } } }, "/formateur/formations");
     expect(screen.queryByRole("link", { name: "Leçon précédente" })).toBeNull();
     expect(screen.getByRole("link", { name: "Retour aux leçons (Maîtriser Excel)" })).toHaveAttribute("href", "/formateur/formations/f1?onglet=programme");
-    fireEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
   });
 });

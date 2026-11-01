@@ -6,8 +6,15 @@ import { ToastProvider } from "@/components/ui/Toast";
 import type { FormationAdmin, LeconAdmin } from "@/lib/admin/types";
 
 // Lot 3, étape B : le formateur écrit un exercice (consigne, fichiers fournis, genre) et l'ajoute au programme.
+vi.mock("@/lib/editeur/actions", () => ({
+  enregistrerLecon: vi.fn(async () => ({ ok: true, revision: 1, brouillon: false, enregistreLe: "2026-11-01T14:32:00" })),
+  reglerLecon: vi.fn(async () => ({ ok: true })),
+  enregistrerQuestions: vi.fn(),
+  abandonnerModifications: vi.fn(),
+  publierModifications: vi.fn(),
+  lireModificationsEnAttente: vi.fn(async () => ({ migrationAbsente: false, donnees: [] })),
+}));
 vi.mock("@/lib/admin/actions", () => ({
-  saveLecon: vi.fn(),
   changerStatutLecon: vi.fn(),
   addRessource: vi.fn(),
   updateRessource: vi.fn(),
@@ -26,6 +33,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }
 vi.mock("@/components/communaute/EditeurTexte", () => import("../communaute/editeur-simule"));
 vi.mock("@/components/editeur/EditeurRiche", () => import("../editeur/editeur-riche-simule"));
 const actions = await import("@/lib/admin/actions");
+const editeur = await import("@/lib/editeur/actions");
 const { EditeurLecon } = await import("@/components/admin/EditeurLecon");
 const { OngletLecons } = await import("@/components/admin/OngletLecons");
 
@@ -51,16 +59,16 @@ const EXERCICE: LeconAdmin = {
   position: { rang: 2, total: 2, module: { rang: 1, titre: "Les bases" } },
   voisines: { precedente: "l1", suivante: null },
 };
-const envoye = () => vi.mocked(actions.saveLecon).mock.calls.at(-1)![1] as FormData;
 
 beforeEach(() => {
   for (const f of Object.values(actions)) vi.mocked(f as (...a: unknown[]) => unknown).mockReset();
   push.mockReset();
-  vi.mocked(actions.saveLecon).mockResolvedValue({ status: "success" });
+  vi.mocked(editeur.reglerLecon).mockClear();
+  vi.mocked(editeur.enregistrerLecon).mockClear();
 });
 
 describe("L'éditeur d'un exercice", () => {
-  it("la consigne à la place du texte, le genre, les fichiers fournis ; ni vidéo ni durée ; enregistré avec son genre", async () => {
+  it("la consigne à la place du texte, le genre, les fichiers fournis ; ni vidéo ni durée ; le genre s'enregistre aussitôt", async () => {
     const user = userEvent.setup();
     render(
       <ToastProvider>
@@ -75,16 +83,12 @@ describe("L'éditeur d'un exercice", () => {
     expect(screen.getByText("Documents & fichiers")).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /Avec rendu/ })).toBeChecked();
     await user.click(screen.getByRole("radio", { name: /Simple/ }));
-    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
-    await waitFor(() => expect(actions.saveLecon).toHaveBeenCalled());
-    expect(envoye().get("genre_exercice")).toBe("simple");
-    expect(JSON.parse(String(envoye().get("document"))).content[0].content).toEqual([
-      { type: "text", text: "Créez un " },
-      { type: "text", text: "tableau croisé dynamique", marks: [{ type: "bold" }] },
-      { type: "text", text: "." },
-    ]);
-    expect(envoye().has("questions")).toBe(false);
-    expect(await screen.findByText("L’exercice a bien été mis à jour.")).toBeInTheDocument();
+    expect(editeur.reglerLecon).toHaveBeenCalledWith(EXERCICE.id, { commentairesActifs: EXERCICE.commentairesActifs, apercu: false, genreExercice: "simple" });
+    // La consigne, convertie, s'enregistre seule quand on l'écrit.
+    await user.type(screen.getByRole("textbox", { name: "Consigne" }), " Rendez-le.");
+    await waitFor(() => expect(editeur.enregistrerLecon).toHaveBeenCalled(), { timeout: 3000 });
+    const saisie = vi.mocked(editeur.enregistrerLecon).mock.calls.at(-1)![1];
+    expect(saisie.document.content[0].content).toEqual([{ type: "text", text: "Créez un tableau croisé dynamique. Rendez-le." }]);
   });
 });
 

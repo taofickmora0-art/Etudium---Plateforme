@@ -182,5 +182,5 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
   }, [cle]);
   const enregistrerMaintenant = useCallback(() => envoyerActuel.current(), []);
 
-  return { etat, enregistrerMaintenant, recuperation, recuperer, ignorer };
+  return { etat, brouillon: dernier.brouillon, enregistrerMaintenant, recuperation, recuperer, ignorer };
 }

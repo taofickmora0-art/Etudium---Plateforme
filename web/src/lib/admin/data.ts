@@ -7,6 +7,7 @@ import { etatFormation } from "@/lib/contenus/etat";
 import type { Badge, CouleurParcours, Niveau, StatutFormation } from "@/lib/contenus/libelles";
 import { cheminsImages, depuisMarkdown, documentLu } from "@/lib/lecon/document";
 import { signerImages } from "@/lib/lecon/images";
+import { versEtatEdition, versSaisieLecon } from "@/lib/editeur/saisie";
 import { estFonctionAbsente, estTablesAbsentes, lireAvecRepli, liste, parOrdre, TablesAbsentesError, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import type {
@@ -279,6 +280,9 @@ export async function getLeconAdmin(id: string): Promise<LeconAdmin | null> {
   const rangModule = programme.findIndex((m) => m.id === String(l.module_id));
   // Une leçon ancienne (Markdown restreint, sans document) s'ouvre convertie ; elle est gardée au premier enregistrement.
   const document = documentLu(contenu?.document) ?? depuisMarkdown(texte(contenu?.texte));
+  // Ce que l'éditeur affiche (0056) : le brouillon s'il existe ; sans la fonction (avant la 0056), rien.
+  const reponseEdition = await supabase.rpc("edition_lecon", { p_lecon: id });
+  const edition = !reponseEdition.error && reponseEdition.data ? versEtatEdition(reponseEdition.data, versSaisieLecon) : undefined;
   return {
     id: String(l.id),
     moduleId: String(l.module_id),
@@ -300,7 +304,8 @@ export async function getLeconAdmin(id: string): Promise<LeconAdmin | null> {
     video: estFournisseur(fournisseur) && typeof videoId === "string" ? { fournisseur, id: videoId } : null,
     texte: texte(contenu?.texte),
     document,
-    images: await signerImages(supabase, cheminsImages(document)),
+    images: await signerImages(supabase, [...cheminsImages(document), ...(edition ? cheminsImages(edition.donnees.document) : [])]),
+    edition,
     ressources: liste(l.ressources).map(versRessource).sort(parOrdre),
   };
 }

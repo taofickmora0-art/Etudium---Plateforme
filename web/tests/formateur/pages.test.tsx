@@ -35,7 +35,6 @@ vi.mock("@/lib/admin/actions", () => ({
   addLecon: vi.fn(),
   deleteLecon: vi.fn(),
   deplacer: vi.fn(),
-  saveLecon: vi.fn(),
   addRessource: vi.fn(),
   updateRessource: vi.fn(),
   deleteRessource: vi.fn(),

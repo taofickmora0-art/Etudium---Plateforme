@@ -12,7 +12,7 @@ vi.mock("@/lib/auth/current-user", () => ({ getShellUser: () => getShellUser(), 
 const refresh = vi.fn();
 vi.mock("next/cache", () => ({ refresh: () => refresh() }));
 
-const { enregistrerLecon, enregistrerInfosFormation, reglerLecon, publierModifications, abandonnerModifications, lireModificationsEnAttente } = await import(
+const { enregistrerLecon, enregistrerInfosFormation, enregistrerQuestions, reglerLecon, publierModifications, abandonnerModifications, lireModificationsEnAttente } = await import(
   "@/lib/editeur/actions"
 );
 
@@ -106,6 +106,16 @@ describe("Les informations générales, les réglages, la publication", () => {
       p_donnees: { titre: "Excel", resume: "Court", description: "Long", objectifs: ["Calculer"], competences: [], niveau: "debutant" },
     });
     expect(await enregistrerInfosFormation(F, { ...INFOS, titre: "" }, 0)).toMatchObject({ code: "invalide", erreurs: { titre: "Entrez le titre de la formation." } });
+  });
+
+  it("les questions d'un quiz partent à la base ; un refus donne son message ; avant la 0031, le message de la migration", async () => {
+    const QUESTIONS = [{ id: "q", genre: "vrai_faux", enonce: "Vrai ?", choix: [], reponses: [], explication: "" }];
+    expect(await enregistrerQuestions(L, QUESTIONS)).toEqual({ ok: true });
+    expect(faux.de("rpc", "enregistrer_quiz")[0].valeurs).toEqual({ p_lecon: L, p_questions: QUESTIONS });
+    faux.repondre("rpc.enregistrer_quiz", { error: { code: "P0001", message: "La question 1 doit avoir une seule bonne réponse." } });
+    expect(await enregistrerQuestions(L, QUESTIONS)).toEqual({ ok: false, message: "La question 1 doit avoir une seule bonne réponse." });
+    faux.repondre("rpc.enregistrer_quiz", { error: { code: "PGRST202", message: "absente" } });
+    expect(await enregistrerQuestions(L, QUESTIONS)).toEqual({ ok: false, message: "Appliquez la migration 0031 (guide « Ce qui te revient », section 37)." });
   });
 
   it("réglages d'une leçon : enregistrés aussitôt", async () => {

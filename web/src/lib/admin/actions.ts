@@ -10,11 +10,7 @@ import { baseFormations, espaceDe, type EspaceEdition } from "./espace";
 import { ACCES_EQUIPE, exigerEditeur, exigerEquipe } from "./garde";
 import { formatParMime } from "./fichiers";
 import { formateurSchema, formationInfosSchema, leconSchema, lignes, moduleSchema, parcoursSchema, ressourceSchema } from "./schemas";
-import { parseDuree } from "./duree";
 import { slugify } from "./slug";
-import { texteDuDocument, validerDocument, type DocumentLecon } from "@/lib/lecon/document";
-import { estMesuree, messageLienCourt } from "@/lib/video/plateformes";
-import { parseVideoUrl } from "./video";
 import { MIGRATION_QUIZ } from "@/lib/quiz/conversion";
 import { MIGRATION_EXERCICES } from "@/lib/exercices/conversion";
 import { MIGRATION_CERTIFICATS } from "@/lib/certificats/conversion";
@@ -563,113 +559,6 @@ export async function deleteLecon(id: string): Promise<Resultat> {
   }
   refresh();
   return { ok: true };
-}
-
-// ─── Une leçon ──────────────────────────────────────────────────────────────
-
-const LIEN_INCONNU = "Ce lien n’est pas une vidéo YouTube, Vimeo, TikTok, Tella, Loom, ScreenPal ou Google Drive.";
-const DUREE_INVALIDE = "Durée au format 12:40.";
-// Le temps réellement regardé se mesure par rapport à cette durée (migration 0007) : sans elle, la leçon ne se valide pas.
-const QUESTIONS_ILLISIBLES = "Les questions n’ont pas pu être lues. Réessayez.";
-const DUREE_REQUISE = "Saisissez la durée de la vidéo : elle sert à mesurer le temps regardé.";
-const DOCUMENT_ILLISIBLE = "Le contenu contient un élément non reconnu.";
-const MIGRATION_CONTENU = "Le contenu riche n’est pas encore installé (migration 0055, guide « Ce qui te revient », section 58).";
-
-/** Page d'une leçon : informations, vidéo (fournisseur + identifiant, jamais le lien), « Dans cette leçon », texte. */
-export async function saveLecon(_prev: FormState, fd: FormData): Promise<FormState> {
-  const id = texte(fd, "id");
-  const lien = texte(fd, "video").trim();
-  const duree = parseDuree(texte(fd, "duree"));
-  const video = lien ? parseVideoUrl(lien) : null;
-  const saisie = {
-    titre: texte(fd, "titre"),
-    titre_court: texte(fd, "titre_court"),
-    duree_secondes: duree ?? 0,
-    apercu: coche(fd, "apercu"),
-    resume: texte(fd, "resume"),
-    points_cles: lignes(texte(fd, "points_cles")),
-    texte: "",
-  };
-  // Le contenu riche (fin du lot 4) : vérifié bloc par bloc ; son texte brut va dans `texte`. Sans le champ (une saisie
-  // qui ne porte pas le contenu), le contenu enregistré reste tel quel.
-  let document: DocumentLecon | null | undefined = undefined;
-  let erreurDocument: string | null = null;
-  if (fd.has("document")) {
-    try {
-      const lu = validerDocument(JSON.parse(texte(fd, "document")));
-      if (lu.ok) document = lu.document;
-      else erreurDocument = lu.message;
-    } catch {
-      erreurDocument = DOCUMENT_ILLISIBLE;
-    }
-    if (document) saisie.texte = texteDuDocument(document);
-  }
-  const values = {
-    ...enTextes({ ...saisie, duree_secondes: "" }),
-    duree: texte(fd, "duree"),
-    video: texte(fd, "video"),
-    points_cles: saisie.points_cles.join("\n"),
-  };
-  const parsed = leconSchema.safeParse(saisie);
-  const erreurs = parsed.success ? {} : fieldErrorsFrom(parsed.error);
-  if (duree === null) erreurs.duree = DUREE_INVALIDE;
-  // Sans mesure (Loom, ScreenPal, Google Drive), la durée est facultative : elle ne sert qu'à l'affichage.
-  else if (video && estMesuree(video.fournisseur) && duree === 0) erreurs.duree = DUREE_REQUISE;
-  if (lien && !video) erreurs.video = messageLienCourt(lien) ?? LIEN_INCONNU;
-  if (erreurDocument) erreurs.texte = erreurDocument;
-  // Un quiz (0031) : ses questions viennent avec la leçon, en JSON ; la base les vérifie une à une.
-  let questions: unknown = undefined;
-  if (fd.has("questions")) {
-    try {
-      questions = JSON.parse(texte(fd, "questions"));
-    } catch {
-      erreurs.questions = QUESTIONS_ILLISIBLES;
-    }
-  }
-  if (!parsed.success || Object.keys(erreurs).length > 0) return { status: "error", fieldErrors: erreurs, values };
-  if (!estUuid(id)) return { status: "error", message: ECHEC, values };
-
-  try {
-    const garde = await exigerEditeur();
-    if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
-    const { supabase } = garde;
-    const { texte: contenuTexte, titre_court, ...lecon } = parsed.data;
-    // Un exercice (0032) : « simple » ou « avec rendu ».
-    const genre = texte(fd, "genre_exercice");
-    const champs = { ...lecon, titre_court: titre_court || null, ...(genre === "simple" || genre === "rendu" ? { genre_exercice: genre } : {}) };
-    let { error } = await supabase
-      .from("lecons")
-      .update({ ...champs, commentaires_actifs: coche(fd, "commentaires_actifs") })
-      .eq("id", id);
-    // Avant la 0027, la colonne manque : le reste s'enregistre.
-    if (colonneAbsente(error)) ({ error } = await supabase.from("lecons").update(champs).eq("id", id));
-    if (error) return erreurEnregistrement(error, values);
-    const { error: erreurContenu } = await supabase.from("lecons_contenus").upsert({
-      lecon_id: id,
-      video_fournisseur: video?.fournisseur ?? null,
-      video_id: video?.id ?? null,
-      ...(document !== undefined ? { texte: contenuTexte, document } : {}),
-    });
-    // Avant la 0055, la colonne du document manque : on ne garde pas un texte privé de sa mise en forme.
-    if (colonneAbsente(erreurContenu)) return { status: "error", message: MIGRATION_CONTENU, values };
-    if (erreurContenu) return erreurEnregistrement(erreurContenu, values);
-    if (questions !== undefined) {
-      const { error: erreurQuiz } = await supabase.rpc("enregistrer_quiz", { p_lecon: id, p_questions: questions });
-      if (erreurQuiz) {
-        refresh();
-        const message = estFonctionAbsente(erreurQuiz)
-          ? MIGRATION_QUIZ
-          : (erreurQuiz.code === "P0001" || erreurQuiz.code === "42501") && erreurQuiz.message
-            ? typographie(erreurQuiz.message)
-            : ECHEC;
-        return { status: "error", fieldErrors: { questions: message }, values };
-      }
-    }
-  } catch {
-    return { status: "error", message: ECHEC, values };
-  }
-  refresh();
-  return { status: "success", values };
 }
 
 // ─── Ressources d'une leçon ─────────────────────────────────────────────────

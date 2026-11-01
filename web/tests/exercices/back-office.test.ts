@@ -8,7 +8,7 @@ const getShellUser = vi.fn();
 vi.mock("@/lib/auth/current-user", () => ({ getShellUser: () => getShellUser(), demoModeActive: () => false }));
 vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 
-const { addLecon, saveLecon, deleteLecon, deleteModule } = await import("@/lib/admin/actions");
+const { addLecon, deleteLecon, deleteModule } = await import("@/lib/admin/actions");
 const { getFormationAdmin, getLeconAdmin } = await import("@/lib/admin/data");
 const { listCatalogue } = await import("@/lib/catalogue/data");
 const { IDLE } = await import("@/lib/auth/schemas");
@@ -40,14 +40,6 @@ describe("Créer un exercice", () => {
     expect(await addLecon(IDLE, form({ module_id: M, titre: "Exercice", type: "exercice" }))).toMatchObject({ status: "error", message: MIGRATION });
   });
 
-  it("enregistrer un exercice : son genre part avec la leçon ; un genre inconnu n'est pas envoyé", async () => {
-    const saisie = { id: L, titre: "Nettoyer une enquête", titre_court: "", duree: "0:00", video: "", resume: "", points_cles: "", texte: "La consigne." };
-    expect(await saveLecon(IDLE, form({ ...saisie, genre_exercice: "simple" }))).toMatchObject({ status: "success" });
-    expect(faux.de("lecons", "update")[0].valeurs).toMatchObject({ genre_exercice: "simple" });
-    faux.vider();
-    await saveLecon(IDLE, form({ ...saisie, genre_exercice: "autre" }));
-    expect(faux.de("lecons", "update")[0].valeurs).not.toHaveProperty("genre_exercice");
-  });
 });
 
 describe("Supprimer une leçon ou un module : les fichiers rendus partent aussi", () => {

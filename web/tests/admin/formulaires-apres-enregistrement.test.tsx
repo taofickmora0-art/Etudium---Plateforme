@@ -11,13 +11,22 @@ const reussite = async (_prev: FormState, fd: FormData): Promise<FormState> => (
   status: "success",
   values: Object.fromEntries([...fd.entries()].map(([k, v]) => [k, String(v)])),
 });
-vi.mock("@/lib/admin/actions", () => ({ saveLecon: vi.fn(), saveFormationInfos: vi.fn(), changerStatutLecon: vi.fn(), addRessource: vi.fn(), updateRessource: vi.fn(), deleteRessource: vi.fn(), deplacer: vi.fn() }));
+vi.mock("@/lib/editeur/actions", () => ({
+  enregistrerLecon: vi.fn(async () => ({ ok: true, revision: 1, brouillon: false, enregistreLe: "2026-11-01T14:32:00" })),
+  reglerLecon: vi.fn(async () => ({ ok: true })),
+  enregistrerQuestions: vi.fn(),
+  abandonnerModifications: vi.fn(),
+  publierModifications: vi.fn(),
+  lireModificationsEnAttente: vi.fn(async () => ({ migrationAbsente: false, donnees: [] })),
+}));
+vi.mock("@/lib/admin/actions", () => ({ saveFormationInfos: vi.fn(), changerStatutLecon: vi.fn(), addRessource: vi.fn(), updateRessource: vi.fn(), deleteRessource: vi.fn(), deplacer: vi.fn() }));
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ storage: { from: () => ({ upload: vi.fn(), remove: vi.fn() }) } }) }));
 vi.mock("@/components/communaute/EditeurTexte", () => import("../communaute/editeur-simule"));
 vi.mock("@/components/editeur/EditeurRiche", () => import("../editeur/editeur-riche-simule"));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 
-const { saveLecon, saveFormationInfos } = await import("@/lib/admin/actions");
+const { saveFormationInfos } = await import("@/lib/admin/actions");
+const { reglerLecon } = await import("@/lib/editeur/actions");
 const { EditeurLecon } = await import("@/components/admin/EditeurLecon");
 const { FormationInfosForm } = await import("@/components/admin/FormationInfosForm");
 
@@ -65,16 +74,11 @@ const enregistrer = async () => {
 };
 
 describe("Après un enregistrement, le formulaire montre ce qui est enregistré", () => {
-  it("un interrupteur garde sa position, et l'enregistrement suivant la renvoie", async () => {
-    vi.mocked(saveLecon).mockImplementation(reussite);
+  it("un interrupteur de leçon garde sa position : il s'enregistre aussitôt (fin du lot 4)", async () => {
     avecNotifications(<EditeurLecon lecon={LECON} />);
-    const apercu = screen.getByRole("checkbox", { name: "Leçon d’aperçu gratuite" });
-    await userEvent.click(apercu);
-    await enregistrer();
-    expect(vi.mocked(saveLecon).mock.calls[0][1].get("apercu")).toBe("on");
+    await userEvent.click(screen.getByRole("checkbox", { name: "Leçon d’aperçu gratuite" }));
+    await waitFor(() => expect(reglerLecon).toHaveBeenCalledWith("l1", expect.objectContaining({ apercu: true })));
     expect(screen.getByRole("checkbox", { name: "Leçon d’aperçu gratuite" })).toBeChecked();
-    await enregistrer();
-    expect(vi.mocked(saveLecon).mock.calls[1][1].get("apercu")).toBe("on");
   });
 
   it("une liste déroulante et un interrupteur de formation gardent le choix enregistré", async () => {

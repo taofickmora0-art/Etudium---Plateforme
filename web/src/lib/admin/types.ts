@@ -1,4 +1,5 @@
 import type { DocumentLecon } from "@/lib/lecon/document";
+import type { EtatEdition, SaisieLecon } from "@/lib/editeur/types";
 import type { GenreExercice } from "@/lib/exercices/types";
 import type { TypeLecon } from "@/lib/catalogue/types";
 import type { EtatFormation } from "@/lib/contenus/etat";
@@ -116,8 +117,10 @@ export type LeconAdmin = {
   texte: string;
   /** Le contenu riche (fin du lot 4) ; une leçon ancienne arrive convertie depuis son texte. */
   document?: DocumentLecon;
-  /** Le lien signé de chaque image du document. */
+  /** Le lien signé de chaque image du document (et de son brouillon). */
   images?: Record<string, string>;
+  /** Ce que l'éditeur affiche et enregistre (0056) : le brouillon s'il existe, sinon l'en-ligne ; absent avant la 0056. */
+  edition?: EtatEdition<SaisieLecon>;
   ressources: RessourceAdmin[];
 };
 
