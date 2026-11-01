@@ -14,7 +14,7 @@ import { SidebarNav } from "./SidebarNav";
  */
 export function AppShell({ account, espace, children }: { account?: ReactNode; /** Espace connu d'avance (menus du rendu préalable). */ espace?: Espace; children: ReactNode }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-page lg:px-5 lg:pb-5">
+    <div className="flex min-h-dvh flex-col bg-page lg:px-5 lg:pb-5 print:bg-white print:p-0">
       <a
         href="#contenu"
         className="focus-etudium sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-champ focus:bg-panneau focus:px-4 focus:py-2.5 focus:text-sm focus:font-medium focus:text-bleu focus:shadow-menu"
@@ -22,17 +22,17 @@ export function AppShell({ account, espace, children }: { account?: ReactNode; /
         Aller au contenu
       </a>
       <AppHeader account={account} espace={espace} />
-      <div className="flex flex-1 lg:items-stretch lg:rounded-coque lg:bg-coque">
-        <SidebarNav className="hidden lg:block" espace={espace} />
+      <div className="flex flex-1 lg:items-stretch lg:rounded-coque lg:bg-coque print:bg-white">
+        <SidebarNav className="hidden lg:block print:hidden" espace={espace} />
         <main
           id="contenu"
           tabIndex={-1}
-          className="mx-2 min-w-0 flex-1 rounded-t-panneau bg-panneau px-4 py-5 outline-none max-sm:px-3.5 max-sm:pt-4 lg:mt-[15px] lg:mr-5 lg:mb-5 lg:ml-0 lg:rounded-panneau lg:p-8"
+          className="mx-2 min-w-0 flex-1 rounded-t-panneau bg-panneau px-4 py-5 outline-none max-sm:px-3.5 max-sm:pt-4 lg:mt-[15px] lg:mr-5 lg:mb-5 lg:ml-0 lg:rounded-panneau lg:p-8 print:m-0 print:p-0"
         >
           {children}
         </main>
       </div>
-      <div className="sticky bottom-0 z-30 bg-page px-2 pb-2 lg:hidden">
+      <div className="sticky bottom-0 z-30 bg-page px-2 pb-2 lg:hidden print:hidden">
         <MobileNav espace={espace} />
       </div>
     </div>

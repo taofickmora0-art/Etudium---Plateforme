@@ -23,7 +23,7 @@ export function AppHeader({ account, espace }: { account?: ReactNode; espace?: E
     // Collé en haut quand la page défile, sur téléphone comme sur ordinateur (demande du 31 octobre 2026).
     <header
       data-entete-app=""
-      className="sticky top-0 z-30 flex flex-none items-center justify-between gap-2 bg-page px-4 py-3 max-sm:gap-1.5 max-sm:px-3 max-sm:py-2.5 lg:flex-wrap lg:gap-3 lg:py-5 lg:pr-6 lg:pl-0"
+      className="sticky top-0 z-30 flex flex-none items-center justify-between gap-2 bg-page px-4 py-3 print:hidden max-sm:gap-1.5 max-sm:px-3 max-sm:py-2.5 lg:flex-wrap lg:gap-3 lg:py-5 lg:pr-6 lg:pl-0"
     >
       <MesureEntete />
       <div className="flex min-w-0 flex-wrap items-center gap-2 lg:gap-3">
