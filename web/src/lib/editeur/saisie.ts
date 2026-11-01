@@ -34,7 +34,7 @@ export function normaliserSaisieLecon(s: SaisieLecon): Normalise {
     points_cles: lignesPropres(s.pointsCles),
     texte,
   });
-  const erreurs: Record<string, string> = parsed.success ? {} : fieldErrorsFrom(parsed.error);
+  const erreurs = (parsed.success ? {} : fieldErrorsFrom(parsed.error)) as Record<string, string>;
   if (duree === null) erreurs.duree = DUREE_INVALIDE;
   else if (video && estMesuree(video.fournisseur) && duree === 0) erreurs.duree = DUREE_REQUISE;
   if (lien && !video) erreurs.video = messageLienCourt(lien) ?? LIEN_INCONNU;
@@ -61,7 +61,7 @@ const infosSchema = formationInfosSchema.pick({ titre: true, resume: true, descr
 /** Les informations générales saisies, vérifiées, dans la forme de `brouillons_formations.donnees`. */
 export function normaliserSaisieInfos(s: SaisieInfos): Normalise {
   const parsed = infosSchema.safeParse({ ...s, objectifs: lignesPropres(s.objectifs), competences: lignesPropres(s.competences) });
-  if (!parsed.success) return { ok: false, erreurs: fieldErrorsFrom(parsed.error) };
+  if (!parsed.success) return { ok: false, erreurs: fieldErrorsFrom(parsed.error) as Record<string, string> };
   return { ok: true, donnees: parsed.data };
 }
 
