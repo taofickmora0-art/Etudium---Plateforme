@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/Button";
 import { ChoiceCards } from "@/components/ui/ChoiceCards";
 import { Field } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
-import { Stepper } from "@/components/ui/Stepper";
 import { Heading, Lead } from "@/components/ui/Text";
 import { TextInput } from "@/components/ui/TextInput";
 import { essayerCode, payer, reessayer, suivrePaiement } from "@/lib/abonnement/actions";
@@ -18,11 +17,10 @@ import { messageEchec, normaliserTelephone, operateurDuNumero } from "@/lib/paie
 import { AttentePaiement } from "./AttentePaiement";
 import { phraseActif, ResultatPaiement } from "./ResultatPaiement";
 
-// La souscription (lot 2, spec §6 ; NdAbonnement, NdMobPaiement) : l'abonnement, le paiement Mobile Money, la
-// confirmation. Pendant l'attente, l'état est redemandé toutes les 3 secondes (le serveur le relit chez Payiz), pendant
+// La souscription (lot 2, spec §6 ; NdAbonnement, NdMobPaiement), sur un seul écran (demande du 1er novembre 2026) :
+// les abonnements et le paiement Mobile Money se voient ensemble, puis la confirmation. Pendant l'attente, l'état est redemandé toutes les 3 secondes (le serveur le relit chez Payiz), pendant
 // 3 minutes au plus.
 
-const ETAPES = ["Abonnement", "Paiement", "Confirmation"];
 const SUIVI_MS = 3000;
 const OPERATEURS = [
   { value: "mtn", title: "MTN Mobile Money" },
@@ -42,14 +40,16 @@ type Props = {
   initiale: CodeFormule | null;
   /** L'heure du serveur (ISO), pour les dates du récapitulatif. */
   maintenant: string;
+  /** Le titre de la page ; sans lui quand la souscription est posée dans « Mon abonnement ». */
+  enTete?: boolean;
 };
 
-export function Souscription({ formules, abonnement, ouverts, initiale, maintenant }: Props) {
+export function Souscription({ formules, abonnement, ouverts, initiale, maintenant, enTete = true }: Props) {
   const proposees = formules.filter((f) => f.active);
   const choisissables = proposees.filter((f) => f.prix !== null);
   const parDefaut = choisissables.find((f) => f.code === initiale) ?? choisissables.find((f) => f.recommandee) ?? choisissables[0];
 
-  const [etape, setEtape] = useState(0);
+  const [confirme, setConfirme] = useState(false);
   const [formuleId, setFormuleId] = useState(parDefaut?.id ?? "");
   const [telephone, setTelephone] = useState("");
   const [operateur, setOperateur] = useState<Operateur | null>(null);
@@ -77,7 +77,7 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
     setErreur(null);
     setResultat(r);
     setOuverte(true);
-    if (r.etat === "reussi") setEtape(2);
+    if (r.etat === "reussi") setConfirme(true);
   }
 
   async function agir(action: () => Promise<EtapePaiement>) {
@@ -153,26 +153,27 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
 
   return (
     <div className="flex min-w-0 flex-col">
-      <Heading level="page">{abonnement.etat === "actif" ? "Prolonger mon abonnement" : "S’abonner"}</Heading>
-      <Lead className="mt-2.5">
-        Un abonnement de 3, 6 ou 12 mois ouvre toutes les formations, la communauté, les lives et leurs replays. Pas de prélèvement
-        automatique.
-      </Lead>
-      <div aria-hidden="true" className="mt-5 h-px bg-separateur" />
+      {enTete && (
+        <>
+          <Heading level="page">{abonnement.etat === "actif" ? "Prolonger mon abonnement" : "S’abonner"}</Heading>
+          <Lead className="mt-2.5">
+            Un abonnement de 3, 6 ou 12 mois ouvre toutes les formations, la communauté, les lives et leurs replays. Pas de
+            prélèvement automatique.
+          </Lead>
+          <div aria-hidden="true" className="mt-5 h-px bg-separateur" />
+        </>
+      )}
 
-      <section aria-label="Souscription" className={`mt-8 max-sm:mt-5 ${CARTE}`}>
-        <Stepper steps={ETAPES} current={etape} label="Étapes de l’abonnement" />
-        <div aria-hidden="true" className="mt-[18px] mb-[22px] h-px bg-bordure-carte max-sm:my-4" />
-
-        {etape === 0 && (
+      <section aria-label="Souscription" className={`${enTete ? "mt-8 max-sm:mt-5" : ""} ${CARTE}`}>
+        {!confirme && (
           <div className="flex flex-col gap-4">
-            <Heading level="section">1. Choisissez votre abonnement</Heading>
+            <Heading level="section">Choisissez votre abonnement</Heading>
             {choisissables.length === 0 ? (
               <p className="m-0 text-sm leading-[22px] text-discret">Les prix seront annoncés au lancement.</p>
             ) : (
               <ChoiceCards
                 label="Choisissez votre abonnement"
-                className="gap-2.5 sm:grid-cols-1"
+                className="gap-2.5"
                 value={formuleId}
                 onValueChange={changerFormule}
                 options={proposees.map((f) => ({
@@ -185,18 +186,15 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
                 }))}
               />
             )}
-            <p className="m-0 text-sm leading-[22px] text-discret">Un abonnement pris avant la fin du précédent s’ajoute à sa date de fin.</p>
-            <div className="flex justify-end">
-              <Button onClick={() => setEtape(1)} disabled={!formule}>
-                Continuer
-              </Button>
-            </div>
+            {abonnement.etat === "actif" && (
+              <p className="m-0 text-sm leading-[22px] text-discret">Votre nouvel abonnement s’ajoute à la fin de celui en cours.</p>
+            )}
           </div>
         )}
 
-        {etape === 1 && formule && periode && (
-          <div className="flex flex-col gap-[18px]">
-            <Heading level="section">2. Paiement par Mobile Money</Heading>
+        {!confirme && formule && periode && (
+          <div className="mt-7 flex flex-col gap-[18px] border-t border-bordure-carte pt-6 max-sm:mt-5 max-sm:pt-5">
+            <Heading level="section">Paiement par Mobile Money</Heading>
             <div className="flex flex-wrap gap-6 max-sm:gap-4">
               <div className="flex min-w-0 flex-[999_1_420px] flex-col gap-[18px] max-sm:gap-4">
                 {!offert && (
@@ -289,9 +287,6 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
                 Paiement sécurisé par Payiz. Étudium ne voit jamais votre code secret.
               </p>
               <div className="flex gap-2 max-sm:w-full max-sm:flex-col-reverse">
-                <Button variant="contour" onClick={() => setEtape(0)}>
-                  Retour
-                </Button>
                 <Button onClick={() => void lancer()} loading={occupe} disabled={!offert && !ouverts}>
                   {offert ? "Activer mon abonnement offert" : `Payer ${montantFcfa(total)}`}
                 </Button>
@@ -305,7 +300,7 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
           </div>
         )}
 
-        {etape === 2 && resultat?.etat === "reussi" && (
+        {confirme && resultat?.etat === "reussi" && (
           <div className="flex flex-wrap items-start gap-4">
             <span className="flex size-12 flex-none items-center justify-center rounded-bouton bg-reussite-fond text-reussite-texte">
               <Icon icon={CheckmarkCircle02Icon} size={22} />

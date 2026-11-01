@@ -47,8 +47,8 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
+// Un seul écran (demande du 1er novembre 2026) : les abonnements et le paiement sont visibles ensemble.
 const allerAuPaiement = async (numero = "01 42 00 00 00") => {
-  await user.click(screen.getByRole("button", { name: "Continuer" }));
   if (numero) await user.type(screen.getByLabelText("Numéro Mobile Money"), numero);
 };
 const avancer = (ms: number) => act(async () => {
@@ -60,8 +60,9 @@ describe("Choisir l'abonnement", () => {
     afficher();
     expect(screen.getByRole("radio", { name: /Standard/ })).toBeChecked();
     expect(screen.getByText("Recommandé")).toBeInTheDocument();
-    expect(screen.getByText(texte(montantFcfa(9000)))).toBeInTheDocument();
-    expect(screen.getByText(texte(montantFcfa(15000)))).toBeInTheDocument();
+    // Le prix est dans chaque carte (le récapitulatif, visible sur le même écran, le répète).
+    expect(within(screen.getByRole("radio", { name: /Basique/ })).getByText(texte(montantFcfa(9000)))).toBeInTheDocument();
+    expect(within(screen.getByRole("radio", { name: /Standard/ })).getByText(texte(montantFcfa(15000)))).toBeInTheDocument();
     expect(screen.getByText("1 an")).toBeInTheDocument();
   });
 
@@ -70,6 +71,18 @@ describe("Choisir l'abonnement", () => {
     expect(screen.getByText("Prix annoncés au lancement")).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /Premium/ })).toBeDisabled();
     expect(screen.getByRole("radio", { name: /Standard/ })).toBeChecked();
+  });
+
+  it("tout sur un seul écran : les abonnements et le paiement, sans « Continuer »", () => {
+    afficher();
+    expect(screen.queryByRole("button", { name: "Continuer" })).toBeNull();
+    expect(screen.getByLabelText("Numéro Mobile Money")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `Payer ${montantFcfa(15000)}` })).toBeInTheDocument();
+  });
+
+  it("sans en-tête quand elle est posée dans « Mon abonnement »", () => {
+    afficher({ enTete: false });
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
   });
 
   it("l'abonnement demandé dans l'adresse est choisi d'avance", () => {

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { PageAbonnement } from "@/components/abonnement/PageAbonnement";
 import { versCartePaiement } from "@/lib/abonnement/conversion";
 import { montantFcfa } from "@/lib/abonnement/regles";
-import type { EtatAbonnement } from "@/lib/abonnement/types";
+import type { EtatAbonnement, Formule } from "@/lib/abonnement/types";
 import { carteSql } from "./fixtures";
 
 // « Mon abonnement » (lot 2, spec §6) : l'état du compte, « S'abonner » / « Prolonger » / « Renouveler », l'historique
@@ -20,19 +20,27 @@ vi.mock("@/lib/abonnement/data", () => ({
   paiementsOuverts: vi.fn(async () => (lectures.push("ouverts"), true)),
 }));
 
+vi.mock("@/lib/abonnement/actions", () => ({ essayerCode: vi.fn(), payer: vi.fn(), suivrePaiement: vi.fn(), reessayer: vi.fn() }));
+
 const MAINTENANT = new Date("2026-11-01T09:00:00Z");
+const FORMULES: Formule[] = [
+  { id: "f1", code: "basique", nom: "Basique", dureeMois: 3, prix: 9000, recommandee: false, active: true },
+  { id: "f2", code: "standard", nom: "Standard", dureeMois: 6, prix: 15000, recommandee: true, active: true },
+  { id: "f3", code: "premium", nom: "Premium", dureeMois: 12, prix: 25000, recommandee: false, active: true },
+];
 const texte = (t: string) => t.replace(/ /g, " ");
 const afficher = (abonnement: EtatAbonnement, paiements = [] as ReturnType<typeof versCartePaiement>[]) =>
-  render(<PageAbonnement abonnement={abonnement} paiements={paiements} maintenant={MAINTENANT} />);
+  render(<PageAbonnement abonnement={abonnement} paiements={paiements} maintenant={MAINTENANT} formules={FORMULES} ouverts />);
 const STANDARD = { code: "standard" as const, nom: "Standard" };
 
 describe("L'état du compte", () => {
-  it("compte gratuit : S'abonner", () => {
+  it("compte gratuit : le message, puis directement les abonnements et le paiement", () => {
     afficher({ etat: "gratuit" });
-    expect(screen.getByRole("heading", { level: 1, name: "Mon abonnement" })).toBeInTheDocument();
-    expect(screen.getByText("Compte gratuit")).toBeInTheDocument();
-    expect(screen.getByText("Les formations gratuites, votre progression et vos certificats.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "S’abonner" })).toHaveAttribute("href", "/abonnement/souscrire");
+    expect(screen.getAllByRole("heading", { level: 1 }).map((h) => h.textContent)).toEqual(["Mon abonnement"]);
+    expect(screen.getByText("Vous êtes sur un compte gratuit.")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Standard/ })).toBeChecked();
+    expect(screen.getByLabelText("Numéro Mobile Money")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "S’abonner" })).toBeNull();
   });
 
   it("abonnement actif : jusqu'à sa fin, Prolonger", () => {
@@ -50,11 +58,11 @@ describe("L'état du compte", () => {
     expect(screen.queryByText("Actif")).not.toBeInTheDocument();
   });
 
-  it("abonnement expiré : Renouveler", () => {
+  it("abonnement expiré : le message, puis directement le paiement", () => {
     afficher({ etat: "expire", formule: STANDARD, fin: "2026-10-14T09:00:00Z" });
-    expect(screen.getByText("Expiré")).toBeInTheDocument();
-    expect(screen.getByText("Expiré le 14 octobre 2026")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Renouveler" })).toHaveAttribute("href", "/abonnement/souscrire");
+    expect(screen.getByText("Votre abonnement Standard a expiré le 14 octobre 2026.")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Standard/ })).toBeChecked();
+    expect(screen.getByLabelText("Numéro Mobile Money")).toBeInTheDocument();
   });
 });
 
@@ -93,7 +101,7 @@ describe("La page serveur", () => {
     lectures.length = 0;
     await ContenuAbonnement();
     expect(lectures[0]).toBe("resynchroniser");
-    expect([...lectures].sort()).toEqual(["abonnement", "paiements", "resynchroniser"]);
+    expect([...lectures].sort()).toEqual(["abonnement", "formules", "ouverts", "paiements", "resynchroniser"]);
   });
 
   it("la souscription aussi : un paiement réussi pendant l'absence ne se paie pas deux fois (revue finale)", async () => {

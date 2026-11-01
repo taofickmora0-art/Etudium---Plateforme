@@ -1,5 +1,5 @@
 import { connection } from "next/server";
-import { lireAbonnement, lirePaiements } from "@/lib/abonnement/data";
+import { lireAbonnement, lireFormules, lirePaiements, paiementsOuverts } from "@/lib/abonnement/data";
 import { resynchroniserEnAttente } from "@/lib/paiements/synchroniser";
 import { PageAbonnement } from "./PageAbonnement";
 
@@ -11,6 +11,6 @@ export async function ContenuAbonnement() {
   // À chaque visite : l'état dépend de la date du jour.
   await connection();
   await resynchroniserEnAttente();
-  const [abonnement, paiements] = await Promise.all([lireAbonnement(), lirePaiements()]);
-  return <PageAbonnement abonnement={abonnement} paiements={paiements} maintenant={new Date()} />;
+  const [abonnement, paiements, formules, ouverts] = await Promise.all([lireAbonnement(), lirePaiements(), lireFormules(), paiementsOuverts()]);
+  return <PageAbonnement abonnement={abonnement} paiements={paiements} maintenant={new Date()} formules={formules} ouverts={ouverts} />;
 }

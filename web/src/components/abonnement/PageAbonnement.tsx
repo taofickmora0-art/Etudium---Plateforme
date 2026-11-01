@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { CreditCardIcon } from "@hugeicons/core-free-icons";
+import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Tag, type TagTone } from "@/components/ui/Tag";
 import { Heading, Lead } from "@/components/ui/Text";
 import { dateLongue, joursRestants } from "@/lib/abonnement/regles";
-import type { CartePaiement, EtatAbonnement } from "@/lib/abonnement/types";
+import type { CartePaiement, EtatAbonnement, Formule } from "@/lib/abonnement/types";
 import { HistoriquePaiements } from "./HistoriquePaiements";
+import { Souscription } from "./Souscription";
 
 const SOUSCRIRE = "/abonnement/souscrire";
 
@@ -37,8 +39,21 @@ function carteEtat(abonnement: EtatAbonnement, maintenant: Date): Carte {
   };
 }
 
-/** « Mon abonnement » (lot 2, spec §6 ; NdAbonnement) : l'état du compte, puis l'historique des paiements et leurs reçus. */
-export function PageAbonnement({ abonnement, paiements, maintenant }: { abonnement: EtatAbonnement; paiements: CartePaiement[]; maintenant: Date }) {
+type Props = {
+  abonnement: EtatAbonnement;
+  paiements: CartePaiement[];
+  maintenant: Date;
+  formules: Formule[];
+  /** « Payer » est possible (paiements activés, serveur configuré). */
+  ouverts: boolean;
+};
+
+/**
+ * « Mon abonnement » (lot 2, spec §6 ; NdAbonnement), puis l'historique des paiements et leurs reçus. Sans abonnement
+ * en cours (compte gratuit, abonnement expiré), les abonnements et le paiement s'affichent directement, sans détour
+ * (demande du 1er novembre 2026).
+ */
+export function PageAbonnement({ abonnement, paiements, maintenant, formules, ouverts }: Props) {
   const carte = carteEtat(abonnement, maintenant);
   return (
     <div className="flex min-w-0 flex-col">
@@ -49,6 +64,21 @@ export function PageAbonnement({ abonnement, paiements, maintenant }: { abonneme
       <div aria-hidden="true" className="mt-5 h-px bg-separateur" />
 
       <div className="mt-8 flex flex-col gap-5 max-sm:mt-5">
+        {abonnement.etat !== "actif" && (
+          <>
+            {abonnement.etat === "gratuit" ? (
+              <Banner tone="information" title="Vous êtes sur un compte gratuit.">
+                Choisissez un abonnement pour débloquer toutes les formations, la communauté, les lives et leurs replays.
+              </Banner>
+            ) : (
+              <Banner tone="attention" title={`Votre abonnement ${abonnement.formule.nom} a expiré le ${dateLongue(abonnement.fin)}.`}>
+                Choisissez un abonnement pour retrouver l’accès. Rien n’a été supprimé.
+              </Banner>
+            )}
+            <Souscription formules={formules} abonnement={abonnement} ouverts={ouverts} initiale={null} maintenant={maintenant.toISOString()} enTete={false} />
+          </>
+        )}
+        {abonnement.etat === "actif" && (
         <section aria-label="Votre abonnement" className="flex flex-wrap items-center gap-x-4 gap-y-3.5 rounded-carte border border-bordure-carte px-[19px] py-[18px] max-sm:p-4">
           <span className="flex size-12 flex-none items-center justify-center rounded-bouton bg-bleu-pale text-bleu">
             <Icon icon={CreditCardIcon} size={22} />
@@ -73,6 +103,7 @@ export function PageAbonnement({ abonnement, paiements, maintenant }: { abonneme
             <Link href={SOUSCRIRE}>{carte.action.texte}</Link>
           </Button>
         </section>
+        )}
 
         <HistoriquePaiements paiements={paiements} />
       </div>
