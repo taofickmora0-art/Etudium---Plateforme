@@ -1,7 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { versCartePaiement } from "@/lib/abonnement/conversion";
 import type { CartePaiement } from "@/lib/abonnement/types";
-import type { PaiementPayiz } from "./payiz";
+import { liste } from "@/lib/contenus/lecture";
+import { createClient } from "@/lib/supabase/server";
+import { configurationPaiement } from "./config";
+import { lirePaiementPayiz, type PaiementPayiz } from "./payiz";
 import { verdictPayiz } from "./regles";
 
 // Appliquer en base ce que dit Payiz d'un paiement. La relecture de l'écran d'attente et les notifications passent
@@ -21,4 +24,30 @@ export async function appliquerPayiz(supabase: SupabaseClient, paiementId: strin
       : await supabase.rpc("noter_echec", { p_paiement: paiementId, p_statut: verdict.statut, p_motif: verdict.motif, p_jeton: jeton });
   if (error) throw new Error(error.message || "Le paiement n’a pas pu être enregistré.");
   return versCartePaiement(data);
+}
+
+/** Une demande non validée au bout d'une heure n'aboutira plus : on ne la relit plus. */
+const FENETRE_RESYNCHRONISATION_MS = 60 * 60 * 1000;
+
+/**
+ * Avant d'afficher « Mon abonnement » : relit chez Payiz les paiements du compte restés en attente depuis moins d'une
+ * heure (onglet fermé pendant l'attente ; en local, Payiz ne peut pas notifier). Une erreur n'empêche pas l'affichage.
+ */
+export async function resynchroniserEnAttente(): Promise<void> {
+  const config = configurationPaiement();
+  if (!config) return;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("mes_paiements");
+  if (error) return;
+  const limite = Date.now() - FENETRE_RESYNCHRONISATION_MS;
+  const enAttente = liste(data)
+    .map(versCartePaiement)
+    .filter((c) => c.statut === "en_attente" && c.payizId && c.essaiLe && Date.parse(c.essaiLe) > limite);
+  for (const carte of enAttente) {
+    try {
+      await appliquerPayiz(supabase, carte.id, await lirePaiementPayiz(config.cle, carte.payizId!), config.jeton);
+    } catch {
+      // Payiz injoignable : la prochaine visite réessaiera.
+    }
+  }
 }
