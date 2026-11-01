@@ -35,8 +35,8 @@ beforeAll(async () => {
   SLUG = `excel-${randomUUID().slice(0, 8)}`;
   FORMATION = (await un<{ id: string }>("insert into public.formations (titre, slug, formateur_id) values ('Maîtriser Microsoft Excel', $1, $2) returning id", [SLUG, fiche])).id;
   BROUILLON = (await un<{ id: string }>("insert into public.formations (titre, slug, formateur_id) values ('Brouillon', $1, $2) returning id", [randomUUID(), fiche])).id;
-  const module = (await un<{ id: string }>("insert into public.modules (formation_id, titre, ordre) values ($1, 'Module 1', 1) returning id", [FORMATION])).id;
-  L1 = (await un<{ id: string }>("insert into public.lecons (module_id, titre, type, publiee, ordre) values ($1, 'Les tableaux', 'lecon', true, 1) returning id", [module])).id;
+  const idModule = (await un<{ id: string }>("insert into public.modules (formation_id, titre, ordre) values ($1, 'Module 1', 1) returning id", [FORMATION])).id;
+  L1 = (await un<{ id: string }>("insert into public.lecons (module_id, titre, type, publiee, ordre) values ($1, 'Les tableaux', 'lecon', true, 1) returning id", [idModule])).id;
   await banc.db.query("insert into public.lecons_contenus (lecon_id, texte) values ($1, 'Texte')", [L1]);
   await statut(S, "publiee");
   for (const qui of [E, P, X]) await abonner(banc, qui);
