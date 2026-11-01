@@ -195,6 +195,19 @@ describe("Le schéma de l'éditeur", () => {
     e.destroy();
   });
 
+  it("relecture finale (critique) : un tableau collé depuis Google Docs ou Excel (largeurs, cellules fusionnées) reste enregistrable", () => {
+    const html =
+      "<table><colgroup><col width='301'><col width='120'></colgroup><tbody>" +
+      "<tr><th>Mois</th><th>Ventes</th></tr>" +
+      "<tr><td colspan='2' style='width:301px'>Total du trimestre</td></tr>" +
+      "<tr><td rowspan='1'>Janvier</td><td>12</td></tr></tbody></table>";
+    const e = new Editor({ extensions: extensionsLecon(""), content: html });
+    const r = validerDocument(e.getJSON());
+    expect(r.ok).toBe(true);
+    expect(JSON.stringify(e.getJSON())).not.toMatch(/"colwidth":\[/);
+    e.destroy();
+  });
+
   it("un collage depuis une page (image, couleur, bloc de code) ne garde que ce que le format accepte", () => {
     const e = new Editor({ extensions: extensionsLecon(""), content: "<p style='color:red'>Texte <span style='font-family:Comic'>coloré</span></p><img src='data:image/png;base64,AAAA'><pre><code>x = 1</code></pre>" });
     const r = validerDocument(e.getJSON());

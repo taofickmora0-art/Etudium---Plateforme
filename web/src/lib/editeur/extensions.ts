@@ -115,9 +115,21 @@ const Lien = Link.extend({ addPasteRules: () => [] }).configure({
   isAllowedUri: (adresse) => adresseDeLien(adresse),
   HTMLAttributes: { target: "_blank", rel: "noopener nofollow ugc" },
 });
-// Une cellule ne contient que des paragraphes ; pas de largeur de colonne enregistrée.
-const Cellule = TableCell.extend({ content: "paragraph+" });
-const CelluleEnTete = TableHeader.extend({ content: "paragraph+" });
+// Une cellule ne contient que des paragraphes. La largeur des colonnes (collée depuis Google Docs ou Excel) n'est pas
+// gardée : le tableau prend la largeur de la page. Les cellules fusionnées le restent.
+const sansLargeur = { colwidth: { default: null, parseHTML: () => null, renderHTML: () => ({}) } };
+const Cellule = TableCell.extend({
+  content: "paragraph+",
+  addAttributes() {
+    return { ...this.parent?.(), ...sansLargeur };
+  },
+});
+const CelluleEnTete = TableHeader.extend({
+  content: "paragraph+",
+  addAttributes() {
+    return { ...this.parent?.(), ...sansLargeur };
+  },
+});
 
 export type VuesNoeuds = { image?: NodeViewRenderer; video?: NodeViewRenderer };
 

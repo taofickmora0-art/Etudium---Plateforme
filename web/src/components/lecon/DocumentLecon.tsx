@@ -116,8 +116,10 @@ function Bloc({ n, images }: { n: NoeudDoc; images: Record<string, string> }): R
         <tr key={i} className="border-t border-bordure-carte first:border-t-0">
           {(r.content ?? []).map((c, j) => {
             const Cellule = c.type === "tableHeader" ? "th" : "td";
+            const colonnes = typeof c.attrs?.colspan === "number" && c.attrs.colspan > 1 ? c.attrs.colspan : undefined;
+            const lignes = typeof c.attrs?.rowspan === "number" && c.attrs.rowspan > 1 ? c.attrs.rowspan : undefined;
             return (
-              <Cellule key={j} scope={Cellule === "th" ? "col" : undefined} className={cn("px-3 py-2 text-left align-top [&>*+*]:mt-1", Cellule === "th" && "font-semibold text-encre")}>
+              <Cellule key={j} colSpan={colonnes} rowSpan={lignes} scope={Cellule === "th" ? "col" : undefined} className={cn("px-3 py-2 text-left align-top [&>*+*]:mt-1", Cellule === "th" && "font-semibold text-encre")}>
                 {(c.content ?? []).map((e, k) => (
                   <Bloc key={k} n={e} images={images} />
                 ))}

@@ -28,12 +28,16 @@ const refuser = (message = INCONNU): never => {
 };
 const texteBorne = (max: number): Attribut => (v) => (v === undefined || v === null ? "" : typeof v === "string" && v.length <= max ? v : refuser());
 const parmi = (valeurs: readonly unknown[]): Attribut => (v) => (valeurs.includes(v) ? v : refuser());
-const fixe = (valeur: unknown): Attribut => (v) => (v === undefined || v === valeur ? valeur : refuser());
 
 const INLINE = ["text", "hardBreak"] as const;
 const LISTES = ["bulletList", "orderedList"] as const;
 const BLOCS = ["paragraph", "heading", ...LISTES, "blockquote", "encadre", "imageLecon", "table", "videoLecon", "horizontalRule"] as const;
-const CELLULE = { colspan: fixe(1), rowspan: fixe(1), colwidth: fixe(null) };
+/** Une fusion de cellules (collée depuis un tableur) : de 1 à 20. */
+const fusion: Attribut = (v) => (v === undefined ? 1 : Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 20 ? v : refuser());
+// La largeur des colonnes (collée depuis Google Docs ou Excel) n'est pas gardée : le tableau prend la largeur de la page.
+const sansLargeur: Attribut = (v) =>
+  v === undefined || v === null || (Array.isArray(v) && v.every((n) => n === null || typeof n === "number")) ? null : refuser();
+const CELLULE = { colspan: fusion, rowspan: fusion, colwidth: sansLargeur };
 
 type Regle = {
   attrs?: Record<string, Attribut>;

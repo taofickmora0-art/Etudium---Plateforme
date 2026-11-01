@@ -87,6 +87,17 @@ describe("Valider un document", () => {
     expect(refus("texte")).toBe(INCONNU);
   });
 
+  it("relecture finale : cellules fusionnées acceptées (1 à 20), largeur de colonne retirée", () => {
+    const fusion: NoeudDoc = { type: "tableCell", attrs: { colspan: 2, rowspan: 1, colwidth: [301, 120] }, content: [para(texte("Total"))] };
+    const r = validerDocument(doc({ type: "table", content: [{ type: "tableRow", content: [fusion] }] }));
+    expect(r).toEqual({
+      ok: true,
+      document: doc({ type: "table", content: [{ type: "tableRow", content: [{ ...fusion, attrs: { colspan: 2, rowspan: 1, colwidth: null } }] }] }),
+    });
+    expect(refus(doc({ type: "table", content: [{ type: "tableRow", content: [{ ...fusion, attrs: { colspan: 21, rowspan: 1, colwidth: null } }] }] }))).toBe(INCONNU);
+    expect(refus(doc({ type: "table", content: [{ type: "tableRow", content: [{ ...fusion, attrs: { colspan: 1, rowspan: 1, colwidth: "large" } }] }] }))).toBe(INCONNU);
+  });
+
   it("un lien javascript: est refusé", () => {
     expect(refus(doc(para(texte("x", [{ type: "link", attrs: { href: "javascript:alert(1)" } }]))))).toBe("Un lien doit commencer par http:// ou https://.");
   });

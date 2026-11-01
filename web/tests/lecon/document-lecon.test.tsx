@@ -61,6 +61,16 @@ describe("Afficher le document d'une leçon", () => {
     expect(screen.getByTitle(/Vidéo/)).toBeInTheDocument();
   });
 
+  it("une cellule fusionnée garde sa fusion (relecture finale)", () => {
+    render(
+      <DocumentLecon
+        images={{}}
+        document={doc({ type: "table", content: [{ type: "tableRow", content: [{ type: "tableCell", attrs: { colspan: 2, rowspan: 1, colwidth: null }, content: [p(t("Total"))] }] }] })}
+      />,
+    );
+    expect(screen.getByRole("cell", { name: "Total" })).toHaveAttribute("colspan", "2");
+  });
+
   it("un bloc inconnu ne rend rien, sans erreur", () => {
     const { container } = render(<DocumentLecon images={{}} document={doc({ type: "script", content: [t("alert(1)")] }, p(t("Suite")))} />);
     expect(container.textContent).toBe("Suite");
