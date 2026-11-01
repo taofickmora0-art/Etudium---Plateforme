@@ -14,6 +14,7 @@ const reussite = async (_prev: FormState, fd: FormData): Promise<FormState> => (
 vi.mock("@/lib/admin/actions", () => ({ saveLecon: vi.fn(), saveFormationInfos: vi.fn(), changerStatutLecon: vi.fn(), addRessource: vi.fn(), updateRessource: vi.fn(), deleteRessource: vi.fn(), deplacer: vi.fn() }));
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ storage: { from: () => ({ upload: vi.fn(), remove: vi.fn() }) } }) }));
 vi.mock("@/components/communaute/EditeurTexte", () => import("../communaute/editeur-simule"));
+vi.mock("@/components/editeur/EditeurRiche", () => import("../editeur/editeur-riche-simule"));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 
 const { saveLecon, saveFormationInfos } = await import("@/lib/admin/actions");

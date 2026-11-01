@@ -5,6 +5,8 @@ import { estFournisseur } from "@/lib/video/plateformes";
 import { demoModeActive } from "@/lib/auth/current-user";
 import { etatFormation } from "@/lib/contenus/etat";
 import type { Badge, CouleurParcours, Niveau, StatutFormation } from "@/lib/contenus/libelles";
+import { cheminsImages, depuisMarkdown, documentLu } from "@/lib/lecon/document";
+import { signerImages } from "@/lib/lecon/images";
 import { estFonctionAbsente, estTablesAbsentes, lireAvecRepli, liste, parOrdre, TablesAbsentesError, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import type {
@@ -244,18 +246,24 @@ export async function getLeconAdmin(id: string): Promise<LeconAdmin | null> {
   if (demoModeActive() || !estUuid(id)) return null;
   const supabase = await createClient();
   // Le statut et « Activer les commentaires » (0027) ; le programme de la formation donne la position et les voisines.
-  const l = (await lireAvecRepli([", publiee, commentaires_actifs, type, genre_exercice", ", publiee, commentaires_actifs, type", ", publiee, commentaires_actifs", ""], (colonnes) =>
-    supabase
+  // Le document riche (0055) en plus, avec son repli : chaque variante des colonnes, avec puis sans le document.
+  const variantes = [", publiee, commentaires_actifs, type, genre_exercice", ", publiee, commentaires_actifs, type", ", publiee, commentaires_actifs", ""].flatMap((c) => [
+    `${c}|, document`,
+    `${c}|`,
+  ]);
+  const l = (await lireAvecRepli(variantes, (variante) => {
+    const [colonnes, document] = variante.split("|");
+    return supabase
       .from("lecons")
       .select(
         `id, module_id, titre, titre_court, duree_secondes, apercu, resume, points_cles${colonnes}, ` +
           "modules(formation_id, formations(titre, slug, modules(id, titre, ordre, lecons(id, ordre)))), " +
-          "lecons_contenus(video_fournisseur, video_id, texte), " +
+          `lecons_contenus(video_fournisseur, video_id, texte${document}), ` +
           "ressources(id, titre, fichier, format, taille_octets, telechargeable, ordre)",
       )
       .eq("id", id)
-      .maybeSingle(),
-  )) as Ligne | null;
+      .maybeSingle();
+  })) as Ligne | null;
   if (!l) return null;
   const parent = un(l.modules);
   const contenu = un(l.lecons_contenus);
@@ -269,6 +277,8 @@ export async function getLeconAdmin(id: string): Promise<LeconAdmin | null> {
   const suite = programme.flatMap((m) => m.lecons.map((x) => x.id));
   const rang = suite.indexOf(String(l.id)) + 1;
   const rangModule = programme.findIndex((m) => m.id === String(l.module_id));
+  // Une leçon ancienne (Markdown restreint, sans document) s'ouvre convertie ; elle est gardée au premier enregistrement.
+  const document = documentLu(contenu?.document) ?? depuisMarkdown(texte(contenu?.texte));
   return {
     id: String(l.id),
     moduleId: String(l.module_id),
@@ -289,6 +299,8 @@ export async function getLeconAdmin(id: string): Promise<LeconAdmin | null> {
     pointsCles: textes(l.points_cles),
     video: estFournisseur(fournisseur) && typeof videoId === "string" ? { fournisseur, id: videoId } : null,
     texte: texte(contenu?.texte),
+    document,
+    images: await signerImages(supabase, cheminsImages(document)),
     ressources: liste(l.ressources).map(versRessource).sort(parOrdre),
   };
 }

@@ -25,6 +25,7 @@ vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ storage: { from
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
 vi.mock("@/components/communaute/EditeurTexte", () => import("../communaute/editeur-simule"));
+vi.mock("@/components/editeur/EditeurRiche", () => import("../editeur/editeur-riche-simule"));
 const actions = await import("@/lib/admin/actions");
 const { EditeurLecon } = await import("@/components/admin/EditeurLecon");
 const { OngletLecons } = await import("@/components/admin/OngletLecons");

@@ -23,6 +23,7 @@ import { baseFormations } from "@/lib/admin/espace";
 import type { LeconAdmin } from "@/lib/admin/types";
 import { parseVideoUrl, videoLabel, videoLink } from "@/lib/admin/video";
 import { estMesuree, messageLienCourt } from "@/lib/video/plateformes";
+import { depuisMarkdown, type DocumentLecon } from "@/lib/lecon/document";
 import { MIGRATION_QUIZ } from "@/lib/quiz/conversion";
 import type { QuestionQuiz } from "@/lib/quiz/types";
 import type { Lecture } from "@/lib/utilisateurs/types";
@@ -33,8 +34,8 @@ import type { GenreExercice } from "@/lib/exercices/types";
 import { StatutLecon } from "./StatutLecon";
 import { useFormulaireAdmin } from "./useFormulaireAdmin";
 
-// L'éditeur visuel (Tiptap) de la communauté, chargé à part : le texte de la leçon a la même mise en forme.
-const EditeurTexte = dynamic(() => import("@/components/communaute/EditeurTexte").then((m) => m.EditeurTexte), {
+// L'éditeur riche (fin du lot 4), chargé à part : titres, listes, images, tableaux, blocs d'information, vidéos.
+const EditeurRiche = dynamic(() => import("@/components/editeur/EditeurRiche").then((m) => m.EditeurRiche), {
   ssr: false,
   loading: () => <div aria-hidden className="h-[220px] animate-pulse rounded-champ border border-bordure-champ bg-page" />,
 });
@@ -96,7 +97,7 @@ export function EditeurLecon({ lecon, base = "/admin/formations", quiz }: Editeu
   const [lien, setLien] = useState(() => valeur("video", lecon.video ? videoLink(lecon.video) : ""));
   const [minutes, setMinutes] = useState(String(Math.floor(lecon.dureeSecondes / 60)));
   const [secondes, setSecondes] = useState(String(lecon.dureeSecondes % 60));
-  const [texte, setTexte] = useState(() => valeur("texte", lecon.texte));
+  const [contenu, setContenu] = useState<DocumentLecon>(() => lecon.document ?? depuisMarkdown(lecon.texte));
   const [publiee, setPubliee] = useState(lecon.publiee);
   const [details, setDetails] = useState(false);
   const [modifie, setModifie] = useState(false);
@@ -400,7 +401,7 @@ export function EditeurLecon({ lecon, base = "/admin/formations", quiz }: Editeu
               {e.titre}
             </p>
           )}
-          <input type="hidden" name="texte" value={texte} />
+          <input type="hidden" name="document" value={JSON.stringify(contenu)} />
           {estQuiz ? (
             quiz?.migrationAbsente ? (
               <Banner tone="attention" title={MIGRATION_QUIZ} />
@@ -425,12 +426,14 @@ export function EditeurLecon({ lecon, base = "/admin/formations", quiz }: Editeu
                   ]}
                 />
               )}
-              <EditeurTexte
+              <EditeurRiche
+                formationId={lecon.formationId}
+                images={lecon.images ?? {}}
                 etiquette={estExercice ? "Consigne" : "Texte de la leçon"}
                 placeholder={estExercice ? "La consigne : ce qu’il faut faire, ce qu’il faut rendre…" : "Le texte de la leçon : explications, liens, étapes…"}
-                valeur={texte}
+                valeur={contenu}
                 onChange={(suivant) => {
-                  setTexte(suivant);
+                  setContenu(suivant);
                   changer();
                 }}
               />

@@ -26,7 +26,7 @@ const SAISIE = {
   video: "https://youtu.be/dQw4w9WgXcQ?si=x",
   resume: "Résumé",
   points_cles: "Créer\n\n Modifier \n",
-  texte: "Texte",
+  document: JSON.stringify({ type: "doc", content: [{ type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Titre" }] }, { type: "paragraph", content: [{ type: "text", text: "Texte" }] }] }),
 };
 
 describe("Back-office : une leçon", () => {
@@ -52,8 +52,24 @@ describe("Back-office : une leçon", () => {
       commentaires_actifs: false,
     });
     expect(maj.filtres).toContainEqual(["eq", "id", L]);
-    expect(faux.de("lecons_contenus", "upsert")[0].valeurs).toEqual({ lecon_id: L, video_fournisseur: "youtube", video_id: "dQw4w9WgXcQ", texte: "Texte" });
+    // Le document riche (fin du lot 4) et son texte brut.
+    expect(faux.de("lecons_contenus", "upsert")[0].valeurs).toEqual({
+      lecon_id: L,
+      video_fournisseur: "youtube",
+      video_id: "dQw4w9WgXcQ",
+      texte: "Titre\nTexte",
+      document: { type: "doc", content: [{ type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Titre" }] }, { type: "paragraph", content: [{ type: "text", text: "Texte" }] }] },
+    });
     expect(refresh).toHaveBeenCalled();
+  });
+
+  it("un document refusé : son message sous le texte, rien d'enregistré (fin du lot 4)", async () => {
+    const lien = JSON.stringify({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "x", marks: [{ type: "link", attrs: { href: "javascript:alert(1)" } }] }] }] });
+    const state = await saveLecon(IDLE, form({ ...SAISIE, document: lien }));
+    expect(state).toMatchObject({ status: "error", fieldErrors: { texte: "Un lien doit commencer par http:// ou https://." } });
+    expect(faux.de("lecons_contenus", "upsert")).toEqual([]);
+    const illisible = await saveLecon(IDLE, form({ ...SAISIE, document: "{pas du json" }));
+    expect(illisible).toMatchObject({ status: "error", fieldErrors: { texte: "Le contenu contient un élément non reconnu." } });
   });
 
   it("un lien inconnu est refusé sur son champ", async () => {

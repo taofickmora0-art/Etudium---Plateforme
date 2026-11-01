@@ -128,6 +128,28 @@ describe("Lecture des contenus du back-office", () => {
     expect(lecon?.ressources.map((r) => r.id)).toEqual(["r1", "r2"]);
   });
 
+  it("une leçon ancienne (Markdown, sans document) s'ouvre convertie en document riche (fin du lot 4)", async () => {
+    faux.repondre("lecons.select", {
+      data: {
+        id: "l1",
+        module_id: "m1",
+        titre: "Les tableaux",
+        modules: { formation_id: "f1", formations: { titre: "Excel" } },
+        lecons_contenus: [{ video_fournisseur: null, video_id: null, texte: "# Étapes\n\n**Ouvrir** le fichier", document: null }],
+        ressources: [],
+      },
+    });
+    const lecon = await getLeconAdmin("00000000-0000-4000-8000-000000000002");
+    expect(lecon?.document).toEqual({
+      type: "doc",
+      content: [
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Étapes" }] },
+        { type: "paragraph", content: [{ type: "text", text: "Ouvrir", marks: [{ type: "bold" }] }, { type: "text", text: " le fichier" }] },
+      ],
+    });
+    expect(lecon?.images).toEqual({});
+  });
+
   it("une adresse inventée ne trouve rien, sans interroger la base", async () => {
     expect(await getFormationAdmin("n-importe-quoi")).toBeNull();
     expect(await getLeconAdmin("123")).toBeNull();

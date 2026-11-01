@@ -17,7 +17,7 @@ vi.mock("@/lib/admin/actions", () => ({
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ storage: { from: () => ({ upload: vi.fn(), remove: vi.fn() }) } }) }));
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
-vi.mock("@/components/communaute/EditeurTexte", () => import("../communaute/editeur-simule"));
+vi.mock("@/components/editeur/EditeurRiche", () => import("../editeur/editeur-riche-simule"));
 // Le lecteur officiel de l'aperçu : il livre la vraie durée de la vidéo (7:42).
 const creerAdaptateur = vi.fn();
 vi.mock("@/lib/video/adaptateurs", () => ({ creerAdaptateur: (...a: unknown[]) => creerAdaptateur(...a) }));
@@ -37,7 +37,9 @@ const LECON: LeconAdmin = {
   resume: "",
   pointsCles: [],
   video: { fournisseur: "youtube", id: "dQw4w9WgXcQ" },
-  texte: "Un **texte**",
+  texte: "Un texte",
+  document: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Un texte" }] }] },
+  images: {},
   ressources: [],
   publiee: false,
   commentairesActifs: true,
@@ -90,7 +92,7 @@ describe("L'éditeur de leçon", () => {
     expect(within(reglages).getByRole("heading", { name: "Documents & fichiers" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Titre de la leçon" })).toHaveValue("Les formules");
     // L'éditeur mis en forme se charge à part.
-    expect(await screen.findByRole("textbox", { name: "Texte de la leçon" })).toHaveValue("Un **texte**");
+    expect(await screen.findByRole("textbox", { name: "Texte de la leçon" })).toHaveValue("Un texte");
   });
 
   it("« Enregistrer » envoie tout ; « La leçon a bien été mise à jour. »", async () => {
@@ -117,7 +119,7 @@ describe("L'éditeur de leçon", () => {
       video: fd.get("video"),
       commentaires: fd.get("commentaires_actifs"),
       apercu: fd.get("apercu"),
-      texte: fd.get("texte"),
+      document: JSON.parse(String(fd.get("document"))),
       resume: fd.get("resume"),
     }).toEqual({
       id: "l2",
@@ -126,7 +128,7 @@ describe("L'éditeur de leçon", () => {
       video: "https://youtu.be/dQw4w9WgXcQ",
       commentaires: null,
       apercu: "on",
-      texte: "Un **texte** !",
+      document: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Un texte !" }] }] },
       resume: "Les bases du calcul.",
     });
     expect(await screen.findByText("La leçon a bien été mise à jour.")).toBeInTheDocument();

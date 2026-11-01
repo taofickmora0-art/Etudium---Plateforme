@@ -24,6 +24,7 @@ vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ storage: { from
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
 vi.mock("@/components/communaute/EditeurTexte", () => import("../communaute/editeur-simule"));
+vi.mock("@/components/editeur/EditeurRiche", () => import("../editeur/editeur-riche-simule"));
 const actions = await import("@/lib/admin/actions");
 const { EditeurLecon } = await import("@/components/admin/EditeurLecon");
 const { OngletLecons } = await import("@/components/admin/OngletLecons");
@@ -69,14 +70,19 @@ describe("L'éditeur d'un exercice", () => {
     expect(screen.getByRole("textbox", { name: "Titre de l’exercice" })).toHaveValue("Tableau des ventes");
     expect(screen.queryByRole("textbox", { name: "Lien de la vidéo" })).toBeNull();
     expect(screen.queryByRole("spinbutton", { name: "Minutes" })).toBeNull();
-    expect(await screen.findByRole("textbox", { name: "Consigne" })).toHaveValue("Créez un **tableau croisé dynamique**.");
+    // Le texte ancien s'ouvre converti en contenu riche (fin du lot 4).
+    expect(await screen.findByRole("textbox", { name: "Consigne" })).toHaveValue("Créez un tableau croisé dynamique.");
     expect(screen.getByText("Documents & fichiers")).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /Avec rendu/ })).toBeChecked();
     await user.click(screen.getByRole("radio", { name: /Simple/ }));
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
     await waitFor(() => expect(actions.saveLecon).toHaveBeenCalled());
     expect(envoye().get("genre_exercice")).toBe("simple");
-    expect(envoye().get("texte")).toBe("Créez un **tableau croisé dynamique**.");
+    expect(JSON.parse(String(envoye().get("document"))).content[0].content).toEqual([
+      { type: "text", text: "Créez un " },
+      { type: "text", text: "tableau croisé dynamique", marks: [{ type: "bold" }] },
+      { type: "text", text: "." },
+    ]);
     expect(envoye().has("questions")).toBe(false);
     expect(await screen.findByText("L’exercice a bien été mis à jour.")).toBeInTheDocument();
   });

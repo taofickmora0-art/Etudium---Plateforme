@@ -12,6 +12,7 @@ import { formatParMime } from "./fichiers";
 import { formateurSchema, formationInfosSchema, leconSchema, lignes, moduleSchema, parcoursSchema, ressourceSchema } from "./schemas";
 import { parseDuree } from "./duree";
 import { slugify } from "./slug";
+import { texteDuDocument, validerDocument, type DocumentLecon } from "@/lib/lecon/document";
 import { estMesuree, messageLienCourt } from "@/lib/video/plateformes";
 import { parseVideoUrl } from "./video";
 import { MIGRATION_QUIZ } from "@/lib/quiz/conversion";
@@ -571,6 +572,8 @@ const DUREE_INVALIDE = "Durée au format 12:40.";
 // Le temps réellement regardé se mesure par rapport à cette durée (migration 0007) : sans elle, la leçon ne se valide pas.
 const QUESTIONS_ILLISIBLES = "Les questions n’ont pas pu être lues. Réessayez.";
 const DUREE_REQUISE = "Saisissez la durée de la vidéo : elle sert à mesurer le temps regardé.";
+const DOCUMENT_ILLISIBLE = "Le contenu contient un élément non reconnu.";
+const MIGRATION_CONTENU = "Le contenu riche n’est pas encore installé (migration 0055, guide « Ce qui te revient », section 58).";
 
 /** Page d'une leçon : informations, vidéo (fournisseur + identifiant, jamais le lien), « Dans cette leçon », texte. */
 export async function saveLecon(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -585,8 +588,22 @@ export async function saveLecon(_prev: FormState, fd: FormData): Promise<FormSta
     apercu: coche(fd, "apercu"),
     resume: texte(fd, "resume"),
     points_cles: lignes(texte(fd, "points_cles")),
-    texte: texte(fd, "texte"),
+    texte: "",
   };
+  // Le contenu riche (fin du lot 4) : vérifié bloc par bloc ; son texte brut va dans `texte`. Sans le champ (une saisie
+  // qui ne porte pas le contenu), le contenu enregistré reste tel quel.
+  let document: DocumentLecon | null | undefined = undefined;
+  let erreurDocument: string | null = null;
+  if (fd.has("document")) {
+    try {
+      const lu = validerDocument(JSON.parse(texte(fd, "document")));
+      if (lu.ok) document = lu.document;
+      else erreurDocument = lu.message;
+    } catch {
+      erreurDocument = DOCUMENT_ILLISIBLE;
+    }
+    if (document) saisie.texte = texteDuDocument(document);
+  }
   const values = {
     ...enTextes({ ...saisie, duree_secondes: "" }),
     duree: texte(fd, "duree"),
@@ -599,6 +616,7 @@ export async function saveLecon(_prev: FormState, fd: FormData): Promise<FormSta
   // Sans mesure (Loom, ScreenPal, Google Drive), la durée est facultative : elle ne sert qu'à l'affichage.
   else if (video && estMesuree(video.fournisseur) && duree === 0) erreurs.duree = DUREE_REQUISE;
   if (lien && !video) erreurs.video = messageLienCourt(lien) ?? LIEN_INCONNU;
+  if (erreurDocument) erreurs.texte = erreurDocument;
   // Un quiz (0031) : ses questions viennent avec la leçon, en JSON ; la base les vérifie une à une.
   let questions: unknown = undefined;
   if (fd.has("questions")) {
@@ -630,8 +648,10 @@ export async function saveLecon(_prev: FormState, fd: FormData): Promise<FormSta
       lecon_id: id,
       video_fournisseur: video?.fournisseur ?? null,
       video_id: video?.id ?? null,
-      texte: contenuTexte,
+      ...(document !== undefined ? { texte: contenuTexte, document } : {}),
     });
+    // Avant la 0055, la colonne du document manque : on ne garde pas un texte privé de sa mise en forme.
+    if (colonneAbsente(erreurContenu)) return { status: "error", message: MIGRATION_CONTENU, values };
     if (erreurContenu) return erreurEnregistrement(erreurContenu, values);
     if (questions !== undefined) {
       const { error: erreurQuiz } = await supabase.rpc("enregistrer_quiz", { p_lecon: id, p_questions: questions });

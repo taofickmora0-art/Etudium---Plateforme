@@ -1,3 +1,4 @@
+import type { DocumentLecon } from "@/lib/lecon/document";
 import type { GenreExercice } from "@/lib/exercices/types";
 import type { TypeLecon } from "@/lib/catalogue/types";
 import type { EtatFormation } from "@/lib/contenus/etat";
@@ -113,6 +114,10 @@ export type LeconAdmin = {
   pointsCles: string[];
   video: Video | null;
   texte: string;
+  /** Le contenu riche (fin du lot 4) ; une leçon ancienne arrive convertie depuis son texte. */
+  document?: DocumentLecon;
+  /** Le lien signé de chaque image du document. */
+  images?: Record<string, string>;
   ressources: RessourceAdmin[];
 };
 
