@@ -1,9 +1,9 @@
 -- Migration 0052 : les rappels d'expiration des abonnements (lot 2, spec du 1er novembre 2026, §8). Des notifications
 -- dans l'appli (catégorie « Expiration et renouvellement ») 7 jours avant la fin, la veille et le jour de l'expiration,
 -- chacune une seule fois, sur la fin réelle de l'accès (un abonnement suivi d'un autre n'en reçoit pas). Elles partent
--- par la tâche planifiée et à l'ouverture de la cloche, comme les rappels des lives. Au passage, un paiement resté en
--- attente plus d'une heure est noté expiré (une confirmation tardive de Payiz l'active quand même, 0049). Les e-mails
--- de rappel viendront avec le lot 5 B. Rejouable.
+-- par la tâche planifiée et à l'ouverture de la cloche, comme les rappels des lives. Au passage, une préparation jamais
+-- envoyée à Payiz est notée expirée après une heure ; un paiement envoyé attend la réponse de Payiz (relecture,
+-- notification). Les e-mails de rappel viendront avec le lot 5 B. Rejouable.
 
 begin;
 
@@ -41,10 +41,11 @@ begin
     return 0;
   end if;
 
-  -- Les paiements restés en attente plus d'une heure n'aboutiront plus.
+  -- Les préparations jamais envoyées à Payiz n'aboutiront plus. Un paiement envoyé garde son état : seul Payiz sait
+  -- s'il a été payé (relecture de « Mon abonnement », notification).
   update public.paiements
   set statut = 'expire'
-  where statut = 'en_attente' and coalesce(essai_le, cree_le) < now() - interval '1 hour';
+  where statut = 'en_attente' and payiz_id is null and cree_le < now() - interval '1 hour';
 
   -- Le jour de l'expiration (et les 3 jours suivants, si la tâche ne passe pas) : les deux autres rappels sont notés
   -- envoyés, pour ne jamais les recevoir après coup.

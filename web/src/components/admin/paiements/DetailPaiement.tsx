@@ -10,7 +10,7 @@ import { Field } from "@/components/ui/Field";
 import { Tag } from "@/components/ui/Tag";
 import { Textarea } from "@/components/ui/Textarea";
 import { annulerAbonnement, chargerPaiement } from "@/lib/admin/paiements/actions";
-import type { DetailPaiement as Detail } from "@/lib/admin/paiements/data";
+import type { DetailPaiement as Detail } from "@/lib/admin/paiements/types";
 import { dateLongue, dureeAbonnement, libelleMoyen, libelleStatut, montantFcfa } from "@/lib/abonnement/regles";
 import { messageEchec } from "@/lib/paiements/regles";
 

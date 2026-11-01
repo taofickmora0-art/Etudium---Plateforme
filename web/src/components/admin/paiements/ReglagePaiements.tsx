@@ -8,7 +8,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Tag } from "@/components/ui/Tag";
 import { Heading } from "@/components/ui/Text";
 import { activerPaiements, desactiverPaiements } from "@/lib/admin/paiements/actions";
-import type { EtatReglage } from "@/lib/admin/paiements/data";
+import type { EtatReglage } from "@/lib/admin/paiements/types";
 
 const GUIDE = "Ajoutez PAYIZ_CLE_SECRETE et PAIEMENT_JETON dans web/.env.local (guide « Ce qui te revient », section 56), puis relancez le serveur.";
 const NOTE = "m-0 text-sm leading-[22px] text-discret";

@@ -173,7 +173,11 @@ describe("L'attente et le résultat", () => {
     await allerAuPaiement();
     await user.click(screen.getByRole("button", { name: `Payer ${montantFcfa(15000)}` }));
     await avancer(181_000);
-    expect(screen.getByRole("dialog", { name: "Le paiement n’a pas abouti" })).toHaveTextContent("La demande n’a pas été validée à temps.");
+    const fenetre = screen.getByRole("dialog", { name: "Le paiement n’a pas abouti" });
+    expect(fenetre).toHaveTextContent("La demande n’a pas été validée à temps.");
+    // L'état chez Payiz est inconnu : on ne promet rien sur le débit (revue finale).
+    expect(fenetre).not.toHaveTextContent("Aucun montant n’a été débité.");
+    expect(fenetre).toHaveTextContent("Si le montant a été débité, votre abonnement s’ouvrira automatiquement.");
   });
 
   it("demande expirée : Recommencer relance un paiement", async () => {

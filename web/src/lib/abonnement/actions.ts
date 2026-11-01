@@ -23,6 +23,9 @@ const INTROUVABLE = "Paiement introuvable.";
 const CHOISIR = "Choisissez un abonnement.";
 const ECHEC = "Le paiement n’a pas pu être lancé. Réessayez.";
 const MIGRATION = "Les abonnements ne sont pas encore installés (migration 0049, guide « Ce qui te revient », section 56).";
+const INDISPONIBLE_POUR_LE_MOMENT = "Le paiement est indisponible pour le moment. Réessayez plus tard.";
+/** Le refus du jeton du serveur : une affaire de configuration, pas un message pour l'étudiant. */
+const JETON_REFUSE = "Jeton de paiement non reconnu.";
 
 type Erreur = { code?: string; message?: string };
 
@@ -31,6 +34,7 @@ const erreur = (message: string): EtapePaiement => ({ etat: "erreur", message })
 /** Les refus de la base (P0001, 42501) sont faits pour être affichés tels quels. */
 function messageBase(e: Erreur): string {
   if (estFonctionAbsente(e)) return MIGRATION;
+  if (e.message === JETON_REFUSE) return INDISPONIBLE_POUR_LE_MOMENT;
   if ((e.code === "P0001" || e.code === "42501") && e.message) return e.message.replace(/'/g, "’");
   return ECHEC;
 }
@@ -50,6 +54,12 @@ async function noterEssai(supabase: SupabaseClient, config: ConfigPaiement, paie
   });
   if (error) return erreur(messageBase(error));
   return etapeDepuisCarte(versCartePaiement(data));
+}
+
+/** Avant tout appel à Payiz : paiements ouverts et jeton du serveur reconnu, sinon l'argent reçu ne serait pas confirmé. */
+async function prets(supabase: SupabaseClient, config: ConfigPaiement): Promise<boolean> {
+  const { data, error } = await supabase.rpc("paiements_prets", { p_jeton: config.jeton });
+  return !error && data === true;
 }
 
 async function lirePaiement(supabase: SupabaseClient, paiementId: string): Promise<CartePaiement | string> {
@@ -86,6 +96,7 @@ export async function payer(e: { formuleId: string; code: string; telephone: str
   // Un paiement attend déjà la validation sur le téléphone : on le reprend (choix 3).
   if (carte.repris) return etapeDepuisCarte(carte);
   if (!telephone) return erreur(NUMERO_VIDE);
+  if (!(await prets(supabase, config))) return erreur(INDISPONIBLE);
 
   let p: PaiementPayiz;
   try {
@@ -127,6 +138,7 @@ export async function reessayer(e: { paiementId: string; telephone: string; oper
   if (typeof lu === "string") return erreur(lu);
   if (lu.statut === "reussi") return { etat: "reussi", paiement: lu };
   if (!lu.payizId) return erreur(messageErreurPayiz("payment_closed"));
+  if (!(await prets(supabase, config))) return erreur(INDISPONIBLE);
 
   try {
     await relancerPaiementPayiz(config.cle, lu.payizId, { telephone, operateur: e.operateur, cleIdempotence: `${lu.id}-${Date.now()}` });

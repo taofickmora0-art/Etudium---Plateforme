@@ -1040,10 +1040,15 @@ Tout se passe en **mode test** : le simulateur de Payiz ne prend aucun argent. L
 7. **Vérifie le montant chez Payiz :** dans ton tableau de bord Payiz, un paiement de 12 000 doit apparaître comme 12 000 F CFA. Si Payiz affiche 120 F CFA ou 1 200 000, dis-le-moi : c'est l'unité de `amount`.
 8. **Ce qui s'ouvre avec l'abonnement :** les formations payantes (« Incluse dans votre abonnement »), tous les espaces de la communauté, l'inscription aux lives et l'espace « Replays ». Avec un compte gratuit, les lives et les replays portent un cadenas et « Voir les abonnements ».
 9. **Une prolongation :** reprends un abonnement (Basique, par exemple) : « Mon abonnement » montre une date de fin repoussée de 3 mois.
-10. **Une expiration simulée.** Dans l'éditeur SQL, en remplaçant l'adresse par celle de ton compte de test :
+10. **Une expiration simulée.** Dans l'éditeur SQL, en remplaçant l'adresse par celle de ton compte de test (aux deux endroits). Tous ses abonnements reculent ensemble : le dernier s'est terminé il y a une heure.
     ```sql
-    update public.abonnements set debut = debut - interval '7 months', fin = fin - interval '7 months'
-    where profil_id = (select id from auth.users where email = 'ton-adresse-de-test');
+    update public.abonnements a
+    set debut = a.debut - d.recul, fin = a.fin - d.recul, rappel_7j_le = null, rappel_veille_le = null, rappel_fin_le = null
+    from (
+      select max(fin) - now() + interval '1 hour' as recul from public.abonnements
+      where annule_le is null and profil_id = (select id from auth.users where email = 'ton-adresse-de-test')
+    ) d
+    where a.profil_id = (select id from auth.users where email = 'ton-adresse-de-test');
     ```
     Recharge : les formations payantes sont reverrouillées, l'Accueil montre « Votre abonnement Standard a expiré le … » avec « Renouveler », et « Mon abonnement » dit « Expiré ». La cloche reçoit « Votre abonnement Standard a expiré ».
 11. **Au back-office :** chaque paiement de test est dans l'onglet « Paiements » (filtres, recherche par numéro de reçu, détail) ; le tableau de bord remplit « Utilisateurs payants », « Taux de conversion », « Chiffre d'affaires » et « Revenus par formule » ; la liste des utilisateurs montre la formule de chacun.

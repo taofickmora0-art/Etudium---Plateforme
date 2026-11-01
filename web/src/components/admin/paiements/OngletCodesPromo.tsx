@@ -12,7 +12,7 @@ import { CELLULE_TABLEAU, TableauListe } from "@/components/ui/TableauListe";
 import { Tag, type TagTone } from "@/components/ui/Tag";
 import { TextInput } from "@/components/ui/TextInput";
 import { enregistrerCodePromo } from "@/lib/admin/paiements/actions";
-import type { CodePromo } from "@/lib/admin/paiements/data";
+import type { CodePromo } from "@/lib/admin/paiements/types";
 import { montantFcfa } from "@/lib/abonnement/regles";
 import { dateNumerique } from "@/lib/utilisateurs/regles";
 

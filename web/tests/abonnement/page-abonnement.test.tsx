@@ -16,6 +16,8 @@ vi.mock("@/lib/paiements/synchroniser", () => ({ resynchroniserEnAttente: vi.fn(
 vi.mock("@/lib/abonnement/data", () => ({
   lireAbonnement: vi.fn(async () => (lectures.push("abonnement"), { etat: "gratuit" })),
   lirePaiements: vi.fn(async () => (lectures.push("paiements"), [])),
+  lireFormules: vi.fn(async () => (lectures.push("formules"), [])),
+  paiementsOuverts: vi.fn(async () => (lectures.push("ouverts"), true)),
 }));
 
 const MAINTENANT = new Date("2026-11-01T09:00:00Z");
@@ -92,5 +94,13 @@ describe("La page serveur", () => {
     await ContenuAbonnement();
     expect(lectures[0]).toBe("resynchroniser");
     expect([...lectures].sort()).toEqual(["abonnement", "paiements", "resynchroniser"]);
+  });
+
+  it("la souscription aussi : un paiement réussi pendant l'absence ne se paie pas deux fois (revue finale)", async () => {
+    const { ContenuSouscription } = await import("@/components/abonnement/ContenuSouscription");
+    lectures.length = 0;
+    await ContenuSouscription({ formule: "standard" });
+    expect(lectures[0]).toBe("resynchroniser");
+    expect(lectures).toContain("abonnement");
   });
 });

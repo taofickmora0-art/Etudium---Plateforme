@@ -23,6 +23,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchPayiz);
   vi.stubEnv("PAYIZ_CLE_SECRETE", "sk_test_x");
   vi.stubEnv("PAIEMENT_JETON", "J");
+  faux.repondre("rpc.paiements_prets", { data: true });
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -83,6 +84,21 @@ describe("Payer", () => {
     await payer({ ...ENTREE, telephone: "01 55 00 00 00", operateur: null });
     expect(corpsEnvoye().payer).toEqual({ phone: "+2290155000000" });
     expect(faux.de("rpc", "noter_essai")[0].valeurs).toMatchObject({ p_operateur: "moov" });
+  });
+
+  it("jeton du serveur non reconnu (ou paiements désactivés) : rien ne part chez Payiz (revue finale)", async () => {
+    faux.repondre("rpc.preparer_paiement", { data: carteSql({ repris: false }) });
+    faux.repondre("rpc.paiements_prets", { data: false });
+    expect(await payer(ENTREE)).toEqual({ etat: "erreur", message: "Les paiements ouvrent bientôt." });
+    expect(faux.de("rpc", "paiements_prets")[0].valeurs).toEqual({ p_jeton: "J" });
+    expect(fetchPayiz).not.toHaveBeenCalled();
+  });
+
+  it("un refus du jeton par la base ne s'affiche pas tel quel (revue finale)", async () => {
+    faux.repondre("rpc.preparer_paiement", { data: carteSql({ repris: false }) });
+    fetchPayiz.mockResolvedValueOnce(reponse(201, payizSql()));
+    faux.repondre("rpc.noter_essai", { error: { code: "42501", message: "Jeton de paiement non reconnu." } });
+    expect(await payer(ENTREE)).toEqual({ etat: "erreur", message: "Le paiement est indisponible pour le moment. Réessayez plus tard." });
   });
 
   it("paiement en cours repris : pas de second appel à Payiz", async () => {
@@ -157,9 +173,9 @@ describe("Suivre et réessayer", () => {
 });
 
 describe("Resynchroniser", () => {
-  it("seuls les paiements en attente de moins d'une heure, chez Payiz", async () => {
-    const recent = new Date(Date.now() - 10 * 60_000).toISOString();
-    const ancien = new Date(Date.now() - 2 * 3600_000).toISOString();
+  it("les paiements envoyés restés en attente depuis moins de 24 h sont relus chez Payiz (revue finale)", async () => {
+    const recent = new Date(Date.now() - 2 * 3600_000).toISOString();
+    const ancien = new Date(Date.now() - 25 * 3600_000).toISOString();
     faux.repondre("rpc.mes_paiements", {
       data: [
         carteSql({ payiz_id: "pay_1", essai_le: recent }),

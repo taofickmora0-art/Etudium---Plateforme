@@ -115,11 +115,14 @@ alter table public.evenements_payiz enable row level security;
 
 create table if not exists public.reglages_paiement (
   id boolean primary key default true check (id),
-  -- Empreinte SHA-256 (hexadécimale) de PAIEMENT_JETON ; vide : paiements désactivés.
+  -- « Payer » est proposé aux étudiants. Désactiver ne touche pas l'empreinte : un paiement déjà envoyé se confirme encore.
+  ouverts boolean not null default false,
+  -- Empreinte SHA-256 (hexadécimale) de PAIEMENT_JETON, posée à l'activation ; elle autorise le serveur à confirmer.
   empreinte text,
   active_le timestamptz,
   active_par uuid references public.profils (id) on delete set null
 );
+alter table public.reglages_paiement add column if not exists ouverts boolean not null default false;
 alter table public.reglages_paiement enable row level security;
 insert into public.reglages_paiement (id) values (true) on conflict (id) do nothing;
 
@@ -326,7 +329,7 @@ stable
 security definer
 set search_path = ''
 as $$
-  select exists (select 1 from public.reglages_paiement where id and empreinte is not null);
+  select exists (select 1 from public.reglages_paiement where id and ouverts and empreinte is not null);
 $$;
 
 create or replace function public.activer_paiements(p_jeton text)
@@ -344,7 +347,7 @@ begin
     raise exception 'Le jeton de paiement doit compter au moins 32 caractères.';
   end if;
   update public.reglages_paiement
-  set empreinte = encode(sha256(convert_to(p_jeton, 'UTF8')), 'hex'), active_le = now(), active_par = (select auth.uid())
+  set ouverts = true, empreinte = encode(sha256(convert_to(p_jeton, 'UTF8')), 'hex'), active_le = now(), active_par = (select auth.uid())
   where id;
 end;
 $$;
@@ -360,8 +363,21 @@ begin
   if not public.equipe_paiements() then
     raise exception 'Réservé aux administrateurs.' using errcode = '42501';
   end if;
-  update public.reglages_paiement set empreinte = null where id;
+  -- L'empreinte reste : les paiements déjà envoyés à Payiz se confirment encore.
+  update public.reglages_paiement set ouverts = false where id;
 end;
+$$;
+
+-- Le serveur avant d'appeler Payiz : paiements ouverts, et son jeton reconnu (sinon l'argent reçu ne pourrait pas être
+-- confirmé).
+create or replace function public.paiements_prets(p_jeton text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select public.paiements_ouverts() and public.jeton_paiement_valide(p_jeton);
 $$;
 
 -- Pour le back-office : les paiements sont-ils ouverts, et le jeton du serveur est-il celui enregistré ?
@@ -448,6 +464,12 @@ begin
   perform public.exiger_compte_actif();
   if public.a_role('formateur') then
     raise exception 'Un compte formateur n’a pas d’abonnement.' using errcode = '42501';
+  end if;
+  -- Deux demandes simultanées d'un même compte passent l'une après l'autre ; un code promo est verrouillé le temps de
+  -- compter ses utilisations (un code à 100 % active l'abonnement dans la même transaction).
+  perform pg_advisory_xact_lock(hashtext('etudium.paiement.' || v_uid::text));
+  if coalesce(trim(p_code), '') <> '' then
+    perform 1 from public.codes_promo where code = upper(trim(p_code)) for update;
   end if;
 
   select * into v from public.paiements
@@ -671,6 +693,7 @@ revoke execute on function public.carte_paiement(public.paiements) from public, 
 revoke execute on function public.activer_paiement(uuid) from public, anon, authenticated;
 
 revoke execute on function public.paiements_ouverts() from public, anon, authenticated;
+revoke execute on function public.paiements_prets(text) from public, anon, authenticated;
 revoke execute on function public.activer_paiements(text) from public, anon, authenticated;
 revoke execute on function public.desactiver_paiements() from public, anon, authenticated;
 revoke execute on function public.etat_paiements(text) from public, anon, authenticated;
@@ -687,6 +710,7 @@ revoke execute on function public.evenement_payiz(text, text) from public, anon,
 revoke execute on function public.evenement_payiz_traite(text, text) from public, anon, authenticated;
 
 grant execute on function public.paiements_ouverts() to anon, authenticated;
+grant execute on function public.paiements_prets(text) to anon, authenticated;
 grant execute on function public.activer_paiements(text) to authenticated;
 grant execute on function public.desactiver_paiements() to authenticated;
 grant execute on function public.etat_paiements(text) to authenticated;

@@ -3,7 +3,7 @@
 import { AlertCircleIcon, CheckmarkCircle02Icon, CreditCardIcon, UserMultipleIcon } from "@hugeicons/core-free-icons";
 import { GRILLE_CHIFFRES, Tuile } from "@/components/tableau/Blocs";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
-import type { CodePromo, EtatReglage, PagePaiements as Page, ResumePaiements } from "@/lib/admin/paiements/data";
+import type { CodePromo, EtatReglage, PagePaiements as Page, ResumePaiements } from "@/lib/admin/paiements/types";
 import { montantFcfa } from "@/lib/abonnement/regles";
 import type { Formule } from "@/lib/abonnement/types";
 import { OngletCodesPromo } from "./OngletCodesPromo";

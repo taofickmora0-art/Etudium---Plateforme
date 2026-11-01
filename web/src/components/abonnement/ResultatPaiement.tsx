@@ -60,7 +60,11 @@ export function ResultatPaiement({ resultat, occupe, onFermer, onReessayer, onRe
         icon={AlertCircleIcon}
         iconTone="danger"
         title="Le paiement n’a pas abouti"
-        description={`${resultat.message} Aucun montant n’a été débité.`}
+        description={
+          resultat.incertain
+            ? `${resultat.message} Si le montant a été débité, votre abonnement s’ouvrira automatiquement.`
+            : `${resultat.message} Aucun montant n’a été débité.`
+        }
         returnFocus={champNumero}
         footer={
           <>

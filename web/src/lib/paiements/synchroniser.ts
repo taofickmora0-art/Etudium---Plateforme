@@ -26,12 +26,13 @@ export async function appliquerPayiz(supabase: SupabaseClient, paiementId: strin
   return versCartePaiement(data);
 }
 
-/** Une demande non validée au bout d'une heure n'aboutira plus : on ne la relit plus. */
-const FENETRE_RESYNCHRONISATION_MS = 60 * 60 * 1000;
+/** Payiz fait expirer une demande au bout de 15 minutes ; au-delà de 24 h, on ne relit plus. */
+const FENETRE_RESYNCHRONISATION_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Avant d'afficher « Mon abonnement » : relit chez Payiz les paiements du compte restés en attente depuis moins d'une
- * heure (onglet fermé pendant l'attente ; en local, Payiz ne peut pas notifier). Une erreur n'empêche pas l'affichage.
+ * Avant d'afficher « Mon abonnement » ou la souscription : relit chez Payiz les paiements du compte restés en attente
+ * depuis moins de 24 h (onglet fermé pendant l'attente ; en local, Payiz ne peut pas notifier). Une erreur n'empêche
+ * pas l'affichage.
  */
 export async function resynchroniserEnAttente(): Promise<void> {
   const config = configurationPaiement();

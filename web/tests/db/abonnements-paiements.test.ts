@@ -39,7 +39,10 @@ const confirmer = (qui: Qui, paiement: string, payiz: string, montant: number, j
 const noterEchec = (paiement: string, statut: string, motif: string | null) =>
   rpc<Carte>("anon", "select public.noter_echec($1, $2, $3, $4) as r", [paiement, statut, motif, J]);
 const empreinte = (jeton: string | null) =>
-  banc.db.query("update public.reglages_paiement set empreinte = case when $1::text is null then null else encode(sha256(convert_to($1::text, 'UTF8')), 'hex') end", [jeton]);
+  banc.db.query(
+    "update public.reglages_paiement set ouverts = $1::text is not null, empreinte = case when $1::text is null then null else encode(sha256(convert_to($1::text, 'UTF8')), 'hex') end",
+    [jeton],
+  );
 
 beforeAll(async () => {
   banc = await creerBanc([
@@ -237,6 +240,32 @@ describe("Préparer, noter, confirmer", () => {
     expect(await rpc<boolean>("anon", "select public.evenement_payiz('evt_1', $1) as r", [J])).toBe(false);
     expect(await traitee()).toBe(true);
     await expect(rpc<boolean>("anon", "select public.evenement_payiz_traite('evt_1', 'faux') as r")).rejects.toThrow("Jeton de paiement non reconnu.");
+  });
+
+  it("désactiver garde l'empreinte : un paiement déjà envoyé se confirme encore (revue finale)", async () => {
+    await banc.en({ id: S }, "select public.activer_paiements($1)", [J]);
+    const p = await preparer(E, formules.standard, null);
+    await noterEssai(p.id, "pay_d1");
+    await banc.en({ id: S }, "select public.desactiver_paiements()");
+    expect(await rpc<boolean>("anon", "select public.paiements_ouverts() as r")).toBe(false);
+    expect((await confirmer("anon", p.id, "pay_d1", 15000)).statut).toBe("reussi");
+    await expect(preparer(E, formules.basique, null)).rejects.toThrow("Les paiements ouvrent bientôt.");
+  });
+
+  it("« prêts » : ouverts, et le jeton du serveur reconnu (revue finale)", async () => {
+    const prets = (jeton: string) => rpc<boolean>("anon", "select public.paiements_prets($1) as r", [jeton]);
+    await banc.en({ id: S }, "select public.activer_paiements($1)", [J]);
+    expect(await prets(J)).toBe(true);
+    expect(await prets("k".repeat(40))).toBe(false);
+    await banc.en({ id: S }, "select public.desactiver_paiements()");
+    expect(await prets(J)).toBe(false);
+  });
+
+  it("préparer se verrouille par compte et sur le code (demandes simultanées ; revue finale)", async () => {
+    // PGlite n'a qu'une connexion : la course elle-même ne se rejoue pas ici ; on vérifie les deux verrous.
+    const { rows } = await banc.db.query<{ d: string }>("select pg_get_functiondef('public.preparer_paiement(uuid, text)'::regprocedure) as d");
+    expect(rows[0].d).toContain("pg_advisory_xact_lock");
+    expect(rows[0].d).toMatch(/from public\.codes_promo[^;]*for update/);
   });
 
   it("un formateur n'a pas d'abonnement", async () => {

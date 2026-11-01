@@ -81,10 +81,11 @@ export async function lireRecu(numero: string): Promise<Recu | null> {
   };
 }
 
-/** « Payer » est possible : l'équipe a activé les paiements, et le serveur a sa clé Payiz et son jeton. */
+/** « Payer » est possible : l'équipe a activé les paiements, et le serveur a sa clé Payiz et un jeton reconnu. */
 export async function paiementsOuverts(): Promise<boolean> {
-  if (demoModeActive() || !configurationPaiement()) return false;
+  const config = configurationPaiement();
+  if (demoModeActive() || !config) return false;
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("paiements_ouverts");
+  const { data, error } = await supabase.rpc("paiements_prets", { p_jeton: config.jeton });
   return !error && data === true;
 }

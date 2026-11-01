@@ -41,6 +41,6 @@ export type EssaiCode = { ok: true; prixInitial: number; remise: number; montant
 export type EtapePaiement =
   | { etat: "attente"; paiement: CartePaiement; finAttente: string }
   | { etat: "reussi"; paiement: CartePaiement }
-  | { etat: "echoue"; paiement: CartePaiement; message: string }
+  | { etat: "echoue"; paiement: CartePaiement; message: string; /** L'écran a cessé d'attendre ; l'état chez Payiz est inconnu. */ incertain?: boolean }
   | { etat: "expire"; paiement: CartePaiement }
   | { etat: "erreur"; message: string };

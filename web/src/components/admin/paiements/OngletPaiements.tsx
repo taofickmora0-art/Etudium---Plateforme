@@ -9,7 +9,7 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { CELLULE_TABLEAU, TableauListe } from "@/components/ui/TableauListe";
 import { Tag } from "@/components/ui/Tag";
 import { chargerPaiements } from "@/lib/admin/paiements/actions";
-import { PAIEMENTS_PAR_PAGE, type PagePaiements } from "@/lib/admin/paiements/data";
+import { PAIEMENTS_PAR_PAGE, type PagePaiements } from "@/lib/admin/paiements/types";
 import { dureeAbonnement, libelleMoyen, libelleStatut, montantFcfa } from "@/lib/abonnement/regles";
 import { dateNumerique } from "@/lib/utilisateurs/regles";
 import { DetailPaiement } from "./DetailPaiement";

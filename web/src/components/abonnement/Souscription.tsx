@@ -114,7 +114,7 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
           traiter(r);
         } else if (Date.now() >= fin) {
           fini = true;
-          traiter({ etat: "echoue", paiement: r.paiement, message: messageEchec("timeout") });
+          traiter({ etat: "echoue", paiement: r.paiement, message: messageEchec("timeout"), incertain: true });
         }
       } finally {
         enVol = false;

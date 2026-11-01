@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { abonner } from "./abonner";
 import { creerBanc, MIGRATIONS_LOT_0, type Banc } from "./banc";
@@ -79,20 +81,39 @@ describe("Les rappels d'expiration", () => {
 });
 
 describe("Le nettoyage des paiements", () => {
-  it("un paiement en attente depuis plus d'une heure passe à « expiré », pas un récent", async () => {
-    const inserer = async (essai: string) =>
+  it("une préparation jamais envoyée à Payiz expire après une heure ; un paiement envoyé attend la réponse de Payiz (revue finale)", async () => {
+    const inserer = async (essai: string, envoye: boolean) =>
       (
         await banc.db.query<{ id: string }>(
-          `insert into public.paiements (profil_id, formule_id, prix_initial, montant, payiz_id, essai_le)
-           select $1, id, 15000, 15000, $2, ${essai} from public.formules where code = 'standard' returning id`,
-          [comptes.sept, `pay_${randomUUID().slice(0, 8)}`],
+          `insert into public.paiements (profil_id, formule_id, prix_initial, montant, payiz_id, essai_le, cree_le)
+           select $1, id, 15000, 15000, $2, ${envoye ? essai : "null"}, ${essai} from public.formules where code = 'standard' returning id`,
+          [comptes.sept, envoye ? `pay_${randomUUID().slice(0, 8)}` : null],
         )
       ).rows[0].id;
-    const ancien = await inserer("now() - interval '2 hours'");
-    const recent = await inserer("now() - interval '1 minute'");
+    const abandonne = await inserer("now() - interval '2 hours'", false);
+    const envoye = await inserer("now() - interval '2 hours'", true);
+    const recent = await inserer("now() - interval '1 minute'", false);
     await traiter();
     const statut = async (id: string) => (await banc.db.query<{ statut: string }>("select statut from public.paiements where id = $1", [id])).rows[0].statut;
-    expect(await statut(ancien)).toBe("expire");
+    expect(await statut(abandonne)).toBe("expire");
+    expect(await statut(envoye)).toBe("en_attente");
     expect(await statut(recent)).toBe("en_attente");
+  });
+});
+
+describe("Le guide, section 56, étape 10 : l'expiration simulée", () => {
+  it("reverrouille même après une prolongation, et le rappel « a expiré » part (revue finale)", async () => {
+    const compte = randomUUID();
+    await banc.creerCompte(compte);
+    await abonner(banc, compte, { debut: "now() - interval '1 day'", fin: "now() + interval '6 months'" });
+    await abonner(banc, compte, { formule: "basique", debut: "now() + interval '6 months'", fin: "now() + interval '9 months'" });
+    const guide = readFileSync(join(process.cwd(), "../docs/guides/ce-qui-te-revient.md"), "utf8");
+    const section = guide.slice(guide.indexOf("## 56."));
+    const sql = /```sql\n([\s\S]*?)```/.exec(section)?.[1];
+    expect(sql).toBeTruthy();
+    await banc.db.exec(sql!.replaceAll("ton-adresse-de-test", `${compte.slice(0, 8)}@exemple.com`));
+    expect((await banc.db.query<{ r: boolean }>("select public.abonne($1) as r", [compte])).rows[0].r).toBe(false);
+    await traiter();
+    expect((await notifications(compte)).map((n) => n.titre)).toEqual(["Votre abonnement Basique a expiré"]);
   });
 });
