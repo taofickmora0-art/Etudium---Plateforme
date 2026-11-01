@@ -16,7 +16,8 @@ export function libelleSauvegarde(etat: EtatSauvegarde): string {
     case "hors_ligne":
       return "Hors ligne : vos modifications sont gardées sur cet appareil";
     case "echec":
-      return "Échec de l’enregistrement. Nouvel essai…";
+      // Une migration absente se dit telle quelle : sans elle, aucun essai n'aboutira.
+      return /migration/i.test(etat.message) ? etat.message : "Échec de l’enregistrement. Nouvel essai…";
     case "conflit":
       return "Non enregistré";
     case "invalide":

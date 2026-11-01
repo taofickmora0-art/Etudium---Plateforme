@@ -295,7 +295,11 @@ function Editeur({ lecon, base = "/admin/formations", quiz }: EditeurLeconProps)
       {sauvegarde.recuperation && (
         <Banner
           tone="information"
-          title="Des modifications de cet appareil n’ont pas été enregistrées."
+          title={
+            sauvegarde.recuperation.ancienne
+              ? "Des modifications de cet appareil, faites sur une version plus ancienne, n’ont pas été enregistrées. Les récupérer remplace la version actuelle."
+              : "Des modifications de cet appareil n’ont pas été enregistrées."
+          }
           action={
             <span className="flex flex-wrap gap-2">
               <Button size="sm" onClick={recuperer}>

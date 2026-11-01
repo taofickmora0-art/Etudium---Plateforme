@@ -73,7 +73,15 @@ function Carte({ formationId, edition }: { formationId: string; edition: EtatEdi
         </Banner>
       )}
       {sauvegarde.recuperation && (
-        <Banner tone="information" title="Des modifications de cet appareil n’ont pas été enregistrées." action={<RecupererIgnorer onRecuperer={recuperer} onIgnorer={sauvegarde.ignorer} />} />
+        <Banner
+          tone="information"
+          title={
+            sauvegarde.recuperation.ancienne
+              ? "Des modifications de cet appareil, faites sur une version plus ancienne, n’ont pas été enregistrées. Les récupérer remplace la version actuelle."
+              : "Des modifications de cet appareil n’ont pas été enregistrées."
+          }
+          action={<RecupererIgnorer onRecuperer={recuperer} onIgnorer={sauvegarde.ignorer} />}
+        />
       )}
       {e.formulaire && <Banner tone="erreur" title={e.formulaire} />}
       <Field label="Titre" htmlFor={`${id}-t`} error={e.titre}>

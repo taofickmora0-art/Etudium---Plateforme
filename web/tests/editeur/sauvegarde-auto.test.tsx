@@ -145,8 +145,31 @@ describe("La sauvegarde automatique", () => {
     expect(deux.result.current.recuperation).toBeNull();
     expect(lireCopie("lecon:l1")).toBeNull();
 
+    // Relecture (3) : après un conflit, la copie porte une révision plus ancienne ; elle se propose, signalée.
     ecrireCopie("lecon:l1", { titre: "Ancienne" }, 1);
-    expect(monter(vi.fn()).result.current.recuperation).toBeNull();
+    expect(monter(vi.fn()).result.current.recuperation).toMatchObject({ valeur: { titre: "Ancienne" }, ancienne: true });
+  });
+
+  it("relecture (6) : après les trois nouveaux essais, l'éditeur réessaie encore toutes les 30 s", async () => {
+    const enregistrer = vi.fn(async (): Promise<ResultatSauvegarde> => ({ ok: false, code: "echec", message: "Panne" }));
+    const { rerender } = monter(enregistrer);
+    rerender({ valeur: { titre: "AB" } });
+    await avancer(1500 + 2000 + 5000 + 15000);
+    expect(enregistrer).toHaveBeenCalledTimes(4);
+    await avancer(30_000);
+    expect(enregistrer).toHaveBeenCalledTimes(5);
+    await avancer(30_000);
+    expect(enregistrer).toHaveBeenCalledTimes(6);
+  });
+
+  it("relecture (3) : en conflit ou en refus, quitter la page est retenu (rien n'est enregistré)", async () => {
+    const enregistrer = vi.fn(async (): Promise<ResultatSauvegarde> => ({ ok: false, code: "conflit", par: null }));
+    const { rerender } = monter(enregistrer);
+    rerender({ valeur: { titre: "AB" } });
+    await avancer(1500);
+    const e = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(e);
+    expect(e.defaultPrevented).toBe(true);
   });
 
   it("quitter la page : retenu seulement s'il reste quelque chose à enregistrer", async () => {
@@ -182,6 +205,10 @@ describe("L'indicateur", () => {
     expect(voir({ type: "a_jour", le: "2026-11-01T09:05:00", brouillon: false })).toBe("Enregistré à 9 h 05");
     expect(voir({ type: "hors_ligne" })).toBe("Hors ligne : vos modifications sont gardées sur cet appareil");
     expect(voir({ type: "echec", message: "x" })).toBe("Échec de l’enregistrement. Nouvel essai…");
+    // Relecture : une migration absente se dit telle quelle (sinon « Nouvel essai… » sans fin, sans explication).
+    expect(voir({ type: "echec", message: "L’enregistrement automatique n’est pas encore installé (migration 0056, guide « Ce qui te revient », section 58)." })).toBe(
+      "L’enregistrement automatique n’est pas encore installé (migration 0056, guide « Ce qui te revient », section 58).",
+    );
     expect(voir({ type: "conflit", par: null })).toBe("Non enregistré");
     expect(voir({ type: "invalide", erreurs: {} })).toBe("Non enregistré : à corriger");
   });

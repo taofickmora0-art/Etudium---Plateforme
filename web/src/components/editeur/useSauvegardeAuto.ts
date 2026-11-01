@@ -6,7 +6,8 @@ import type { ResultatSauvegarde } from "@/lib/editeur/types";
 
 // La sauvegarde automatique de l'éditeur (fin du lot 4, spec §2.1). 1,5 seconde après la dernière modification, la
 // valeur part avec la révision vue ; une seule sauvegarde à la fois (un changement pendant l'envoi repart ensuite, avec
-// la révision rendue). Un échec se réessaie après 2, 5 puis 15 secondes ; hors ligne, on attend le retour du réseau.
+// la révision rendue). Un échec se réessaie après 2, 5 puis 15 secondes, puis toutes les 30 secondes ; hors ligne, on
+// attend le retour du réseau.
 // Un conflit arrête tout ; un refus attend une correction. Ce qui n'est pas encore confirmé est gardé sur l'appareil,
 // et proposé à la réouverture. Rien ne part à l'ouverture.
 
@@ -32,6 +33,8 @@ type Options<T> = {
 };
 
 const NOUVEAUX_ESSAIS_MS = [2000, 5000, 15000];
+/** Après les trois premiers essais, l'éditeur continue d'essayer, à ce rythme, tant que la page est ouverte. */
+const ESSAI_SUIVANT_MS = 30_000;
 const ECHEC = "L’enregistrement n’a pas abouti.";
 const hydrate = () => () => {};
 const horsLigne = () => typeof navigator !== "undefined" && navigator.onLine === false;
@@ -107,11 +110,9 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
       setPhase({ type: "hors_ligne" });
     } else {
       setPhase({ type: "echec", message: r.message });
-      const attente = NOUVEAUX_ESSAIS_MS[essais.current];
-      if (attente !== undefined) {
-        essais.current += 1;
-        minuteur.current = setTimeout(() => void envoyerActuel.current(), attente);
-      }
+      const attente = NOUVEAUX_ESSAIS_MS[essais.current] ?? ESSAI_SUIVANT_MS;
+      essais.current += 1;
+      minuteur.current = setTimeout(() => void envoyerActuel.current(), attente);
     }
   }, [cle]);
 
@@ -153,7 +154,7 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
       : phase;
 
   // Fermer l'onglet avec quelque chose à enregistrer : le navigateur demande confirmation.
-  const aRetenir = etat.type === "modifie" || etat.type === "en_cours" || etat.type === "echec" || etat.type === "hors_ligne";
+  const aRetenir = etat.type !== "a_jour";
   useEffect(() => {
     if (!aRetenir) return;
     const retenir = (e: BeforeUnloadEvent) => {
@@ -164,13 +165,17 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
     return () => window.removeEventListener("beforeunload", retenir);
   }, [aRetenir]);
 
-  // La copie de l'appareil trouvée à l'ouverture (même révision, autre contenu) : proposée une fois la page affichée.
+  // La copie de l'appareil trouvée à l'ouverture (autre contenu) : proposée une fois la page affichée. D'une révision
+  // plus ancienne (après un conflit, ou une publication par un autre), elle est signalée : la récupérer remplace la
+  // version actuelle.
   const [copie] = useState(() => (typeof window === "undefined" ? null : lireCopie<T>(cle)));
   const [valeurInitiale] = useState(json);
   const [decide, setDecide] = useState(false);
   const affiche = useSyncExternalStore(hydrate, () => true, () => false);
   const recuperation =
-    affiche && !decide && copie && copie.revision === revisionInitiale && JSON.stringify(copie.valeur) !== valeurInitiale ? { valeur: copie.valeur, le: copie.le } : null;
+    affiche && !decide && copie && copie.revision <= revisionInitiale && JSON.stringify(copie.valeur) !== valeurInitiale
+      ? { valeur: copie.valeur, le: copie.le, ancienne: copie.revision < revisionInitiale }
+      : null;
 
   const recuperer = useCallback((): T | null => {
     setDecide(true);
