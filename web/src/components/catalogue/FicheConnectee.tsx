@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowRight01Icon, ArrowRight02Icon, Certificate01Icon, Clock01Icon, SquareLock02Icon, StarIcon } from "@hugeicons/core-free-icons";
 import { SectionAvis } from "@/components/avis/SectionAvis";
+import { BlocMonetisation } from "./BlocMonetisation";
+import type { Monetisation } from "@/lib/catalogue/monetisation";
 import { buttonVariants } from "@/components/ui/Button";
 import { Couverture } from "@/components/ui/Couverture";
 import { urlCouverture } from "@/lib/couvertures/adresse";
@@ -193,8 +195,11 @@ export function FicheConnectee({
   lienModifier = null,
   scores = {},
   statuts = {},
+  monetisation = null,
 }: {
   fiche: FicheFormation;
+  /** Le lien compétence → monétisation (0048) : « À suivre d'abord », « Et ensuite ? Vendre cette compétence ». */
+  monetisation?: Monetisation | null;
   progression?: EtatProgression | null;
   /** Formation dans les favoris du compte ; null sans la table des favoris (migration 0009). */
   favori?: boolean | null;
@@ -307,6 +312,7 @@ export function FicheConnectee({
             <EnTeteSection titre="Programme" id="programme-titre" suite={fiche.modules.length > 0 ? resumeProgramme(fiche) : undefined} />
             <ProgrammeFiche fiche={fiche} variante="connecte" progression={progression?.commencee ? progression : null} lienModifier={lienModifier} scores={scores} statuts={statuts} />
           </section>
+          <BlocMonetisation monetisation={monetisation} variante="connecte" />
           <SectionAvis
             variante="connecte"
             formation={{ id: fiche.id, titre: fiche.titre }}

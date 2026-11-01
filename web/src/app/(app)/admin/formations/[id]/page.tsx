@@ -11,6 +11,7 @@ import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tag } from "@/components/ui/Tag";
 import { getFormationAdmin, listFormateurs, listParcours } from "@/lib/admin/data";
+import { competencesAVendre } from "@/lib/catalogue/data";
 import { requireSpace } from "@/lib/auth/require-space";
 import { ETATS, TON_ETAT } from "@/lib/contenus/etat";
 
@@ -25,11 +26,11 @@ async function FicheFormation({ params, searchParams }: Params) {
   const [{ id }, { onglet }] = await Promise.all([params, searchParams]);
   let donnees;
   try {
-    donnees = await Promise.all([getFormationAdmin(id), listParcours(), listFormateurs()]);
+    donnees = await Promise.all([getFormationAdmin(id), listParcours(), listFormateurs(), competencesAVendre(id)]);
   } catch (erreur) {
     return siTablesAbsentes(erreur);
   }
-  const [formation, parcours, formateurs] = donnees;
+  const [formation, parcours, formateurs, { competences, liees }] = donnees;
   if (!formation) notFound();
   return (
     <PageAdmin
@@ -39,7 +40,7 @@ async function FicheFormation({ params, searchParams }: Params) {
     >
       <FormationOnglets
         ongletInitial={onglet && ONGLETS.includes(onglet) ? onglet : "informations"}
-        informations={<FormationInfosForm formation={formation} parcours={parcours} formateurs={formateurs} />}
+        informations={<FormationInfosForm formation={formation} parcours={parcours} formateurs={formateurs} competences={competences} liees={liees} />}
         programme={<OngletLecons formation={formation} />}
         publication={<PublicationPanel id={formation.id} formation={formation} formateurNom={formateurs.find((f) => f.id === formation.formateurId)?.nom ?? null} />}
         apprenants={

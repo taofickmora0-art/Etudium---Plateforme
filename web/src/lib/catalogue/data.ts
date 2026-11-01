@@ -3,6 +3,7 @@ import { demoModeActive } from "@/lib/auth/current-user";
 import type { Badge, CouleurParcours, Niveau } from "@/lib/contenus/libelles";
 import { lireAvecRepli, liste, parOrdre, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
+import type { LienMonetisation } from "./monetisation";
 import { estLeconDeContenu } from "./regles";
 import type { CarteCatalogue, FicheFormation, LeconFiche, ModuleFiche, ParcoursCatalogue } from "./types";
 
@@ -69,6 +70,34 @@ export async function listCatalogue(): Promise<CarteCatalogue[]> {
     return supabase.from("formations").select(`${COLONNES_CARTE}${notes}, modules(lecons(duree_secondes${lecons}))`).eq("statut", "publiee");
   })) as Ligne[] | null;
   return (lignes ?? []).map((f) => versCarte(f, liste(f.modules).flatMap((m) => liste(m.lecons))));
+}
+
+/**
+ * Les liens compétence → monétisation (0048), pour des formations que le compte peut voir ; aucun avant la 0048 ou si la
+ * lecture échoue : les blocs « Et ensuite ? » et « À suivre d'abord » ne s'affichent simplement pas.
+ */
+export async function lireMonetisation(): Promise<LienMonetisation[]> {
+  if (demoModeActive()) return [];
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("formations_monetisation").select("business_id, competence_id");
+  if (error) return [];
+  return liste(data).map((l) => ({ businessId: texte(l.business_id), competenceId: texte(l.competence_id) }));
+}
+
+/**
+ * Pour l'éditeur d'une formation (0048 ; restructuration, §5.3) : les formations publiées de Compétences digitales (sauf
+ * elle-même), dans l'ordre du parcours, et celles qu'elle apprend déjà à vendre.
+ */
+export async function competencesAVendre(formationId: string): Promise<{ competences: { id: string; titre: string }[]; liees: string[] }> {
+  const [cartes, liens] = await Promise.all([listCatalogue(), lireMonetisation()]);
+  const position = (c: CarteCatalogue) => c.parcours.find((p) => p.couleur === "digital")?.position ?? Number.MAX_SAFE_INTEGER;
+  return {
+    competences: cartes
+      .filter((c) => c.id !== formationId && c.parcours.some((p) => p.couleur === "digital"))
+      .sort((a, b) => position(a) - position(b) || a.titre.localeCompare(b.titre, "fr"))
+      .map((c) => ({ id: c.id, titre: c.titre })),
+    liees: liens.filter((l) => l.businessId === formationId).map((l) => l.competenceId),
+  };
 }
 
 export async function listParcoursCatalogue(): Promise<ParcoursCatalogue[]> {

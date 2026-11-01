@@ -8,7 +8,8 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { lireAvis } from "@/lib/avis/data";
 import { BandeauApercu } from "@/components/lecon/BandeauApercu";
 import { ficheApercu, lienModifierLecons } from "@/lib/catalogue/apercu";
-import { getFiche } from "@/lib/catalogue/data";
+import { getFiche, lireMonetisation, listCatalogue } from "@/lib/catalogue/data";
+import { monetisationDe } from "@/lib/catalogue/monetisation";
 import { metadonneesFiche } from "@/lib/catalogue/partage";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { renvoyerFormateur } from "@/lib/catalogue/garde-formateur";
@@ -49,8 +50,11 @@ async function Fiche({ params }: Params) {
   if (!fiche) notFound();
   // Un formateur ne lit que ses formations (restructuration R1) : l'éditeur de la sienne, sinon son tableau de bord.
   await renvoyerFormateur(compte, fiche.id);
+  // Le lien compétence → monétisation (0048 ; restructuration, §5.3) : « À suivre d'abord », « Et ensuite ? ».
+  const [liens, cartes] = await Promise.all([lireMonetisation(), listCatalogue()]);
+  const monetisation = monetisationDe(fiche.id, liens, cartes);
   // Avis (1.11), progression (1.7) et favoris (1.9) : absents tant que leurs migrations ne sont pas appliquées.
-  if (!compte) return <FichePublique fiche={fiche} avis={await lireAvis(fiche.id)} />;
+  if (!compte) return <FichePublique fiche={fiche} avis={await lireAvis(fiche.id)} monetisation={monetisation} />;
   // Le meilleur score de chaque quiz, dans le programme (lot 3).
   const aDes = (type: string) => fiche.modules.some((m) => m.lecons.some((l) => l.type === type));
   const [lignes, favoris, avis, lienModifier, scores, statuts] = await Promise.all([
@@ -71,6 +75,7 @@ async function Fiche({ params }: Params) {
       lienModifier={lienModifier}
       scores={scores}
       statuts={statuts}
+      monetisation={monetisation}
     />
   );
   return apercu ? (

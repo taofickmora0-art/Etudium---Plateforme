@@ -26,6 +26,10 @@ type Props = {
   formateurs: FormateurAdmin[];
   /** Espace formateur : le contenu seulement ; les réglages de l'équipe sont montrés, pas modifiables. */
   espace?: EspaceEdition;
+  /** Les formations publiées de Compétences digitales, pour « Compétences à vendre » (0048) ; absent : pas de rubrique. */
+  competences?: { id: string; titre: string }[];
+  /** Celles que cette formation apprend déjà à vendre. */
+  liees?: string[];
 };
 
 const ouiNon = (valeur: boolean) => (valeur ? "oui" : "non");
@@ -56,12 +60,15 @@ function ReglagesEquipe({ formation }: { formation: FormationAdmin }) {
 }
 
 /** Onglet « Informations » d'une formation (spec du lot 1, §4 et §10 ; spec de l'espace formateur, §3). */
-export function FormationInfosForm({ formation, parcours, formateurs, espace = "admin" }: Props) {
+export function FormationInfosForm({ formation, parcours, formateurs, espace = "admin", competences, liees = [] }: Props) {
   const equipe = espace === "admin";
   const { state, envoyer, pending, erreurs: e, valeur } = useFormulaireAdmin(saveFormationInfos);
   const adresseFixee = formation.publieeLe !== null;
   const coche = (champ: string, enregistre: boolean) => (state.values ? state.values[champ] === "on" : enregistre);
   const parcoursCoches = state.values ? (state.values.parcours ?? "").split(",").filter(Boolean) : formation.parcoursIds;
+  const vendues = state.values ? (state.values.competences_vendues ?? "").split(",").filter(Boolean) : liees;
+  // « Compétences à vendre » (restructuration, §5.3) : seulement s'il existe un parcours Business.
+  const rubriqueMonetisation = competences !== undefined && parcours.some((p) => p.couleur === "business");
 
   // Le score minimal aux quiz (0031) : absent avant elle, sinon chaque enregistrement buterait sur la colonne absente.
   const champScore = formation.scoreQuiz !== null && (
@@ -180,6 +187,26 @@ export function FormationInfosForm({ formation, parcours, formateurs, espace = "
             parcours.map((p) => <Checkbox key={p.id} name="parcours" value={p.id} label={p.nom} defaultChecked={parcoursCoches.includes(p.id)} />)
           )}
         </fieldset>
+        {rubriqueMonetisation && (
+          <fieldset className="m-0 flex flex-col gap-3 border-0 p-0">
+            <legend className="mb-1 p-0 text-sm leading-5 font-medium text-encre">Compétences à vendre</legend>
+            <input type="hidden" name="monetisation" value="1" />
+            <p className="m-0 mb-1 text-[13px] leading-5 text-discret">
+              Pour une formation du parcours Business : les formations de Compétences digitales qu’elle apprend à vendre. Aucune
+              cochée : elle vaut pour toutes les compétences.
+            </p>
+            {competences.length === 0 ? (
+              <p className="m-0 text-[13px] leading-5 text-discret">Aucune formation publiée dans Compétences digitales pour le moment.</p>
+            ) : (
+              competences.map((c) => <Checkbox key={c.id} name="competences_vendues" value={c.id} label={c.titre} defaultChecked={vendues.includes(c.id)} />)
+            )}
+            {e.competences_vendues && (
+              <p role="alert" className="m-0 text-[13px] leading-5 text-erreur-texte">
+                {e.competences_vendues}
+              </p>
+            )}
+          </fieldset>
+        )}
         {equipe ? (
           <>
             {/* Plus d'achat seul ni de prix par formation : l'abonnement ouvre tout (restructuration, §5.2). */}

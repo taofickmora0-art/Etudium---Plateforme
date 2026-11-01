@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowRight01Icon, ChartIncreaseIcon, Clock01Icon, AssignmentsIcon, PlayCircleIcon, Quiz01Icon, StarIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { SectionAvis } from "@/components/avis/SectionAvis";
+import { BlocMonetisation } from "./BlocMonetisation";
+import type { Monetisation } from "@/lib/catalogue/monetisation";
 import { Couverture } from "@/components/ui/Couverture";
 import { urlCouverture } from "@/lib/couvertures/adresse";
 import { formatNote, libelleNombreAvis } from "@/lib/avis/regles";
@@ -62,7 +64,17 @@ function CarteOffre({ fiche }: { fiche: FicheFormation }) {
 }
 
 /** Fiche formation pour un visiteur (NdFormationPublic) : bandeau, apprentissages, programme, avis, appel à l'action. */
-export function FichePublique({ fiche, avis = null }: { fiche: FicheFormation; /** Null sans la migration 0010. */ avis?: AvisFormation | null }) {
+export function FichePublique({
+  fiche,
+  avis = null,
+  monetisation = null,
+}: {
+  fiche: FicheFormation;
+  /** Null sans la migration 0010. */
+  avis?: AvisFormation | null;
+  /** Le lien compétence → monétisation (0048) : « À suivre d'abord », « Et ensuite ? Vendre cette compétence ». */
+  monetisation?: Monetisation | null;
+}) {
   const parcours = [...fiche.parcours].sort((a, b) => a.ordre - b.ordre)[0];
   const badge = badgeDeCarte(fiche);
   const apercus = leconsApercu(fiche);
@@ -221,6 +233,8 @@ export function FichePublique({ fiche, avis = null }: { fiche: FicheFormation; /
           )}
         </div>
       </section>
+
+      <BlocMonetisation monetisation={monetisation} variante="public" />
 
       <section className={SECTION}>
         <h2 className={TITRE_SECTION}>Avis des étudiants</h2>

@@ -7,12 +7,18 @@ import { MetaDot, ProgressBar } from "@/components/ui/Progress";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
 import { Tag } from "@/components/ui/Tag";
 import { Heading, Lead } from "@/components/ui/Text";
+import { grouperBusiness, type LienMonetisation } from "@/lib/catalogue/monetisation";
 import type { CarteCatalogue, ParcoursCatalogue } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
 import type { CouleurParcours } from "@/lib/contenus/libelles";
 import { etatFormation, formationsDuParcours, progressionDuParcours, type ProgressionFormation } from "@/lib/parcours/regles";
 
-type Props = { parcours: ParcoursCatalogue[]; cartes: CarteCatalogue[]; progressions: Map<string, ProgressionFormation>   /** Parcours de l'onglet ouvert au départ (`/parcours?parcours=…`) ; le premier s'il est inconnu. */
+type Props = {
+  parcours: ParcoursCatalogue[];
+  cartes: CarteCatalogue[];
+  progressions: Map<string, ProgressionFormation>;
+  /** Le lien compétence → monétisation (0048) : l'onglet Business range ses formations par compétence. */
+  liens?: LienMonetisation[];   /** Parcours de l'onglet ouvert au départ (`/parcours?parcours=…`) ; le premier s'il est inconnu. */
   initial?: string;
 };
 
@@ -54,8 +60,21 @@ function LigneFormation({ carte, rang, progression }: { carte: CarteCatalogue; r
   );
 }
 
-function PanneauParcours({ parcours, cartes, progressions }: { parcours: ParcoursCatalogue; cartes: CarteCatalogue[]; progressions: Map<string, ProgressionFormation> }) {
+function PanneauParcours({
+  parcours,
+  cartes,
+  progressions,
+  liens,
+}: {
+  parcours: ParcoursCatalogue;
+  cartes: CarteCatalogue[];
+  progressions: Map<string, ProgressionFormation>;
+  liens: LienMonetisation[];
+}) {
   const formations = formationsDuParcours(cartes, parcours.slug);
+  // Business (restructuration, §5.3) : par compétence, puis « Pour toutes les compétences » ; le numéro reste celui du parcours.
+  const groupes = parcours.couleur === "business" ? grouperBusiness(formations, liens, cartes) : null;
+  const rang = (carte: CarteCatalogue) => formations.indexOf(carte) + 1;
   const { pourcentage, terminees, total } = progressionDuParcours(formations, progressions);
   const idListe = `formations-${parcours.slug}`;
   return (
@@ -99,13 +118,21 @@ function PanneauParcours({ parcours, cartes, progressions }: { parcours: Parcour
           {formations.length === 0 ? (
             <p className="m-0 text-sm leading-[22px] text-discret">Aucune formation dans ce parcours pour le moment.</p>
           ) : (
-            <div className="box-border flex min-w-0 flex-col rounded-carte border border-bordure-carte bg-panneau px-[15px] py-1">
-              <ul aria-label={`Formations du parcours ${parcours.nom}`} className="m-0 flex list-none flex-col p-0 [&>li+li]:border-t [&>li+li]:border-bordure-carte">
-                {formations.map((carte, index) => (
-                  <LigneFormation key={carte.id} carte={carte} rang={index + 1} progression={progressions.get(carte.slug)} />
-                ))}
-              </ul>
-            </div>
+            (groupes ?? [{ competence: null, formations }]).map((groupe) => {
+              const nom = !groupes ? `Formations du parcours ${parcours.nom}` : groupe.competence ? `Pour vendre : ${groupe.competence.titre}` : "Pour toutes les compétences";
+              return (
+                <div key={groupe.competence?.id ?? "toutes"} className="flex min-w-0 flex-col gap-2.5">
+                  {groupes && <h3 className="m-0 text-base leading-6 font-semibold text-encre">{nom}</h3>}
+                  <div className="box-border flex min-w-0 flex-col rounded-carte border border-bordure-carte bg-panneau px-[15px] py-1">
+                    <ul aria-label={nom} className="m-0 flex list-none flex-col p-0 [&>li+li]:border-t [&>li+li]:border-bordure-carte">
+                      {groupe.formations.map((carte) => (
+                        <LigneFormation key={carte.id} carte={carte} rang={rang(carte)} progression={progressions.get(carte.slug)} />
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              );
+            })
           )}
         </section>
       </div>
@@ -117,7 +144,7 @@ function PanneauParcours({ parcours, cartes, progressions }: { parcours: Parcour
  * Parcours (NdParcours ; restructuration, §5.2) : un onglet par parcours, sa progression et ses formations. Le parcours
  * guide, il n'ouvre plus l'accès : chaque abonnement ouvre toutes les formations. Plus de cadenas sur les onglets.
  */
-export function MesParcours({ parcours, cartes, progressions, initial }: Props) {
+export function MesParcours({ parcours, cartes, progressions, initial, liens = [] }: Props) {
   return (
     <div className="flex flex-col">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -141,7 +168,7 @@ export function MesParcours({ parcours, cartes, progressions, initial }: Props) 
             items={parcours.map((p) => ({
               value: p.slug,
               label: p.nomCourt,
-              content: <PanneauParcours parcours={p} cartes={cartes} progressions={progressions} />,
+              content: <PanneauParcours parcours={p} cartes={cartes} progressions={progressions} liens={liens} />,
             }))}
           />
         )}

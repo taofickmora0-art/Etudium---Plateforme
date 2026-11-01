@@ -20,6 +20,8 @@ vi.mock("@/lib/admin/data", () => ({
   listParcours: async () => [],
   estTablesAbsentes: () => false,
 }));
+// Les compétences qu'une formation Business apprend à vendre (0048) : lues pour la rubrique de l'éditeur.
+vi.mock("@/lib/catalogue/data", () => ({ competencesAVendre: async () => ({ competences: [], liees: [] }) }));
 const envoyerEnRelecture = vi.fn();
 const deleteFormation = vi.fn();
 vi.mock("@/lib/admin/actions", () => ({

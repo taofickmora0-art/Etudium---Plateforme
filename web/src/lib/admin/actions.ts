@@ -29,6 +29,9 @@ const ADRESSE_PRISE_ENTRE_TEMPS = "Une autre formation vient de prendre cette ad
 const DEPLACEMENT_ECHOUE = "Le déplacement n’a pas abouti.";
 const FORMATION_VIDE = "Publiez au moins une leçon avant de publier la formation.";
 const MIGRATION_LECONS = "Appliquez la migration 0027 (guide « Ce qui te revient », section 33).";
+const MIGRATION_MONETISATION = "Appliquez la migration 0048 (guide « Ce qui te revient », section 54).";
+/** Une table absente de la base (migration pas encore appliquée). */
+const tableAbsente = (erreur: { code?: string } | null) => erreur?.code === "42P01" || erreur?.code === "PGRST205";
 const PUBLIEE_ARCHIVER = "Une formation publiée s’archive, elle ne s’efface pas.";
 
 type Resultat = { ok: boolean; message?: string; redirection?: string };
@@ -219,6 +222,9 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
   const id = texte(fd, "id");
   const titre = texte(fd, "titre");
   const parcoursCoches = [...new Set(fd.getAll("parcours").map(String).filter(estUuid))];
+  // Les compétences qu'une formation Business apprend à vendre (0048) : seulement si le formulaire montre la rubrique.
+  const monetisation = fd.has("monetisation");
+  const vendues = [...new Set(fd.getAll("competences_vendues").map(String).filter(estUuid))];
   const saisie = {
     titre,
     slug: texte(fd, "slug").trim() || slugify(titre),
@@ -242,6 +248,7 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
     objectifs: saisie.objectifs.join("\n"),
     competences: saisie.competences.join("\n"),
     parcours: parcoursCoches.join(","),
+    competences_vendues: vendues.join(","),
   };
   let garde: Awaited<ReturnType<typeof exigerEditeur>>;
   try {
@@ -298,6 +305,11 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
       const { error: e } = await supabase.from("formations_parcours").insert({ formation_id: id, parcours_id: parcoursId, ordre });
       if (e) return erreurEnregistrement(e, values);
     }
+
+    if (monetisation) {
+      const refusMonetisation = await enregistrerMonetisation(supabase, id, parcoursCoches, vendues);
+      if (refusMonetisation) return { status: "error", fieldErrors: { competences_vendues: refusMonetisation }, values };
+    }
   } catch {
     return { status: "error", message: ECHEC, values };
   }
@@ -310,6 +322,35 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
     };
   }
   return { status: "success", values };
+}
+
+/**
+ * Les compétences qu'une formation Business apprend à vendre (0048 ; restructuration, §5.3) : liées si elle est dans le
+ * parcours Business, sinon toutes déliées. La base revérifie (une compétence publiée de Compétences digitales). Renvoie
+ * le message à afficher sous la rubrique, ou null.
+ */
+async function enregistrerMonetisation(supabase: Supabase, id: string, parcoursCoches: string[], vendues: string[]): Promise<string | null> {
+  let business = false;
+  if (parcoursCoches.length > 0) {
+    const { data, error } = await supabase.from("parcours").select("id").in("id", parcoursCoches).eq("couleur", "business");
+    if (error) return ECHEC;
+    business = ((data as unknown[] | null) ?? []).length > 0;
+  }
+  const cibles = business ? vendues : [];
+  const { data: actuels, error } = await supabase.from("formations_monetisation").select("competence_id").eq("business_id", id);
+  if (error) return tableAbsente(error) ? MIGRATION_MONETISATION : ECHEC;
+  const existantes = ((actuels as { competence_id: string }[] | null) ?? []).map((l) => l.competence_id);
+  const retirees = existantes.filter((c) => !cibles.includes(c));
+  if (retirees.length > 0) {
+    const { error: e } = await supabase.from("formations_monetisation").delete().eq("business_id", id).in("competence_id", retirees);
+    if (e) return ECHEC;
+  }
+  const ajoutees = cibles.filter((c) => !existantes.includes(c));
+  if (ajoutees.length > 0) {
+    const { error: e } = await supabase.from("formations_monetisation").insert(ajoutees.map((c) => ({ business_id: id, competence_id: c })));
+    if (e) return e.code === "P0001" && e.message ? typographie(e.message) : ECHEC;
+  }
+  return null;
 }
 
 /** Publier (au moins une leçon), archiver ou republier une formation. */

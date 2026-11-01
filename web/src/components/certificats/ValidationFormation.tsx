@@ -11,6 +11,7 @@ import { Icon } from "@/components/ui/Icon";
 import { ProgressBar } from "@/components/ui/Progress";
 import { cn } from "@/lib/cn";
 import { marquerCertificatVu } from "@/lib/certificats/actions";
+import type { CarteCatalogue } from "@/lib/catalogue/types";
 import type { EtatValidation } from "@/lib/certificats/types";
 import { LIBELLES_STATUT } from "@/lib/exercices/types";
 import { PartagerCertificat } from "./PartagerCertificat";
@@ -48,7 +49,18 @@ function Condition({ remplie, libelle, detail, lien }: { remplie: boolean; libel
  * droite, le certificat s'il est délivré, avec « Télécharger le PDF », « Partager » et « Vérifier ». À la première visite
  * après la délivrance, la fenêtre « Félicitations » (NdCertificatObtenu).
  */
-export function ValidationFormation({ etat, formation, prenom }: { etat: EtatValidation; formation: { titre: string; slug: string }; prenom: string }) {
+export function ValidationFormation({
+  etat,
+  formation,
+  prenom,
+  etapeSuivante = null,
+}: {
+  etat: EtatValidation;
+  formation: { titre: string; slug: string };
+  prenom: string;
+  /** Une compétence validée : la première formation Business qui apprend à la vendre (0048 ; restructuration, §5.3). */
+  etapeSuivante?: CarteCatalogue | null;
+}) {
   const { certificat } = etat;
   const [felicitations, setFelicitations] = useState(Boolean(certificat && !certificat.vu));
   const [partage, setPartage] = useState(false);
@@ -104,6 +116,20 @@ export function ValidationFormation({ etat, formation, prenom }: { etat: EtatVal
             <p className="m-0 text-[13px] leading-5 text-discret">Les exercices sont facultatifs pour cette formation : ils ne comptent pas pour le certificat.</p>
           )}
         </section>
+        {(etat.complet || certificat) && etapeSuivante && (
+          <section aria-labelledby="etape-suivante" className={CARTE}>
+            <div className="flex flex-col gap-1">
+              <h2 id="etape-suivante" className="m-0 text-lg leading-7 font-semibold text-encre max-sm:text-base">
+                Étape suivante
+              </h2>
+              <p className="m-0 text-sm leading-[22px] text-discret">Vous maîtrisez cette compétence : apprenez maintenant à la vendre.</p>
+            </div>
+            <p className="m-0 text-[15px] leading-[22px] font-semibold text-encre">{etapeSuivante.titre}</p>
+            <Button asChild className="self-start max-sm:w-full">
+              <Link href={`/formations/${etapeSuivante.slug}`}>Voir la formation</Link>
+            </Button>
+          </section>
+        )}
       </div>
 
       <section aria-labelledby="votre-certificat" className={CARTE}>

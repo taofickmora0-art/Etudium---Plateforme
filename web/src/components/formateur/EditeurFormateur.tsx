@@ -9,6 +9,7 @@ import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tag } from "@/components/ui/Tag";
 import { getFormationAdmin, listParcours } from "@/lib/admin/data";
+import { competencesAVendre } from "@/lib/catalogue/data";
 import { ETATS, TON_ETAT } from "@/lib/contenus/etat";
 import { estMaFormation } from "@/lib/formateur/data";
 import { MES_FORMATIONS, RACINE_FORMATEUR } from "./cadre";
@@ -27,11 +28,11 @@ export async function EditeurFormateur({ params, searchParams }: Params) {
   if (!(await estMaFormation(id))) notFound();
   let donnees;
   try {
-    donnees = await Promise.all([getFormationAdmin(id), listParcours()]);
+    donnees = await Promise.all([getFormationAdmin(id), listParcours(), competencesAVendre(id)]);
   } catch (erreur) {
     return siTablesAbsentes(erreur);
   }
-  const [formation, parcours] = donnees;
+  const [formation, parcours, { competences, liees }] = donnees;
   if (!formation) notFound();
   return (
     <PageAdmin
@@ -42,7 +43,7 @@ export async function EditeurFormateur({ params, searchParams }: Params) {
     >
       <FormationOnglets
         ongletInitial={onglet && ONGLETS.includes(onglet) ? onglet : "informations"}
-        informations={<FormationInfosForm formation={formation} parcours={parcours} formateurs={[]} espace="formateur" />}
+        informations={<FormationInfosForm formation={formation} parcours={parcours} formateurs={[]} espace="formateur" competences={competences} liees={liees} />}
         programme={<OngletLecons formation={formation} base="/formateur/formations" />}
         publication={<PublicationFormateur id={formation.id} formation={formation} />}
         apprenants={

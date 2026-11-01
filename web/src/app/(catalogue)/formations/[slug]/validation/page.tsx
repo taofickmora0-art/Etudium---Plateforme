@@ -9,7 +9,9 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { Heading, Lead } from "@/components/ui/Text";
 import { lireValidation, MIGRATION_CERTIFICATS } from "@/lib/certificats/data";
 import { ficheApercu } from "@/lib/catalogue/apercu";
-import { getFiche } from "@/lib/catalogue/data";
+import { getFiche, lireMonetisation, listCatalogue } from "@/lib/catalogue/data";
+import { monetisationDe } from "@/lib/catalogue/monetisation";
+import type { CarteCatalogue } from "@/lib/catalogue/types";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { renvoyerFormateur } from "@/lib/catalogue/garde-formateur";
 import { compteConnecte } from "@/lib/catalogue/visiteur";
@@ -23,12 +25,16 @@ async function Validation({ params }: Params) {
   if (!compte) redirect(`/connexion?next=${encodeURIComponent(`/formations/${slug}/validation`)}`);
   let fiche: FicheFormation | null;
   let lecture: Awaited<ReturnType<typeof lireValidation>>;
+  // Une compétence validée : la première formation Business qui apprend à la vendre (0048 ; restructuration, §5.3).
+  let etapeSuivante: CarteCatalogue | null = null;
   try {
     fiche = (await getFiche(slug)) ?? (await ficheApercu(slug));
     if (!fiche) notFound();
     // Un formateur ne suit pas de formation (restructuration R1) : l'éditeur de la sienne, sinon son tableau de bord.
     await renvoyerFormateur(compte, fiche.id);
-    lecture = await lireValidation(fiche.id);
+    const [lue, liens, cartes] = await Promise.all([lireValidation(fiche.id), lireMonetisation(), listCatalogue()]);
+    lecture = lue;
+    etapeSuivante = monetisationDe(fiche.id, liens, cartes).aVendre[0] ?? null;
   } catch (erreur) {
     return siTablesAbsentes(erreur);
   }
@@ -55,7 +61,7 @@ async function Validation({ params }: Params) {
   return (
     <div className="flex flex-col gap-6">
       {entete}
-      <ValidationFormation etat={lecture.donnees} formation={{ titre: fiche.titre, slug: fiche.slug }} prenom={compte.prenom} />
+      <ValidationFormation etat={lecture.donnees} formation={{ titre: fiche.titre, slug: fiche.slug }} prenom={compte.prenom} etapeSuivante={etapeSuivante} />
     </div>
   );
 }

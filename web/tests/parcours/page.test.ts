@@ -2,12 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import { CARTES_DESIGN, PARCOURS_DESIGN } from "../catalogue/cartes-design";
 
 const lireProgression = vi.fn();
-vi.mock("@/lib/catalogue/data", () => ({ listCatalogue: async () => CARTES_DESIGN, listParcoursCatalogue: async () => PARCOURS_DESIGN }));
+const LIENS = [{ businessId: "lancer-son-activite-freelance", competenceId: "canva-debutant-a-expert" }];
+vi.mock("@/lib/catalogue/data", () => ({ listCatalogue: async () => CARTES_DESIGN, listParcoursCatalogue: async () => PARCOURS_DESIGN, lireMonetisation: async () => LIENS }));
 vi.mock("@/lib/progression/data", () => ({ lireProgression: () => lireProgression() }));
 
 const { PageMesParcours } = await import("@/components/parcours/PageMesParcours");
 
-type Element = { props: { progressions: Map<string, { pourcentage: number; terminee: boolean }>; initial?: string } };
+type Element = { props: { progressions: Map<string, { pourcentage: number; terminee: boolean }>; initial?: string; liens?: unknown } };
 
 describe("Page Mes parcours : progression", () => {
   it("les progressions viennent de la base (leçons terminées ÷ leçons)", async () => {
@@ -23,6 +24,8 @@ describe("Page Mes parcours : progression", () => {
     lireProgression.mockResolvedValue(null);
     const element = (await PageMesParcours({ searchParams: Promise.resolve({ parcours: "competences-digitales" }) })) as unknown as Element;
     expect(element.props.initial).toBe("competences-digitales");
+    // Le lien compétence → monétisation (0048), pour l'onglet Business.
+    expect(element.props.liens).toEqual(LIENS);
     const double = (await PageMesParcours({ searchParams: Promise.resolve({ parcours: ["business-revenus-en-ligne", "x"] }) })) as unknown as Element;
     expect(double.props.initial).toBe("business-revenus-en-ligne");
   });

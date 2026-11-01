@@ -969,3 +969,18 @@ Pas de migration. Recharge l'appli, puis :
 7. **Au back-office,** dans les informations d'une formation : plus de « Disponible seule » ni de « Prix en FCFA ».
 
 Le paiement lui-même (choisir un abonnement, payer par Mobile Money, l'accès qui s'ouvre) arrive au lot 2.
+
+## 54. Le lien compétence → monétisation (liste du 31 octobre, tâche 14), 10 minutes
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0048_monetisation.sql`, après la 0047.
+2. **Régler le lien, avec le compte de l'équipe** (ou celui du formateur de la formation Business) :
+   - ouvre l'éditeur de « Lancer son activité de freelance » (une formation du parcours Business), onglet Informations ;
+   - sous « Parcours », la rubrique « Compétences à vendre » liste les formations publiées de Compétences digitales ;
+   - coche « Canva, de débutant à expert », puis enregistre ;
+   - aucune cochée : la formation vaut « pour toutes les compétences » (prospection, prix…).
+3. **Ce qui s'affiche :**
+   - sur la fiche de Canva : « Et ensuite ? Vendre cette compétence », avec « Lancer son activité de freelance » ;
+   - sur la fiche de « Lancer son activité de freelance » : « À suivre d'abord », avec Canva ;
+   - une fois Canva validée (page « Validation et certificat ») : la carte « Étape suivante » vers la formation Business ;
+   - page Parcours, onglet Business : les formations rangées par compétence (« Pour vendre : Canva, de débutant à expert »), puis « Pour toutes les compétences ».
+4. **Ce qui est refusé :** lier une formation qui n'est pas dans le parcours Business, ou une compétence qui n'est pas une formation publiée de Compétences digitales. Si la formation quitte le parcours Business, ses liens sont retirés à l'enregistrement.
