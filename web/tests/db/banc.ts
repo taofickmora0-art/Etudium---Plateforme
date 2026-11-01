@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 
@@ -27,6 +27,14 @@ export const MIGRATIONS_LOT_0 = [
 ];
 
 const lire = (fichier: string) => readFileSync(join(process.cwd(), fichier), "utf8");
+
+/** Toutes les migrations, de la 0001 à `derniere` comprise (« 0055 »), dans l'ordre. */
+export function migrationsJusqua(derniere: string): string[] {
+  return readdirSync(join(process.cwd(), "supabase/migrations"))
+    .filter((f) => /^\d{4}_.+\.sql$/.test(f) && f.slice(0, 4) <= derniere)
+    .sort()
+    .map((f) => `supabase/migrations/${f}`);
+}
 
 export async function creerBanc(fichiers: string[]): Promise<Banc> {
   const db = new PGlite();
