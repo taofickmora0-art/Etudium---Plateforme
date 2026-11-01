@@ -5,6 +5,7 @@ const lireProgression = vi.fn();
 const LIENS = [{ businessId: "lancer-son-activite-freelance", competenceId: "canva-debutant-a-expert" }];
 vi.mock("@/lib/catalogue/data", () => ({ listCatalogue: async () => CARTES_DESIGN, listParcoursCatalogue: async () => PARCOURS_DESIGN, lireMonetisation: async () => LIENS }));
 vi.mock("@/lib/progression/data", () => ({ lireProgression: () => lireProgression() }));
+vi.mock("@/lib/abonnement/data", () => ({ lireAbonnement: async () => ({ etat: "gratuit" }) }));
 
 const { PageMesParcours } = await import("@/components/parcours/PageMesParcours");
 

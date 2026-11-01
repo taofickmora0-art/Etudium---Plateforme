@@ -30,6 +30,8 @@ export function versCarte(l: Ligne): SessionCarte {
     inscriptions: nombre(l.inscriptions),
     inscrit: l.inscrit === true,
     statut: statut(l.statut),
+    // Réservée aux abonnés (0050) : la clé n'apparaît que pour un live fermé au compte.
+    ...(l.reservee === true ? { reservee: true } : {}),
   };
 }
 

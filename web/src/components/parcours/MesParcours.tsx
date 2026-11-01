@@ -20,6 +20,8 @@ type Props = {
   /** Le lien compétence → monétisation (0048) : l'onglet Business range ses formations par compétence. */
   liens?: LienMonetisation[];   /** Parcours de l'onglet ouvert au départ (`/parcours?parcours=…`) ; le premier s'il est inconnu. */
   initial?: string;
+  /** Un abonnement en cours (lot 2) : ses formations payantes sont « Incluses ». */
+  abonne?: boolean;
 };
 
 /** Tuile de 48 px aux couleurs du parcours (NdParcours). */
@@ -33,8 +35,8 @@ const pluriel = (n: number, mot: string) => `${n} ${n > 1 ? `${mot}s` : mot}`;
 const formationsTerminees = (terminees: number, total: number) =>
   terminees === 0 ? `Aucune formation terminée sur ${total}` : `${pluriel(terminees, "formation")} ${terminees > 1 ? "terminées" : "terminée"} sur ${total}`;
 
-function LigneFormation({ carte, rang, progression }: { carte: CarteCatalogue; rang: number; progression?: ProgressionFormation }) {
-  const etat = etatFormation(carte, progression);
+function LigneFormation({ carte, rang, progression, abonne }: { carte: CarteCatalogue; rang: number; progression?: ProgressionFormation; abonne: boolean }) {
+  const etat = etatFormation(carte, progression, abonne);
   return (
     <li>
       <Link href={`/formations/${carte.slug}`} className="focus-etudium flex min-h-12 items-center gap-3.5 px-1 py-3.5 text-inherit no-underline transition-colors hover:bg-page">
@@ -65,11 +67,13 @@ function PanneauParcours({
   cartes,
   progressions,
   liens,
+  abonne,
 }: {
   parcours: ParcoursCatalogue;
   cartes: CarteCatalogue[];
   progressions: Map<string, ProgressionFormation>;
   liens: LienMonetisation[];
+  abonne: boolean;
 }) {
   const formations = formationsDuParcours(cartes, parcours.slug);
   // Business (restructuration, §5.3) : par compétence, puis « Pour toutes les compétences » ; le numéro reste celui du parcours.
@@ -107,10 +111,10 @@ function PanneauParcours({
             <Tag tone="enAttente">{pluriel(formations.length, "formation")}</Tag>
           </div>
           {/* Une formation payante reste fermée sans abonnement (restructuration, §5.2). */}
-          {formations.some((c) => etatFormation(c, progressions.get(c.slug)).verrou) && (
+          {formations.some((c) => etatFormation(c, progressions.get(c.slug), abonne).verrou) && (
             <p className="m-0 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-[22px] text-discret">
               <span>Un abonnement ouvre toutes les formations.</span>
-              <Link href="/abonnement" className="focus-etudium font-medium text-bleu no-underline hover:underline">
+              <Link href="/abonnement/souscrire" className="focus-etudium font-medium text-bleu no-underline hover:underline">
                 Voir les abonnements
               </Link>
             </p>
@@ -126,7 +130,7 @@ function PanneauParcours({
                   <div className="box-border flex min-w-0 flex-col rounded-carte border border-bordure-carte bg-panneau px-[15px] py-1">
                     <ul aria-label={nom} className="m-0 flex list-none flex-col p-0 [&>li+li]:border-t [&>li+li]:border-bordure-carte">
                       {groupe.formations.map((carte) => (
-                        <LigneFormation key={carte.id} carte={carte} rang={rang(carte)} progression={progressions.get(carte.slug)} />
+                        <LigneFormation key={carte.id} carte={carte} rang={rang(carte)} progression={progressions.get(carte.slug)} abonne={abonne} />
                       ))}
                     </ul>
                   </div>
@@ -144,7 +148,7 @@ function PanneauParcours({
  * Parcours (NdParcours ; restructuration, §5.2) : un onglet par parcours, sa progression et ses formations. Le parcours
  * guide, il n'ouvre plus l'accès : chaque abonnement ouvre toutes les formations. Plus de cadenas sur les onglets.
  */
-export function MesParcours({ parcours, cartes, progressions, initial, liens = [] }: Props) {
+export function MesParcours({ parcours, cartes, progressions, initial, liens = [], abonne = false }: Props) {
   return (
     <div className="flex flex-col">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -154,7 +158,7 @@ export function MesParcours({ parcours, cartes, progressions, initial, liens = [
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="contour">
-            <Link href="/abonnement">Voir les abonnements</Link>
+            {abonne ? <Link href="/abonnement">Mon abonnement</Link> : <Link href="/abonnement/souscrire">Voir les abonnements</Link>}
           </Button>
         </div>
       </div>
@@ -168,7 +172,7 @@ export function MesParcours({ parcours, cartes, progressions, initial, liens = [
             items={parcours.map((p) => ({
               value: p.slug,
               label: p.nomCourt,
-              content: <PanneauParcours parcours={p} cartes={cartes} progressions={progressions} liens={liens} />,
+              content: <PanneauParcours parcours={p} cartes={cartes} progressions={progressions} liens={liens} abonne={abonne} />,
             }))}
           />
         )}

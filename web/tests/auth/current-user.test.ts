@@ -13,7 +13,7 @@ const from = vi.fn((table: string) => {
   };
   return requete;
 });
-const rpc = vi.fn(async (): Promise<{ data: boolean | null; error: unknown }> => ({ data: false, error: null }));
+const rpc = vi.fn(async (nom?: string): Promise<{ data: unknown; error: unknown }> => ({ data: nom === "mon_abonnement" ? { etat: "gratuit" } : false, error: null }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth, from, rpc }) }));
 
 let configuree = true;
@@ -106,6 +106,20 @@ describe("Compte affiché par la coque", () => {
     const user = await getShellUser();
     expect(user).toMatchObject({ prenom: "Aïcha", nom: "Kpadé", initials: "AK", email: "aicha.k@exemple.com", roles: ["etudiant"] });
     expect(user).toMatchObject({ serie: 0, points: 0, formule: "Gratuite", statut: "Étudiant·e" });
+  });
+
+  it("la formule affichée est celle de l'abonnement en cours (lot 2)", async () => {
+    auth.getUser.mockResolvedValue(session({}));
+    tables.profils = { data: { prenom: "Aïcha", nom: "Kpadé" }, error: null };
+    tables.roles = { data: [{ role: "etudiant" }], error: null };
+    rpc.mockImplementation(async (nom?: string) => ({
+      data: nom === "mon_abonnement" ? { etat: "actif", formule: { code: "standard", nom: "Standard" }, fin: "2027-05-01T09:00:00Z" } : false,
+      error: null,
+    }));
+    expect((await getShellUser())?.formule).toBe("Standard");
+    rpc.mockImplementation(async (nom?: string) => ({ data: nom === "mon_abonnement" ? null : false, error: nom === "mon_abonnement" ? { code: "PGRST202" } : null }));
+    expect((await getShellUser())?.formule).toBe("Gratuite");
+    rpc.mockReset().mockImplementation(async (nom?: string) => ({ data: nom === "mon_abonnement" ? { etat: "gratuit" } : false, error: null }));
   });
 
   it("les rôles suivent l'ordre du menu", async () => {

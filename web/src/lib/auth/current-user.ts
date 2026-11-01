@@ -1,6 +1,8 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
+import { versEtatAbonnement } from "@/lib/abonnement/conversion";
+import { formuleDuCompte } from "@/lib/abonnement/regles";
 import type { Role } from "@/lib/auth/permissions";
 import { DEMO_USER } from "@/lib/demo-user";
 import { getPublicEnv } from "@/lib/env";
@@ -83,10 +85,12 @@ export const getShellUser = cache(async (): Promise<ShellUser | null> => {
   if (!user) return null;
 
   const supabase = await createClient();
-  const [profil, roles, suspendu] = await Promise.all([
+  const [profil, roles, suspendu, abonnement] = await Promise.all([
     supabase.from("profils").select("prenom, nom, photo_url").eq("id", user.id).maybeSingle(),
     supabase.from("roles").select("role").eq("profil_id", user.id),
     estSuspendu(supabase),
+    // La formule de l'abonnement en cours (0049) ; sans la migration, « Gratuite ».
+    supabase.rpc("mon_abonnement"),
   ]);
   // Compte suspendu : déconnecté par la route dédiée (une page n'écrit pas de cookies), message sur la connexion.
   if (suspendu) redirect(ADRESSE_SUSPENDU);
@@ -105,7 +109,7 @@ export const getShellUser = cache(async (): Promise<ShellUser | null> => {
     email,
     roles: tries.length > 0 ? tries : ["etudiant"],
     statut: "Étudiant·e",
-    formule: "Gratuite",
+    formule: abonnement.error ? "Gratuite" : formuleDuCompte(versEtatAbonnement(abonnement.data)),
     serie: 0,
     points: 0,
     photoUrl: photoPublicUrl(chaine(profil.data?.photo_url)),

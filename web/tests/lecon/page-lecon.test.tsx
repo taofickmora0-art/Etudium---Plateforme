@@ -111,7 +111,7 @@ describe("Page leçon : contenu", () => {
     );
     const { container } = render(<ContenuLecon donnees={fermee} connecte />);
     expect(screen.getByRole("heading", { name: "Cette leçon est verrouillée" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Voir les abonnements" })).toHaveAttribute("href", "/abonnement");
+    expect(screen.getByRole("link", { name: "Voir les abonnements" })).toHaveAttribute("href", "/abonnement/souscrire");
     expect(screen.getByRole("link", { name: "Voir l’aperçu gratuit" })).toHaveAttribute("href", `${ADRESSE}/${id(1)}`);
     expect(container.innerHTML).not.toMatch(/youtube|vimeo|dQw4w9WgXcQ|Texte secret|Classeur d’exemple/);
     expect(screen.queryByRole("tablist")).toBeNull();

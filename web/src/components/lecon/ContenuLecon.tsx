@@ -63,7 +63,7 @@ export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lie
           title="Vous regardez un aperçu gratuit"
           action={
             <Button asChild size="sm">
-              <Link href="/abonnement">Voir les abonnements</Link>
+              <Link href="/abonnement/souscrire">Voir les abonnements</Link>
             </Button>
           }
         >

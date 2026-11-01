@@ -21,6 +21,8 @@ export type SessionCarte = {
   inscriptions: number;
   inscrit: boolean;
   statut: StatutSession;
+  /** Réservée aux abonnés (choix 1 du lot 2) : un cadenas et « Voir les abonnements » au lieu de s'inscrire. */
+  reservee?: boolean;
 };
 
 /** La carte de l'accueil : avec les initiales des 3 premiers inscrits. */

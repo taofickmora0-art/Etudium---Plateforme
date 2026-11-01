@@ -103,7 +103,7 @@ describe("Un compte sans accès, ou un visiteur", () => {
   it("connecté sur une leçon d'aperçu : le bandeau de l'aperçu gratuit, et « Voir les abonnements »", () => {
     render(<ContenuLecon donnees={donnees(EXCEL)} connecte />);
     const bandeau = screen.getByText("Vous regardez un aperçu gratuit").closest<HTMLElement>("[role=status]")!;
-    expect(within(bandeau).getByRole("link", { name: "Voir les abonnements" })).toHaveAttribute("href", "/abonnement");
+    expect(within(bandeau).getByRole("link", { name: "Voir les abonnements" })).toHaveAttribute("href", "/abonnement/souscrire");
   });
 
   it("« Leçon suivante » saute les leçons fermées ; « Voir l'aperçu gratuit » propose le suivant", () => {

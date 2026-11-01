@@ -78,7 +78,17 @@ function appelDuHaut(fiche: FicheFormation, progression: EtatProgression | null)
   const suivie = progression?.commencee ? progression : null;
   if (suivie) return suivie.aReprendre ? { libelle: "Poursuivre le cours", lecon: suivie.aReprendre } : null;
   const premiere = premiereLeconOuverte(fiche);
-  return etatAcces(fiche, true) === "gratuite" && premiere ? { libelle: "Commencer le cours", lecon: premiere } : null;
+  const etat = etatAcces(fiche, true);
+  return (etat === "gratuite" || etat === "incluse") && premiere ? { libelle: "Commencer le cours", lecon: premiere } : null;
+}
+
+/** Une formation payante fermée : les abonnements l'ouvrent toutes (lot 2). */
+function LienAbonnements() {
+  return (
+    <Link href="/abonnement/souscrire" className="focus-etudium mt-1 text-sm leading-[22px] font-medium text-bleu no-underline hover:underline">
+      Voir les abonnements
+    </Link>
+  );
 }
 
 /** « Prochaine leçon » et « Poursuivre le cours », ou « Formation terminée » et « Revoir la formation ». */
@@ -134,10 +144,12 @@ function CarteAcces({ fiche, progression, favori }: { fiche: FicheFormation; pro
           <span>Validation et certificat</span>
         </Link>
       )}
-      {!reprise && etat === "gratuite" && (
+      {!reprise && (etat === "gratuite" || etat === "incluse") && (
         <>
           <span className="text-sm leading-[22px] font-medium text-discret">Votre formation</span>
-          <p className="m-0 mt-2 text-sm leading-[22px] text-texte">Formation gratuite : toutes les leçons sont ouvertes.</p>
+          <p className="m-0 mt-2 text-sm leading-[22px] text-texte">
+            {etat === "incluse" ? "Incluse dans votre abonnement : toutes les leçons sont ouvertes." : "Formation gratuite : toutes les leçons sont ouvertes."}
+          </p>
           {premiere && (
             <Link href={adresseLecon(fiche.slug, premiere.id)} className={BOUTON_PRINCIPAL}>
               <span>Commencer</span>
@@ -153,6 +165,7 @@ function CarteAcces({ fiche, progression, favori }: { fiche: FicheFormation; pro
             {apercus.length > 1 ? `${apercus.length} leçons sont ouvertes en aperçu.` : "Une leçon est ouverte en aperçu."}
           </p>
           <p className="m-0 mt-1 text-sm leading-[22px] text-texte">Incluse dans tous les abonnements.</p>
+          <LienAbonnements />
           {apercus[0] && (
             <Link href={adresseLecon(fiche.slug, apercus[0].id)} className={BOUTON_PRINCIPAL}>
               <span>Voir l’aperçu gratuit</span>
@@ -168,6 +181,7 @@ function CarteAcces({ fiche, progression, favori }: { fiche: FicheFormation; pro
             Formation verrouillée
           </span>
           <p className="m-0 mt-2 text-sm leading-[22px] text-texte">Incluse dans tous les abonnements.</p>
+          <LienAbonnements />
         </>
       )}
       {/* Favoris (tâche 1.9) : absent tant que la table n'est pas dans la base (null). */}

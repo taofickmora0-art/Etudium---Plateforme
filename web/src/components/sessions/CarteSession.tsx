@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import Link from "next/link";
-import { Calendar03Icon, CheckmarkCircle02Icon, UserIcon, UserMultipleIcon, Video01Icon } from "@hugeicons/core-free-icons";
+import { Calendar03Icon, CheckmarkCircle02Icon, SquareLock02Icon, UserIcon, UserMultipleIcon, Video01Icon } from "@hugeicons/core-free-icons";
 import { useFuseau } from "@/components/dates/useFuseau";
 import { Button } from "@/components/ui/Button";
 import { Icon, type IconSvgElement } from "@/components/ui/Icon";
@@ -58,6 +58,7 @@ export function CarteSession({ session: s, maintenant, onInscrire, onDesinscrire
   const [attente, setAttente] = useState<string | null>(null);
   const { mois, jour } = jourCarte(s.debut, fuseau);
   const annulee = s.statut === "annulee";
+  const reservee = s.reservee === true;
   const finie = terminee(s, maintenant);
   const commencee = Date.parse(s.debut) <= maintenant.getTime();
   const ouverte = !annulee && !finie;
@@ -105,13 +106,24 @@ export function CarteSession({ session: s, maintenant, onInscrire, onDesinscrire
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {annulee && <Tag tone="echoue">Annulée</Tag>}
-          {finie && !annulee && (
+          {reservee && !annulee && (
+            <>
+              <Tag tone="enAttente" icon={SquareLock02Icon}>
+                Avec un abonnement
+              </Tag>
+              <Button variant="contour" asChild>
+                <Link href="/abonnement/souscrire">Voir les abonnements</Link>
+              </Button>
+            </>
+          )}
+          {finie && !annulee && !reservee && (
             <Button variant="contour" asChild>
               <Link href={lienReplays}>Voir le replay</Link>
             </Button>
           )}
           {ouverte && enCours(s, maintenant) && <Tag tone="compteur">En cours</Tag>}
           {ouverte &&
+            !reservee &&
             (commencee && s.lien ? (
               <Button asChild>
                 <a href={s.lien} target="_blank" rel="noopener noreferrer">
@@ -124,6 +136,7 @@ export function CarteSession({ session: s, maintenant, onInscrire, onDesinscrire
               </Button>
             ))}
           {ouverte &&
+            !reservee &&
             (s.inscrit ? (
               <>
                 <InscriptionConfirmee />

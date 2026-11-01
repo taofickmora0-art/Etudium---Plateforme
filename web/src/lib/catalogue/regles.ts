@@ -48,11 +48,13 @@ export function parcoursPrincipal(carte: Pick<CarteCatalogue, "parcours">): Coul
 const lecons = (fiche: Pick<FicheFormation, "modules">): LeconFiche[] => fiche.modules.flatMap((m) => m.lecons);
 
 /**
- * Ce que la personne peut suivre (spec §3, lot 1) : toute la formation si elle est gratuite et que la personne a un
- * compte ; sinon ses leçons d'aperçu s'il y en a ; sinon rien. Les abonnements arrivent au lot 2.
+ * Ce que la personne peut suivre (spec §3, lot 1 ; lot 2) : toute la formation si elle est gratuite et que la personne a
+ * un compte ; toute la formation payante si la base l'a ouverte (abonnement : une leçon hors aperçu accessible) ; sinon
+ * ses leçons d'aperçu s'il y en a ; sinon rien.
  */
-export function etatAcces(fiche: Pick<FicheFormation, "gratuite" | "modules">, connecte: boolean): "gratuite" | "apercu" | "verrouillee" {
+export function etatAcces(fiche: Pick<FicheFormation, "gratuite" | "modules">, connecte: boolean): "gratuite" | "incluse" | "apercu" | "verrouillee" {
   if (fiche.gratuite && connecte) return "gratuite";
+  if (connecte && lecons(fiche).some((l) => l.accessible && !l.apercu)) return "incluse";
   return leconsApercu(fiche).length > 0 ? "apercu" : "verrouillee";
 }
 

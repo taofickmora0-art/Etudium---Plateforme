@@ -15,13 +15,14 @@ export function formationsDuParcours(cartes: CarteCatalogue[], slug: string): Ca
 }
 
 /**
- * État affiché à droite d'une formation : terminée, en cours (pourcentage), sinon ouverte ou fermée.
- * Au lot 1, une formation est ouverte si elle est gratuite (les abonnements arrivent au lot 2).
+ * État affiché à droite d'une formation : terminée, en cours (pourcentage), sinon ouverte ou fermée. Une formation
+ * gratuite est ouverte à tous ; une formation payante, à l'abonné (lot 2).
  */
-export function etatFormation(carte: CarteCatalogue, progression?: ProgressionFormation): { libelle: string; ton: TagTone; verrou?: boolean } {
+export function etatFormation(carte: CarteCatalogue, progression?: ProgressionFormation, abonne = false): { libelle: string; ton: TagTone; verrou?: boolean } {
   if (progression?.terminee || (progression?.pourcentage ?? 0) >= 100) return { libelle: "Terminé", ton: "valide" };
   if (progression && progression.pourcentage > 0) return { libelle: `${Math.round(progression.pourcentage)} %`, ton: "nouveau" };
   if (carte.gratuite) return { libelle: "Gratuite", ton: "gratuit" };
+  if (abonne) return { libelle: "Incluse", ton: "nouveau" };
   return { libelle: "Verrouillée", ton: "verrouillee", verrou: true };
 }
 

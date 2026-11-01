@@ -31,7 +31,7 @@ describe("Page Parcours (restructuration, §5.2 : le parcours guide, l'abonnemen
     expect(within(panneau).getByText("Un abonnement ouvre toutes les formations.")).toBeInTheDocument();
     const liens = screen.getAllByRole("link", { name: "Voir les abonnements" });
     expect(liens.length).toBeGreaterThan(0);
-    for (const lien of liens) expect(lien).toHaveAttribute("href", "/abonnement");
+    for (const lien of liens) expect(lien).toHaveAttribute("href", "/abonnement/souscrire");
     expect(screen.queryByRole("link", { name: "Voir les formules" })).toBeNull();
   });
 
