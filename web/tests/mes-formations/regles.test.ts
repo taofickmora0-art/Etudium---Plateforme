@@ -42,6 +42,13 @@ describe("Formations suivies", () => {
     expect(fermee.etat).toBe("verrouillee");
   });
 
+  it("lot 5 C : désactivée par l'équipe, la carte reste, « Indisponible », sans lien ; l'archivée n'est pas « indisponible »", () => {
+    const [desactivee] = formationsSuivies([{ ...EXCEL_OUVERTE, statut: "desactivee" as const }], [ligne(EXCEL_OUVERTE.id, 1, true, 5)], new Set());
+    expect(desactivee).toMatchObject({ etat: "verrouillee", href: null, temps: "Momentanément indisponible", indisponible: true });
+    const [archivee] = formationsSuivies([{ ...EXCEL_OUVERTE, statut: "archivee" as const }], [ligne(EXCEL_OUVERTE.id, 1, true, 5)], new Set());
+    expect(archivee.indisponible).toBe(false);
+  });
+
   it("verrouillée mais encore publiée (aperçus vus) : la carte mène à la fiche, pas nulle part", () => {
     const [fermee] = formationsSuivies([publiee(EXCEL)], [ligne(EXCEL.id, 1, true, 20), ligne(EXCEL.id, 2, true, 10)], new Set());
     expect(fermee).toMatchObject({ etat: "verrouillee", href: "/formations/maitriser-microsoft-excel", temps: "Accès fermé" });

@@ -16,6 +16,8 @@ export type VueCarteSuivie = {
   pourcentage: number;
   temps: string;
   etat: EtatSuivi;
+  /** Désactivée par l'équipe : « Indisponible » au lieu de « Verrouillée ». */
+  indisponible?: boolean;
   href: string | null;
   favori: boolean;
   /** Adresse de l'image de couverture ; null : couverture par défaut du parcours. */
@@ -32,6 +34,7 @@ export function versVueCarte(s: FormationSuivie): VueCarteSuivie {
     pourcentage: s.progression.pourcentage,
     temps: s.temps,
     etat: s.etat,
+    indisponible: s.indisponible,
     href: s.href,
     favori: s.favori,
     couverture: urlCouverture(s.fiche.couverture),
@@ -40,7 +43,8 @@ export function versVueCarte(s: FormationSuivie): VueCarteSuivie {
 
 /**
  * Carte d'une formation suivie (NdMesFormations) : progression et temps ; toute la carte mène à la leçon où reprendre.
- * Une formation verrouillée porte le badge « Verrouillée » et mène à sa fiche ; archivée, elle n'est plus un lien.
+ * Une formation verrouillée porte le badge « Verrouillée » et mène à sa fiche ; archivée, elle n'est plus un lien ;
+ * désactivée par l'équipe, elle porte « Indisponible », sans lien.
  */
 export function CarteSuivie({ vue, sansEtiquette = false }: { vue: VueCarteSuivie; sansEtiquette?: boolean }) {
   const state = vue.etat === "verrouillee" ? "verrouillee" : vue.etat === "terminee" ? "terminee" : vue.pourcentage === 0 ? "aCommencer" : "enCours";
@@ -53,6 +57,7 @@ export function CarteSuivie({ vue, sansEtiquette = false }: { vue: VueCarteSuivi
       progress={vue.pourcentage}
       timeLabel={vue.temps}
       state={state}
+      lockLabel={vue.indisponible ? "Indisponible" : undefined}
       titleAs="h2"
       sansEtiquette={sansEtiquette}
       // Le badge du parcours (liste du 31 octobre 2026, tâche 15).

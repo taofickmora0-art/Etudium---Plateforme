@@ -17,8 +17,10 @@ export type FormationSuivie = {
   favori: boolean;
   /** Leçon où reprendre, sinon la fiche (offre d'une formation verrouillée) ; null pour une formation archivée, qui n'a plus de fiche. */
   href: string | null;
-  /** « 2 h restantes », « 4 h 10 suivies », « Accès fermé ». */
+  /** « 2 h restantes », « 4 h 10 suivies », « Accès fermé », « Momentanément indisponible ». */
   temps: string;
+  /** Désactivée par l'équipe (lot 5, étape C) : « Indisponible » au lieu de « Verrouillée ». */
+  indisponible: boolean;
   derniereVisite: string;
 };
 
@@ -33,12 +35,13 @@ export function formationsSuivies(fiches: FicheSuivie[], lignes: LigneProgressio
     if (!progression.commencee) continue;
     const etat: EtatSuivi = fiche.statut !== "publiee" || (!progression.terminee && !progression.aReprendre) ? "verrouillee" : progression.terminee ? "terminee" : "enCours";
     const restant = dureeLisible(progression.restantSecondes);
-    const temps = etat === "verrouillee" ? "Accès fermé" : etat === "terminee" ? `${dureeLisible(fiche.dureeSecondes)} suivies` : restant ? `${restant} restantes` : "";
+    const indisponible = fiche.statut === "desactivee";
+    const temps = indisponible ? "Momentanément indisponible" : etat === "verrouillee" ? "Accès fermé" : etat === "terminee" ? `${dureeLisible(fiche.dureeSecondes)} suivies` : restant ? `${restant} restantes` : "";
     const href =
       fiche.statut !== "publiee" ? null : progression.aReprendre ? `/formations/${fiche.slug}/lecons/${progression.aReprendre.id}` : `/formations/${fiche.slug}`;
     const visites = lignes.filter((l) => l.formationId === fiche.id).map((l) => l.vueLe);
     const derniereVisite = visites.reduce((max, v) => (Date.parse(v) > Date.parse(max) ? v : max), visites[0]);
-    suivies.push({ fiche, etat, progression, favori: favoris.has(fiche.id), href, temps, derniereVisite });
+    suivies.push({ fiche, etat, progression, favori: favoris.has(fiche.id), href, temps, indisponible, derniereVisite });
   }
   return suivies.sort((a, b) => Date.parse(b.derniereVisite) - Date.parse(a.derniereVisite));
 }

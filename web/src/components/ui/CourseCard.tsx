@@ -90,6 +90,8 @@ type CourseCardProps = {
   state: "enCours" | "terminee" | "aCommencer" | "verrouillee";
   /** Étiquette en haut à droite (« Populaire ») ; une carte verrouillée affiche toujours « Verrouillée ». */
   tag?: CardTag;
+  /** L'étiquette d'une carte verrouillée (« Indisponible » pour une formation désactivée) ; par défaut « Verrouillée ». */
+  lockLabel?: string;
   /** Le badge du parcours (« Académique »), avant l'étiquette. */
   parcoursTag?: CardTag;
   /** Niveau du titre de la carte dans la page. */
@@ -101,9 +103,23 @@ type CourseCardProps = {
 };
 
 /** Carte de formation : illustration, titre, deux lignes de description, progression. */
-export function CourseCard({ href, title, description, parcours, progress, timeLabel, state, tag, parcoursTag, titleAs, sansEtiquette = false, couverture = null }: CourseCardProps) {
+export function CourseCard({
+  href,
+  title,
+  description,
+  parcours,
+  progress,
+  timeLabel,
+  state,
+  tag,
+  lockLabel = "Verrouillée",
+  parcoursTag,
+  titleAs,
+  sansEtiquette = false,
+  couverture = null,
+}: CourseCardProps) {
   const metaId = useId();
-  const shownTag = sansEtiquette ? undefined : state === "verrouillee" ? { tone: "verrouillee" as const, label: "Verrouillée" } : tag;
+  const shownTag = sansEtiquette ? undefined : state === "verrouillee" ? { tone: "verrouillee" as const, label: lockLabel } : tag;
   return (
     <CardShell
       href={href}

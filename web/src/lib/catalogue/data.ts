@@ -175,7 +175,7 @@ export const getFiche = cache(async (slug: string): Promise<FicheFormation | nul
   return f ? versFiche(f) : null;
 });
 
-export type StatutFiche = "publiee" | "archivee" | "brouillon";
+export type StatutFiche = "publiee" | "archivee" | "brouillon" | "desactivee";
 
 /**
  * Les fiches de plusieurs formations (Mes formations, Favoris), quel que soit leur statut : les règles de la base

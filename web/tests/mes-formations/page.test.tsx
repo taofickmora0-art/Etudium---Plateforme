@@ -47,6 +47,14 @@ describe("Page Mes formations", () => {
     expect(screen.getByText("Accès fermé")).toBeInTheDocument();
   });
 
+  it("lot 5 C : une formation désactivée porte « Indisponible » et son explication, sans lien", () => {
+    render(<MesFormations suivies={[vue({ etat: "verrouillee", indisponible: true, temps: "Momentanément indisponible", href: null })]} />);
+    expect(screen.getByText("Indisponible")).toBeInTheDocument();
+    expect(screen.queryByText("Verrouillée")).toBeNull();
+    expect(screen.getByText("Momentanément indisponible")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Maîtriser Microsoft Excel/ })).toBeNull();
+  });
+
   it("« En cours » montre aussi les formations à 0 % ; « Terminées », « Verrouillées », « Favoris »", async () => {
     render(<MesFormations suivies={SUIVIES} />);
     await userEvent.click(screen.getByRole("button", { name: "En cours" }));
