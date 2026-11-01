@@ -80,6 +80,27 @@ describe("La page leçon", () => {
     expect(ouvrirLecon).not.toHaveBeenCalled();
   });
 
+  it("le brouillon d'une leçon en ligne, vu par l'équipe ou le formateur : l'étiquette « Brouillon » (fin du lot 4)", () => {
+    render(<ContenuLecon donnees={donnees({ brouillon: true })} connecte />);
+    expect(screen.getByText("Brouillon")).toBeInTheDocument();
+    expect(screen.getByText("Les étudiants voient encore la version en ligne.")).toBeInTheDocument();
+  });
+
+  it("la fiche montre les informations générales du brouillon à qui peut les lire (fin du lot 4)", async () => {
+    const { avecBrouillonFormation } = await import("@/lib/editeur/apercu");
+    faux.repondre("brouillons_formations.select", {
+      data: { donnees: { titre: "Excel (brouillon)", resume: "R", description: "D", objectifs: ["O"], competences: ["C"], niveau: "avance" } },
+    });
+    expect(await avecBrouillonFormation(EXCEL)).toEqual({
+      fiche: { ...EXCEL, titre: "Excel (brouillon)", resume: "R", description: "D", objectifs: ["O"], competences: ["C"], niveau: "avance" },
+      brouillon: true,
+    });
+    faux.repondre("brouillons_formations.select", { data: null });
+    expect(await avecBrouillonFormation(EXCEL)).toEqual({ fiche: EXCEL, brouillon: false });
+    faux.repondre("brouillons_formations.select", { error: { code: "PGRST205", message: "absente" } });
+    expect(await avecBrouillonFormation(EXCEL)).toEqual({ fiche: EXCEL, brouillon: false });
+  });
+
   it("aperçu d'une leçon en brouillon : le bandeau le dit", () => {
     render(<ContenuLecon donnees={donnees()} connecte apercu="lecon" />);
     expect(within(screen.getByRole("status", { name: "Aperçu : pas encore visible des étudiants" })).getByText("Cette leçon est en brouillon.")).toBeInTheDocument();

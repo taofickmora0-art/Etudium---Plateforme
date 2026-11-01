@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft01Icon, ArrowRight01Icon, Clock01Icon, PencilEdit02Icon, TeachingIcon } from "@hugeicons/core-free-icons";
 import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
 import { iconButtonVariants } from "@/components/ui/IconButton";
+import { Tag } from "@/components/ui/Tag";
 import { Icon } from "@/components/ui/Icon";
 import { MetaDot } from "@/components/ui/Progress";
 import type { FicheFormation, TypeLecon } from "@/lib/catalogue/types";
@@ -79,6 +80,12 @@ export function EnTeteLecon({ fiche, lecon, lienModifier = null, type = "lecon" 
         </div>
       )}
       {nomModule && <p className="m-0 text-sm leading-[22px] text-pretty text-discret max-lg:hidden">{nomModule}</p>}
+      {lecon.brouillon && (
+        <p className="m-0 mb-1.5 flex flex-wrap items-center gap-2 text-[13px] leading-5 text-discret">
+          <Tag tone="aCorriger">Brouillon</Tag>
+          <span>Les étudiants voient encore la version en ligne.</span>
+        </p>
+      )}
       <h1 className="m-0 text-xl leading-7 font-semibold text-balance text-encre lg:mt-1 lg:text-[32px] lg:leading-10 lg:font-medium lg:tracking-[-0.01em] lg:text-titre">
         {lecon.titre}
       </h1>

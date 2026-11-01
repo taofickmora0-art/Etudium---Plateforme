@@ -75,6 +75,42 @@ describe("Lecture de la page leçon", () => {
     expect(faux.de("lecons")).toEqual([]);
   });
 
+  it("l'équipe ou le formateur voit le brouillon de la leçon (fin du lot 4) ; sans brouillon lisible, ce qui est en ligne", async () => {
+    faux.repondre("lecons.select", { data: LECON_APERCU });
+    faux.repondre("brouillons_lecons.select", {
+      data: {
+        donnees: {
+          titre: "Découvrir l’interface (brouillon)",
+          titre_court: null,
+          resume: "Nouveau résumé",
+          points_cles: ["Un"],
+          video_fournisseur: "vimeo",
+          video_id: "76979871",
+          duree_secondes: 125,
+          document: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Version brouillon" }] }] },
+          texte: "Version brouillon",
+        },
+      },
+    });
+    const vue = await getLecon("maitriser-microsoft-excel", id(1), true);
+    expect(vue?.lecon).toMatchObject({
+      titre: "Découvrir l’interface (brouillon)",
+      resume: "Nouveau résumé",
+      pointsCles: ["Un"],
+      video: { fournisseur: "vimeo", id: "76979871" },
+      dureeSecondes: 125,
+      texte: "Version brouillon",
+      document: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Version brouillon" }] }] },
+      brouillon: true,
+    });
+    expect(faux.de("brouillons_lecons", "select")[0].filtres).toContainEqual(["eq", "lecon_id", id(1)]);
+    // Pas de brouillon (ou la règle d'accès le cache à un étudiant) : la version en ligne.
+    faux.repondre("brouillons_lecons.select", { data: null });
+    const enLigne = (await getLecon("maitriser-microsoft-excel", id(1), true))?.lecon;
+    expect(enLigne).toMatchObject({ titre: "Découvrir l’interface" });
+    expect(enLigne?.brouillon).toBeFalsy();
+  });
+
   it("une leçon ouverte donne sa vidéo, son texte, ses ressources dans l'ordre et la note du compte", async () => {
     faux.repondre("lecons.select", { data: LECON_APERCU });
     faux.repondre("notes_lecons.select", { data: { texte: "Ma note" } });

@@ -6,6 +6,7 @@ import type { Reponse } from "@/lib/communaute/types";
 import { estColonneAbsente, estTablesAbsentes, liste, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { cheminsImages, documentLu } from "./document";
 import { signerImages } from "./images";
+import { brouillonDeLecon } from "@/lib/editeur/apercu";
 import { createClient } from "@/lib/supabase/server";
 import { depuisMultirange } from "@/lib/video/suivi";
 import { lireQuizAPasser } from "@/lib/quiz/data";
@@ -51,6 +52,21 @@ function versLecon(l: Ligne): LeconDetail {
     document: documentLu(contenu?.document),
     ressources: accessible ? [...liste(l.ressources)].sort((a, b) => rangDe(a) - rangDe(b)).map(versRessource) : [],
     visionnage: null,
+  };
+}
+
+/** Les champs du brouillon (0056) à la place de ceux en ligne. */
+function avecBrouillon(lecon: LeconDetail, d: Ligne): LeconDetail {
+  return {
+    ...lecon,
+    titre: texte(d.titre) || lecon.titre,
+    resume: texte(d.resume),
+    pointsCles: textes(d.points_cles),
+    video: versVideo(d),
+    dureeSecondes: Number(d.duree_secondes ?? lecon.dureeSecondes),
+    texte: texte(d.texte),
+    document: documentLu(d.document),
+    brouillon: true,
   };
 }
 
@@ -109,7 +125,10 @@ export async function getLeconDans(fiche: FicheFormation, leconId: string, conne
   const ligne = verifier(reponse) as Ligne | null;
   if (!ligne) return null;
 
-  const lue = versLecon(ligne);
+  const enLigne = versLecon(ligne);
+  // L'équipe ou le formateur de la formation voit le brouillon (fin du lot 4) ; un étudiant ne peut pas le lire.
+  const brouillon = connecte && enLigne.accessible ? await brouillonDeLecon(supabase, leconId) : null;
+  const lue = brouillon ? avecBrouillon(enLigne, brouillon) : enLigne;
   const lecon = lue.document ? { ...lue, images: await signerImages(supabase, cheminsImages(lue.document)) } : lue;
   if (!connecte) return { fiche, lecon, note: null, notesDisponibles: true };
   // Un quiz (lot 3) : ses questions à passer, sans les bonnes réponses.

@@ -8,6 +8,8 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { lireAvis } from "@/lib/avis/data";
 import { BandeauApercu } from "@/components/lecon/BandeauApercu";
 import { ficheApercu, lienModifierLecons } from "@/lib/catalogue/apercu";
+import { avecBrouillonFormation } from "@/lib/editeur/apercu";
+import { Banner } from "@/components/ui/Banner";
 import { getFiche, lireMonetisation, listCatalogue } from "@/lib/catalogue/data";
 import { monetisationDe } from "@/lib/catalogue/monetisation";
 import { metadonneesFiche } from "@/lib/catalogue/partage";
@@ -55,6 +57,8 @@ async function Fiche({ params }: Params) {
   const monetisation = monetisationDe(fiche.id, liens, cartes);
   // Avis (1.11), progression (1.7) et favoris (1.9) : absents tant que leurs migrations ne sont pas appliquées.
   if (!compte) return <FichePublique fiche={fiche} avis={await lireAvis(fiche.id)} monetisation={monetisation} />;
+  // L'équipe ou le formateur voit les informations générales du brouillon (fin du lot 4).
+  const vue = await avecBrouillonFormation(fiche);
   // Le meilleur score de chaque quiz, dans le programme (lot 3).
   const aDes = (type: string) => fiche.modules.some((m) => m.lecons.some((l) => l.type === type));
   const [lignes, favoris, avis, lienModifier, scores, statuts] = await Promise.all([
@@ -68,7 +72,7 @@ async function Fiche({ params }: Params) {
   ]);
   const page = (
     <FicheConnectee
-      fiche={fiche}
+      fiche={vue.fiche}
       progression={lignes ? etatFormation(fiche, lignes) : null}
       favori={favoris ? favoris.some((f) => f.formationId === fiche.id) : null}
       avis={avis}
@@ -78,13 +82,23 @@ async function Fiche({ params }: Params) {
       monetisation={monetisation}
     />
   );
-  return apercu ? (
+  const avecBrouillon = vue.brouillon ? (
     <div className="flex flex-col gap-4">
-      <BandeauApercu apercu="formation" />
+      <Banner tone="attention" title="Brouillon : vous voyez les informations modifiées.">
+        Les étudiants voient encore la version en ligne, jusqu’à « Publier les modifications ».
+      </Banner>
       {page}
     </div>
   ) : (
     page
+  );
+  return apercu ? (
+    <div className="flex flex-col gap-4">
+      <BandeauApercu apercu="formation" />
+      {avecBrouillon}
+    </div>
+  ) : (
+    avecBrouillon
   );
 }
 

@@ -38,6 +38,8 @@ export type LeconDetail = {
   document?: DocumentLecon | null;
   /** Le lien signé de chaque image du contenu riche. */
   images?: Record<string, string>;
+  /** L'équipe ou le formateur voit le brouillon de la leçon, pas ce qui est en ligne (fin du lot 4). */
+  brouillon?: boolean;
   ressources: RessourceLecon[];
   /** Null pour un visiteur, une leçon fermée, ou sans la table du visionnage. */
   visionnage: VisionnageLecon | null;
