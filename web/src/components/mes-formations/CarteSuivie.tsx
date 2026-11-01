@@ -1,4 +1,5 @@
 import { CourseCard } from "@/components/ui/CourseCard";
+import type { TagTone } from "@/components/ui/Tag";
 import type { Parcours } from "@/components/ui/CourseIllustration";
 import { parcoursPrincipal } from "@/lib/catalogue/regles";
 import { urlCouverture } from "@/lib/couvertures/adresse";
@@ -10,6 +11,8 @@ export type VueCarteSuivie = {
   titre: string;
   resume: string;
   parcours: Parcours;
+  /** Le nom court du parcours, pour son badge (« Académique ») ; absent : pas de badge. */
+  parcoursNom?: string | null;
   pourcentage: number;
   temps: string;
   etat: EtatSuivi;
@@ -25,6 +28,7 @@ export function versVueCarte(s: FormationSuivie): VueCarteSuivie {
     titre: s.fiche.titre,
     resume: s.fiche.resume,
     parcours: parcoursPrincipal(s.fiche),
+    parcoursNom: [...s.fiche.parcours].sort((a, b) => a.ordre - b.ordre)[0]?.nomCourt ?? null,
     pourcentage: s.progression.pourcentage,
     temps: s.temps,
     etat: s.etat,
@@ -51,6 +55,8 @@ export function CarteSuivie({ vue, sansEtiquette = false }: { vue: VueCarteSuivi
       state={state}
       titleAs="h2"
       sansEtiquette={sansEtiquette}
+      // Le badge du parcours (liste du 31 octobre 2026, tâche 15).
+      parcoursTag={vue.parcoursNom && !sansEtiquette ? { tone: vue.parcours as TagTone, label: vue.parcoursNom } : undefined}
       couverture={vue.couverture}
     />
   );

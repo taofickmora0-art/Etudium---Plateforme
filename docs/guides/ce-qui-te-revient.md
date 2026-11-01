@@ -984,3 +984,12 @@ Le paiement lui-même (choisir un abonnement, payer par Mobile Money, l'accès q
    - une fois Canva validée (page « Validation et certificat ») : la carte « Étape suivante » vers la formation Business ;
    - page Parcours, onglet Business : les formations rangées par compétence (« Pour vendre : Canva, de débutant à expert »), puis « Pour toutes les compétences ».
 4. **Ce qui est refusé :** lier une formation qui n'est pas dans le parcours Business, ou une compétence qui n'est pas une formation publiée de Compétences digitales. Si la formation quitte le parcours Business, ses liens sont retirés à l'enregistrement.
+
+## 55. Le badge du parcours sur les formations (liste du 31 octobre, tâche 15), 5 minutes
+
+Pas de migration. Recharge l'appli, connecté avec un compte étudiant :
+
+1. **Le catalogue** (Formations), **l'Accueil** (« Formations disponibles ») et **la recherche** : chaque carte porte le badge de son parcours, à sa couleur (Académique, Digital, Business), à côté de « Populaire » ou « Gratuit ». C'était déjà le cas pour un visiteur.
+2. **Mes formations :** même badge sur chaque formation commencée (à côté de « Verrouillée » s'il y a lieu).
+3. **Le fil de l'Accueil :** la carte « Nouvelle formation » montre son parcours en badge coloré.
+4. **La page Favoris** garde ses cartes sans badge : le cœur occupe le coin.

@@ -6,8 +6,8 @@ import { libelleNiveau } from "@/lib/contenus/libelles";
 import { urlCouverture } from "@/lib/couvertures/adresse";
 
 /**
- * Carte d'une formation du catalogue : la variante publique porte aussi la puce du parcours (NdCataloguePublic).
- * `sansEtiquette` : pas de badge, un bouton occupe le coin (cœur de la page Favoris).
+ * Carte d'une formation du catalogue, avec la puce de son parcours (NdCataloguePublic ; pour tous depuis la liste du 31
+ * octobre 2026, tâche 15). `sansEtiquette` : pas de badge, un bouton occupe le coin (cœur de la page Favoris).
  */
 export function CarteFormation({
   carte,
@@ -35,7 +35,7 @@ export function CarteFormation({
       rating={carte.note ?? undefined}
       reviews={carte.nbAvis}
       tag={sansEtiquette ? undefined : badgeDeCarte(carte)}
-      parcoursTag={variante === "public" && parcours && !sansEtiquette ? { tone: couleur as TagTone, label: parcours.nomCourt } : undefined}
+      parcoursTag={parcours && !sansEtiquette ? { tone: couleur as TagTone, label: parcours.nomCourt } : undefined}
       titleAs={titleAs}
     />
   );

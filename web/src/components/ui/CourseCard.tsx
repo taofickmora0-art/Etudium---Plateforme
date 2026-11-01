@@ -90,6 +90,8 @@ type CourseCardProps = {
   state: "enCours" | "terminee" | "aCommencer" | "verrouillee";
   /** Étiquette en haut à droite (« Populaire ») ; une carte verrouillée affiche toujours « Verrouillée ». */
   tag?: CardTag;
+  /** Le badge du parcours (« Académique »), avant l'étiquette. */
+  parcoursTag?: CardTag;
   /** Niveau du titre de la carte dans la page. */
   titleAs?: "h2" | "h3";
   /** Aucune étiquette, pas même « Verrouillée » : un bouton occupe le coin (cœur de la page Favoris). */
@@ -99,11 +101,21 @@ type CourseCardProps = {
 };
 
 /** Carte de formation : illustration, titre, deux lignes de description, progression. */
-export function CourseCard({ href, title, description, parcours, progress, timeLabel, state, tag, titleAs, sansEtiquette = false, couverture = null }: CourseCardProps) {
+export function CourseCard({ href, title, description, parcours, progress, timeLabel, state, tag, parcoursTag, titleAs, sansEtiquette = false, couverture = null }: CourseCardProps) {
   const metaId = useId();
   const shownTag = sansEtiquette ? undefined : state === "verrouillee" ? { tone: "verrouillee" as const, label: "Verrouillée" } : tag;
   return (
-    <CardShell href={href} title={title} description={description} parcours={parcours} tag={shownTag} describedBy={metaId} titleAs={titleAs} couverture={couverture}>
+    <CardShell
+      href={href}
+      title={title}
+      description={description}
+      parcours={parcours}
+      tag={shownTag}
+      parcoursTag={sansEtiquette ? undefined : parcoursTag}
+      describedBy={metaId}
+      titleAs={titleAs}
+      couverture={couverture}
+    >
       <ProgressBar value={progress} label={`Progression de ${title}`} className="mt-[17px] -ml-px" />
       <ProgressMeta id={metaId} value={progress} timeLabel={timeLabel} className="mt-2 flex-nowrap" />
     </CardShell>

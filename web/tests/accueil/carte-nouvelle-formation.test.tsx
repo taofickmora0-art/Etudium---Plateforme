@@ -28,10 +28,11 @@ describe("La carte « Nouvelle formation »", () => {
     render(<CarteNouvelleFormation formation={FORMATION} maintenant={new Date("2026-10-15T12:00:00Z")} />);
     const carte = screen.getByRole("article", { name: "Nouvelle formation : La prise de notes efficace" });
     expect(within(carte).getByText("Nouvelle formation")).toBeInTheDocument();
-    expect(within(carte).getByText(/il y a 2 jours/)).toBeInTheDocument();
+    expect(within(carte).getByText("il y a 2 jours")).toBeInTheDocument();
     expect(within(carte).getByText("La prise de notes efficace")).toBeInTheDocument();
     expect(within(carte).getByText("Des méthodes simples pour ne rien perdre en cours.")).toBeInTheDocument();
-    expect(within(carte).getByText(/Académique/)).toBeInTheDocument();
+    // Le parcours en badge, à sa couleur (liste du 31 octobre 2026, tâche 15).
+    expect(within(carte).getByText("Académique")).toBeInTheDocument();
     expect(within(carte).getByRole("link", { name: "Découvrir la formation" })).toHaveAttribute("href", "/formations/prise-de-notes");
     expect(within(carte).queryByRole("button", { name: /J’aime/ })).toBeNull();
   });

@@ -13,6 +13,7 @@ const vue = (o: Partial<VueCarteSuivie>): VueCarteSuivie => ({
   titre: "Maîtriser Microsoft Excel",
   resume: "Formules, tableaux croisés dynamiques et graphiques.",
   parcours: "academique",
+  parcoursNom: "Académique",
   pourcentage: 68,
   temps: "2 h restantes",
   etat: "enCours",
@@ -38,6 +39,8 @@ describe("Page Mes formations", () => {
     expect(within(filtres).getAllByRole("button").map((b) => b.textContent)).toEqual(["Toutes", "En cours", "Terminées", "Verrouillées", "Favoris"]);
     expect(within(filtres).getByRole("button", { name: "Toutes" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("link", { name: /Maîtriser Microsoft Excel/ })).toHaveAttribute("href", "/formations/maitriser-microsoft-excel/lecons/l4");
+    // Le badge du parcours (liste du 31 octobre 2026, tâche 15).
+    expect(within(screen.getByRole("link", { name: /Maîtriser Microsoft Excel/ })).getByText("Académique")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Marketing digital/ })).toBeNull();
     expect(screen.getByText("Marketing digital pour débutants")).toBeInTheDocument();
     expect(screen.getByText("Verrouillée")).toBeInTheDocument();

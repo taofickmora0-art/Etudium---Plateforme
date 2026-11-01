@@ -3,7 +3,7 @@ import { ArrowRight01Icon, CourseIcon } from "@hugeicons/core-free-icons";
 import { buttonVariants } from "@/components/ui/Button";
 import { Couverture } from "@/components/ui/Couverture";
 import { Icon } from "@/components/ui/Icon";
-import { Tag } from "@/components/ui/Tag";
+import { Tag, type TagTone } from "@/components/ui/Tag";
 import { cn } from "@/lib/cn";
 import { parcoursPrincipal } from "@/lib/catalogue/regles";
 import type { CarteCatalogue } from "@/lib/catalogue/types";
@@ -29,9 +29,9 @@ export function CarteNouvelleFormation({ formation, maintenant }: { formation: C
           <Tag tone="nouveau" icon={CourseIcon}>
             Nouvelle formation
           </Tag>
-          <span className="text-[13px] leading-5 text-discret max-sm:text-xs max-sm:leading-[18px]">
-            {[moment(formation.publieeLe, maintenant), parcours?.nomCourt].filter(Boolean).join(" · ")}
-          </span>
+          <span className="text-[13px] leading-5 text-discret max-sm:text-xs max-sm:leading-[18px]">{moment(formation.publieeLe, maintenant)}</span>
+          {/* Le parcours en badge, à sa couleur (liste du 31 octobre 2026, tâche 15). */}
+          {parcours && <Tag tone={parcoursPrincipal(formation) as TagTone}>{parcours.nomCourt}</Tag>}
         </div>
         <h3 className="m-0 mt-2 text-[17px] leading-[25px] font-semibold wrap-anywhere text-encre max-sm:text-base max-sm:leading-6">{formation.titre}</h3>
         {formation.resume && <p className="m-0 mt-1 line-clamp-2 text-[15px] leading-6 text-texte max-sm:text-sm max-sm:leading-[22px]">{formation.resume}</p>}

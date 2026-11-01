@@ -74,10 +74,10 @@ describe("Catalogue des formations", () => {
     expect(within(excel).queryByText(/avis/)).toBeNull();
   });
 
-  it("la carte connectée porte le seul badge, et le tri se choisit dans un menu", async () => {
+  it("la carte connectée porte aussi la puce du parcours (liste du 31 octobre 2026, tâche 15), et le tri se choisit dans un menu", async () => {
     afficher("connecte");
     const excel = screen.getByRole("link", { name: /Maîtriser Microsoft Excel/ });
-    expect(within(excel).queryByText("Académique")).toBeNull();
+    expect(within(excel).getByText("Académique")).toBeInTheDocument();
     expect(within(excel).getByText("Populaire")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Trier : parcours/ }));
     expect(screen.getAllByRole("menuitemradio").map((m) => m.textContent)).toEqual(["Parcours", "Les plus récentes", "Note des étudiants", "Durée"]);
