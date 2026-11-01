@@ -15,6 +15,8 @@ const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 const MIGRATION = "Appliquez les migrations 0049 à 0052 (guide « Ce qui te revient », section 56).";
 const GUIDE = "Ajoutez PAYIZ_CLE_SECRETE et PAIEMENT_JETON dans web/.env.local (guide « Ce qui te revient », section 56), puis relancez le serveur.";
 const STATUTS = ["reussi", "en_attente", "echoue", "expire"];
+const JETON_COURT =
+  "PAIEMENT_JETON est trop court (32 caractères au moins). Génère-le avec la commande du guide « Ce qui te revient », section 56, colle-le dans web/.env.local, puis relance le serveur.";
 
 function message(error: { code?: string; message?: string }): string {
   if (estFonctionAbsente(error)) return MIGRATION;
@@ -37,6 +39,7 @@ export async function activerPaiements(): Promise<Resultat> {
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   const jeton = process.env.PAIEMENT_JETON?.trim();
   if (!jeton || !process.env.PAYIZ_CLE_SECRETE?.trim()) return { ok: false, message: GUIDE };
+  if (jeton.length < 32) return { ok: false, message: JETON_COURT };
   return appeler("activer_paiements", { p_jeton: jeton });
 }
 

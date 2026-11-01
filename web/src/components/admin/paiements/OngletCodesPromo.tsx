@@ -14,6 +14,7 @@ import { TextInput } from "@/components/ui/TextInput";
 import { enregistrerCodePromo } from "@/lib/admin/paiements/actions";
 import type { CodePromo } from "@/lib/admin/paiements/types";
 import { montantFcfa } from "@/lib/abonnement/regles";
+import { chiffresSeulement } from "./saisie";
 import { dateNumerique } from "@/lib/utilisateurs/regles";
 
 const COLONNES = ["Code", "Remise", "Validité", "Utilisations", "État"];
@@ -100,7 +101,7 @@ function FenetreCode({ initiale, onFermer }: { initiale: Saisie; onFermer: () =>
           <FilterChips label="Type de remise" options={TYPES} value={s.type} onValueChange={(v) => changer({ type: v === "montant" ? "montant" : "pourcentage" })} />
         </div>
         <Field label={s.type === "pourcentage" ? "Valeur (%)" : "Valeur (FCFA)"} htmlFor="code-promo-valeur">
-          <TextInput id="code-promo-valeur" inputMode="numeric" value={s.valeur} onChange={(e) => changer({ valeur: e.target.value })} />
+          <TextInput id="code-promo-valeur" inputMode="numeric" value={s.valeur} onChange={(e) => changer({ valeur: chiffresSeulement(e.target.value) })} />
         </Field>
         <div className="flex flex-wrap gap-3.5">
           <Field label="Début (facultatif)" htmlFor="code-promo-debut" className="min-w-[150px] flex-1">
@@ -111,7 +112,7 @@ function FenetreCode({ initiale, onFermer }: { initiale: Saisie; onFermer: () =>
           </Field>
         </div>
         <Field label="Limite d’utilisations (facultatif)" htmlFor="code-promo-limite" hint="Vide : sans limite.">
-          <TextInput id="code-promo-limite" inputMode="numeric" placeholder="Sans limite" value={s.limite} onChange={(e) => changer({ limite: e.target.value })} />
+          <TextInput id="code-promo-limite" inputMode="numeric" placeholder="Sans limite" value={s.limite} onChange={(e) => changer({ limite: chiffresSeulement(e.target.value) })} />
         </Field>
         <Switch label="Actif" checked={s.actif} onCheckedChange={(actif) => changer({ actif })} />
       </div>

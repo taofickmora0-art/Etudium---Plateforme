@@ -11,6 +11,7 @@ import { TextInput } from "@/components/ui/TextInput";
 import { attribuerAbonnement } from "@/lib/admin/paiements/actions";
 import { dureeAbonnement, montantFcfa } from "@/lib/abonnement/regles";
 import type { Formule, MoyenManuel } from "@/lib/abonnement/types";
+import { chiffresSeulement } from "../paiements/saisie";
 
 const MOYENS: { value: MoyenManuel; title: string }[] = [
   { value: "mobile_money", title: "Mobile Money hors plateforme" },
@@ -90,7 +91,7 @@ export function FenetreAttribution({ compte, formules, onFermer }: { compte: { i
         </div>
         {moyen !== "offert" && (
           <Field label="Montant reçu (FCFA)" htmlFor="attribution-montant" hint="Le prix de l’abonnement, à corriger si la personne a payé un autre montant.">
-            <TextInput id="attribution-montant" inputMode="numeric" value={montant} onChange={(e) => setMontant(e.target.value)} />
+            <TextInput id="attribution-montant" inputMode="numeric" value={montant} onChange={(e) => setMontant(chiffresSeulement(e.target.value))} />
           </Field>
         )}
         <Field label="Référence (facultative)" htmlFor="attribution-reference" hint="L’identifiant de la transaction MTN ou Moov, ou une note.">

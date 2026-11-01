@@ -11,6 +11,7 @@ import { TextInput } from "@/components/ui/TextInput";
 import { reglerFormule } from "@/lib/admin/paiements/actions";
 import { dureeAbonnement } from "@/lib/abonnement/regles";
 import type { Formule } from "@/lib/abonnement/types";
+import { chiffresSeulement } from "./saisie";
 
 /** Une formule : son prix (vide tant qu'il n'est pas fixé), recommandée ou non, proposée ou non. La durée est fixe. */
 function LigneFormule({ formule, ecriture }: { formule: Formule; ecriture: boolean }) {
@@ -44,7 +45,7 @@ function LigneFormule({ formule, ecriture }: { formule: Formule; ecriture: boole
           placeholder="Non fixé"
           value={prix}
           disabled={!ecriture}
-          onChange={(e) => setPrix(e.target.value)}
+          onChange={(e) => setPrix(chiffresSeulement(e.target.value))}
         />
       </Field>
       <div className="flex flex-[1_1_220px] flex-col gap-2">

@@ -102,6 +102,16 @@ describe("Attribuer", () => {
     expect(actions.attribuerAbonnement).toHaveBeenCalledWith({ compteId: "c1", formuleId: "f1", moyen: "mobile_money", montant: "9000", reference: "MP2611.1234" });
   });
 
+  it("le montant reçu n'accepte que des chiffres", async () => {
+    const user = userEvent.setup();
+    afficher(GRATUIT);
+    await user.click(screen.getByRole("button", { name: "Attribuer un abonnement" }));
+    const montant = within(screen.getByRole("dialog")).getByLabelText("Montant reçu (FCFA)");
+    await user.clear(montant);
+    await user.type(montant, "15a 0b00");
+    expect(montant).toHaveValue("15000");
+  });
+
   it("offert : pas de montant à saisir", async () => {
     const user = userEvent.setup();
     afficher(GRATUIT);

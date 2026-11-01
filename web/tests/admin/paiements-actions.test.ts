@@ -43,6 +43,16 @@ describe("Le réglage « Paiements activés »", () => {
     expect(faux.appels).toEqual([]);
   });
 
+  it("un jeton trop court : ce qu'il faut faire, sans appel", async () => {
+    vi.stubEnv("PAIEMENT_JETON", "trop-court");
+    expect(await actions.activerPaiements()).toEqual({
+      ok: false,
+      message:
+        "PAIEMENT_JETON est trop court (32 caractères au moins). Génère-le avec la commande du guide « Ce qui te revient », section 56, colle-le dans web/.env.local, puis relance le serveur.",
+    });
+    expect(faux.appels).toEqual([]);
+  });
+
   it("activer envoie le jeton du serveur à la base ; désactiver", async () => {
     expect(await actions.activerPaiements()).toEqual({ ok: true });
     expect(faux.de("rpc", "activer_paiements")[0].valeurs).toEqual({ p_jeton: JETON });

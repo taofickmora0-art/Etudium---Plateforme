@@ -171,6 +171,26 @@ describe("Attribuer un abonnement depuis la page des paiements (0054)", () => {
   });
 });
 
+describe("Les champs de montant n'acceptent que des chiffres", () => {
+  it("valeur et limite d'un code promo ; prix d'un abonnement", async () => {
+    const user = userEvent.setup();
+    afficher();
+    await user.click(screen.getByRole("tab", { name: "Codes promo" }));
+    await user.click(screen.getByRole("button", { name: "Nouveau code" }));
+    const fenetre = screen.getByRole("dialog", { name: "Nouveau code promo" });
+    await user.type(within(fenetre).getByLabelText("Valeur (%)"), "2a0 b");
+    expect(within(fenetre).getByLabelText("Valeur (%)")).toHaveValue("20");
+    await user.type(within(fenetre).getByLabelText("Limite d’utilisations (facultatif)"), "cinq5");
+    expect(within(fenetre).getByLabelText("Limite d’utilisations (facultatif)")).toHaveValue("5");
+    await user.click(within(fenetre).getByRole("button", { name: "Annuler" }));
+    await user.click(screen.getByRole("tab", { name: "Abonnements" }));
+    const [prix] = screen.getAllByLabelText("Prix (FCFA)");
+    await user.clear(prix);
+    await user.type(prix, "1x2 000");
+    expect(prix).toHaveValue("12000");
+  });
+});
+
 describe("Un modérateur", () => {
   it("voit tout, sans aucun bouton d'écriture", async () => {
     afficher({ ecriture: false });
