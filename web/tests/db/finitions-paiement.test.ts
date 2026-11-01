@@ -58,7 +58,11 @@ describe("Une préparation reprise", () => {
 describe("L'annulation d'un abonnement suivi d'un autre", () => {
   it("le suivant commence aussitôt, avec toute sa durée : pas de trou dans l'accès", async () => {
     const enCours = await abonner(banc, G, { debut: "now() - interval '1 day'", fin: "now() + interval '30 days'" });
-    const suivant = await abonner(banc, G, { formule: "basique", debut: "now() + interval '30 days'", fin: "now() + interval '120 days'" });
+    // Un temps entre les deux créations (une machine chargée) ne doit rien changer.
+    await banc.db.query("select pg_sleep(0.2)");
+    // Comme activer_paiement : le suivant commence exactement à la fin de celui en cours.
+    const finEnCours = `(select fin from public.abonnements where id = '${enCours}')`;
+    const suivant = await abonner(banc, G, { formule: "basique", debut: finEnCours, fin: `${finEnCours} + interval '90 days'` });
     await banc.en({ id: S }, "select public.annuler_abonnement($1, 'Remboursé depuis Payiz')", [enCours]);
     const { rows } = await banc.db.query<{ debut_ok: boolean; duree_ok: boolean; abonne: boolean }>(
       `select debut <= now() + interval '1 minute' and debut >= now() - interval '1 minute' as debut_ok,
