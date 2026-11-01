@@ -8,11 +8,12 @@ vi.mock("next/navigation", async (original) => ({ ...(await original<typeof impo
 const listCatalogue = vi.fn<() => Promise<CarteCatalogue[]>>();
 const listParcoursCatalogue = vi.fn<() => Promise<ParcoursCatalogue[]>>();
 vi.mock("@/lib/catalogue/data", () => ({ listCatalogue: () => listCatalogue(), listParcoursCatalogue: () => listParcoursCatalogue() }));
+vi.mock("@/lib/abonnement/data", () => ({ lireFormules: async () => [] }));
 
-const { ContenuLanding, FormationsDepuisBase } = await import("@/components/landing/ContenuLanding");
+const { ContenuLanding, FormationsDepuisBase, FormulesDepuisBase } = await import("@/components/landing/ContenuLanding");
 
 async function rendre() {
-  return render(<ContenuLanding formations={await FormationsDepuisBase()} />);
+  return render(<ContenuLanding formations={await FormationsDepuisBase()} formules={await FormulesDepuisBase()} />);
 }
 
 describe("Landing assemblée (spec du lot 1, §9)", () => {

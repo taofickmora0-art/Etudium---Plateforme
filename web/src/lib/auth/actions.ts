@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { clearLocalSession } from "./local-session";
 import { authErrorMessage, safeNext } from "./messages";
 import { codeSchema, fieldErrorsFrom, newPasswordSchema, resetRequestSchema, signInSchema, signUpSchema, type FormState } from "./schemas";
-import { PENDING_EMAIL_COOKIE, PENDING_EMAIL_MAX_AGE, REMEMBER_COOKIE } from "./session-cookies";
+import { PENDING_EMAIL_COOKIE, PENDING_EMAIL_MAX_AGE, REMEMBER_COOKIE, SUITE_COOKIE } from "./session-cookies";
 import { cheminFormateur, estFormateurConnecte } from "./espace-formateur";
 import { estSuspendu, MESSAGE_SUSPENDU } from "./suspension";
 
@@ -125,6 +125,11 @@ export async function signUp(_prev: FormState, formData: FormData): Promise<Form
   if (erreur) return { status: "error", message: authErrorMessage(erreur), values };
 
   await retenirAdresse(email);
+  // La page demandée (une souscription choisie sur la page d'accueil) : retrouvée après le code, jamais hors du site.
+  const suite = safeNext(texte(formData, "next"), "");
+  if (suite && suite !== "/accueil") {
+    (await cookies()).set(SUITE_COOKIE, suite, { path: "/", httpOnly: true, sameSite: "lax", secure: securise, maxAge: PENDING_EMAIL_MAX_AGE });
+  }
   redirect("/verification-email");
 }
 
@@ -151,8 +156,11 @@ export async function verifyCode(_prev: FormState, formData: FormData): Promise<
   }
   if (erreur) return { status: "error", message: authErrorMessage(erreur) };
 
-  (await cookies()).delete(PENDING_EMAIL_COOKIE);
-  redirect("/accueil");
+  const jar = await cookies();
+  jar.delete(PENDING_EMAIL_COOKIE);
+  const suite = safeNext(jar.get(SUITE_COOKIE)?.value);
+  jar.delete(SUITE_COOKIE);
+  redirect(suite);
 }
 
 /** « Renvoyer le code » : nouveau code pour l'adresse en attente. */

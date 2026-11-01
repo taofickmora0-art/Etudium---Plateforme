@@ -10,6 +10,7 @@ import { PasswordInput } from "@/components/ui/PasswordInput";
 import { TextInput } from "@/components/ui/TextInput";
 import { signUp } from "@/lib/auth/actions";
 import { IDLE } from "@/lib/auth/schemas";
+import { NextField } from "./FromAddress";
 import { GoogleButton, OrDivider } from "./GoogleButton";
 import { LIEN } from "./SignInForm";
 
@@ -22,6 +23,7 @@ export function SignUpForm() {
       <GoogleButton />
       <OrDivider label="ou avec votre e-mail" />
       <form action={action} noValidate className="flex flex-col gap-[18px]">
+        <NextField />
         {state.status === "error" && state.message && <Banner tone="erreur" title={state.message} />}
         {/* Prénom et nom côte à côte, l'un sous l'autre sur un écran étroit (NdInscription). */}
         <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(150px,calc((100%-14px)/2))),1fr))] gap-3.5">

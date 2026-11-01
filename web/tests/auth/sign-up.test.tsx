@@ -80,6 +80,23 @@ describe("Code de vérification", () => {
     expect(jar.has("etudium-verification")).toBe(false);
   });
 
+  it("la page demandée avant l'inscription est retrouvée après le code (abonnement choisi sur la page d'accueil)", async () => {
+    auth.signUp.mockResolvedValue({ data: { user: { id: "u1", identities: [{}] } }, error: null });
+    await expect(signUp(IDLE, form({ ...INSCRIPTION, next: "/abonnement/souscrire?formule=standard" }))).rejects.toThrow("NEXT_REDIRECT:/verification-email");
+    expect(jar.get("etudium-suite")).toBe("/abonnement/souscrire?formule=standard");
+    auth.verifyOtp.mockResolvedValue({ error: null });
+    await expect(verifyCode(IDLE, form({ code: "482913" }))).rejects.toThrow("NEXT_REDIRECT:/abonnement/souscrire?formule=standard");
+    expect(jar.has("etudium-suite")).toBe(false);
+  });
+
+  it("une page demandée hors du site n'est pas retenue", async () => {
+    auth.signUp.mockResolvedValue({ data: { user: { id: "u1", identities: [{}] } }, error: null });
+    await expect(signUp(IDLE, form({ ...INSCRIPTION, next: "//pirate.example/x" }))).rejects.toThrow("NEXT_REDIRECT:/verification-email");
+    expect(jar.has("etudium-suite")).toBe(false);
+    auth.verifyOtp.mockResolvedValue({ error: null });
+    await expect(verifyCode(IDLE, form({ code: "482913" }))).rejects.toThrow("NEXT_REDIRECT:/accueil");
+  });
+
   it("un mauvais code l'annonce", async () => {
     jar.set("etudium-verification", "aicha.k@exemple.com");
     auth.verifyOtp.mockResolvedValue({ error: { code: "otp_expired", status: 403 } });

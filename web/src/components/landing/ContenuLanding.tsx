@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { unstable_rethrow } from "next/navigation";
 import { BandeAppelAction } from "@/components/catalogue/BlocsFiche";
+import { lireFormules } from "@/lib/abonnement/data";
 import { listCatalogue } from "@/lib/catalogue/data";
 import { HeroLanding } from "./HeroLanding";
 import { SectionCommunaute } from "./SectionCommunaute";
@@ -29,12 +30,17 @@ export async function FormationsDepuisBase() {
   return <SectionFormations cartes={await lireOuRien(listCatalogue, "formations")} />;
 }
 
+/** Les formules et leurs prix (lot 2) ; une lecture impossible les montre sans prix. */
+export async function FormulesDepuisBase() {
+  return <SectionFormules formules={await lireOuRien(lireFormules, "formules")} />;
+}
+
 /**
  * La landing (NdLanding, spec du lot 1 §9), dans l'ordre du design. Témoignages et chiffres sont absents tant qu'il
- * n'y a ni vrais témoignages ni chiffres parlants (Q11). Seules les formations sont lues en base : elles arrivent en
- * propriété (Suspense).
+ * n'y a ni vrais témoignages ni chiffres parlants (Q11). Les formations et les prix des formules sont lus en base : ils
+ * arrivent en propriété (Suspense).
  */
-export function ContenuLanding({ formations }: { formations: ReactNode }) {
+export function ContenuLanding({ formations, formules }: { formations: ReactNode; formules: ReactNode }) {
   return (
     <>
       <HeroLanding />
@@ -43,7 +49,7 @@ export function ContenuLanding({ formations }: { formations: ReactNode }) {
       <SectionParcours />
       <SectionEtapes />
       {formations}
-      <SectionFormules />
+      {formules}
       <SectionAccompagnement />
       <SectionCommunaute />
       <SectionFaq />

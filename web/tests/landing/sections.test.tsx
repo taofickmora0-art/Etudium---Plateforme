@@ -14,7 +14,7 @@ function toutesLesSections() {
       <SectionProblemes />
       <SectionSolution />
       <SectionEtapes />
-      <SectionFormules />
+      <SectionFormules formules={[]} />
       <SectionAccompagnement />
       <SectionCommunaute />
       <SectionFaq />

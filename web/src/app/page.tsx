@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { ContenuLanding, FormationsDepuisBase } from "@/components/landing/ContenuLanding";
+import { ContenuLanding, FormationsDepuisBase, FormulesDepuisBase } from "@/components/landing/ContenuLanding";
 import { FormationsEnAttente } from "@/components/landing/SectionFormations";
+import { SectionFormules } from "@/components/landing/SectionFormules";
 import { CadrePublic } from "@/components/site/CadrePublic";
 
 export const metadata: Metadata = {
@@ -22,6 +23,11 @@ export default function Racine() {
         formations={
           <Suspense fallback={<FormationsEnAttente />}>
             <FormationsDepuisBase />
+          </Suspense>
+        }
+        formules={
+          <Suspense fallback={<SectionFormules formules={[]} />}>
+            <FormulesDepuisBase />
           </Suspense>
         }
       />

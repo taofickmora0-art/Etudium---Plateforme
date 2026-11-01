@@ -5,6 +5,8 @@ export const REMEMBER_COOKIE = "etudium-souvenir";
 /** Adresse en attente de vérification par le code : jamais dans l'URL. */
 export const PENDING_EMAIL_COOKIE = "etudium-verification";
 export const PENDING_EMAIL_MAX_AGE = 30 * 60;
+/** La page demandée avant l'inscription par e-mail (« Choisir Standard ») : retrouvée après le code. */
+export const SUITE_COOKIE = "etudium-suite";
 
 const TRENTE_JOURS = 30 * 24 * 60 * 60;
 
