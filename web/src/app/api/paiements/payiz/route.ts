@@ -1,4 +1,5 @@
 import { configurationPaiement } from "@/lib/paiements/config";
+import { viderFileApres } from "@/lib/envois/declencher";
 import { lirePaiementPayiz } from "@/lib/paiements/payiz";
 import { verifierSignature } from "@/lib/paiements/signature";
 import { appliquerPayiz } from "@/lib/paiements/synchroniser";
@@ -49,7 +50,9 @@ export async function POST(request: Request): Promise<Response> {
     const paiement = await lirePaiementPayiz(config.cle, payizId);
     // Un paiement d'ailleurs (même compte Payiz, autre référence) ne nous regarde pas.
     if (!paiement.reference || !UUID.test(paiement.reference)) return reponse(200, RECU);
-    await appliquerPayiz(supabase, paiement.reference, paiement, config.jeton);
+    const carte = await appliquerPayiz(supabase, paiement.reference, paiement, config.jeton);
+    // Le reçu par e-mail (migration 0058) part tout de suite.
+    if (carte?.statut === "reussi") viderFileApres();
   } catch (e) {
     if (!(e instanceof Error && REFUS_DEFINITIFS.has(e.message))) return reponse(500, { erreur: "Traitement impossible." });
   }

@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { ACCES_EQUIPE, exigerEquipe } from "@/lib/admin/garde";
 import type { Role } from "@/lib/auth/permissions";
 import { estFonctionAbsente } from "@/lib/contenus/lecture";
+import { viderFileApres } from "@/lib/envois/declencher";
 import { versPage } from "./data";
 import { estFiltre, estRole, MOTIF_MAX } from "./regles";
 import type { FiltreComptes, PageComptes, Resultat } from "./types";
@@ -61,6 +62,7 @@ export async function suspendreCompte(compteId: string, motif: string): Promise<
   const { error } = await garde.supabase.rpc("suspendre_compte", { p_compte: compteId, p_motif: (motif ?? "").trim().slice(0, MOTIF_MAX) });
   if (error) return { ok: false, message: message(error) };
   refresh();
+  viderFileApres();
   return { ok: true };
 }
 
@@ -72,5 +74,6 @@ export async function reactiverCompte(compteId: string): Promise<Resultat> {
   const { error } = await garde.supabase.rpc("reactiver_compte", { p_compte: compteId });
   if (error) return { ok: false, message: message(error) };
   refresh();
+  viderFileApres();
   return { ok: true };
 }

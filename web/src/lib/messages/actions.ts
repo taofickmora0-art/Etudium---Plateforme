@@ -2,6 +2,7 @@
 
 import { getShellUser } from "@/lib/auth/current-user";
 import { estFonctionAbsente, liste, texte, un } from "@/lib/contenus/lecture";
+import { viderFileApres } from "@/lib/envois/declencher";
 import { createClient } from "@/lib/supabase/server";
 import { CONTACT_EQUIPE, MIGRATION_MESSAGES, versContact, versConversation, versFil, versMessage } from "./conversion";
 import { ESPACES_MESSAGES, SUJETS_ASSISTANCE, type Contact, type ConversationResume, type EspaceMessages, type Fil, type Message } from "./types";
@@ -51,7 +52,9 @@ export async function envoyerMessage(conversationId: string, texteMessage: strin
   });
   if (error) return refus(error, ENVOI_ECHEC);
   const brut = un(data);
-  return brut ? { ok: true, message: versMessage(brut) } : { ok: false, message: ENVOI_ECHEC };
+  if (!brut) return { ok: false, message: ENVOI_ECHEC };
+  viderFileApres();
+  return { ok: true, message: versMessage(brut) };
 }
 
 /** « Contacter l'équipe » (page Aide) : ouvre l'assistance et écrit « Sujet : … » puis le message. */

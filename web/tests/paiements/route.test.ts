@@ -8,6 +8,8 @@ import { carteSql, PAIEMENT_ID, payizSql } from "../abonnement/fixtures";
 
 const faux = fauxSupabase();
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => faux.client }));
+const viderFileApres = vi.fn();
+vi.mock("@/lib/envois/declencher", () => ({ viderFileApres: () => viderFileApres() }));
 
 const { POST } = await import("@/app/api/paiements/payiz/route");
 
@@ -27,6 +29,7 @@ const requete = (corps: string, signature?: string) => {
 
 beforeEach(() => {
   faux.vider();
+  viderFileApres.mockClear();
   fetchPayiz.mockReset();
   vi.stubGlobal("fetch", fetchPayiz);
   vi.stubEnv("PAYIZ_CLE_SECRETE", "sk_test_x");
@@ -66,6 +69,7 @@ describe("Route des notifications Payiz", () => {
     expect(faux.de("rpc", "confirmer_paiement")[0].valeurs).toEqual({ p_paiement: PAIEMENT_ID, p_payiz: "pay_1", p_montant: 12000, p_jeton: "J" });
     expect(faux.de("rpc", "evenement_payiz")[0].valeurs).toEqual({ p_id: "evt_1", p_jeton: "J" });
     expect(faux.appels.map((a) => a.op)).toEqual(["evenement_payiz_traite", "confirmer_paiement", "evenement_payiz"]);
+    expect(viderFileApres).toHaveBeenCalledTimes(1);
   });
 
   it("notification déjà traitée : 200 sans relire", async () => {

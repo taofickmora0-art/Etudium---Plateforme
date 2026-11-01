@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { exigerEquipe, SESSION_EXPIREE } from "@/lib/admin/garde";
 import { demoModeActive, getShellUser } from "@/lib/auth/current-user";
+import { viderFileApres } from "@/lib/envois/declencher";
 import { createClient } from "@/lib/supabase/server";
 import { lireNotifications } from "./data";
 import { ANNONCE_TEXTE_MAX, ANNONCE_TITRE_MAX, lienDuSite, NOMBRE_CLOCHE, NOMBRE_PAGE, REFUS_ANNONCE } from "./regles";
@@ -23,6 +24,8 @@ export async function chargerCloche(): Promise<LotNotifications | null> {
     } catch {
       // Ignoré : la cloche lit ce qu'elle a.
     }
+    // Les push et les e-mails en attente (migration 0058) partent après la réponse.
+    viderFileApres();
   }
   try {
     const lecture = await lireNotifications({ nombre: NOMBRE_CLOCHE });
@@ -70,5 +73,6 @@ export async function publierAnnonce(titre: string, texte: string, lien: string)
     return { ok: false, message: error.code === "P0001" && error.message ? typographie(error.message) : "L’annonce n’a pas pu être envoyée. Réessayez." };
   }
   refresh();
+  viderFileApres();
   return { ok: true, destinataires: Number(data) || 0 };
 }

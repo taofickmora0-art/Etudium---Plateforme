@@ -8,6 +8,8 @@ import { carteSql, FORMULE_ID, PAIEMENT_ID, payizSql } from "./fixtures";
 const faux = fauxSupabase();
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => faux.client }));
 vi.mock("@/lib/auth/current-user", () => ({ demoModeActive: () => false }));
+const viderFileApres = vi.fn();
+vi.mock("@/lib/envois/declencher", () => ({ viderFileApres: () => viderFileApres() }));
 
 const { essayerCode, payer, reessayer, suivrePaiement } = await import("@/lib/abonnement/actions");
 const { resynchroniserEnAttente } = await import("@/lib/paiements/synchroniser");
@@ -19,6 +21,7 @@ const entete = (i: number, nom: string) => (fetchPayiz.mock.calls[i][1]?.headers
 
 beforeEach(() => {
   faux.vider();
+  viderFileApres.mockClear();
   fetchPayiz.mockReset();
   vi.stubGlobal("fetch", fetchPayiz);
   vi.stubEnv("PAYIZ_CLE_SECRETE", "sk_test_x");
@@ -163,12 +166,15 @@ describe("Suivre et réessayer", () => {
     expect(await suivrePaiement(PAIEMENT_ID)).toMatchObject({ etat: "reussi", paiement: { numeroRecu: "ET-R-2026-000001" } });
     expect(fetchPayiz.mock.calls[0][0]).toBe("https://api.payiz.app/v1/payments/pay_1");
     expect(faux.de("rpc", "confirmer_paiement")[0].valeurs).toEqual({ p_paiement: PAIEMENT_ID, p_payiz: "pay_1", p_montant: 12000, p_jeton: "J" });
+    // Le reçu par e-mail part tout de suite (lot 5, étape B).
+    expect(viderFileApres).toHaveBeenCalledTimes(1);
   });
 
   it("suivre : Payiz injoignable, on reste en attente", async () => {
     faux.repondre("rpc.mon_paiement", { data: carteSql({ payiz_id: "pay_1", essai_le: "2026-11-01T10:00:00Z" }) });
     fetchPayiz.mockRejectedValueOnce(new TypeError("fetch failed"));
     expect(await suivrePaiement(PAIEMENT_ID)).toMatchObject({ etat: "attente" });
+    expect(viderFileApres).not.toHaveBeenCalled();
   });
 
   it("suivre : paiement introuvable", async () => {

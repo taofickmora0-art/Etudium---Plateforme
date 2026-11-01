@@ -2,6 +2,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { estFonctionAbsente } from "@/lib/contenus/lecture";
+import { viderFileApres } from "@/lib/envois/declencher";
 import { configurationPaiement, type ConfigPaiement } from "@/lib/paiements/config";
 import { creerPaiementPayiz, ErreurPayiz, lirePaiementPayiz, relancerPaiementPayiz, type PaiementPayiz } from "@/lib/paiements/payiz";
 import { erreurPayizTraduite, masquerTelephone, messageErreurPayiz, normaliserTelephone } from "@/lib/paiements/regles";
@@ -139,6 +140,8 @@ export async function suivrePaiement(paiementId: string): Promise<EtapePaiement>
   if (carte.statut === "en_attente" && carte.payizId && config) {
     try {
       carte = (await appliquerPayiz(supabase, carte.id, await lirePaiementPayiz(config.cle, carte.payizId), config.jeton)) ?? carte;
+      // Le reçu par e-mail (migration 0058) part tout de suite.
+      if (carte.statut === "reussi") viderFileApres();
     } catch {
       // Payiz injoignable ou réponse inattendue : on garde l'état connu ; le suivi suivant réessaie.
     }
