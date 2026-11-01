@@ -630,7 +630,22 @@ begin
 end;
 $$;
 
--- Les notifications de Payiz peuvent arriver deux fois : vrai seulement la première.
+-- Les notifications de Payiz peuvent arriver deux fois : une notification déjà traitée est ignorée. Elle n'est notée
+-- qu'une fois traitée : en cas d'échec, Payiz relance et la relance est traitée.
+create or replace function public.evenement_payiz_traite(p_id text, p_jeton text)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  perform public.exiger_jeton_paiement(p_jeton);
+  return exists (select 1 from public.evenements_payiz where id = p_id);
+end;
+$$;
+
+-- Note une notification traitée : vrai seulement la première fois.
 create or replace function public.evenement_payiz(p_id text, p_jeton text)
 returns boolean
 language plpgsql
@@ -669,6 +684,7 @@ revoke execute on function public.noter_essai(uuid, text, text, text, text) from
 revoke execute on function public.confirmer_paiement(uuid, text, integer, text) from public, anon, authenticated;
 revoke execute on function public.noter_echec(uuid, text, text, text) from public, anon, authenticated;
 revoke execute on function public.evenement_payiz(text, text) from public, anon, authenticated;
+revoke execute on function public.evenement_payiz_traite(text, text) from public, anon, authenticated;
 
 grant execute on function public.paiements_ouverts() to anon, authenticated;
 grant execute on function public.activer_paiements(text) to authenticated;
@@ -685,5 +701,6 @@ grant execute on function public.noter_essai(uuid, text, text, text, text) to an
 grant execute on function public.confirmer_paiement(uuid, text, integer, text) to anon, authenticated;
 grant execute on function public.noter_echec(uuid, text, text, text) to anon, authenticated;
 grant execute on function public.evenement_payiz(text, text) to anon, authenticated;
+grant execute on function public.evenement_payiz_traite(text, text) to anon, authenticated;
 
 commit;

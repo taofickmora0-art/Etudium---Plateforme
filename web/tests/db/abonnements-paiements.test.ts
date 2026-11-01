@@ -230,6 +230,15 @@ describe("Préparer, noter, confirmer", () => {
     expect(await rpc<unknown>({ id: G }, "select public.mon_paiement($1) as r", [p.id])).toBeNull();
   });
 
+  it("une notification Payiz : notée traitée une seule fois, seulement avec le jeton", async () => {
+    const traitee = () => rpc<boolean>("anon", "select public.evenement_payiz_traite('evt_1', $1) as r", [J]);
+    expect(await traitee()).toBe(false);
+    expect(await rpc<boolean>("anon", "select public.evenement_payiz('evt_1', $1) as r", [J])).toBe(true);
+    expect(await rpc<boolean>("anon", "select public.evenement_payiz('evt_1', $1) as r", [J])).toBe(false);
+    expect(await traitee()).toBe(true);
+    await expect(rpc<boolean>("anon", "select public.evenement_payiz_traite('evt_1', 'faux') as r")).rejects.toThrow("Jeton de paiement non reconnu.");
+  });
+
   it("un formateur n'a pas d'abonnement", async () => {
     await expect(preparer(F, formules.standard, null)).rejects.toThrow("Un compte formateur n’a pas d’abonnement.");
   });
