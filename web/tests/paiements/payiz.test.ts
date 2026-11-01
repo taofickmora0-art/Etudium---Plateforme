@@ -4,6 +4,7 @@ import { creerPaiementPayiz, ErreurPayiz, lirePaiementPayiz, relancerPaiementPay
 // Le client Payiz (https://api.payiz.app/v1), avec un fetch injecté.
 
 const PAIEMENT = { id: "pay_1", status: "processing", amount: 12000, currency: "XOF", reference: "p1", expires_at: null, latest_attempt: null };
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- la signature de fetch, pour lire ses appels
 const repondre = (status: number, corps: unknown) => vi.fn(async (..._args: Parameters<typeof fetch>) => new Response(JSON.stringify(corps), { status }));
 const FORMULE = { code: "standard" as const, nom: "Standard", dureeMois: 6 };
 
@@ -54,7 +55,7 @@ describe("Le client Payiz", () => {
   });
 
   it("Payiz injoignable : code « reseau »", async () => {
-    const f = vi.fn(async (..._args: Parameters<typeof fetch>): Promise<Response> => {
+    const f = vi.fn(async (): Promise<Response> => {
       throw new TypeError("fetch failed");
     });
     const erreur = await lirePaiementPayiz("sk_test_x", "pay_1", f).catch((e: unknown) => e);

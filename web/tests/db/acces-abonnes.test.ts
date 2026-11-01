@@ -50,8 +50,8 @@ beforeAll(async () => {
     "insert into public.formations (titre, slug, formateur_id, gratuite, statut) values ('Excel', $1, $2, false, 'publiee') returning id",
     [`excel-${randomUUID().slice(0, 6)}`, fiche],
   )).id;
-  const module = (await un<{ id: string }>("insert into public.modules (formation_id, titre) values ($1, 'Module 1') returning id", [formation])).id;
-  lecon = (await un<{ id: string }>("insert into public.lecons (module_id, titre, publiee, ordre, apercu) values ($1, 'Leçon 1', true, 1, false) returning id", [module])).id;
+  const leModule = (await un<{ id: string }>("insert into public.modules (formation_id, titre) values ($1, 'Module 1') returning id", [formation])).id;
+  lecon = (await un<{ id: string }>("insert into public.lecons (module_id, titre, publiee, ordre, apercu) values ($1, 'Leçon 1', true, 1, false) returning id", [leModule])).id;
   P = (await un<{ id: string }>("insert into public.parcours (slug, nom, nom_court, couleur, ordre) values ($1, 'Compétences digitales', 'Digital', 'digital', 1) returning id", [`p-${randomUUID()}`])).id;
   await banc.db.query("insert into public.formations_parcours (formation_id, parcours_id, ordre) values ($1, $2, 1)", [formation, P]);
 
