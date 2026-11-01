@@ -71,6 +71,17 @@ describe("Le client Payiz", () => {
     expect(JSON.parse(String(init?.body))).toEqual({ phone: "+2290155000000", operator: "moov" });
   });
 
+  it("relit un paiement avec un délai plus court si on le demande", async () => {
+    const f = vi.fn(
+      (_url: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) =>
+        new Promise<Response>((_, rejeter) => init?.signal?.addEventListener("abort", () => rejeter(new DOMException("délai", "TimeoutError")))),
+    );
+    const debut = Date.now();
+    const erreur = await lirePaiementPayiz("sk_test_x", "pay_1", f, 50).catch((e: unknown) => e);
+    expect(erreur).toMatchObject({ code: "reseau" });
+    expect(Date.now() - debut).toBeLessThan(2000);
+  });
+
   it("relit un paiement", async () => {
     const f = repondre(200, PAIEMENT);
     expect(await lirePaiementPayiz("sk_test_x", "pay_1", f)).toEqual(PAIEMENT);

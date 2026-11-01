@@ -44,9 +44,9 @@ export class ErreurPayiz extends Error {
   }
 }
 
-type Requete = { methode: "GET" | "POST"; corps?: unknown; idempotence?: string };
+type Requete = { methode: "GET" | "POST"; corps?: unknown; idempotence?: string; delaiMs?: number };
 
-async function appeler<T>(cle: string, chemin: string, { methode, corps, idempotence }: Requete, f: typeof fetch): Promise<T> {
+async function appeler<T>(cle: string, chemin: string, { methode, corps, idempotence, delaiMs = DELAI_MS }: Requete, f: typeof fetch): Promise<T> {
   const headers: Record<string, string> = { Authorization: `Bearer ${cle}` };
   if (corps !== undefined) headers["Content-Type"] = "application/json";
   if (idempotence) headers["Idempotency-Key"] = idempotence;
@@ -56,7 +56,7 @@ async function appeler<T>(cle: string, chemin: string, { methode, corps, idempot
       method: methode,
       headers,
       body: corps === undefined ? undefined : JSON.stringify(corps),
-      signal: AbortSignal.timeout(DELAI_MS),
+      signal: AbortSignal.timeout(delaiMs),
       cache: "no-store",
     });
   } catch {
@@ -124,7 +124,7 @@ export async function relancerPaiementPayiz(
   );
 }
 
-/** L'état d'un paiement, relu chez Payiz (il fait foi). */
-export function lirePaiementPayiz(cle: string, payizId: string, f: typeof fetch = fetch): Promise<PaiementPayiz> {
-  return appeler<PaiementPayiz>(cle, `/payments/${encodeURIComponent(payizId)}`, { methode: "GET" }, f);
+/** L'état d'un paiement, relu chez Payiz (il fait foi) ; `delaiMs` raccourcit l'attente (relecture d'arrière-plan). */
+export function lirePaiementPayiz(cle: string, payizId: string, f: typeof fetch = fetch, delaiMs = DELAI_MS): Promise<PaiementPayiz> {
+  return appeler<PaiementPayiz>(cle, `/payments/${encodeURIComponent(payizId)}`, { methode: "GET", delaiMs }, f);
 }

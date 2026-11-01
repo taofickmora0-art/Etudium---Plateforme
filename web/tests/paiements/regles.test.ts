@@ -20,6 +20,8 @@ describe("Le numéro Mobile Money", () => {
       expect(normaliserTelephone(saisie)).toBe("+2290142000000");
     }
     expect(normaliserTelephone("97 00 00 00")).toBe("+2290197000000");
+    // L'ancien format à 8 chiffres, avec l'indicatif (finitions du paiement).
+    for (const saisie of ["+229 97 00 00 00", "229 97000000", "00229 97 00 00 00"]) expect(normaliserTelephone(saisie)).toBe("+2290197000000");
   });
 
   it("refuse une longueur fausse, des lettres ou un autre préfixe", () => {
@@ -80,6 +82,11 @@ describe("Lire un paiement Payiz", () => {
       motif: "insufficient_funds",
     });
     expect(verdictPayiz(payiz("requires_payment", { status: "expired" }))).toEqual({ action: "echec", statut: "echoue", motif: "timeout" });
+  });
+
+  it("un paiement remboursé avant d'avoir été vu réussi n'ouvre rien ; un remboursement partiel reste un paiement", () => {
+    expect(verdictPayiz(payiz("refunded"))).toEqual({ action: "echec", statut: "annule", motif: null });
+    expect(verdictPayiz(payiz("partially_refunded"))).toEqual({ action: "confirmer", montant: 12000 });
   });
 
   it("demande expirée ou annulée", () => {

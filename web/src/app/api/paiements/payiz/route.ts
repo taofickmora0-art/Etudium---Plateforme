@@ -13,6 +13,9 @@ import { createClient } from "@/lib/supabase/server";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Refus de la base qui ne changeront pas à la relance : la notification est notée traitée (rien n'est activé). */
+const REFUS_DEFINITIFS = new Set(["Paiement Payiz étranger.", "Paiement inconnu.", "Paiement Payiz différent.", "Montant différent du paiement enregistré."]);
+
 const reponse = (status: number, corps: unknown) => Response.json(corps, { status });
 const RECU = { recu: true };
 
@@ -48,8 +51,7 @@ export async function POST(request: Request): Promise<Response> {
     if (!paiement.reference || !UUID.test(paiement.reference)) return reponse(200, RECU);
     await appliquerPayiz(supabase, paiement.reference, paiement, config.jeton);
   } catch (e) {
-    if (e instanceof Error && e.message === "Paiement Payiz étranger.") return reponse(200, RECU);
-    return reponse(500, { erreur: "Traitement impossible." });
+    if (!(e instanceof Error && REFUS_DEFINITIFS.has(e.message))) return reponse(500, { erreur: "Traitement impossible." });
   }
   await supabase.rpc("evenement_payiz", { p_id: evenement.id, p_jeton: config.jeton });
   return reponse(200, RECU);

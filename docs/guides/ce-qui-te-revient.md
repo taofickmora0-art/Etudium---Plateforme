@@ -1019,6 +1019,7 @@ Tout se passe en **mode test** : le simulateur de Payiz ne prend aucun argent. L
    - `web/supabase/migrations/0050_acces_abonnes.sql` (ce qu'ouvre un abonnement) ;
    - `web/supabase/migrations/0051_paiements_equipe.sql` (le back-office et le tableau de bord) ;
    - `web/supabase/migrations/0052_rappels_abonnements.sql` (les rappels d'expiration ; sa dernière partie crée la tâche planifiée, comme en section 47).
+   - `web/supabase/migrations/0053_finitions_paiement.sql` (finitions : un double « Payer » ne crée pas deux demandes, limite d'essais des codes promo, annulation sans trou d'accès).
 4. **Au back-office, avec ton compte administrateur** (menu « Abonnements et paiements ») :
    - onglet « Abonnements » : fixe les prix (par exemple Basique 9 000, Standard 15 000, Premium 25 000), puis « Enregistrer » sur chaque ligne ;
    - en haut, « Activer les paiements » : la base garde l'empreinte de ton jeton (jamais le jeton lui-même) ;

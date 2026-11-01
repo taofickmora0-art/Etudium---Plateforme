@@ -28,6 +28,8 @@ export async function appliquerPayiz(supabase: SupabaseClient, paiementId: strin
 
 /** Payiz fait expirer une demande au bout de 15 minutes ; au-delà de 24 h, on ne relit plus. */
 const FENETRE_RESYNCHRONISATION_MS = 24 * 60 * 60 * 1000;
+/** La page attend Payiz 4 secondes au plus : un paiement non relu le sera à la visite suivante. */
+const DELAI_RELECTURE_MS = 4000;
 
 /**
  * Avant d'afficher « Mon abonnement » ou la souscription : relit chez Payiz les paiements du compte restés en attente
@@ -44,11 +46,10 @@ export async function resynchroniserEnAttente(): Promise<void> {
   const enAttente = liste(data)
     .map(versCartePaiement)
     .filter((c) => c.statut === "en_attente" && c.payizId && c.essaiLe && Date.parse(c.essaiLe) > limite);
-  for (const carte of enAttente) {
-    try {
-      await appliquerPayiz(supabase, carte.id, await lirePaiementPayiz(config.cle, carte.payizId!), config.jeton);
-    } catch {
-      // Payiz injoignable : la prochaine visite réessaiera.
-    }
-  }
+  // En même temps ; une erreur (Payiz injoignable, lent) n'empêche pas les autres : la prochaine visite réessaiera.
+  await Promise.allSettled(
+    enAttente.map(async (carte) =>
+      appliquerPayiz(supabase, carte.id, await lirePaiementPayiz(config.cle, carte.payizId!, fetch, DELAI_RELECTURE_MS), config.jeton),
+    ),
+  );
 }

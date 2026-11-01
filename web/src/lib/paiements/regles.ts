@@ -6,7 +6,8 @@ import type { PaiementPayiz } from "./payiz";
 
 /**
  * Un numéro béninois au format de Payiz (« +2290142000000 »), ou null. Espaces, points et tirets sont ignorés ; « +229 »,
- * « 00229 » ou « 229 » en tête aussi. Les 8 chiffres d'avant le passage à 10 chiffres (2024) prennent « 01 » devant.
+ * « 00229 » ou « 229 » en tête aussi. Les 8 chiffres d'avant le passage à 10 chiffres (2024), avec ou sans indicatif,
+ * prennent « 01 » devant.
  */
 export function normaliserTelephone(saisie: string): string | null {
   let chiffres = saisie.replace(/[\s.\-()]/g, "");
@@ -16,7 +17,8 @@ export function normaliserTelephone(saisie: string): string | null {
   }
   if (!/^\d+$/.test(chiffres)) return null;
   for (const prefixe of ["00229", "229"]) {
-    if (chiffres.startsWith(prefixe) && chiffres.length - prefixe.length === 10) {
+    const reste = chiffres.length - prefixe.length;
+    if (chiffres.startsWith(prefixe) && (reste === 10 || (reste === 8 && chiffres[prefixe.length] !== "0"))) {
       chiffres = chiffres.slice(prefixe.length);
       break;
     }
@@ -77,8 +79,11 @@ export function verdictPayiz(p: PaiementPayiz): Verdict {
   switch (p.status) {
     case "succeeded":
     case "partially_refunded":
-    case "refunded":
       return { action: "confirmer", montant: p.amount };
+    // Remboursé en entier avant que nous l'ayons vu réussi : rien à ouvrir. (Déjà réussi chez nous, il ne change pas :
+    // l'équipe annule alors l'abonnement au back-office.)
+    case "refunded":
+      return { action: "echec", statut: "annule", motif: null };
     case "expired":
       return { action: "echec", statut: "expire", motif: null };
     case "canceled":

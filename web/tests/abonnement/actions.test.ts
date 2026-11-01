@@ -49,6 +49,13 @@ describe("Payer", () => {
     expect(fetchPayiz).not.toHaveBeenCalled();
   });
 
+  it("sans code promo, un numéro vide ou une configuration absente s'annonce avant toute préparation (finitions)", async () => {
+    expect(await payer({ ...ENTREE, telephone: "" })).toEqual({ etat: "erreur", message: "Saisissez votre numéro Mobile Money." });
+    vi.stubEnv("PAYIZ_CLE_SECRETE", "");
+    expect(await payer(ENTREE)).toEqual({ etat: "erreur", message: "Les paiements ouvrent bientôt." });
+    expect(faux.appels).toEqual([]);
+  });
+
   it("sans configuration : « Les paiements ouvrent bientôt. », sans appel à Payiz", async () => {
     vi.stubEnv("PAYIZ_CLE_SECRETE", "");
     faux.repondre("rpc.preparer_paiement", { data: carteSql({ repris: false }) });
@@ -115,9 +122,9 @@ describe("Payer", () => {
     expect(fetchPayiz).not.toHaveBeenCalled();
   });
 
-  it("numéro vide pour un paiement : message", async () => {
+  it("numéro vide avec un code qui ne rend pas le paiement gratuit : message", async () => {
     faux.repondre("rpc.preparer_paiement", { data: carteSql({ repris: false }) });
-    expect(await payer({ ...ENTREE, telephone: "" })).toEqual({ etat: "erreur", message: "Saisissez votre numéro Mobile Money." });
+    expect(await payer({ ...ENTREE, code: "PROMO20", telephone: "" })).toEqual({ etat: "erreur", message: "Saisissez votre numéro Mobile Money." });
   });
 
   it("erreur Payiz traduite", async () => {
@@ -189,6 +196,20 @@ describe("Resynchroniser", () => {
     expect(fetchPayiz).toHaveBeenCalledTimes(1);
     expect(fetchPayiz.mock.calls[0][0]).toBe("https://api.payiz.app/v1/payments/pay_1");
     expect(faux.de("rpc", "confirmer_paiement").map((a) => (a.valeurs as { p_paiement: string }).p_paiement)).toEqual([PAIEMENT_ID]);
+  });
+
+  it("les paiements en attente sont relus en même temps, pas l'un après l'autre (finitions)", async () => {
+    const recent = new Date(Date.now() - 10 * 60_000).toISOString();
+    faux.repondre("rpc.mes_paiements", {
+      data: [carteSql({ payiz_id: "pay_1", essai_le: recent }), carteSql({ id: "33333333-3333-4333-8333-333333333333", payiz_id: "pay_2", essai_le: recent })],
+    });
+    let liberer: (r: Response) => void = () => {};
+    fetchPayiz.mockImplementationOnce(() => new Promise<Response>((ok) => (liberer = ok)));
+    fetchPayiz.mockResolvedValueOnce(reponse(200, payizSql({ id: "pay_2", reference: "33333333-3333-4333-8333-333333333333" })));
+    const fin = resynchroniserEnAttente();
+    await vi.waitFor(() => expect(fetchPayiz).toHaveBeenCalledTimes(2));
+    liberer(reponse(200, payizSql()));
+    await fin;
   });
 
   it("sans configuration : rien", async () => {

@@ -86,6 +86,17 @@ describe("Route des notifications Payiz", () => {
     expect(faux.de("rpc", "evenement_payiz")).toEqual([]);
   });
 
+  it("un refus définitif de la base (montant différent, paiement inconnu) : 200 et noté traité, Payiz ne relance pas", async () => {
+    for (const message of ["Montant différent du paiement enregistré.", "Paiement inconnu.", "Paiement Payiz différent."]) {
+      faux.vider();
+      faux.repondre("rpc.evenement_payiz_traite", { data: false });
+      fetchPayiz.mockResolvedValueOnce(new Response(JSON.stringify(payizSql({ status: "succeeded" })), { status: 200 }));
+      faux.repondre("rpc.confirmer_paiement", { error: { code: "P0001", message } });
+      expect((await POST(requete(evenement()))).status, message).toBe(200);
+      expect(faux.de("rpc", "evenement_payiz"), message).toHaveLength(1);
+    }
+  });
+
   it("paiement d'une autre référence : 200, rien n'est activé", async () => {
     fetchPayiz.mockResolvedValueOnce(new Response(JSON.stringify(payizSql({ status: "succeeded", reference: "commande-ailleurs" })), { status: 200 }));
     expect((await POST(requete(evenement()))).status).toBe(200);

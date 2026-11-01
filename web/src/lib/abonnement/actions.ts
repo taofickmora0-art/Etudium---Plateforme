@@ -83,6 +83,11 @@ export async function payer(e: { formuleId: string; code: string; telephone: str
   const saisie = e.telephone.trim();
   const telephone = saisie ? normaliserTelephone(saisie) : null;
   if (saisie && !telephone) return erreur(NUMERO_INVALIDE);
+  // Sans code promo, le paiement n'est jamais gratuit : ce qui manque se dit avant de rien préparer en base.
+  if (!e.code.trim()) {
+    if (!configurationPaiement()) return erreur(INDISPONIBLE);
+    if (!telephone) return erreur(NUMERO_VIDE);
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("preparer_paiement", { p_formule: e.formuleId, p_code: e.code.trim() || null });
