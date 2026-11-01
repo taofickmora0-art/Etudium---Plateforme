@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Delete02Icon } from "@hugeicons/core-free-icons";
 import { Banner } from "@/components/ui/Banner";
+import { ModificationsNonPubliees } from "@/components/editeur/ModificationsNonPubliees";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
@@ -14,7 +15,7 @@ import { dateCourte } from "@/lib/utilisateurs/regles";
 type Resultat = { ok: boolean; message?: string; redirection?: string };
 type Props = {
   id: string;
-  formation: Pick<FormationAdmin, "etat" | "envoyeeLe" | "renvoyeeLe" | "remarqueRelecture" | "publieeLe">;
+  formation: Pick<FormationAdmin, "etat" | "envoyeeLe" | "renvoyeeLe" | "remarqueRelecture" | "publieeLe" | "modificationsNonPubliees">;
 };
 
 const TEXTE = "m-0 text-[15px] leading-6 text-texte";
@@ -48,6 +49,7 @@ export function PublicationFormateur({ id, formation }: Props) {
 
   return (
     <div className="flex max-w-[680px] min-w-0 flex-col gap-4 rounded-carte border border-bordure-carte bg-panneau p-6">
+      {formation.modificationsNonPubliees && <ModificationsNonPubliees formationId={id} />}
       {etat === "brouillon" && <p className={TEXTE}>Brouillon : visible seulement par vous et l’équipe Étudium. Envoyez-le en relecture quand il est prêt.</p>}
       {etat === "en_attente" && formation.envoyeeLe && (
         <p className={TEXTE}>{`Envoyée en relecture le ${dateCourte(formation.envoyeeLe)}. Un admin la relit ; vous pouvez continuer à la modifier.`}</p>

@@ -36,6 +36,7 @@ const sousTitre = (f: FormationResume) =>
     libelleNiveau(f.niveau),
     `${f.nbLecons} ${f.nbLecons > 1 ? "leçons" : "leçon"}`,
     f.modifieeParFormateurLe && `Modifiée par le formateur le ${dateCourte(f.modifieeParFormateurLe)}`,
+    f.modificationsNonPubliees && "Modifications non publiées",
   ]
     .filter(Boolean)
     .join(" · ");

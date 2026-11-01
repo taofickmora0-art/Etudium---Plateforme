@@ -34,6 +34,8 @@ export type FormationResume = {
   etat: EtatFormation;
   /** Dernière modification par son formateur une fois en ligne (0014), ou null. */
   modifieeParFormateurLe: string | null;
+  /** Des brouillons attendent « Publier les modifications » (0056) ; faux avant la 0056. */
+  modificationsNonPubliees?: boolean;
 };
 
 /** `publiee` : statut de la leçon (0027) ; vrai avant la 0027. */
@@ -50,6 +52,8 @@ export type LeconResume = {
   nbQuestions?: number;
   /** Un exercice (0032) : simple, ou avec rendu ; null pour les autres types, ou avant la 0032. */
   genreExercice?: GenreExercice | null;
+  /** Modifiée, pas encore publiée : un brouillon l'attend (0056). */
+  brouillon?: boolean;
 };
 
 export type ModuleAdmin = { id: string; titre: string; ordre: number; lecons: LeconResume[] };

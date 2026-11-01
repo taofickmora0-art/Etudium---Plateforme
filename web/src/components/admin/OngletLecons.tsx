@@ -50,6 +50,7 @@ import { formatDuree } from "@/lib/admin/duree";
 import { baseFormations, type EspaceEdition } from "@/lib/admin/espace";
 import { cleLecon, cleModule, deplacementApresDepot, deplacerDans, type Deplacement } from "@/lib/admin/rangement";
 import type { FormationAdmin, LeconResume, ModuleAdmin } from "@/lib/admin/types";
+import { Tag } from "@/components/ui/Tag";
 import { StatutLecon } from "./StatutLecon";
 import { useFormulaireAdmin } from "./useFormulaireAdmin";
 
@@ -210,6 +211,11 @@ function LigneLecon({ lecon, module, rang, total, ctx }: { lecon: LeconResume; m
         </Link>
         <span className="truncate text-[13px] leading-5 text-discret max-sm:text-xs">{resumeLecon(lecon)}</span>
       </span>
+      {lecon.brouillon && (
+        <Tag tone="aCorriger" className="flex-none">
+          Modifiée, non publiée
+        </Tag>
+      )}
       <StatutLecon publiee={lecon.publiee} onChange={(publiee) => ctx.changerStatut(lecon, publiee)} />
       <Menu
         label={`Actions sur « ${lecon.titre} »`}

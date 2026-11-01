@@ -10,6 +10,7 @@ import { deleteFormation, setStatutFormation } from "@/lib/admin/actions";
 import type { FormationAdmin } from "@/lib/admin/types";
 import type { StatutFormation } from "@/lib/contenus/libelles";
 import { dateCourte } from "@/lib/utilisateurs/regles";
+import { ModificationsNonPubliees } from "@/components/editeur/ModificationsNonPubliees";
 import { RenvoyerAuFormateur } from "./RenvoyerAuFormateur";
 
 type Resultat = { ok: boolean; message?: string; redirection?: string };
@@ -23,7 +24,7 @@ const EXPLICATION: Record<StatutFormation, string> = {
 
 type Props = {
   id: string;
-  formation: Pick<FormationAdmin, "statut" | "etat" | "envoyeeLe" | "renvoyeeLe" | "remarqueRelecture" | "modifieeParFormateurLe" | "publieeLe">;
+  formation: Pick<FormationAdmin, "statut" | "etat" | "envoyeeLe" | "renvoyeeLe" | "remarqueRelecture" | "modifieeParFormateurLe" | "publieeLe" | "modificationsNonPubliees">;
   /** Nom de la fiche formateur de la formation, ou null. */
   formateurNom: string | null;
 };
@@ -77,6 +78,7 @@ export function PublicationPanel({ id, formation, formateurNom }: Props) {
 
   return (
     <div className="flex max-w-[680px] flex-col gap-4 rounded-carte border border-bordure-carte bg-panneau p-6">
+      {formation.modificationsNonPubliees && <ModificationsNonPubliees formationId={id} />}
       <EtatRelecture formation={formation} formateurNom={formateurNom} />
       <p className="m-0 text-[15px] leading-6 text-texte">{EXPLICATION[statut]}</p>
       <div className="flex flex-wrap gap-2">

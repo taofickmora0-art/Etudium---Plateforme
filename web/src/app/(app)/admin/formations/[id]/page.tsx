@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { FormationInfosForm } from "@/components/admin/FormationInfosForm";
 import { FormationOnglets } from "@/components/admin/FormationOnglets";
 import { PageAdmin } from "@/components/admin/PageAdmin";
+import { BoutonPublierModifications } from "@/components/editeur/FenetrePublication";
 import { OngletApprenants } from "@/components/admin/OngletApprenants";
 import { OngletLecons } from "@/components/admin/OngletLecons";
 import { PublicationPanel } from "@/components/admin/PublicationPanel";
@@ -36,7 +37,12 @@ async function FicheFormation({ params, searchParams }: Params) {
     <PageAdmin
       titre={formation.titre}
       fil={[{ label: "Formations", href: "/admin/formations" }, { label: formation.titre }]}
-      action={<Tag tone={TON_ETAT[formation.etat]}>{ETATS[formation.etat]}</Tag>}
+      action={
+        <span className="flex flex-wrap items-center gap-2">
+          {formation.modificationsNonPubliees && <BoutonPublierModifications formationId={formation.id} />}
+          <Tag tone={TON_ETAT[formation.etat]}>{ETATS[formation.etat]}</Tag>
+        </span>
+      }
     >
       <FormationOnglets
         ongletInitial={onglet && ONGLETS.includes(onglet) ? onglet : "informations"}

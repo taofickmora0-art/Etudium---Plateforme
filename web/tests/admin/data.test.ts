@@ -150,6 +150,29 @@ describe("Lecture des contenus du back-office", () => {
     expect(lecon?.images).toEqual({});
   });
 
+  it("les formations qui ont des modifications non publiées sont repérées (fin du lot 4)", async () => {
+    faux.repondre("formations.select", {
+      data: [
+        { id: "f1", slug: "excel", titre: "Excel", statut: "publiee", niveau: "debutant", modules: [] },
+        { id: "f2", slug: "word", titre: "Word", statut: "publiee", niveau: "debutant", modules: [] },
+        { id: "f3", slug: "zotero", titre: "Zotero", statut: "publiee", niveau: "debutant", modules: [] },
+      ],
+    });
+    faux.repondre("brouillons_formations.select", { data: [{ formation_id: "f2" }] });
+    faux.repondre("brouillons_lecons.select", { data: [{ lecon_id: "l9", lecons: { modules: { formation_id: "f3" } } }] });
+    expect((await listFormations()).map((f) => [f.id, f.modificationsNonPubliees])).toEqual([
+      ["f1", false],
+      ["f2", true],
+      ["f3", true],
+    ]);
+    // Avant la 0056 : les tables manquent, rien n'est repéré.
+    faux.vider();
+    faux.repondre("formations.select", { data: [{ id: "f1", slug: "excel", titre: "Excel", statut: "publiee", niveau: "debutant", modules: [] }] });
+    faux.repondre("brouillons_formations.select", { error: { code: "PGRST205", message: "absente" } });
+    faux.repondre("brouillons_lecons.select", { error: { code: "PGRST205", message: "absente" } });
+    expect((await listFormations()).map((f) => f.modificationsNonPubliees)).toEqual([false]);
+  });
+
   it("une adresse inventée ne trouve rien, sans interroger la base", async () => {
     expect(await getFormationAdmin("n-importe-quoi")).toBeNull();
     expect(await getLeconAdmin("123")).toBeNull();

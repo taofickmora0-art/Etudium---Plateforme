@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { FormationInfosForm } from "@/components/admin/FormationInfosForm";
 import { FormationOnglets } from "@/components/admin/FormationOnglets";
 import { PageAdmin } from "@/components/admin/PageAdmin";
+import { BoutonPublierModifications } from "@/components/editeur/FenetrePublication";
 import { OngletApprenants } from "@/components/admin/OngletApprenants";
 import { OngletLecons } from "@/components/admin/OngletLecons";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
@@ -39,7 +40,12 @@ export async function EditeurFormateur({ params, searchParams }: Params) {
       titre={formation.titre}
       racine={RACINE_FORMATEUR}
       fil={[MES_FORMATIONS, { label: formation.titre }]}
-      action={<Tag tone={TON_ETAT[formation.etat]}>{ETATS[formation.etat]}</Tag>}
+      action={
+        <span className="flex flex-wrap items-center gap-2">
+          {formation.modificationsNonPubliees && <BoutonPublierModifications formationId={formation.id} />}
+          <Tag tone={TON_ETAT[formation.etat]}>{ETATS[formation.etat]}</Tag>
+        </span>
+      }
     >
       <FormationOnglets
         ongletInitial={onglet && ONGLETS.includes(onglet) ? onglet : "informations"}

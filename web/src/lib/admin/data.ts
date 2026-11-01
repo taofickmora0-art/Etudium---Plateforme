@@ -132,6 +132,32 @@ function relecture(f: Ligne) {
  * Les formations, par titre ; avec un filtre, celles d'une fiche formateur, les plus récemment modifiées d'abord
  * (espace formateur). Les colonnes de relecture (0014) sont facultatives.
  */
+type Client = Awaited<ReturnType<typeof createClient>>;
+
+/** Les formations qui ont des brouillons (0056), lisibles par leurs éditeurs ; vide avant la 0056. */
+async function formationsAvecBrouillons(supabase: Client): Promise<Set<string>> {
+  const [formations, lecons] = await Promise.all([
+    supabase.from("brouillons_formations").select("formation_id"),
+    supabase.from("brouillons_lecons").select("lecon_id, lecons(modules(formation_id))"),
+  ]);
+  const ids = new Set<string>();
+  if (!formations.error) for (const b of liste(formations.data)) ids.add(String(b.formation_id));
+  if (!lecons.error) {
+    for (const b of liste(lecons.data)) {
+      const formation = un(un(un(b.lecons)?.modules))?.formation_id;
+      if (typeof formation === "string") ids.add(formation);
+    }
+  }
+  return ids;
+}
+
+/** Les leçons qui ont un brouillon (0056) parmi celles-ci ; vide avant la 0056. */
+async function leconsAvecBrouillon(supabase: Client, lecons: string[]): Promise<Set<string>> {
+  if (lecons.length === 0) return new Set();
+  const { data, error } = await supabase.from("brouillons_lecons").select("lecon_id").in("lecon_id", lecons);
+  return new Set(error ? [] : liste(data).map((b) => String(b.lecon_id)));
+}
+
 export async function listFormations(filtre?: { formateurId: string }): Promise<FormationResume[]> {
   if (demoModeActive()) return [];
   const supabase = await createClient();
@@ -142,6 +168,7 @@ export async function listFormations(filtre?: { formateurId: string }): Promise<
     const requete = supabase.from("formations").select(`id, slug, titre, statut, niveau${colonnes}, formations_parcours(parcours(nom_court)), modules(lecons(id${lecons}))`);
     return filtre ? requete.eq("formateur_id", filtre.formateurId).order("modifie_le", { ascending: false }) : requete.order("titre");
   });
+  const avecBrouillons = await formationsAvecBrouillons(supabase);
   return liste(lignes).map((f) => {
     const { statut, etat, modifieeParFormateurLe } = relecture(f);
     return {
@@ -154,6 +181,7 @@ export async function listFormations(filtre?: { formateurId: string }): Promise<
       parcours: nomsDesParcours(f),
       etat,
       modifieeParFormateurLe,
+      modificationsNonPubliees: avecBrouillons.has(String(f.id)),
     };
   });
 }
@@ -198,10 +226,20 @@ export async function getFormationAdmin(id: string): Promise<FormationAdmin | nu
   })) as Ligne | null;
   if (!f) return null;
   const questions = await questionsParQuiz(supabase, id);
+  const brouillons = await leconsAvecBrouillon(
+    supabase,
+    liste(f.modules).flatMap((m) => liste(m.lecons).map((l) => String(l.id))),
+  );
   const modules = liste(f.modules)
     .map(versModule)
     .sort(parOrdre)
-    .map((m) => ({ ...m, lecons: m.lecons.map((l) => (l.type === "quiz" && l.id in questions ? { ...l, nbQuestions: questions[l.id] } : l)) }));
+    .map((m) => ({
+      ...m,
+      lecons: m.lecons.map((l) => ({
+        ...(l.type === "quiz" && l.id in questions ? { ...l, nbQuestions: questions[l.id] } : l),
+        ...(brouillons.has(l.id) ? { brouillon: true } : {}),
+      })),
+    }));
   const { statut, etat, envoyeeLe, renvoyeeLe, modifieeParFormateurLe } = relecture(f);
   // Les informations générales dans l'éditeur (0056) : le brouillon s'il existe ; sans la fonction, rien.
   const reponseEdition = await supabase.rpc("edition_formation", { p_formation: id });
@@ -234,6 +272,7 @@ export async function getFormationAdmin(id: string): Promise<FormationAdmin | nu
     modules,
     couverture: texte(f.couverture) || null,
     edition,
+    modificationsNonPubliees: edition?.brouillon === true || brouillons.size > 0,
   };
 }
 

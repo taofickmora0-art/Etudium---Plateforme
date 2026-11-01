@@ -21,7 +21,9 @@ const NOUVELLE = (
 );
 
 const sousTitre = (f: FormationResume) =>
-  [f.parcours.join(", ") || "Sans parcours", libelleNiveau(f.niveau), `${f.nbLecons} ${f.nbLecons > 1 ? "leçons" : "leçon"}`].join(" · ");
+  [f.parcours.join(", ") || "Sans parcours", libelleNiveau(f.niveau), `${f.nbLecons} ${f.nbLecons > 1 ? "leçons" : "leçon"}`, f.modificationsNonPubliees && "Modifications non publiées"]
+    .filter(Boolean)
+    .join(" · ");
 
 const cadre = { titre: "Mes formations", fil: [{ label: MES_FORMATIONS.label }], racine: RACINE_FORMATEUR };
 

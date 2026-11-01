@@ -60,6 +60,17 @@ describe("L'onglet Leçons", () => {
     expect(within(ligne("Les formules")).getByRole("link", { name: "Les formules" })).toHaveAttribute("href", "/admin/formations/f1/lecons/l2");
   });
 
+  it("une leçon modifiée mais pas encore publiée porte l'étiquette (fin du lot 4)", () => {
+    render(
+      <ToastProvider>
+        <OngletLecons
+          formation={{ ...FORMATION, modules: [{ ...FORMATION.modules[0], lecons: [{ ...FORMATION.modules[0].lecons[0], brouillon: true }] }] } as FormationAdmin}
+        />
+      </ToastProvider>,
+    );
+    expect(within(ligne("Découvrir l’interface")).getByText("Modifiée, non publiée")).toBeInTheDocument();
+  });
+
   it("changer le statut d'une leçon", async () => {
     const user = userEvent.setup();
     vi.mocked(actions.changerStatutLecon).mockResolvedValue({ ok: true });
