@@ -59,7 +59,7 @@ describe("Valider un document", () => {
   it("les attributs que l'éditeur ajoute de lui-même (cible du lien, type de liste) sont retirés", () => {
     const r = validerDocument(
       doc(
-        para(texte("lien", [{ type: "link", attrs: { href: "https://a.fr", target: "_blank", rel: "noopener nofollow ugc", class: null } }])),
+        para(texte("lien", [{ type: "link", attrs: { href: "https://a.fr", target: "_blank", rel: "noopener nofollow ugc", class: null } } as never])),
         { type: "orderedList", attrs: { start: 1, type: null }, content: [{ type: "listItem", content: [para(texte("un"))] }] },
       ),
     );
