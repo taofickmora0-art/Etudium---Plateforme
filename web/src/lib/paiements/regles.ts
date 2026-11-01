@@ -69,6 +69,9 @@ const MESSAGES_ERREUR: Record<string, string> = {
 /** Une erreur de l'API Payiz (`error.code`), en clair ; tout le reste (clé, compte, réseau) : indisponible. */
 export const messageErreurPayiz = (code: string): string => MESSAGES_ERREUR[code] ?? "Le paiement est indisponible pour le moment. Réessayez plus tard.";
 
+/** L'erreur Payiz se dit à l'étudiant (numéro, opérateur…) ; sinon elle regarde l'équipe (clé, compte, réseau). */
+export const erreurPayizTraduite = (code: string): boolean => code in MESSAGES_ERREUR;
+
 export type Verdict =
   | { action: "confirmer"; montant: number }
   | { action: "echec"; statut: "echoue" | "expire" | "annule"; motif: string | null }

@@ -134,6 +134,21 @@ describe("Payer", () => {
     expect(faux.de("rpc", "noter_essai")).toEqual([]);
   });
 
+  it("erreur Payiz non traduite : notée dans le journal du serveur, sans la clé ni le numéro", async () => {
+    const journal = vi.spyOn(console, "error").mockImplementation(() => {});
+    faux.repondre("rpc.preparer_paiement", { data: carteSql({ repris: false }) });
+    fetchPayiz.mockResolvedValueOnce(reponse(401, { error: { code: "invalid_api_key", message: "Invalid API key provided." } }));
+    expect(await payer(ENTREE)).toEqual({ etat: "erreur", message: "Le paiement est indisponible pour le moment. Réessayez plus tard." });
+    expect(journal).toHaveBeenCalledTimes(1);
+    const ligne = journal.mock.calls[0].join(" ");
+    expect(ligne).toContain("invalid_api_key");
+    expect(ligne).toContain("401");
+    expect(ligne).toContain("Invalid API key provided.");
+    expect(ligne).not.toContain("sk_test_x");
+    expect(ligne).not.toContain("0142000000");
+    journal.mockRestore();
+  });
+
   it("refus de la base : son message", async () => {
     faux.repondre("rpc.preparer_paiement", { error: { code: "P0001", message: "Ce code a expiré." } });
     expect(await payer({ ...ENTREE, code: "VIEUX" })).toEqual({ etat: "erreur", message: "Ce code a expiré." });

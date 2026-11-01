@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { estFonctionAbsente } from "@/lib/contenus/lecture";
 import { configurationPaiement, type ConfigPaiement } from "@/lib/paiements/config";
 import { creerPaiementPayiz, ErreurPayiz, lirePaiementPayiz, relancerPaiementPayiz, type PaiementPayiz } from "@/lib/paiements/payiz";
-import { masquerTelephone, messageErreurPayiz, normaliserTelephone } from "@/lib/paiements/regles";
+import { erreurPayizTraduite, masquerTelephone, messageErreurPayiz, normaliserTelephone } from "@/lib/paiements/regles";
 import { appliquerPayiz } from "@/lib/paiements/synchroniser";
 import { createClient } from "@/lib/supabase/server";
 import { versCartePaiement, versEssaiCode } from "./conversion";
@@ -37,6 +37,22 @@ function messageBase(e: Erreur): string {
   if (e.message === JETON_REFUSE) return INDISPONIBLE_POUR_LE_MOMENT;
   if ((e.code === "P0001" || e.code === "42501") && e.message) return e.message.replace(/'/g, "’");
   return ECHEC;
+}
+
+/** Les chiffres en série (un numéro de téléphone) ne vont pas dans le journal. */
+const sansNumero = (texte: string) => texte.replace(/\+?\d{8,}/g, "•••");
+
+/**
+ * Un refus de Payiz. Ce qui ne regarde pas l'étudiant (clé refusée, compte, réseau) s'affiche « indisponible » et
+ * s'écrit dans le journal du serveur pour l'équipe : code, statut, message de Payiz ; jamais la clé ni le numéro.
+ */
+function refusPayiz(action: "payer" | "reessayer", x: unknown): EtapePaiement {
+  if (!(x instanceof ErreurPayiz)) return erreur(ECHEC);
+  if (!erreurPayizTraduite(x.code)) {
+    const details = x.details ? ` ${sansNumero(JSON.stringify(x.details))}` : "";
+    console.error(`[payiz] ${action} refusé : statut ${x.statut}, code ${x.code}, « ${sansNumero(x.message)} »${details}`);
+  }
+  return erreur(messageErreurPayiz(x.code));
 }
 
 const operateurPayiz = (p: PaiementPayiz): Operateur | null => {
@@ -107,7 +123,7 @@ export async function payer(e: { formuleId: string; code: string; telephone: str
   try {
     p = await creerPaiementPayiz(config.cle, { paiementId: carte.id, montant: carte.montant, formule: carte.formule, telephone, operateur: e.operateur });
   } catch (x) {
-    return erreur(x instanceof ErreurPayiz ? messageErreurPayiz(x.code) : ECHEC);
+    return refusPayiz("payer", x);
   }
   return noterEssai(supabase, config, carte.id, p.id, e.operateur ?? operateurPayiz(p), telephone);
 }
@@ -152,7 +168,7 @@ export async function reessayer(e: { paiementId: string; telephone: string; oper
       const { data, error } = await supabase.rpc("noter_echec", { p_paiement: lu.id, p_statut: "expire", p_motif: null, p_jeton: config.jeton });
       return error ? erreur(messageBase(error)) : etapeDepuisCarte(versCartePaiement(data));
     }
-    return erreur(x instanceof ErreurPayiz ? messageErreurPayiz(x.code) : ECHEC);
+    return refusPayiz("reessayer", x);
   }
   return noterEssai(supabase, config, lu.id, lu.payizId, e.operateur, telephone);
 }
