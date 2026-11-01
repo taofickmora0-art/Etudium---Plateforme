@@ -40,14 +40,14 @@ beforeAll(async () => {
   await banc.db.query("insert into public.lecons_contenus (lecon_id, texte) values ($1, 'Texte')", [L1]);
   await statut(S, "publiee");
   for (const qui of [E, P, X]) await abonner(banc, qui);
-  for (const qui of [E, P]) await banc.en({ id: qui }, "select public.ouvrir_lecon($1)", [L1]);
+  for (const qui of [E, P, S]) await banc.en({ id: qui }, "select public.ouvrir_lecon($1)", [L1]);
   await banc.db.query("insert into public.suspensions (profil_id, par) values ($1, $2)", [P, S]);
   await banc.db.query("delete from public.notifications");
   await banc.db.query("delete from public.envois");
 });
 
 describe("Migration 0059 : désactiver une formation", () => {
-  it("le nombre d'étudiants qui la suivent (comptes suspendus exclus) : pour l'équipe seulement", async () => {
+  it("le nombre d'étudiants qui la suivent (comptes suspendus et équipe exclus, relecture 3) : pour l'équipe seulement", async () => {
     expect((await banc.en<{ n: number }>({ id: S }, "select public.nombre_suiveurs_formation($1) as n", [FORMATION]))[0].n).toBe(1);
     await expect(banc.en({ id: F }, "select public.nombre_suiveurs_formation($1)", [FORMATION])).rejects.toThrow();
     await expect(banc.en({ id: E }, "select public.nombre_suiveurs_formation($1)", [FORMATION])).rejects.toThrow();
@@ -71,12 +71,13 @@ describe("Migration 0059 : désactiver une formation", () => {
       { titre: "« Maîtriser Microsoft Excel » est momentanément indisponible", texte: "Votre progression et vos certificats sont conservés.", lien: "/mes-formations" },
     ]);
     expect(await notifications(X)).toEqual([]);
+    expect(await notifications(S)).toEqual([]);
     expect((await notifications(F)).map((n) => n.titre)).toEqual(["Votre formation « Maîtriser Microsoft Excel » est désactivée par l’équipe"]);
     expect(await emails()).toEqual([{ destinataire: E, titre: "« Maîtriser Microsoft Excel » est momentanément indisponible" }]);
   });
 
-  it("Review Focus 3 et 5 : désactivée, elle ne s'archive pas ; les certificats délivrés restent vérifiables", async () => {
-    await expect(statut(S, "archivee")).rejects.toThrow("Une formation désactivée se réactive : elle redevient publiée.");
+  it("Review Focus 3 et 5 : désactivée, elle ne redevient pas brouillon ; les certificats délivrés restent vérifiables", async () => {
+    await expect(statut(S, "brouillon")).rejects.toThrow("Une formation désactivée se réactive (elle redevient publiée) ou s’archive.");
     await banc.db.query(
       "insert into public.certificats (identifiant, profil_id, formation_id, titulaire, formation_titre, delivre_le) values ('ET-2026-TEST-0059', $1, $2, 'Aïcha', 'Maîtriser Microsoft Excel', current_date)",
       [E, FORMATION],
@@ -91,11 +92,21 @@ describe("Migration 0059 : désactiver une formation", () => {
     await statut(S, "publiee");
     expect(await acces(E)).toBe(true);
     expect(await notifications(E)).toEqual([
-      { titre: "« Maîtriser Microsoft Excel » est de nouveau disponible", texte: "Vous reprenez là où vous en étiez.", lien: `/formations/${SLUG}` },
+      { titre: "« Maîtriser Microsoft Excel » est de nouveau disponible", texte: "Elle est de nouveau dans le catalogue.", lien: `/formations/${SLUG}` },
     ]);
     expect(await notifications(X)).toEqual([]);
     expect((await notifications(F)).map((n) => n.titre)).toEqual(["Votre formation « Maîtriser Microsoft Excel » est de nouveau en ligne"]);
     expect(await emails()).toEqual([{ destinataire: E, titre: "« Maîtriser Microsoft Excel » est de nouveau disponible" }]);
     expect((await un<{ n: number }>("select count(*)::int as n from public.versions_formations where formation_id = $1", [FORMATION])).n).toBe(avant);
+  });
+
+  it("relecture (1) : désactivée, elle s'archive directement ; personne n'apprend qu'elle serait « de nouveau disponible »", async () => {
+    await statut(S, "desactivee");
+    await banc.db.query("delete from public.notifications");
+    await banc.db.query("delete from public.envois");
+    await statut(S, "archivee");
+    expect((await un<{ s: string }>("select statut::text as s from public.formations where id = $1", [FORMATION])).s).toBe("archivee");
+    expect((await notifications(E)).map((n) => n.titre)).toEqual(["Formation archivée"]);
+    expect(await emails()).toEqual([]);
   });
 });

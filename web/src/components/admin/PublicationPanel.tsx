@@ -94,7 +94,7 @@ export function PublicationPanel({ id, formation, formateurNom, version = null, 
       <div className="flex flex-wrap gap-2">
         {statut === "brouillon" && <Button onClick={() => ouvrir("publier")}>Publier</Button>}
         {formation.etat === "en_attente" && <RenvoyerAuFormateur id={id} />}
-        {statut === "publiee" && (
+        {(statut === "publiee" || statut === "desactivee") && (
           <Button variant="contour" onClick={() => ouvrir("archiver")}>
             Archiver
           </Button>

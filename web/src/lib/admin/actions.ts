@@ -15,6 +15,7 @@ import { MIGRATION_QUIZ } from "@/lib/quiz/conversion";
 import { MIGRATION_EXERCICES } from "@/lib/exercices/conversion";
 import { MIGRATION_CERTIFICATS } from "@/lib/certificats/conversion";
 import { estLeconDeContenu } from "@/lib/catalogue/regles";
+import { viderFileApres } from "@/lib/envois/declencher";
 
 // Actions serveur du back-office (spec du lot 1, §10). Chacune revérifie qui demande : l'équipe (exigerEquipe) ou,
 // pour le contenu des formations, l'équipe ou un formateur (exigerEditeur, spec de l'espace formateur) ; puis la base
@@ -375,6 +376,8 @@ export async function setStatutFormation(id: string, statut: "publiee" | "archiv
     return { ok: false, message: ECHEC };
   }
   refresh();
+  // Désactiver, réactiver ou archiver prévient ceux qui suivent la formation (0016, 0059) : push et e-mails partent.
+  viderFileApres();
   return { ok: true };
 }
 

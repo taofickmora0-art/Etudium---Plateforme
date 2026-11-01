@@ -7,6 +7,8 @@ const getShellUser = vi.fn();
 vi.mock("@/lib/auth/current-user", () => ({ getShellUser: () => getShellUser(), demoModeActive: () => false }));
 const refresh = vi.fn();
 vi.mock("next/cache", () => ({ refresh: () => refresh() }));
+const viderFileApres = vi.fn();
+vi.mock("@/lib/envois/declencher", () => ({ viderFileApres: () => viderFileApres() }));
 
 const { createFormation, saveFormationInfos, setStatutFormation, deleteFormation } = await import("@/lib/admin/actions");
 const { IDLE } = await import("@/lib/auth/schemas");
@@ -191,11 +193,15 @@ describe("Back-office : formations", () => {
   });
 
   it("lot 5 C : une formation publiée se désactive ; le refus de la base (passage interdit) s'affiche", async () => {
+    viderFileApres.mockClear();
     expect(await setStatutFormation(F, "desactivee")).toEqual({ ok: true });
+    // Relecture (2) : les e-mails et les push des étudiants partent sans attendre une cloche.
+    expect(viderFileApres).toHaveBeenCalledTimes(1);
     expect(faux.de("formations", "update")[0].valeurs).toEqual({ statut: "desactivee" });
     expect(faux.de("modules", "select")).toEqual([]);
     faux.repondre("formations.update", { error: { code: "P0001", message: "Seule une formation publiée peut être désactivée." } });
     expect(await setStatutFormation(F, "desactivee")).toEqual({ ok: false, message: "Seule une formation publiée peut être désactivée." });
+    expect(viderFileApres).toHaveBeenCalledTimes(1);
   });
 
   it("seul un brouillon s'efface, avec ses fichiers", async () => {

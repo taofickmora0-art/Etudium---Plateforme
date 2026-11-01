@@ -1128,7 +1128,7 @@ Les notifications de l'appli partent aussi en **push** sur les appareils qui l'o
 
 ## 60. Désactiver une formation (lot 5, étape C), 10 minutes
 
-L'équipe peut **désactiver** une formation publiée : plus aucun étudiant n'y a accès, tout de suite (leçons, quiz, exercices, validation). Elle disparaît du catalogue, de la recherche et de l'accueil ; elle reste dans « Mes formations » de ceux qui l'ont commencée, avec l'étiquette « Indisponible ». Progression, certificats et avis sont gardés ; les certificats déjà délivrés restent vérifiables. **Réactiver** la remet « Publiée » : les accès reviennent. Dans les deux cas, les étudiants qui la suivent sont prévenus (notification, push et e-mail), et son formateur aussi.
+L'équipe peut **désactiver** une formation publiée : plus aucun étudiant n'y a accès, tout de suite (leçons, quiz, exercices, validation). Elle disparaît du catalogue, de la recherche et de l'accueil ; elle reste dans « Mes formations » de ceux qui l'ont commencée, avec l'étiquette « Indisponible ». Progression, certificats et avis sont gardés ; les certificats déjà délivrés restent vérifiables. **Réactiver** la remet « Publiée » : les accès reviennent. Dans les deux cas, les étudiants qui la suivent sont prévenus (notification, push et e-mail), et son formateur aussi. Les comptes de l'équipe et les formateurs qui ont ouvert ses leçons ne comptent pas parmi ces étudiants.
 
 1. **La migration** `web/supabase/migrations/0059_desactivation_formations.sql`, dans l'éditeur SQL de Supabase, après la 0058.
 2. **Tester** avec une formation de test publiée et un compte étudiant qui en a ouvert une leçon :
@@ -1137,6 +1137,7 @@ L'équipe peut **désactiver** une formation publiée : plus aucun étudiant n'y
    - côté formateur : l'onglet « Publication » dit « Désactivée par l'équipe Étudium » (il ne peut pas la réactiver) ;
    - back-office › « Réactiver » : la formation revient, l'étudiant reprend là où il en était.
 3. **Bon à savoir :**
-   - seule une formation publiée se désactive ; une formation désactivée se réactive (pour l'archiver, réactive-la d'abord) ;
+   - seule une formation publiée se désactive ; une formation désactivée se réactive ou s'archive directement (« Archiver ») ;
+   - chaque désactivation ou réactivation envoie **un e-mail par étudiant** qui la suit : teste avec une petite formation, et surveille le quota d'envoi de Resend (l'offre gratuite en limite le nombre par jour) ;
    - le filtre « Désactivées » de la liste des formations les retrouve ;
    - réactiver ne crée pas de nouvelle version dans l'historique (le contenu n'a pas changé).

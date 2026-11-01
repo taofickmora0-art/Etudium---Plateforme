@@ -13,7 +13,9 @@ alter type public.statut_formation add value if not exists 'desactivee';
 
 begin;
 
--- ─── Les étudiants qui suivent une formation, comptes suspendus exclus ──────────────────────────────
+-- ─── Les étudiants qui suivent une formation ────────────────────────────────────────────────────────
+-- Ceux qui en ont ouvert une leçon, sans les comptes suspendus ni l'équipe et les formateurs (qui ouvrent des leçons
+-- pour les relire, sans être des étudiants).
 create or replace function public.suiveurs_actifs_formation(p_formation uuid)
 returns uuid[]
 language sql
@@ -23,7 +25,8 @@ set search_path = ''
 as $$
   select coalesce(array_agg(s), '{}')
   from unnest(public.suiveurs_formation(p_formation)) s
-  where not exists (select 1 from public.suspensions su where su.profil_id = s);
+  where not exists (select 1 from public.suspensions su where su.profil_id = s)
+    and not exists (select 1 from public.roles r where r.profil_id = s and r.role in ('admin', 'moderateur', 'super_admin', 'formateur'));
 $$;
 
 -- Pour la fenêtre de confirmation du back-office : « N étudiants suivent cette formation ».
@@ -43,7 +46,8 @@ end;
 $$;
 
 -- ─── Les passages permis ────────────────────────────────────────────────────────────────────────────
--- Désactiver : une formation publiée seulement. Une formation désactivée se réactive (elle redevient publiée).
+-- Désactiver : une formation publiée seulement. Une formation désactivée se réactive (elle redevient publiée) ou
+-- s'archive (aucun accès étudiant non plus ; 0016 prévient ceux qui la suivent).
 create or replace function public.desactivation_regle()
 returns trigger
 language plpgsql
@@ -54,8 +58,8 @@ begin
   if new.statut::text = 'desactivee' and old.statut::text not in ('desactivee', 'publiee') then
     raise exception 'Seule une formation publiée peut être désactivée.' using errcode = 'P0001';
   end if;
-  if old.statut::text = 'desactivee' and new.statut::text not in ('desactivee', 'publiee') then
-    raise exception 'Une formation désactivée se réactive : elle redevient publiée.' using errcode = 'P0001';
+  if old.statut::text = 'desactivee' and new.statut::text not in ('desactivee', 'publiee', 'archivee') then
+    raise exception 'Une formation désactivée se réactive (elle redevient publiée) ou s’archive.' using errcode = 'P0001';
   end if;
   return new;
 end;
@@ -87,7 +91,7 @@ begin
     v_titre_formateur := format('Votre formation « %s » est désactivée par l’équipe', new.titre);
   elsif old.statut::text = 'desactivee' and new.statut::text = 'publiee' then
     v_titre := format('« %s » est de nouveau disponible', new.titre);
-    v_texte := 'Vous reprenez là où vous en étiez.';
+    v_texte := 'Elle est de nouveau dans le catalogue.';
     v_lien := '/formations/' || new.slug;
     v_titre_formateur := format('Votre formation « %s » est de nouveau en ligne', new.titre);
   else

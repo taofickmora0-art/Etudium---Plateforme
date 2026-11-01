@@ -58,12 +58,14 @@ describe("Désactiver une formation au back-office", () => {
     expect(await screen.findByText("Formation désactivée")).toBeInTheDocument();
   });
 
-  it("désactivée : l'explication et « Réactiver » (elle redevient publiée) ; ni archiver, ni republier", async () => {
+  it("désactivée : l'explication, « Réactiver » (elle redevient publiée) et « Archiver » (relecture 1) ; pas « Republier »", async () => {
     const user = userEvent.setup();
     avecToast(<PublicationPanel id="f1" formation={{ ...FORMATION, statut: "desactivee", etat: "desactivee" }} formateurNom={null} />);
     expect(screen.getByText("Désactivée : plus aucun accès pour les étudiants. Leur progression, leurs certificats et leurs avis sont gardés.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Archiver" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Republier" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Archiver" }));
+    await user.click(within(screen.getByRole("dialog", { name: "Archiver cette formation ?" })).getByRole("button", { name: "Archiver" }));
+    expect(setStatutFormation).toHaveBeenCalledWith("f1", "archivee");
     await user.click(screen.getByRole("button", { name: "Réactiver" }));
     const fenetre = screen.getByRole("dialog", { name: "Réactiver cette formation ?" });
     await user.click(within(fenetre).getByRole("button", { name: "Réactiver" }));
