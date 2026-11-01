@@ -13,6 +13,7 @@ const reussite = async (_prev: FormState, fd: FormData): Promise<FormState> => (
 });
 vi.mock("@/lib/editeur/actions", () => ({
   enregistrerLecon: vi.fn(async () => ({ ok: true, revision: 1, brouillon: false, enregistreLe: "2026-11-01T14:32:00" })),
+  enregistrerInfosFormation: vi.fn(async () => ({ ok: true, revision: 1, brouillon: false, enregistreLe: "2026-11-01T14:32:00" })),
   reglerLecon: vi.fn(async () => ({ ok: true })),
   enregistrerQuestions: vi.fn(),
   abandonnerModifications: vi.fn(),
@@ -84,14 +85,15 @@ describe("Après un enregistrement, le formulaire montre ce qui est enregistré"
   it("une liste déroulante et un interrupteur de formation gardent le choix enregistré", async () => {
     vi.mocked(saveFormationInfos).mockImplementation(reussite);
     avecNotifications(<FormationInfosForm formation={FORMATION} parcours={[]} formateurs={[]} />);
-    await userEvent.selectOptions(screen.getByLabelText("Niveau"), "avance");
+    // Le niveau a rejoint les informations générales, enregistrées seules (fin du lot 4) : le badge, ici.
+    await userEvent.selectOptions(screen.getByLabelText("Badge"), "populaire");
     await userEvent.click(screen.getByRole("switch", { name: "Formation gratuite" }));
     await enregistrer();
-    expect(screen.getByLabelText("Niveau")).toHaveValue("avance");
+    expect(screen.getByLabelText("Badge")).toHaveValue("populaire");
     expect(screen.getByRole("switch", { name: "Formation gratuite" })).toHaveAttribute("aria-checked", "true");
     await enregistrer();
     const second = vi.mocked(saveFormationInfos).mock.calls[1][1];
-    expect(second.get("niveau")).toBe("avance");
+    expect(second.get("badge")).toBe("populaire");
     expect(second.get("gratuite")).toBe("on");
   });
 });

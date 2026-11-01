@@ -9,7 +9,7 @@ import { cheminValide } from "@/lib/couvertures/regles";
 import { baseFormations, espaceDe, type EspaceEdition } from "./espace";
 import { ACCES_EQUIPE, exigerEditeur, exigerEquipe } from "./garde";
 import { formatParMime } from "./fichiers";
-import { formateurSchema, formationInfosSchema, leconSchema, lignes, moduleSchema, parcoursSchema, ressourceSchema } from "./schemas";
+import { formateurSchema, formationInfosSchema, leconSchema, moduleSchema, parcoursSchema, ressourceSchema } from "./schemas";
 import { slugify } from "./slug";
 import { MIGRATION_QUIZ } from "@/lib/quiz/conversion";
 import { MIGRATION_EXERCICES } from "@/lib/exercices/conversion";
@@ -209,27 +209,27 @@ export async function createFormation(_prev: FormState, fd: FormData): Promise<F
   }
 }
 
-/** Ce que le formateur remplit dans l'onglet Informations (spec de l'espace formateur, §1). */
-const CHAMPS_DU_CONTENU = { titre: true, slug: true, resume: true, description: true, objectifs: true, competences: true, niveau: true } as const;
+/**
+ * La carte « Réglages » de l'onglet Informations. Le contenu (titre, résumé, description, objectifs, compétences, niveau)
+ * s'enregistre seul, à part (fin du lot 4, lib/editeur). Le formateur n'y règle que l'adresse (spec de l'espace
+ * formateur, §1) ; l'équipe, aussi le reste.
+ */
+const reglagesSchema = formationInfosSchema.omit({ titre: true, resume: true, description: true, objectifs: true, competences: true, niveau: true });
+const reglagesFormateurSchema = formationInfosSchema.pick({ slug: true });
 
 const SCORE_QUIZ = "Score minimal entre 0 et 100 %.";
 
-/** Onglet « Informations » d'une formation, puis ses parcours (ajoutés en fin de liste, retirés s'ils sont décochés). */
+/** Les réglages d'une formation, puis ses parcours (ajoutés en fin de liste, retirés s'ils sont décochés). */
 export async function saveFormationInfos(_prev: FormState, fd: FormData): Promise<FormState> {
   const id = texte(fd, "id");
+  // Le titre en ligne : il donne l'adresse quand le champ est vidé.
   const titre = texte(fd, "titre");
   const parcoursCoches = [...new Set(fd.getAll("parcours").map(String).filter(estUuid))];
   // Les compétences qu'une formation Business apprend à vendre (0048) : seulement si le formulaire montre la rubrique.
   const monetisation = fd.has("monetisation");
   const vendues = [...new Set(fd.getAll("competences_vendues").map(String).filter(estUuid))];
   const saisie = {
-    titre,
     slug: texte(fd, "slug").trim() || slugify(titre),
-    resume: texte(fd, "resume"),
-    description: texte(fd, "description"),
-    objectifs: lignes(texte(fd, "objectifs")),
-    competences: lignes(texte(fd, "competences")),
-    niveau: texte(fd, "niveau"),
     formateur_id: texte(fd, "formateur_id") || null,
     gratuite: coche(fd, "gratuite"),
     badge: texte(fd, "badge") || null,
@@ -242,8 +242,6 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
   const obligatoires = fd.has("certification") ? coche(fd, "exercices_obligatoires") : null;
   const values = {
     ...enTextes({ ...saisie, seuil_video: texte(fd, "seuil_video") }),
-    objectifs: saisie.objectifs.join("\n"),
-    competences: saisie.competences.join("\n"),
     parcours: parcoursCoches.join(","),
     competences_vendues: vendues.join(","),
   };
@@ -257,7 +255,7 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
   // Depuis l'espace formateur (ou pour un formateur), seulement le contenu : les réglages commerciaux et le formateur
   // attribué reviennent à l'équipe, et ce formulaire ne les envoie pas (un membre de l'équipe peut aussi être formateur).
   const complet = garde.equipe && espaceDe(fd) === "admin";
-  const parsed = complet ? formationInfosSchema.safeParse(saisie) : formationInfosSchema.pick(CHAMPS_DU_CONTENU).safeParse(saisie);
+  const parsed = complet ? reglagesSchema.safeParse(saisie) : reglagesFormateurSchema.safeParse(saisie);
   const scoreInvalide = scoreQuiz !== null && (scoreSaisi === "" || !Number.isInteger(scoreQuiz) || scoreQuiz < 0 || scoreQuiz > 100);
   if (!parsed.success || scoreInvalide) {
     const erreurs = parsed.success ? {} : fieldErrorsFrom(parsed.error);

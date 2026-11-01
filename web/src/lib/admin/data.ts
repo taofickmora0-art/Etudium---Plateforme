@@ -7,7 +7,7 @@ import { etatFormation } from "@/lib/contenus/etat";
 import type { Badge, CouleurParcours, Niveau, StatutFormation } from "@/lib/contenus/libelles";
 import { cheminsImages, depuisMarkdown, documentLu } from "@/lib/lecon/document";
 import { signerImages } from "@/lib/lecon/images";
-import { versEtatEdition, versSaisieLecon } from "@/lib/editeur/saisie";
+import { versEtatEdition, versSaisieInfos, versSaisieLecon } from "@/lib/editeur/saisie";
 import { estFonctionAbsente, estTablesAbsentes, lireAvecRepli, liste, parOrdre, TablesAbsentesError, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import type {
@@ -203,6 +203,9 @@ export async function getFormationAdmin(id: string): Promise<FormationAdmin | nu
     .sort(parOrdre)
     .map((m) => ({ ...m, lecons: m.lecons.map((l) => (l.type === "quiz" && l.id in questions ? { ...l, nbQuestions: questions[l.id] } : l)) }));
   const { statut, etat, envoyeeLe, renvoyeeLe, modifieeParFormateurLe } = relecture(f);
+  // Les informations générales dans l'éditeur (0056) : le brouillon s'il existe ; sans la fonction, rien.
+  const reponseEdition = await supabase.rpc("edition_formation", { p_formation: id });
+  const edition = !reponseEdition.error && reponseEdition.data ? versEtatEdition(reponseEdition.data, versSaisieInfos) : undefined;
   return {
     id: String(f.id),
     slug: texte(f.slug),
@@ -230,6 +233,7 @@ export async function getFormationAdmin(id: string): Promise<FormationAdmin | nu
     parcoursIds: liste(f.formations_parcours).map((lien) => String(lien.parcours_id)),
     modules,
     couverture: texte(f.couverture) || null,
+    edition,
   };
 }
 

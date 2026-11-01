@@ -1,5 +1,5 @@
 import type { DocumentLecon } from "@/lib/lecon/document";
-import type { EtatEdition, SaisieLecon } from "@/lib/editeur/types";
+import type { EtatEdition, SaisieInfos, SaisieLecon } from "@/lib/editeur/types";
 import type { GenreExercice } from "@/lib/exercices/types";
 import type { TypeLecon } from "@/lib/catalogue/types";
 import type { EtatFormation } from "@/lib/contenus/etat";
@@ -76,6 +76,8 @@ export type FormationAdmin = FormationResume & {
   envoyeeLe: string | null;
   renvoyeeLe: string | null;
   remarqueRelecture: string | null;
+  /** Les informations générales dans l'éditeur (0056) : le brouillon s'il existe ; absent avant la 0056. */
+  edition?: EtatEdition<SaisieInfos>;
 };
 
 export type RessourceAdmin = {

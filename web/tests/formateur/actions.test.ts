@@ -76,7 +76,8 @@ describe("Actions du formateur", () => {
     );
     expect(state.status).toBe("success");
     const [maj] = faux.de("formations", "update");
-    expect(Object.keys(maj.valeurs as object).sort()).toEqual(["competences", "description", "niveau", "objectifs", "resume", "slug", "titre"]);
+    // Le contenu s'enregistre seul, à part (fin du lot 4) : il reste l'adresse.
+    expect(Object.keys(maj.valeurs as object).sort()).toEqual(["slug"]);
   });
 
   it("l'équipe, elle, enregistre toujours les réglages", async () => {
@@ -116,7 +117,7 @@ describe("Actions du formateur", () => {
     faux.repondre("formations_parcours.select", { data: [] });
     const state = await saveFormationInfos(IDLE, form({ id: F, espace: "formateur", titre: "Excel", slug: "excel", resume: "", description: "", objectifs: "", competences: "", niveau: "debutant" }));
     expect(state.status).toBe("success");
-    expect(Object.keys(faux.de("formations", "update")[0].valeurs as object).sort()).toEqual(["competences", "description", "niveau", "objectifs", "resume", "slug", "titre"]);
+    expect(Object.keys(faux.de("formations", "update")[0].valeurs as object).sort()).toEqual(["slug"]);
   });
 
   it("le formateur réordonne modules, leçons et ressources, pas les parcours", async () => {

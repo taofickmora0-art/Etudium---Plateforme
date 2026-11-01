@@ -82,18 +82,12 @@ describe("Back-office : formations", () => {
     expect(faux.appels).toEqual([]);
   });
 
-  it("les informations s'enregistrent, listes saisies une par ligne", async () => {
+  it("les réglages s'enregistrent ; le contenu (titre, résumé, description, listes, niveau) n'en fait plus partie (fin du lot 4)", async () => {
     const state = await saveFormationInfos(IDLE, form(INFOS));
     expect(state.status).toBe("success");
     const [maj] = faux.de("formations", "update");
     expect(maj.valeurs).toEqual({
-      titre: "Maîtriser Excel",
       slug: "maitriser-excel",
-      resume: "Résumé",
-      description: "",
-      objectifs: ["A", "B"],
-      competences: ["Formules"],
-      niveau: "intermediaire",
       formateur_id: null,
       gratuite: true,
       badge: null,
@@ -173,7 +167,6 @@ describe("Back-office : formations", () => {
     faux.repondre("formations.update", { error: { code: "P0001", message: "L'adresse d'une formation publiée ne change plus." } });
     const state = await saveFormationInfos(IDLE, form({ ...INFOS, slug: "autre-adresse" }));
     expect(state.fieldErrors?.slug).toBe("L’adresse d’une formation publiée ne change plus.");
-    expect(state.values?.objectifs).toBe("A\nB");
     expect(faux.de("formations_parcours")).toEqual([]);
   });
 

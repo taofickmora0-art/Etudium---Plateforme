@@ -8,12 +8,13 @@ import { Field } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
 import { Switch } from "@/components/ui/Switch";
 import { TextInput } from "@/components/ui/TextInput";
-import { Textarea } from "@/components/ui/Textarea";
 import { saveFormationInfos } from "@/lib/admin/actions";
 import type { EspaceEdition } from "@/lib/admin/espace";
 import { urlCouverture } from "@/lib/couvertures/adresse";
 import type { FormateurAdmin, FormationAdmin, ParcoursAdmin } from "@/lib/admin/types";
-import { BADGES, NIVEAUX } from "@/lib/contenus/libelles";
+import { BADGES } from "@/lib/contenus/libelles";
+import { InfosGenerales } from "@/components/editeur/InfosGenerales";
+import type { EtatEdition, SaisieInfos } from "@/lib/editeur/types";
 import { CouvertureEditor } from "./CouvertureEditor";
 import { CARTE_FORMULAIRE } from "./ParcoursForm";
 import { useFormulaireAdmin } from "./useFormulaireAdmin";
@@ -33,6 +34,16 @@ type Props = {
 };
 
 const ouiNon = (valeur: boolean) => (valeur ? "oui" : "non");
+
+/** Avant la 0056 : les informations en ligne (l'enregistrement automatique dira qu'il manque la migration). */
+const editionParDefaut = (f: FormationAdmin): EtatEdition<SaisieInfos> => ({
+  donnees: { titre: f.titre, resume: f.resume, description: f.description, objectifs: f.objectifs, competences: f.competences, niveau: f.niveau },
+  revision: 0,
+  brouillon: false,
+  enLigne: f.statut !== "brouillon",
+  modifiePar: null,
+  modifieLe: null,
+});
 
 /** Les réglages qui reviennent à l'équipe, montrés au formateur (spec de l'espace formateur, §3). */
 function ReglagesEquipe({ formation }: { formation: FormationAdmin }) {
@@ -59,7 +70,10 @@ function ReglagesEquipe({ formation }: { formation: FormationAdmin }) {
   );
 }
 
-/** Onglet « Informations » d'une formation (spec du lot 1, §4 et §10 ; spec de l'espace formateur, §3). */
+/**
+ * Onglet « Informations » d'une formation (spec du lot 1, §4 et §10 ; spec de l'espace formateur, §3) : la couverture, les
+ * informations générales (enregistrées seules, fin du lot 4), puis les réglages (bouton « Enregistrer »).
+ */
 export function FormationInfosForm({ formation, parcours, formateurs, espace = "admin", competences, liees = [] }: Props) {
   const equipe = espace === "admin";
   const { state, envoyer, pending, erreurs: e, valeur } = useFormulaireAdmin(saveFormationInfos);
@@ -92,13 +106,15 @@ export function FormationInfosForm({ formation, parcours, formateurs, espace = "
   return (
     <div className="flex flex-col gap-5">
       <CouvertureEditor formationId={formation.id} parcours={couleur} couverture={urlCouverture(formation.couverture)} />
+      {/* Le contenu (fin du lot 4) : enregistré tout seul, dans un brouillon si la formation est en ligne. */}
+      <InfosGenerales formationId={formation.id} edition={formation.edition ?? editionParDefaut(formation)} />
       <form onSubmit={envoyer} noValidate className={CARTE_FORMULAIRE}>
         {state.status === "error" && state.message && <Banner tone="erreur" title={state.message} />}
+        <h2 className="m-0 text-base leading-6 font-semibold text-encre">Réglages</h2>
         <input type="hidden" name="id" value={formation.id} />
         <input type="hidden" name="espace" value={espace} />
-        <Field label="Titre" htmlFor="formation-titre" error={e.titre}>
-          <TextInput id="formation-titre" name="titre" defaultValue={valeur("titre", formation.titre)} maxLength={120} required />
-        </Field>
+        {/* Le titre en ligne : il donne l'adresse quand le champ est vidé. */}
+        <input type="hidden" name="titre" value={formation.titre} />
         <Field
           label="Adresse"
           htmlFor="formation-slug"
@@ -115,22 +131,7 @@ export function FormationInfosForm({ formation, parcours, formateurs, espace = "
             spellCheck={false}
           />
         </Field>
-        <Field label="Résumé" htmlFor="formation-resume" hint="Deux lignes sous le titre, sur les cartes du catalogue." error={e.resume}>
-          <Textarea id="formation-resume" name="resume" rows={2} defaultValue={valeur("resume", formation.resume)} maxLength={160} />
-        </Field>
-        <Field label="Description" htmlFor="formation-description" error={e.description}>
-          <Textarea id="formation-description" name="description" rows={4} defaultValue={valeur("description", formation.description)} maxLength={2000} />
-        </Field>
-        <Field label="Ce que vous allez apprendre" htmlFor="formation-objectifs" hint="Un objectif par ligne." error={e.objectifs}>
-          <Textarea id="formation-objectifs" name="objectifs" rows={5} defaultValue={valeur("objectifs", formation.objectifs.join("\n"))} />
-        </Field>
-        <Field label="Compétences acquises" htmlFor="formation-competences" hint="Une compétence par ligne." error={e.competences}>
-          <Textarea id="formation-competences" name="competences" rows={4} defaultValue={valeur("competences", formation.competences.join("\n"))} />
-        </Field>
         <div className={GRILLE}>
-          <Field label="Niveau" htmlFor="formation-niveau" error={e.niveau}>
-            <Select id="formation-niveau" name="niveau" options={NIVEAUX} defaultValue={valeur("niveau", formation.niveau)} />
-          </Field>
           {/* Avant la 0033, le score reste ici ; ensuite, il rejoint la carte « Certification ». */}
           {formation.exercicesObligatoires === null && champScore}
           {equipe && (
