@@ -14,13 +14,13 @@ import { ContexteImages, VueImage, VueVideo } from "./noeuds";
 
 const CONTENU = cn(
   "tiptap min-h-[220px] px-4 py-3.5 text-[15px] leading-6 text-texte outline-none wrap-anywhere max-sm:px-3 max-sm:text-sm max-sm:leading-[22px]",
-  "[&>*+*]:mt-3 [&_p]:m-0 [&_strong]:font-semibold [&_u]:underline-offset-2",
+  "[&>*+*]:mt-3! [&_p]:m-0 [&_strong]:font-semibold [&_u]:underline-offset-2",
   "[&_a]:text-bleu [&_a]:underline [&_a]:underline-offset-2",
   "[&_h2]:m-0 [&_h2]:text-xl [&_h2]:leading-7 [&_h2]:font-semibold [&_h2]:text-encre",
   "[&_h3]:m-0 [&_h3]:text-[17px] [&_h3]:leading-6 [&_h3]:font-semibold [&_h3]:text-encre",
   "[&_ul]:m-0 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-5",
   "[&_blockquote]:m-0 [&_blockquote]:border-l-[3px] [&_blockquote]:border-bleu-bord [&_blockquote]:pl-3 [&_blockquote]:text-ardoise",
-  "[&_[data-encadre]]:rounded-carte [&_[data-encadre]]:px-4 [&_[data-encadre]]:py-3 [&_[data-encadre]>*+*]:mt-2",
+  "[&_[data-encadre]]:rounded-carte [&_[data-encadre]]:px-4 [&_[data-encadre]]:py-3 [&_[data-encadre]>*+*]:mt-2!",
   "[&_[data-encadre=info]]:bg-bleu-pale [&_[data-encadre=astuce]]:bg-reussite-fond [&_[data-encadre=attention]]:bg-attention-fond [&_[data-encadre=retenir]]:bg-premium-fond",
   "[&_table]:w-full [&_table]:border-collapse [&_table]:text-sm [&_.tableWrapper]:overflow-x-auto",
   "[&_td]:border [&_td]:border-bordure-carte [&_td]:px-3 [&_td]:py-2 [&_td]:align-top",

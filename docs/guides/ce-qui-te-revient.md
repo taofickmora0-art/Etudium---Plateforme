@@ -1072,3 +1072,27 @@ Pour une personne qui te paie hors de la plateforme (Mobile Money sur ton numér
 3. **Vérifie :** la fiche affiche « Standard, actif jusqu'au … » et l'abonnement avec son origine ; l'onglet Paiements montre le paiement (moyen « Mobile Money hors plateforme ») ; le chiffre d'affaires l'inclut (0 pour un abonnement offert).
 4. **Résilier :** sur la fiche, « Résilier », avec un motif : l'abonnement en cours et ceux qui suivent sont annulés, l'accès aux formations payantes s'arrête tout de suite, la personne est prévenue (sa progression et ses certificats restent). « Annuler » sur une ligne n'annule que cet abonnement ; les suivants avancent d'autant.
 5. **Un modérateur** voit la section « Abonnement », sans les boutons.
+
+## 58. Éditeur riche, brouillons et historique des versions (fin du lot 4), 20 minutes
+
+L'éditeur des leçons écrit maintenant des titres, des listes, des images, des tableaux, des blocs d'information et des vidéos. Tout s'enregistre seul ; une leçon déjà en ligne s'enregistre dans un brouillon que tu publies quand tu veux ; chaque publication garde une version.
+
+1. **Les migrations**, dans l'éditeur SQL de Supabase, dans l'ordre, après la 0054 :
+   - `web/supabase/migrations/0055_contenu_riche.sql` (le contenu riche et l'espace privé des images) ;
+   - `web/supabase/migrations/0056_brouillons.sql` (brouillons, enregistrement automatique, publication) ;
+   - `web/supabase/migrations/0057_versions_formations.sql` (historique des versions).
+2. **Écrire une leçon** (formation de test, encore en brouillon) :
+   - ouvre une leçon ; écris un titre, une liste, un bloc d'information (bouton « Bloc d’information », puis change son ton), un tableau, une image (bouton « Image ») et une vidéo (bouton « Vidéo », colle un lien YouTube) ;
+   - en haut, l'indicateur passe à « Enregistrement… » puis « Enregistré à … » : il n'y a plus de bouton « Enregistrer » ;
+   - ferme l'onglet en pleine saisie, rouvre la leçon : rien n'est perdu (si la connexion avait coupé, un bandeau propose « Récupérer ») ;
+   - « Voir comme un étudiant » : la leçon s'affiche avec ses blocs, l'image et le tableau.
+3. **Le brouillon** (formation en ligne, avec un compte étudiant à côté) :
+   - modifie une leçon publiée : l'indicateur dit « Brouillon enregistré », un bandeau « Modifications non publiées » apparaît ;
+   - le compte étudiant voit toujours l'ancienne version ; toi, tu vois le brouillon avec l'étiquette « Brouillon » ;
+   - « Publier les modifications » : la fenêtre liste ce qui part ; « Publier » ; l'étudiant voit la nouvelle version ;
+   - les informations générales (titre, résumé, description…) marchent pareil ; les réglages gardent leur bouton « Enregistrer ».
+4. **L'historique** : onglet « Historique » de la formation ; choisis une version ancienne, « Restaurer dans le brouillon », relis, puis « Publier les modifications ».
+5. **Bon à savoir :**
+   - les questions des quiz s'enregistrent avec le bouton « Enregistrer les questions » ;
+   - les réglages d'une leçon (commentaires, aperçu gratuit, genre d'exercice) s'enregistrent dès qu'on les coche ;
+   - si deux personnes modifient la même leçon en même temps, la seconde voit « Cette leçon vient d’être modifiée par … » et recharge : rien n'est écrasé.
