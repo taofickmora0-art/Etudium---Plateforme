@@ -20,11 +20,18 @@ import { useSauvegardeAuto } from "./useSauvegardeAuto";
  * modifications ». Les réglages (adresse, formateur, badge…) restent dans la carte « Réglages ».
  */
 export function InfosGenerales({ formationId, edition }: { formationId: string; edition: EtatEdition<SaisieInfos> }) {
-  // Une publication ou un abandon change la révision : la carte repart de ce que dit la base.
-  return <Carte key={`${formationId}:${edition.revision}:${edition.brouillon ? "b" : "l"}`} formationId={formationId} edition={edition} />;
+  // La carte ne repart de la base que si elle a une révision plus récente que celle qu'elle connaît (Publier,
+  // Abandonner, Restaurer, un autre auteur) : un rafraîchissement après sa propre sauvegarde ne la recharge pas.
+  const [connue, setConnue] = useState(edition.revision);
+  const [generation, setGeneration] = useState(0);
+  if (edition.revision > connue) {
+    setConnue(edition.revision);
+    setGeneration((g) => g + 1);
+  }
+  return <Carte key={`${formationId}:${generation}`} formationId={formationId} edition={edition} surEnregistre={(r) => setConnue((c) => Math.max(c, r))} />;
 }
 
-function Carte({ formationId, edition }: { formationId: string; edition: EtatEdition<SaisieInfos> }) {
+function Carte({ formationId, edition, surEnregistre }: { formationId: string; edition: EtatEdition<SaisieInfos>; surEnregistre: (revision: number) => void }) {
   const id = useId();
   const initiale = edition.donnees;
   const [titre, setTitre] = useState(initiale.titre);
@@ -43,6 +50,7 @@ function Carte({ formationId, edition }: { formationId: string; edition: EtatEdi
     revisionInitiale: edition.revision,
     brouillonInitial: edition.brouillon,
     enregistrer: (valeur, revision) => enregistrerInfosFormation(formationId, valeur, revision),
+    surEnregistre,
   });
   const { etat } = sauvegarde;
   const e: Record<string, string> = etat.type === "invalide" ? etat.erreurs : {};

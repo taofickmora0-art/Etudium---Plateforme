@@ -157,6 +157,31 @@ describe("L'éditeur de leçon", () => {
     expect(await screen.findByText("Enregistré à 14 h 32")).toBeInTheDocument();
   });
 
+  it("relecture (2) : un rafraîchissement après une sauvegarde ne recharge pas l'éditeur ; une révision plus récente de la base, si", async () => {
+    const user = userEvent.setup();
+    vi.mocked(editeur.enregistrerLecon).mockResolvedValue({ ...OK, revision: 8 });
+    const lecon = { ...LECON, edition: { ...EDITION, revision: 7 } };
+    const vue = afficher(lecon);
+    await user.type(screen.getByRole("textbox", { name: "Titre de la leçon" }), " !");
+    await waitFor(() => expect(editeur.enregistrerLecon).toHaveBeenCalled(), { timeout: 3000 });
+    expect(await screen.findByText("Enregistré à 14 h 32")).toBeInTheDocument();
+    // Une autre action rafraîchit la page : la base rend la révision que l'éditeur connaît déjà.
+    vue.rerender(
+      <ToastProvider>
+        <EditeurLecon lecon={{ ...lecon, edition: { ...EDITION, revision: 8 } }} />
+      </ToastProvider>,
+    );
+    expect(screen.getByRole("textbox", { name: "Titre de la leçon" })).toHaveValue("Les formules !");
+    expect(screen.getByText("Enregistré à 14 h 32")).toBeInTheDocument();
+    // Publiée ailleurs : une révision plus récente, l'éditeur repart de la base.
+    vue.rerender(
+      <ToastProvider>
+        <EditeurLecon lecon={{ ...lecon, edition: { ...EDITION, revision: 10, donnees: { ...EDITION.donnees, titre: "Titre publié" } } }} />
+      </ToastProvider>,
+    );
+    expect(screen.getByRole("textbox", { name: "Titre de la leçon" })).toHaveValue("Titre publié");
+  });
+
   it("leçon ancienne ouverte sans modification : aucune sauvegarde (Review Focus 5)", async () => {
     afficher();
     await screen.findByRole("textbox", { name: "Texte de la leçon" });

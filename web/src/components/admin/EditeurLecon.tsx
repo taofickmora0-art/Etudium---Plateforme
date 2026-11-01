@@ -92,12 +92,19 @@ function saisieDe(lecon: LeconAdmin): SaisieLecon {
  * Un quiz (lot 3) : l'éditeur de ses questions à la place de la vidéo et du texte, avec « Enregistrer les questions ».
  */
 export function EditeurLecon(props: EditeurLeconProps) {
-  // Une publication, un abandon ou un rechargement change la révision : l'éditeur repart de ce que dit la base.
-  const edition = props.lecon.edition;
-  return <Editeur key={`${props.lecon.id}:${edition?.revision ?? 0}:${edition?.brouillon ? "b" : "l"}`} {...props} />;
+  // L'éditeur ne repart de la base que si elle a une révision plus récente que celle qu'il connaît (Publier, Abandonner,
+  // Restaurer, un autre auteur) : un rafraîchissement de la page après sa propre sauvegarde ne le recharge pas.
+  const serveur = props.lecon.edition?.revision ?? 0;
+  const [connue, setConnue] = useState(serveur);
+  const [generation, setGeneration] = useState(0);
+  if (serveur > connue) {
+    setConnue(serveur);
+    setGeneration((g) => g + 1);
+  }
+  return <Editeur key={`${props.lecon.id}:${generation}`} {...props} surEnregistre={(r) => setConnue((c) => Math.max(c, r))} />;
 }
 
-function Editeur({ lecon, base = "/admin/formations", quiz }: EditeurLeconProps) {
+function Editeur({ lecon, base = "/admin/formations", quiz, surEnregistre }: EditeurLeconProps & { surEnregistre: (revision: number) => void }) {
   const estQuiz = lecon.type === "quiz";
   const estExercice = lecon.type === "exercice";
   // Un quiz ou un exercice (lot 3) n'a ni vidéo ni durée.
@@ -138,6 +145,7 @@ function Editeur({ lecon, base = "/admin/formations", quiz }: EditeurLeconProps)
     revisionInitiale: lecon.edition?.revision ?? 0,
     brouillonInitial: lecon.edition?.brouillon ?? false,
     enregistrer: (valeur, revision) => enregistrerLecon(lecon.id, valeur, revision),
+    surEnregistre,
   });
   const { etat } = sauvegarde;
   const e: Record<string, string> = etat.type === "invalide" ? etat.erreurs : {};

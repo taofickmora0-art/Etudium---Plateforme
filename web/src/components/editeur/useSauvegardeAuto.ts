@@ -29,6 +29,8 @@ type Options<T> = {
   revisionInitiale: number;
   brouillonInitial: boolean;
   enregistrer: (valeur: T, revision: number) => Promise<ResultatSauvegarde>;
+  /** Chaque enregistrement réussi : la révision que l'éditeur connaît maintenant. */
+  surEnregistre?: (revision: number) => void;
   delaiMs?: number;
 };
 
@@ -39,7 +41,7 @@ const ECHEC = "L’enregistrement n’a pas abouti.";
 const hydrate = () => () => {};
 const horsLigne = () => typeof navigator !== "undefined" && navigator.onLine === false;
 
-export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonInitial, enregistrer, delaiMs = 1500 }: Options<T>) {
+export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonInitial, enregistrer, surEnregistre, delaiMs = 1500 }: Options<T>) {
   const json = JSON.stringify(valeur);
   const [confirme, setConfirme] = useState(json);
   const [phase, setPhase] = useState<Phase>({ type: "repos" });
@@ -49,6 +51,7 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
   const confirmeActuel = useRef(json);
   const revision = useRef(revisionInitiale);
   const enregistrerActuel = useRef(enregistrer);
+  const surEnregistreActuel = useRef(surEnregistre);
   const enCours = useRef(false);
   const relancer = useRef(false);
   const arrete = useRef(false);
@@ -59,6 +62,7 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
   useEffect(() => {
     valeurActuelle.current = valeur;
     enregistrerActuel.current = enregistrer;
+    surEnregistreActuel.current = surEnregistre;
   });
 
   const envoyer = useCallback(async () => {
@@ -87,6 +91,7 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
 
     if (r.ok) {
       revision.current = r.revision;
+      surEnregistreActuel.current?.(r.revision);
       essais.current = 0;
       confirmeActuel.current = envoye;
       setConfirme(envoye);
