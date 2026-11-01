@@ -2,8 +2,18 @@
 
 import { RadioGroup } from "radix-ui";
 import { cn } from "@/lib/cn";
+import { Tag } from "./Tag";
 
-type ChoiceOption = { value: string; title: string; subtitle: string; price: string };
+type ChoiceOption = {
+  value: string;
+  title: string;
+  subtitle?: string;
+  price?: string;
+  /** Pastille à côté du titre (« Recommandé »). */
+  badge?: string;
+  /** Option visible mais pas choisissable (abonnement sans prix). */
+  disabled?: boolean;
+};
 
 type ChoiceCardsProps = {
   /** Question posée, lue par les lecteurs d'écran (« Choisissez une formule »). */
@@ -27,13 +37,17 @@ export function ChoiceCards({ label, options, value, onValueChange, className }:
         <RadioGroup.Item
           key={option.value}
           value={option.value}
-          className="group focus-etudium box-border flex w-full cursor-pointer items-center gap-3.5 rounded-bouton border border-bordure bg-panneau px-4 py-3.5 text-left text-texte transition-colors hover:bg-page data-[state=checked]:border-bleu data-[state=checked]:shadow-[inset_0_0_0_1px_var(--color-bleu)]"
+          disabled={option.disabled}
+          className="group focus-etudium box-border flex w-full cursor-pointer items-center gap-3.5 rounded-bouton border border-bordure bg-panneau px-4 py-3.5 text-left text-texte transition-colors hover:bg-page data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60 data-[disabled]:hover:bg-panneau data-[state=checked]:border-bleu data-[state=checked]:shadow-[inset_0_0_0_1px_var(--color-bleu)]"
         >
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="text-[15px] leading-[22px] font-semibold text-encre">{option.title}</span>
-            <span className="text-[13px] leading-5 text-discret">{option.subtitle}</span>
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="text-[15px] leading-[22px] font-semibold text-encre">{option.title}</span>
+              {option.badge && <Tag tone="nouveau">{option.badge}</Tag>}
+            </span>
+            {option.subtitle && <span className="text-[13px] leading-5 text-discret">{option.subtitle}</span>}
           </span>
-          <span className="text-sm font-semibold text-encre">{option.price}</span>
+          {option.price && <span className="text-right text-sm font-semibold text-encre">{option.price}</span>}
           <span
             aria-hidden="true"
             className="flex size-5 flex-none items-center justify-center rounded-full border-[1.5px] border-inactif bg-panneau group-data-[state=checked]:border-bleu group-data-[state=checked]:bg-bleu"
