@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { EditorContent, ReactNodeViewRenderer, useEditor } from "@tiptap/react";
 import { cn } from "@/lib/cn";
+import { imagesAColler } from "@/lib/editeur/collage";
 import { envoyerImage } from "@/lib/editeur/envoi-image";
 import { extensionsLecon } from "@/lib/editeur/extensions";
 import type { DocumentLecon } from "@/lib/lecon/document";
@@ -65,8 +66,9 @@ export function EditeurRiche({ formationId, valeur, images, onChange, onBlur, et
     editorProps: {
       attributes: { role: "textbox", "aria-multiline": "true", "aria-label": etiquette, class: CONTENU },
       // Une image collée ou déposée part dans l'espace des images ; jamais en `data:` dans le document.
+      // Un tableau d'Excel ou de Word arrive avec une image de ses cellules : c'est le tableau qui entre.
       handlePaste: (_vue, evenement) => {
-        const fichiers = [...(evenement.clipboardData?.files ?? [])].filter((f) => f.type.startsWith("image/"));
+        const fichiers = imagesAColler(evenement.clipboardData);
         fichiers.forEach((f) => envoyer.current(f));
         return fichiers.length > 0;
       },
