@@ -13,7 +13,9 @@ export async function signerImages(supabase: SupabaseClient, chemins: string[]):
   try {
     const { data, error } = await supabase.storage.from(ESPACE_IMAGES).createSignedUrls(uniques, DUREE_S);
     if (error || !data) return {};
-    return Object.fromEntries(data.filter((d) => d.path && d.signedUrl && !d.error).map((d) => [d.path as string, d.signedUrl]));
+    const liens: Record<string, string> = {};
+    for (const d of data) if (d.path && d.signedUrl && !d.error) liens[d.path] = d.signedUrl;
+    return liens;
   } catch {
     return {};
   }
