@@ -50,9 +50,10 @@ describe("Règles de la page Utilisateurs", () => {
     expect(rolePrincipal(["etudiant"])).toBe("etudiant");
     expect(rolePrincipal(["etudiant", "formateur", "admin"])).toBe("admin");
     expect(rolePrincipal(["etudiant", "moderateur", "super_admin"])).toBe("super_admin");
-    expect(formuleAffichee(["etudiant"])).toBe("Gratuit");
-    expect(formuleAffichee(["etudiant", "formateur"])).toBe("—");
-    expect(formuleAffichee(["etudiant", "moderateur"])).toBe("—");
+    expect(formuleAffichee(["etudiant"], null)).toBe("Gratuit");
+    expect(formuleAffichee(["etudiant"], "Standard")).toBe("Standard");
+    expect(formuleAffichee(["etudiant", "formateur"], null)).toBe("—");
+    expect(formuleAffichee(["etudiant", "moderateur"], null)).toBe("—");
     expect(dateNumerique("2026-09-12T09:00:00Z")).toBe("12/09/2026");
     expect(dateNumerique("2026-09-12T23:30:00Z")).toBe("13/09/2026");
     expect(nomCourt("Koffi", "Dossou", "k@exemple.com")).toBe("Koffi D.");

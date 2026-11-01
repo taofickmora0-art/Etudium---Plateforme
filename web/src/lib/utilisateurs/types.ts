@@ -15,6 +15,8 @@ export type CompteResume = {
   /** Null s'il ne s'est jamais connecté. */
   derniereConnexion: string | null;
   suspendu: boolean;
+  /** Le nom de l'abonnement en cours (lot 2) ; null sans abonnement. */
+  formule?: string | null;
 };
 
 export type PageComptes = { total: number; comptes: CompteResume[] };

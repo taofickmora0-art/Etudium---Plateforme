@@ -9,6 +9,7 @@ vi.mock("@/lib/auth/current-user", () => ({ demoModeActive: () => false }));
 
 const { croissance, lireStatistiques } = await import("@/lib/admin/statistiques");
 const { TableauDeBordAdmin } = await import("@/components/admin/TableauDeBordAdmin");
+const { montantFcfa } = await import("@/lib/abonnement/regles");
 
 const STATS = {
   utilisateurs: 240,
@@ -20,7 +21,25 @@ const STATS = {
     { titre: "Maîtriser Microsoft Excel", slug: "maitriser-microsoft-excel", etudiants: 21 },
     { titre: "Zotero : gérer ses références", slug: "zotero-gerer-ses-references", etudiants: 14 },
   ],
+  abonnesActifs: 30,
+  etudiants: 200,
+  caMois: 45000,
+  caTotal: 180000,
+  caParMois: [
+    { mois: "2026-06", montant: 0 },
+    { mois: "2026-07", montant: 15000 },
+    { mois: "2026-08", montant: 30000 },
+    { mois: "2026-09", montant: 45000 },
+    { mois: "2026-10", montant: 45000 },
+    { mois: "2026-11", montant: 45000 },
+  ],
+  revenusParFormule: [
+    { code: "basique", nom: "Basique", montant: 36000, nombre: 4 },
+    { code: "standard", nom: "Standard", montant: 120000, nombre: 8 },
+    { code: "premium", nom: "Premium", montant: 24000, nombre: 1 },
+  ],
 };
+const texte = (t: string) => t.replace(/\u202f/g, " ");
 const tuile = (libelle: string) => screen.getByText(libelle).closest("[data-tuile]") as HTMLElement;
 
 describe("Tableau de bord du back-office : données", () => {
@@ -37,7 +56,36 @@ describe("Tableau de bord du back-office : données", () => {
         formations_suivies: [{ titre: "Maîtriser Microsoft Excel", slug: "maitriser-microsoft-excel", etudiants: 21 }],
       },
     });
-    expect(await lireStatistiques()).toEqual({ ...STATS, formationsSuivies: STATS.formationsSuivies.slice(0, 1) });
+    // Sans la migration 0051 : les chiffres du lot 2 valent 0.
+    expect(await lireStatistiques()).toEqual({
+      ...STATS,
+      formationsSuivies: STATS.formationsSuivies.slice(0, 1),
+      abonnesActifs: 0,
+      etudiants: 0,
+      caMois: 0,
+      caTotal: 0,
+      caParMois: [],
+      revenusParFormule: [],
+    });
+    faux.repondre("rpc.statistiques_back_office", {
+      data: {
+        utilisateurs: 240,
+        abonnes_actifs: 30,
+        etudiants: 200,
+        ca_mois: 45000,
+        ca_total: 180000,
+        ca_par_mois: [{ mois: "2026-11", montant: 45000 }],
+        revenus_par_formule: [{ code: "standard", nom: "Standard", montant: 120000, nombre: 8 }],
+      },
+    });
+    expect(await lireStatistiques()).toMatchObject({
+      abonnesActifs: 30,
+      etudiants: 200,
+      caMois: 45000,
+      caTotal: 180000,
+      caParMois: [{ mois: "2026-11", montant: 45000 }],
+      revenusParFormule: [{ code: "standard", nom: "Standard", montant: 120000, nombre: 8 }],
+    });
     faux.repondre("rpc.statistiques_back_office", { error: { code: "PGRST202" } });
     expect(await lireStatistiques()).toBeNull();
   });
@@ -57,11 +105,24 @@ describe("Tableau de bord du back-office : écran", () => {
     expect(within(tuile("Nouveaux inscrits")).getByText("cette semaine · 40 ce mois (31 le mois dernier)")).toBeInTheDocument();
   });
 
-  it("ce qui arrive avec le paiement (lot 2) et les sessions live (lot 5) a déjà sa place", () => {
+  it("les tuiles du paiement (lot 2) se remplissent ; les sessions live (lot 5) gardent leur place", () => {
     render(<TableauDeBordAdmin stats={STATS} />);
-    for (const libelle of ["Utilisateurs payants", "Taux de conversion", "Chiffre d’affaires", "Revenus par formule"]) {
-      expect(within(tuile(libelle)).getByText("Disponible au lot 2")).toBeInTheDocument();
-    }
+    expect(screen.queryByText("Disponible au lot 2")).toBeNull();
+    expect(within(tuile("Utilisateurs payants")).getByText("30")).toBeInTheDocument();
+    expect(within(tuile("Utilisateurs payants")).getByText("abonnements actifs")).toBeInTheDocument();
+    expect(within(tuile("Taux de conversion")).getByText("15 %")).toBeInTheDocument();
+    expect(within(tuile("Taux de conversion")).getByText("des étudiants ont un abonnement actif")).toBeInTheDocument();
+    const ca = tuile("Chiffre d’affaires");
+    expect(ca).toHaveTextContent(texte("Ce mois45 000 FCFA"));
+    expect(ca).toHaveTextContent(texte("Au total180 000 FCFA"));
+    expect(within(ca).getAllByRole("img")).toHaveLength(6);
+    // Le nom accessible garde l'espace fine de `Intl` (U+202F).
+    expect(within(ca).getByRole("img", { name: `novembre 2026 : ${montantFcfa(45000)}` })).toBeInTheDocument();
+    const parFormule = tuile("Revenus par formule");
+    expect(parFormule).toHaveTextContent("Standard");
+    expect(parFormule).toHaveTextContent(texte("120 000 FCFA"));
+    expect(parFormule).toHaveTextContent("8 abonnements");
+    expect(parFormule).toHaveTextContent("1 abonnement");
     // Plus de formation achetée seule (restructuration, §5.2).
     expect(screen.queryByText("Formations achetées seules")).toBeNull();
     expect(within(tuile("Sessions live à venir")).getByText("Disponible au lot 5")).toBeInTheDocument();

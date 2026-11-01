@@ -29,7 +29,10 @@ function identite(l: Ligne): Omit<CompteResume, "suspendu"> {
 /** Une page de comptes, telle que la rend la fonction comptes_equipe. */
 export function versPage(data: unknown): PageComptes {
   const brut = un(data);
-  return { total: nombre(brut?.total), comptes: liste(brut?.comptes).map((l) => ({ ...identite(l), suspendu: l.suspendu === true })) };
+  return {
+    total: nombre(brut?.total),
+    comptes: liste(brut?.comptes).map((l) => ({ ...identite(l), suspendu: l.suspendu === true, ...(typeof l.formule === "string" ? { formule: l.formule } : {}) })),
+  };
 }
 
 function versDetail(l: Ligne): CompteDetail {

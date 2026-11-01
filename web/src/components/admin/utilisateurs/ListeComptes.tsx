@@ -149,7 +149,13 @@ export function ListeComptes({ initial, moi }: Props) {
                   </td>
                   <td className={CELLULE_TABLEAU}>{c.email}</td>
                   <td className={CELLULE_TABLEAU}>{LIBELLES_ROLES[rolePrincipal(c.roles)]}</td>
-                  <td className={CELLULE_TABLEAU}>{formuleAffichee(c.roles) === "Gratuit" ? <Tag tone="enAttente">Gratuit</Tag> : "—"}</td>
+                  <td className={CELLULE_TABLEAU}>
+                    {rolePrincipal(c.roles) === "etudiant" ? (
+                      <Tag tone={c.formule ? "nouveau" : "enAttente"}>{formuleAffichee(c.roles, c.formule)}</Tag>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td className={CELLULE_TABLEAU}>{c.suspendu ? <Tag tone="echoue">Suspendu</Tag> : <Tag tone="valide">Actif</Tag>}</td>
                   <td className={`${CELLULE_TABLEAU} whitespace-nowrap`}>{dateNumerique(c.inscritLe)}</td>
                   <td className={`${CELLULE_TABLEAU} text-right`}>

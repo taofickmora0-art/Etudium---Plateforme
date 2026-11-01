@@ -47,8 +47,9 @@ export function nomCourt(prenom: string, nom: string, email: string): string {
 /** Le rôle affiché dans le tableau : le plus élevé du compte. */
 export const rolePrincipal = (roles: Role[]): Role => [...ROLES_ORDONNES].reverse().find((r) => roles.includes(r)) ?? "etudiant";
 
-/** La formule du tableau : « Gratuit » pour un étudiant tant que les abonnements n'existent pas (lot 2), « — » sinon. */
-export const formuleAffichee = (roles: Role[]): string => (rolePrincipal(roles) === "etudiant" ? "Gratuit" : "—");
+/** La formule du tableau : celle de l'abonnement en cours (lot 2), « Gratuit » pour un étudiant sans abonnement, « — » sinon. */
+export const formuleAffichee = (roles: Role[], formule: string | null | undefined): string =>
+  rolePrincipal(roles) !== "etudiant" ? "—" : formule || "Gratuit";
 
 const DATE_NUMERIQUE = new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Africa/Porto-Novo" });
 

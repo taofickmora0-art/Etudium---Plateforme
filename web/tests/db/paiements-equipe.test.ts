@@ -154,6 +154,30 @@ describe("Les paiements", () => {
     expect(rows[0]).toEqual({ categorie: "service", titre: "Votre abonnement a été annulé", lien: "/abonnement" });
   });
 
+  it("le tableau de bord : abonnés, chiffre d'affaires, revenus par formule ; la formule de chaque compte", async () => {
+    await banc.db.query("delete from public.abonnements");
+    await banc.db.query("delete from public.paiements");
+    const maintenant = new Date().toISOString();
+    await paiement(E, { statut: "reussi", payiz_id: "pay_s1", montant: 15000, confirme_le: maintenant });
+    await paiement(G, { statut: "reussi", payiz_id: "pay_s2", formule_id: formules.basique, prix_initial: 9000, montant: 9000, confirme_le: "2026-08-15T10:00:00Z" });
+    const abonnement = await abonner(banc, E, { formule: "standard" });
+    void abonnement;
+    const stats = await rpc<Record<string, unknown>>({ id: M }, "select public.statistiques_back_office() as r");
+    expect(stats).toMatchObject({ abonnes_actifs: 1, ca_mois: 30000, ca_total: 39000 });
+    expect(stats.etudiants).toBe(2);
+    const parMois = stats.ca_par_mois as { mois: string; montant: number }[];
+    expect(parMois).toHaveLength(6);
+    expect(parMois.at(-1)).toEqual({ mois: maintenant.slice(0, 7), montant: 30000 });
+    expect(stats.revenus_par_formule).toEqual([
+      { code: "basique", nom: "Basique", montant: 9000, nombre: 1 },
+      { code: "standard", nom: "Standard", montant: 30000, nombre: 2 },
+      { code: "premium", nom: "Premium", montant: 0, nombre: 0 },
+    ]);
+    const comptes = await rpc<{ comptes: { id: string; formule: string | null }[] }>({ id: M }, "select public.comptes_equipe('', 'tous', 1) as r");
+    expect(comptes.comptes.find((c) => c.id === E)?.formule).toBe("Standard");
+    expect(comptes.comptes.find((c) => c.id === G)?.formule).toBeNull();
+  });
+
   it("le résumé du mois", async () => {
     await banc.db.query("delete from public.abonnements");
     await banc.db.query("delete from public.paiements");

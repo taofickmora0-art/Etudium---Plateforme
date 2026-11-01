@@ -10,16 +10,43 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Banner } from "@/components/ui/Banner";
 import { ProgressBar } from "@/components/ui/Progress";
-import { AVENIR, Carte, GRILLE_CHIFFRES, RANGEE, Tuile } from "@/components/tableau/Blocs";
+import { Carte, GRILLE_CHIFFRES, RANGEE, Tuile } from "@/components/tableau/Blocs";
 import { croissance, type StatistiquesBackOffice } from "@/lib/admin/statistiques";
+import { montantFcfa } from "@/lib/abonnement/regles";
 
 const pluriel = (n: number, mot: string) => `${n.toLocaleString("fr-FR")} ${n > 1 ? `${mot}s` : mot}`;
 const chiffre = (n: number) => n.toLocaleString("fr-FR");
+const MOIS_COURT = new Intl.DateTimeFormat("fr-FR", { month: "short", timeZone: "UTC" });
+const MOIS_LONG = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric", timeZone: "UTC" });
+/** « 2026-11 » : « nov. », et « novembre 2026 » pour les lecteurs d'écran. */
+const mois = (cle: string, format: Intl.DateTimeFormat) => format.format(new Date(`${cle}-15T12:00:00Z`));
+
+/** Le chiffre d'affaires mois par mois : six barres, hauteur relative au meilleur mois. */
+function BarresMois({ parMois }: { parMois: StatistiquesBackOffice["caParMois"] }) {
+  const max = Math.max(1, ...parMois.map((m) => m.montant));
+  return (
+    <div className="mt-1 flex h-[120px] items-end gap-2">
+      {parMois.map((m) => (
+        <div key={m.mois} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1.5">
+          <div
+            role="img"
+            aria-label={`${mois(m.mois, MOIS_LONG)} : ${montantFcfa(m.montant)}`}
+            className="w-full max-w-10 rounded-t-[6px] bg-bleu"
+            style={{ height: `${Math.max(2, Math.round((90 * m.montant) / max))}px` }}
+          />
+          <span aria-hidden="true" className="text-xs leading-[18px] text-discret">
+            {mois(m.mois, MOIS_COURT)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 /**
  * Tableau de bord du back-office : la vue globale de la plateforme (choisie par l'utilisateur le 13 octobre 2026).
- * Inscriptions, apprentissage, formations les plus suivies, sessions live à venir (0018) ; revenus et abonnés (lot 2)
- * ont déjà leur place et s'afficheront avec leur lot.
+ * Inscriptions, abonnés et revenus (lot 2, 0051), apprentissage, formations les plus suivies, sessions live à venir
+ * (0018), contenus à examiner (0020).
  */
 export function TableauDeBordAdmin({
   stats,
@@ -57,18 +84,47 @@ export function TableauDeBordAdmin({
           value={chiffre(stats.inscritsSemaine)}
           hint={`cette semaine · ${chiffre(stats.inscritsMois)} ce mois (${chiffre(stats.inscritsMoisPrecedent)} le mois dernier)`}
         />
-        <Tuile icon={CrownIcon} tone="attention" label="Utilisateurs payants" value="—" hint="Disponible au lot 2" />
-        <Tuile icon={ArrowDataTransferHorizontalIcon} tone="reussite" label="Taux de conversion" value="—" hint="Disponible au lot 2" />
+        <Tuile icon={CrownIcon} tone="attention" label="Utilisateurs payants" value={chiffre(stats.abonnesActifs)} hint="abonnements actifs" />
+        <Tuile
+          icon={ArrowDataTransferHorizontalIcon}
+          tone="reussite"
+          label="Taux de conversion"
+          value={stats.etudiants > 0 ? `${Math.round((100 * stats.abonnesActifs) / stats.etudiants)} %` : "—"}
+          hint="des étudiants ont un abonnement actif"
+        />
       </div>
 
       <div className={RANGEE}>
-        <Carte titre="Chiffre d’affaires" lot={2} className="flex-[2_1_420px]">
-          <p className="m-0 text-[13px] leading-5 text-discret">Ce mois, au total, et sa courbe mois par mois.</p>
-          <div className={AVENIR}>La courbe apparaîtra avec les premiers paiements.</div>
+        <Carte titre="Chiffre d’affaires" className="flex-[2_1_420px]">
+          <dl className="m-0 flex flex-wrap gap-x-8 gap-y-2">
+            <div>
+              <dt className="text-[13px] leading-5 text-discret">Ce mois</dt>
+              <dd className="m-0 text-2xl leading-8 font-medium text-titre">{montantFcfa(stats.caMois)}</dd>
+            </div>
+            <div>
+              <dt className="text-[13px] leading-5 text-discret">Au total</dt>
+              <dd className="m-0 text-2xl leading-8 font-medium text-titre">{montantFcfa(stats.caTotal)}</dd>
+            </div>
+          </dl>
+          {stats.caParMois.length > 0 && <BarresMois parMois={stats.caParMois} />}
         </Carte>
         <div className="flex min-w-0 flex-[1_1_260px] flex-col gap-5">
-          <Carte titre="Revenus par formule" lot={2}>
-            <p className="m-0 text-[13px] leading-5 text-discret">Basique, Standard et Premium.</p>
+          <Carte titre="Revenus par formule">
+            {stats.revenusParFormule.length === 0 ? (
+              <p className="m-0 text-[13px] leading-5 text-discret">Aucun paiement pour le moment.</p>
+            ) : (
+              <ul className="m-0 flex list-none flex-col gap-3 p-0">
+                {stats.revenusParFormule.map((f) => (
+                  <li key={f.code} className="flex flex-col gap-1.5">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm leading-[22px]">
+                      <span className="font-medium text-encre">{f.nom}</span>
+                      <span className="text-discret">{`${montantFcfa(f.montant)} · ${pluriel(f.nombre, "abonnement")}`}</span>
+                    </div>
+                    <ProgressBar value={stats.caTotal > 0 ? Math.round((100 * f.montant) / stats.caTotal) : 0} label={`Part de ${f.nom}`} />
+                  </li>
+                ))}
+              </ul>
+            )}
           </Carte>
         </div>
       </div>
