@@ -3,7 +3,9 @@ import { demoModeActive } from "@/lib/auth/current-user";
 import { getFiche } from "@/lib/catalogue/data";
 import { versReponse } from "@/lib/communaute/data";
 import type { Reponse } from "@/lib/communaute/types";
-import { estTablesAbsentes, liste, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
+import { estColonneAbsente, estTablesAbsentes, liste, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
+import { cheminsImages, documentLu } from "./document";
+import { signerImages } from "./images";
 import { createClient } from "@/lib/supabase/server";
 import { depuisMultirange } from "@/lib/video/suivi";
 import { lireQuizAPasser } from "@/lib/quiz/data";
@@ -46,6 +48,7 @@ function versLecon(l: Ligne): LeconDetail {
     pointsCles: textes(l.points_cles),
     video: versVideo(contenu),
     texte: texte(contenu?.texte),
+    document: documentLu(contenu?.document),
     ressources: accessible ? [...liste(l.ressources)].sort((a, b) => rangDe(a) - rangDe(b)).map(versRessource) : [],
     visionnage: null,
   };
@@ -94,19 +97,20 @@ export async function getLeconDans(fiche: FicheFormation, leconId: string, conne
   if (!fiche.modules.some((m) => m.lecons.some((l) => l.id === leconId))) return null;
 
   const supabase = await createClient();
-  const ligne = verifier(
-    await supabase
+  const lire = (contenu: string) =>
+    supabase
       .from("lecons")
-      .select(
-        "id, titre, duree_secondes, apercu, resume, points_cles, accessible, " +
-          "lecons_contenus(video_fournisseur, video_id, texte), ressources(id, titre, format, taille_octets, telechargeable, ordre)",
-      )
+      .select(`id, titre, duree_secondes, apercu, resume, points_cles, accessible, lecons_contenus(${contenu}), ressources(id, titre, format, taille_octets, telechargeable, ordre)`)
       .eq("id", leconId)
-      .maybeSingle(),
-  ) as Ligne | null;
+      .maybeSingle();
+  let reponse = await lire("video_fournisseur, video_id, texte, document");
+  // Avant la 0055, la colonne du contenu riche manque : le texte ancien suffit.
+  if (estColonneAbsente(reponse.error)) reponse = await lire("video_fournisseur, video_id, texte");
+  const ligne = verifier(reponse) as Ligne | null;
   if (!ligne) return null;
 
-  const lecon = versLecon(ligne);
+  const lue = versLecon(ligne);
+  const lecon = lue.document ? { ...lue, images: await signerImages(supabase, cheminsImages(lue.document)) } : lue;
   if (!connecte) return { fiche, lecon, note: null, notesDisponibles: true };
   // Un quiz (lot 3) : ses questions à passer, sans les bonnes réponses.
   // Un exercice (lot 3) : son statut et les versions du compte.

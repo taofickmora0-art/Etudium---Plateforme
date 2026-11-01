@@ -184,6 +184,13 @@ export function depuisMarkdown(markdown: string): DocumentLecon {
   return { type: "doc", content: [brut ? { type: "paragraph", content: [{ type: "text", text: brut.slice(0, LIMITES.caracteres) }] } : { type: "paragraph" }] };
 }
 
+/** Un document lu en base : null s'il est absent ou s'il sort de la liste fermée (le texte ancien s'affiche alors). */
+export function documentLu(brut: unknown): DocumentLecon | null {
+  if (brut === null || brut === undefined) return null;
+  const r = validerDocument(brut);
+  return r.ok ? r.document : null;
+}
+
 /** Les chemins des images du document, dans l'ordre. */
 export function cheminsImages(doc: DocumentLecon): string[] {
   const chemins: string[] = [];

@@ -140,7 +140,7 @@ describe("Les lectures des exercices", () => {
     });
     expect(await lireRenduACorriger(R)).toEqual({
       etudiant: "Aïcha Kpadé",
-      exercice: { id: L, titre: "Tableau des ventes", genre: "rendu", consigne: "Créez un **TCD**." },
+      exercice: { id: L, titre: "Tableau des ventes", genre: "rendu", consigne: "Créez un **TCD**.", consigneDocument: null },
       formation: { id: F, titre: "Excel", slug: "excel" },
       module: { titre: "Analyse", rang: 3 },
       version: VERSION_APP,

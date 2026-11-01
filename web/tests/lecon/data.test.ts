@@ -89,6 +89,7 @@ describe("Lecture de la page leçon", () => {
       pointsCles: ["Repérer le ruban", "Nommer une feuille"],
       video: { fournisseur: "youtube", id: "dQw4w9WgXcQ" },
       texte: "Ouvrez Excel.",
+      document: null,
       ressources: [
         { id: "r1", titre: "Classeur d’exemple", format: XLSX, tailleOctets: 84_000, telechargeable: true },
         { id: "r2", titre: "Guide de l’interface", format: "application/pdf", tailleOctets: 1_200_000, telechargeable: false },

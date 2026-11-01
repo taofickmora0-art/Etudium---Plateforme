@@ -1,3 +1,4 @@
+import type { DocumentLecon } from "./document";
 import type { Video } from "@/lib/video/plateformes";
 import type { Reponse } from "@/lib/communaute/types";
 import type { FicheFormation } from "@/lib/catalogue/types";
@@ -33,6 +34,10 @@ export type LeconDetail = {
   /** Vides sans accès à la leçon. */
   video: VideoLecon | null;
   texte: string;
+  /** Le contenu riche (0055) ; absent ou null : le texte ancien s'affiche. */
+  document?: DocumentLecon | null;
+  /** Le lien signé de chaque image du contenu riche. */
+  images?: Record<string, string>;
   ressources: RessourceLecon[];
   /** Null pour un visiteur, une leçon fermée, ou sans la table du visionnage. */
   visionnage: VisionnageLecon | null;

@@ -10,7 +10,7 @@ import type { DonneesLecon } from "@/lib/lecon/types";
 import { DansCetteLecon } from "./DansCetteLecon";
 import { EnTeteLecon } from "./EnTeteLecon";
 import { LeconVerrouillee } from "./LeconVerrouillee";
-import { TexteMisEnForme } from "@/components/communaute/TexteMisEnForme";
+import { aUnContenuEcrit, ContenuEcrit } from "./ContenuEcrit";
 import type { MoiCommunaute } from "@/lib/communaute/types";
 import { BandeauApercu, type Apercu } from "./BandeauApercu";
 import { DiscussionsLecon } from "./DiscussionsLecon";
@@ -109,8 +109,8 @@ export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lie
         ))
       )}
       <EnTeteLecon fiche={fiche} lecon={lecon} lienModifier={lienModifier} />
-      {/* Le texte mis en forme dans l'éditeur de leçon (titres, gras, listes, liens), comme les publications. */}
-      {ouverte && lecon.texte && <TexteMisEnForme texte={lecon.texte} className="text-[15px] leading-6 text-texte max-sm:text-sm max-sm:leading-[22px]" />}
+      {/* Le contenu écrit dans l'éditeur de leçon : riche (fin du lot 4), ou le texte ancien mis en forme. */}
+      {ouverte && <ContenuEcrit document={lecon.document} images={lecon.images} texte={lecon.texte} />}
       <NavigationLecon fiche={fiche} leconId={lecon.id} />
       <div aria-hidden="true" className="h-px bg-separateur max-lg:hidden" />
       <div className="flex flex-wrap items-start gap-8">
@@ -226,8 +226,8 @@ function ContenuExercice({ donnees, connecte, apercu = null, moi = null, lienMod
       {lecon.accessible && (
         <section aria-label="Consigne" className="flex min-w-0 flex-col gap-3 rounded-carte border border-bordure-carte bg-panneau p-6 max-sm:p-4">
           <h2 className="m-0 text-lg leading-7 font-semibold text-encre max-sm:text-base">Consigne</h2>
-          {lecon.texte ? (
-            <TexteMisEnForme texte={lecon.texte} className="text-[15px] leading-6 text-texte max-sm:text-sm max-sm:leading-[22px]" />
+          {aUnContenuEcrit(lecon) ? (
+            <ContenuEcrit document={lecon.document} images={lecon.images} texte={lecon.texte} />
           ) : (
             <p className="m-0 text-sm leading-[22px] text-discret">La consigne arrive bientôt.</p>
           )}

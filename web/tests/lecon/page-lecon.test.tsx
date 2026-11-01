@@ -48,6 +48,15 @@ const donnees = (lecon: Partial<LeconDetail>, fiche = EXCEL_OUVERTE): DonneesLec
 });
 
 describe("Page leçon : contenu", () => {
+  it("une leçon au contenu riche l'affiche ; une leçon ancienne garde son texte mis en forme (fin du lot 4)", () => {
+    const { unmount } = render(<ContenuLecon donnees={donnees({ texte: "Étape 1 Sauvegardez avant.", document: { type: "doc", content: [{ type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Étape 1" }] }, { type: "encadre", attrs: { ton: "attention" }, content: [{ type: "paragraph", content: [{ type: "text", text: "Sauvegardez avant." }] }] }] }, images: {} })} connecte />);
+    expect(screen.getByRole("heading", { level: 2, name: "Étape 1" })).toBeInTheDocument();
+    expect(screen.getByRole("note", { name: "Attention" })).toHaveTextContent("Sauvegardez avant.");
+    unmount();
+    render(<ContenuLecon donnees={donnees({ texte: "**Ancien** texte" })} connecte />);
+    expect(screen.getByText("Ancien").tagName).toBe("STRONG");
+  });
+
   it("un compte connecté suit la leçon : titre, vidéo, voisines, onglets et « Dans cette leçon »", () => {
     render(<ContenuLecon donnees={donnees({})} connecte />);
     expect(screen.getByRole("heading", { level: 1, name: "Saisir et mettre en forme des données" })).toBeInTheDocument();

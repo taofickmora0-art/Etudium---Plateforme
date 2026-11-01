@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download04Icon } from "@hugeicons/core-free-icons";
-import { TexteMisEnForme } from "@/components/communaute/TexteMisEnForme";
+import { aUnContenuEcrit, ContenuEcrit } from "@/components/lecon/ContenuEcrit";
 import { HistoriqueRendus, TONS_STATUT } from "@/components/exercices/HistoriqueRendus";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
@@ -166,8 +166,13 @@ export function CorrectionRendu({ rendu }: { rendu: RenduACorriger }) {
       <div className="flex min-w-0 flex-col gap-6">
         <section aria-label="Consigne" className={CARTE}>
           <h2 className="m-0 text-base leading-6 font-semibold text-encre">Consigne</h2>
-          {rendu.exercice.consigne ? (
-            <TexteMisEnForme texte={rendu.exercice.consigne} className="text-sm leading-[22px] text-texte" />
+          {aUnContenuEcrit({ document: rendu.exercice.consigneDocument, texte: rendu.exercice.consigne }) ? (
+            <ContenuEcrit
+              document={rendu.exercice.consigneDocument}
+              images={rendu.images}
+              texte={rendu.exercice.consigne}
+              className="text-sm leading-[22px] text-texte"
+            />
           ) : (
             <p className="m-0 text-sm leading-[22px] text-discret">Pas de consigne écrite.</p>
           )}

@@ -1,4 +1,5 @@
 import { liste, texte, un } from "@/lib/contenus/lecture";
+import { documentLu } from "@/lib/lecon/document";
 import type { CorrectionAFaire, ExerciceEtudiant, ExerciceListe, GenreExercice, RenduACorriger, StatutRendu, VersionRendu } from "./types";
 
 // Les réponses des fonctions de la 0032, converties pour l'appli.
@@ -73,7 +74,7 @@ export function versRenduACorriger(data: unknown): RenduACorriger | null {
   const section = un(brut.module) ?? {};
   return {
     etudiant: texte(brut.etudiant),
-    exercice: { id: texte(exercice.id), titre: texte(exercice.titre), genre: versGenre(exercice.genre), consigne: texte(exercice.consigne) },
+    exercice: { id: texte(exercice.id), titre: texte(exercice.titre), genre: versGenre(exercice.genre), consigne: texte(exercice.consigne), consigneDocument: documentLu(exercice.consigne_document) },
     formation: { id: texte(formation.id), titre: texte(formation.titre), slug: texte(formation.slug) },
     module: { titre: texte(section.titre), rang: nombre(section.rang) },
     version: versVersion(un(brut.version) ?? {}),

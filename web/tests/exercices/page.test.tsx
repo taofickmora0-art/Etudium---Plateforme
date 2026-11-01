@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import type { FicheFormation } from "@/lib/catalogue/types";
@@ -79,6 +79,14 @@ describe("La page d'un exercice", () => {
     expect(screen.getByRole("link", { name: "Modifier l’exercice" })).toHaveAttribute("href", "/admin/formations/f1/lecons/e");
     expect(screen.queryByRole("button", { name: /Terminer la leçon/ })).toBeNull();
     expect(ouvrirLecon).not.toHaveBeenCalled();
+  });
+
+  it("la consigne riche (fin du lot 4)", () => {
+    const d = donnees();
+    afficher({ ...d, lecon: { ...d.lecon, document: { type: "doc", content: [{ type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Étape 1" }] }, { type: "encadre", attrs: { ton: "attention" }, content: [{ type: "paragraph", content: [{ type: "text", text: "Sauvegardez avant." }] }] }] }, images: {} } });
+    const consigne = screen.getByRole("region", { name: "Consigne" });
+    expect(within(consigne).getByRole("heading", { name: "Étape 1" })).toBeInTheDocument();
+    expect(within(consigne).getByRole("note", { name: "Attention" })).toBeInTheDocument();
   });
 
   it("un visiteur est invité à se connecter ; un exercice illisible (avant la 0032) le dit", () => {

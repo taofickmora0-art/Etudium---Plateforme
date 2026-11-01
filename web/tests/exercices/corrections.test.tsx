@@ -100,6 +100,13 @@ describe("Corriger un travail", () => {
     expect(within(screen.getByRole("list", { name: "Historique des rendus" })).getAllByRole("listitem")).toHaveLength(2);
   });
 
+  it("la consigne riche (fin du lot 4)", () => {
+    afficher({ ...RENDU, exercice: { ...RENDU.exercice, consigneDocument: { type: "doc", content: [{ type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Étape 1" }] }, { type: "encadre", attrs: { ton: "attention" }, content: [{ type: "paragraph", content: [{ type: "text", text: "Sauvegardez avant." }] }] }] } }, images: {} });
+    const consigne = screen.getByRole("region", { name: "Consigne" });
+    expect(within(consigne).getByRole("heading", { name: "Étape 1" })).toBeInTheDocument();
+    expect(within(consigne).getByRole("note", { name: "Attention" })).toHaveTextContent("Sauvegardez avant.");
+  });
+
   it("« Demander une correction » exige une remarque ; « Envoyer la demande » ; « Remarque envoyée »", async () => {
     const user = userEvent.setup();
     afficher();

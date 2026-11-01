@@ -1,3 +1,4 @@
+import type { DocumentLecon } from "@/lib/lecon/document";
 // Les exercices (lot 3, étape B ; migration 0032) : un élément du programme, de type « exercice ».
 
 export type GenreExercice = "simple" | "rendu";
@@ -59,7 +60,9 @@ export type CorrectionAFaire = {
 /** Un travail à corriger, avec l'exercice et l'historique de l'étudiant. */
 export type RenduACorriger = {
   etudiant: string;
-  exercice: { id: string; titre: string; genre: GenreExercice; consigne: string };
+  exercice: { id: string; titre: string; genre: GenreExercice; consigne: string; consigneDocument?: DocumentLecon | null };
+  /** Le lien signé de chaque image de la consigne riche (0055). */
+  images?: Record<string, string>;
   formation: { id: string; titre: string; slug: string };
   module: { titre: string; rang: number };
   version: VersionRendu;

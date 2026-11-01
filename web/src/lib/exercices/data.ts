@@ -1,4 +1,6 @@
 import { estFonctionAbsente, liste, un } from "@/lib/contenus/lecture";
+import { cheminsImages } from "@/lib/lecon/document";
+import { signerImages } from "@/lib/lecon/images";
 import { createClient } from "@/lib/supabase/server";
 import type { Lecture } from "@/lib/utilisateurs/types";
 import { MIGRATION_EXERCICES, versCorrection, versExercice, versExerciceListe, versRenduACorriger, versStatut } from "./conversion";
@@ -61,5 +63,7 @@ export async function lireRenduACorriger(renduId: string): Promise<RenduACorrige
     if (estFonctionAbsente(error)) return null;
     throw new Error(`Lecture du travail impossible : ${error.message ?? error.code}`);
   }
-  return versRenduACorriger(data);
+  const rendu = versRenduACorriger(data);
+  if (!rendu?.exercice.consigneDocument) return rendu;
+  return { ...rendu, images: await signerImages(supabase, cheminsImages(rendu.exercice.consigneDocument)) };
 }
