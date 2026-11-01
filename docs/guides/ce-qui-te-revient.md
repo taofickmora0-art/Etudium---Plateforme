@@ -1125,3 +1125,18 @@ Les notifications de l'appli partent aussi en **push** sur les appareils qui l'o
    - « Notifications push » est un réglage du compte : l'éteindre sur un appareil coupe le push partout ; se déconnecter désabonne l'appareil (un téléphone prêté ne reçoit plus rien) ;
    - la file se vide quand quelqu'un ouvre une page (la cloche), envoie un message ou une annonce, suspend ou réactive un compte, ou quand un paiement est confirmé ; un envoi de plus de 24 heures est abandonné ;
    - en ligne, ajoute les mêmes variables dans les réglages de l'hébergeur (avec `NEXT_PUBLIC_SITE_URL` = l'adresse du site, pour les liens des e-mails).
+
+## 60. Désactiver une formation (lot 5, étape C), 10 minutes
+
+L'équipe peut **désactiver** une formation publiée : plus aucun étudiant n'y a accès, tout de suite (leçons, quiz, exercices, validation). Elle disparaît du catalogue, de la recherche et de l'accueil ; elle reste dans « Mes formations » de ceux qui l'ont commencée, avec l'étiquette « Indisponible ». Progression, certificats et avis sont gardés ; les certificats déjà délivrés restent vérifiables. **Réactiver** la remet « Publiée » : les accès reviennent. Dans les deux cas, les étudiants qui la suivent sont prévenus (notification, push et e-mail), et son formateur aussi.
+
+1. **La migration** `web/supabase/migrations/0059_desactivation_formations.sql`, dans l'éditeur SQL de Supabase, après la 0058.
+2. **Tester** avec une formation de test publiée et un compte étudiant qui en a ouvert une leçon :
+   - back-office › la formation › onglet « Publication » › « Désactiver » : la fenêtre dit combien d'étudiants la suivent ; confirme ;
+   - côté étudiant : la formation n'est plus au catalogue ; dans « Mes formations », la carte dit « Indisponible » ; la cloche montre « « … » est momentanément indisponible » ;
+   - côté formateur : l'onglet « Publication » dit « Désactivée par l'équipe Étudium » (il ne peut pas la réactiver) ;
+   - back-office › « Réactiver » : la formation revient, l'étudiant reprend là où il en était.
+3. **Bon à savoir :**
+   - seule une formation publiée se désactive ; une formation désactivée se réactive (pour l'archiver, réactive-la d'abord) ;
+   - le filtre « Désactivées » de la liste des formations les retrouve ;
+   - réactiver ne crée pas de nouvelle version dans l'historique (le contenu n'a pas changé).
