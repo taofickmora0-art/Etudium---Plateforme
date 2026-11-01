@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HeaderActions } from "@/components/layout/HeaderActions";
 import { signOut } from "@/lib/auth/actions";
+import { desabonnerPush } from "@/lib/envois/abonnement-push";
+import { retirerAppareil } from "@/lib/envois/actions";
 import { loadFullPage } from "@/lib/full-page";
 import { DEMO_USER } from "@/lib/demo-user";
 
@@ -14,6 +16,8 @@ vi.mock("next/navigation", async (original) => ({
 }));
 vi.mock("@/lib/auth/actions", () => ({ signOut: vi.fn() }));
 vi.mock("@/lib/full-page", () => ({ loadFullPage: vi.fn() }));
+vi.mock("@/lib/envois/abonnement-push", () => ({ desabonnerPush: vi.fn() }));
+vi.mock("@/lib/envois/actions", () => ({ retirerAppareil: vi.fn() }));
 // La cloche se charge par une action du serveur (migration 0016) : sans base ici, elle reste vide.
 vi.mock("@/lib/notifications/actions", () => ({ chargerCloche: async () => null, marquerLues: async () => ({ ok: true }) }));
 
@@ -29,6 +33,8 @@ describe("Actions de l'en-tête", () => {
   beforeEach(() => {
     vi.mocked(signOut).mockReset();
     vi.mocked(loadFullPage).mockReset();
+    vi.mocked(desabonnerPush).mockReset().mockResolvedValue(null);
+    vi.mocked(retirerAppareil).mockReset().mockResolvedValue({ ok: true });
   });
 
   it("la photo de profil s'affiche dans le rond de l'en-tête", () => {
@@ -50,6 +56,30 @@ describe("Actions de l'en-tête", () => {
     await user.click(screen.getByRole("button", { name: "Se déconnecter" }));
     expect(signOut).toHaveBeenCalledOnce();
     expect(fenetre).not.toBeInTheDocument();
+  });
+
+  it("relecture (1) : se déconnecter désabonne d'abord cet appareil du push et le retire du compte (appareil partagé)", async () => {
+    vi.mocked(signOut).mockResolvedValue(undefined);
+    vi.mocked(desabonnerPush).mockResolvedValue("https://fcm.googleapis.com/fcm/send/abc");
+    const user = await ouvrirDeconnexion();
+    await user.click(screen.getByRole("button", { name: "Se déconnecter" }));
+    expect(retirerAppareil).toHaveBeenCalledWith("https://fcm.googleapis.com/fcm/send/abc");
+    expect(vi.mocked(retirerAppareil).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(signOut).mock.invocationCallOrder[0]);
+    expect(loadFullPage).toHaveBeenCalledWith("/connexion");
+  });
+
+  it("relecture (1) : sans abonnement, ou si le retrait échoue, la déconnexion se fait quand même", async () => {
+    vi.mocked(signOut).mockResolvedValue(undefined);
+    const user = await ouvrirDeconnexion();
+    await user.click(screen.getByRole("button", { name: "Se déconnecter" }));
+    expect(retirerAppareil).not.toHaveBeenCalled();
+    expect(signOut).toHaveBeenCalledOnce();
+    vi.mocked(desabonnerPush).mockResolvedValue("https://fcm.googleapis.com/fcm/send/abc");
+    vi.mocked(retirerAppareil).mockRejectedValue(new Error("réseau"));
+    await user.click(screen.getByRole("button", { name: "Mon profil" }));
+    await user.click(screen.getByRole("menuitem", { name: "Se déconnecter" }));
+    await user.click(screen.getByRole("button", { name: "Se déconnecter" }));
+    expect(signOut).toHaveBeenCalledTimes(2);
   });
 
   it("après la déconnexion, la page de connexion est entièrement rechargée (rien du compte ne reste en mémoire)", async () => {

@@ -53,6 +53,12 @@ describe("L'envoi par Resend", () => {
     expect(JSON.parse(init.body)).toEqual({ from: config.expediteur, to: ["a@exemple.com"], subject: "Paiement reçu", html: "<p>Bonjour</p>", text: "Bonjour" });
   });
 
+  it("relecture (5) : avec l'adresse de l'équipe, les réponses vont à l'équipe", async () => {
+    const f = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+    await envoyerEmail({ ...config, reponse: "equipe@etudium.app" }, message, f);
+    expect(JSON.parse(f.mock.calls[0][1].body)).toMatchObject({ reply_to: "equipe@etudium.app" });
+  });
+
   it("un refus de Resend ou une panne du réseau : échec avec un message lisible", async () => {
     const refus = vi.fn().mockResolvedValue(new Response(JSON.stringify({ message: "Invalid `to` field" }), { status: 422 }));
     expect(await envoyerEmail(config, message, refus)).toEqual({ ok: false, erreur: "Resend 422 : Invalid `to` field" });

@@ -17,7 +17,14 @@ export async function envoyerEmail(config: ConfigEmail, m: MessageEmail, f: type
         "Content-Type": "application/json",
         ...(m.idempotence ? { "Idempotency-Key": m.idempotence } : {}),
       },
-      body: JSON.stringify({ from: config.expediteur, to: [m.a], subject: m.sujet, html: m.html, text: m.texte }),
+      body: JSON.stringify({
+        from: config.expediteur,
+        to: [m.a],
+        subject: m.sujet,
+        html: m.html,
+        text: m.texte,
+        ...(config.reponse ? { reply_to: config.reponse } : {}),
+      }),
       signal: AbortSignal.timeout(10_000),
     });
     if (reponse.ok) return { ok: true };

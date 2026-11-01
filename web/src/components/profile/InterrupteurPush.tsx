@@ -24,8 +24,11 @@ export function InterrupteurPush({ actif, onChange }: { actif: boolean; onChange
   useEffect(() => {
     if (etat !== "possible") return;
     let vivant = true;
-    void abonnementCourant().then((adresse) => {
-      if (vivant) setAbonne(adresse !== null);
+    void abonnementCourant().then((abonnement) => {
+      if (!vivant) return;
+      setAbonne(abonnement !== null);
+      // Rattaché au compte connecté : un autre compte a pu s'abonner sur cet appareil sans s'être déconnecté.
+      if (abonnement) void enregistrerAppareil(abonnement).catch(() => null);
     });
     return () => {
       vivant = false;

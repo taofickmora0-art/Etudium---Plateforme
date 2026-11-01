@@ -135,11 +135,18 @@ describe("L'interrupteur des notifications push", () => {
     expect(interrupteur()).not.toBeChecked();
   });
 
+  it("relecture (1) : cet appareil abonné est rattaché au compte connecté à l'ouverture (un autre compte s'y était abonné)", async () => {
+    navigateur({ permission: "granted", abonne: true });
+    render(<InterrupteurPush actif onChange={vi.fn()} />);
+    await waitFor(() => expect(enregistrerAppareil).toHaveBeenCalledWith({ adresse: ADRESSE, p256dh: "cle-p256dh", auth: "cle-auth" }));
+  });
+
   it("préférence active mais cet appareil pas abonné : éteint (il ne reçoit rien)", async () => {
     navigateur({ permission: "granted" });
     render(<InterrupteurPush actif onChange={vi.fn()} />);
     await waitFor(() => expect(interrupteur()).toBeEnabled());
     expect(interrupteur()).not.toBeChecked();
+    expect(enregistrerAppareil).not.toHaveBeenCalled();
   });
 
   it("autorisation refusée à la demande : le message du refus, rien d'enregistré", async () => {

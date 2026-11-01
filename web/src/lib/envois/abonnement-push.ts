@@ -40,11 +40,13 @@ export function octetsDeCle(cle: string): Uint8Array {
 
 const memesOctets = (a: ArrayBuffer | null | undefined, b: Uint8Array) => !!a && a.byteLength === b.length && new Uint8Array(a).every((x, i) => x === b[i]);
 
-/** L'adresse de l'abonnement de cet appareil, s'il en a un. */
-export async function abonnementCourant(): Promise<string | null> {
+/** L'abonnement de cet appareil (adresse et clés), s'il en a un. */
+export async function abonnementCourant(): Promise<AppareilNavigateur | null> {
   try {
     const enregistrement = await window.navigator.serviceWorker?.getRegistration("/");
-    return (await enregistrement?.pushManager.getSubscription())?.endpoint ?? null;
+    const abonnement = await enregistrement?.pushManager.getSubscription();
+    const keys = abonnement?.toJSON().keys;
+    return abonnement && keys?.p256dh && keys.auth ? { adresse: abonnement.endpoint, p256dh: keys.p256dh, auth: keys.auth } : null;
   } catch {
     return null;
   }

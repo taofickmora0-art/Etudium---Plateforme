@@ -2,10 +2,11 @@
 // - ENVOIS_JETON : le jeton du serveur, affiché une fois à la fin de la migration 0058 (la base n'en garde que l'empreinte) ;
 // - NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUJET : les notifications push (VAPID_SUJET = mailto:… ou https://…) ;
 // - RESEND_API_KEY, EMAIL_EXPEDITEUR : les e-mails importants (« Étudium <equipe@domaine> », domaine vérifié chez Resend) ;
+// - EMAIL_REPONSE (facultatif) : l'adresse de l'équipe qui reçoit les réponses (un compte suspendu répond à l'e-mail) ;
 // - NEXT_PUBLIC_SITE_URL : l'adresse du site, pour les liens absolus des e-mails.
 
 export type ConfigPush = { publique: string; privee: string; sujet: string };
-export type ConfigEmail = { cle: string; expediteur: string };
+export type ConfigEmail = { cle: string; expediteur: string; reponse?: string | null };
 export type ConfigEnvois = { jeton: string; push: ConfigPush | null; email: ConfigEmail | null; site: string };
 
 const lire = (env: Record<string, string | undefined>, nom: string) => env[nom]?.trim() || null;
@@ -22,7 +23,7 @@ export function configurationEnvois(env: Record<string, string | undefined> = pr
   return {
     jeton,
     push: publique && privee && sujet ? { publique, privee, sujet } : null,
-    email: cle && expediteur ? { cle, expediteur } : null,
+    email: cle && expediteur ? { cle, expediteur, reponse: lire(env, "EMAIL_REPONSE") } : null,
     site: (lire(env, "NEXT_PUBLIC_SITE_URL") ?? "http://localhost:3000").replace(/\/+$/, ""),
   };
 }

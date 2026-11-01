@@ -11,7 +11,7 @@ vi.mock("@/lib/auth/current-user", () => ({ getShellUser: () => getShellUser(), 
 
 const { enregistrerAppareil, retirerAppareil } = await import("@/lib/envois/actions");
 
-const APPAREIL = { adresse: "https://push.exemple/abc", p256dh: "B" + "x".repeat(86), auth: "a".repeat(22) };
+const APPAREIL = { adresse: "https://fcm.googleapis.com/fcm/send/abc", p256dh: "B" + "x".repeat(86), auth: "a".repeat(22) };
 const ECHEC = "Cet appareil n’a pas pu être enregistré. Réessayez.";
 
 beforeEach(() => {
@@ -27,7 +27,10 @@ describe("Les appareils du push", () => {
 
   it("refusé sans session, ou avec une adresse qui n'est pas en https ou trop longue, sans appel", async () => {
     expect(await enregistrerAppareil({ ...APPAREIL, adresse: "http://push.exemple/abc" })).toEqual({ ok: false, message: ECHEC });
-    expect(await enregistrerAppareil({ ...APPAREIL, adresse: "https://push.exemple/" + "x".repeat(1000) })).toEqual({ ok: false, message: ECHEC });
+    expect(await enregistrerAppareil({ ...APPAREIL, adresse: "https://fcm.googleapis.com/fcm/send/" + "x".repeat(1000) })).toEqual({ ok: false, message: ECHEC });
+    // Relecture (4) : seules les adresses des services de push ; jamais un serveur choisi par le compte.
+    expect(await enregistrerAppareil({ ...APPAREIL, adresse: "https://intranet.exemple/x" })).toEqual({ ok: false, message: ECHEC });
+    expect(await enregistrerAppareil({ ...APPAREIL, adresse: "https://fcm.googleapis.com.ailleurs.exemple/x" })).toEqual({ ok: false, message: ECHEC });
     expect(await enregistrerAppareil({ ...APPAREIL, auth: "" })).toEqual({ ok: false, message: ECHEC });
     getShellUser.mockResolvedValue(null);
     expect(await enregistrerAppareil(APPAREIL)).toEqual({ ok: false, message: SESSION_EXPIREE });

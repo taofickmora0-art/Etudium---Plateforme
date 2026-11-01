@@ -19,10 +19,13 @@ create table if not exists public.appareils_push (
   cle_auth text not null,
   cree_le timestamptz not null default now(),
   vu_le timestamptz not null default now(),
-  constraint appareils_push_adresse check (adresse ~ '^https://' and char_length(adresse) <= 1000),
+  constraint appareils_push_adresse check (adresse ~ '^https://(fcm\.googleapis\.com|android\.googleapis\.com|updates\.push\.services\.mozilla\.com|([a-z0-9-]+\.)*push\.apple\.com|([a-z0-9-]+\.)*notify\.windows\.com)/' and char_length(adresse) <= 1000),
   constraint appareils_push_cles check (char_length(cle_p256dh) between 1 and 200 and char_length(cle_auth) between 1 and 100)
 );
 create index if not exists appareils_push_profil on public.appareils_push (profil_id, vu_le desc);
+-- Services de push : Chrome, Edge, Opera, Samsung (Google), Firefox (Mozilla), Safari (Apple), Windows (WNS).
+alter table public.appareils_push drop constraint if exists appareils_push_adresse;
+alter table public.appareils_push add constraint appareils_push_adresse check (adresse ~ '^https://(fcm\.googleapis\.com|android\.googleapis\.com|updates\.push\.services\.mozilla\.com|([a-z0-9-]+\.)*push\.apple\.com|([a-z0-9-]+\.)*notify\.windows\.com)/' and char_length(adresse) <= 1000);
 alter table public.appareils_push enable row level security;
 revoke all on public.appareils_push from anon, authenticated;
 grant select on public.appareils_push to authenticated;
@@ -42,11 +45,13 @@ create table if not exists public.envois (
   essais integer not null default 0,
   prochain_essai timestamptz not null default now(),
   pris_le timestamptz,
+  prise uuid,
   erreur text,
   cree_le timestamptz not null default now(),
   constraint envois_canal check (canal in ('push', 'email')),
   constraint envois_statut check (statut in ('a_envoyer', 'envoye', 'abandonne'))
 );
+alter table public.envois add column if not exists prise uuid;
 create index if not exists envois_a_envoyer on public.envois (prochain_essai) where statut = 'a_envoyer';
 alter table public.envois enable row level security;
 revoke all on public.envois from anon, authenticated;
@@ -249,8 +254,12 @@ as $$
 begin
   if tg_op = 'INSERT' then
     insert into public.envois (canal, destinataire, titre, texte, lien)
-    values ('email', new.profil_id, 'Votre compte Étudium est suspendu', 'Pour en savoir plus, écrivez à l’équipe Étudium depuis la page Aide.', '/aide');
+    values ('email', new.profil_id, 'Votre compte Étudium est suspendu', 'Pour en savoir plus, répondez à cet e-mail : l’équipe Étudium vous lira.', null);
   else
+    -- Le compte est supprimé (la suspension part avec lui) : personne à prévenir.
+    if not exists (select 1 from public.profils where id = old.profil_id) then
+      return null;
+    end if;
     insert into public.envois (canal, destinataire, titre, texte, lien)
     values ('email', old.profil_id, 'Votre compte Étudium est réactivé', 'Vous retrouvez tous vos accès.', '/accueil');
   end if;
@@ -271,6 +280,7 @@ set search_path = ''
 as $$
 declare
   v_resultat jsonb;
+  v_prise uuid := gen_random_uuid();
 begin
   perform public.exiger_jeton_envois(p_jeton);
   -- Plus de 24 heures : trop tard pour prévenir.
@@ -288,13 +298,15 @@ begin
     for update skip locked
   ),
   reserves as (
-    update public.envois e set pris_le = now(), essais = e.essais + 1
+    update public.envois e set pris_le = now(), prise = v_prise, essais = e.essais + 1
     from pris where e.id = pris.id
     returning e.*
   )
   select coalesce(jsonb_agg(
     jsonb_build_object(
       'id', r.id,
+      'prise', r.prise,
+      'cree_le', r.cree_le,
       'canal', r.canal,
       'titre', r.titre,
       'texte', r.texte,
@@ -313,7 +325,8 @@ begin
 end;
 $$;
 
-create or replace function public.terminer_envoi(p_jeton text, p_id bigint, p_reussi boolean, p_erreur text, p_disparus text[])
+drop function if exists public.terminer_envoi(text, bigint, boolean, text, text[]);
+create or replace function public.terminer_envoi(p_jeton text, p_id bigint, p_prise uuid, p_reussi boolean, p_erreur text, p_disparus text[])
 returns void
 language plpgsql
 security definer
@@ -322,8 +335,10 @@ as $$
 begin
   perform public.exiger_jeton_envois(p_jeton);
   delete from public.appareils_push where adresse = any (coalesce(p_disparus, '{}'));
+  -- Seule la prise en cours compte : après 2 minutes, un autre serveur a pu reprendre (et faire) l'envoi.
   if p_reussi then
-    update public.envois set statut = 'envoye', pris_le = null, erreur = null where id = p_id;
+    update public.envois set statut = 'envoye', pris_le = null, erreur = null
+    where id = p_id and statut = 'a_envoyer' and prise = p_prise;
     return;
   end if;
   -- 4 essais au plus : un nouvel essai 1, 5 puis 15 minutes plus tard, puis abandon.
@@ -332,7 +347,7 @@ begin
       pris_le = null,
       erreur = left(coalesce(p_erreur, 'Échec'), 500),
       prochain_essai = now() + case essais when 1 then interval '1 minute' when 2 then interval '5 minutes' else interval '15 minutes' end
-  where id = p_id;
+  where id = p_id and statut = 'a_envoyer' and prise = p_prise;
 end;
 $$;
 
@@ -357,12 +372,12 @@ revoke execute on function public.notifier(uuid[], text, text, text, text, boole
 revoke execute on function public.enregistrer_appareil(text, text, text) from public, anon;
 revoke execute on function public.retirer_appareil(text) from public, anon;
 revoke execute on function public.prendre_envois(text, text[], integer) from public;
-revoke execute on function public.terminer_envoi(text, bigint, boolean, text, text[]) from public;
+revoke execute on function public.terminer_envoi(text, bigint, uuid, boolean, text, text[]) from public;
 grant execute on function public.enregistrer_appareil(text, text, text) to authenticated;
 grant execute on function public.retirer_appareil(text) to authenticated;
 -- Le serveur appelle avec ou sans session : le jeton fait foi.
 grant execute on function public.prendre_envois(text, text[], integer) to anon, authenticated;
-grant execute on function public.terminer_envoi(text, bigint, boolean, text, text[]) to anon, authenticated;
+grant execute on function public.terminer_envoi(text, bigint, uuid, boolean, text, text[]) to anon, authenticated;
 
 commit;
 

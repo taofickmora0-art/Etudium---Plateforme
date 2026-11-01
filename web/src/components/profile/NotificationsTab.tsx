@@ -19,6 +19,8 @@ export function NotificationsTab({ profile }: { profile: ProfileData }) {
   const { toast } = useToast();
   const [prefs, setPrefs] = useState<NotificationPreferences>(profile.preferences);
   const enregistre = useRef(profile.preferences);
+  // Le dernier état voulu : l'interrupteur push répond après l'autorisation du navigateur, avec une fonction reçue avant.
+  const courant = useRef(profile.preferences);
   const aEnvoyer = useRef<NotificationPreferences | null>(null);
   const enCours = useRef(false);
 
@@ -38,6 +40,7 @@ export function NotificationsTab({ profile }: { profile: ProfileData }) {
         enregistre.current = etat;
       } else {
         aEnvoyer.current = null;
+        courant.current = enregistre.current;
         setPrefs(enregistre.current);
         toast({ tone: "erreur", title: "La modification n’a pas été enregistrée.", description: "Vérifiez votre connexion, puis réessayez." });
       }
@@ -46,7 +49,8 @@ export function NotificationsTab({ profile }: { profile: ProfileData }) {
   }
 
   const basculer = (cle: PreferenceKey, valeur: boolean) => {
-    const suivant = { ...prefs, [cle]: valeur };
+    const suivant = { ...courant.current, [cle]: valeur };
+    courant.current = suivant;
     setPrefs(suivant);
     aEnvoyer.current = suivant;
     void envoyer();

@@ -26,6 +26,8 @@ export async function envoyerPush(
   const options: webpush.RequestOptions = {
     vapidDetails: { subject: config.sujet, publicKey: config.publique, privateKey: config.privee },
     TTL: 24 * 60 * 60,
+    // Un service qui ne répond pas ne bloque pas la file.
+    timeout: 10_000,
   };
   const corps = JSON.stringify(charge);
   const resultats = await Promise.allSettled(

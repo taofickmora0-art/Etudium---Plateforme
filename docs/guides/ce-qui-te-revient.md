@@ -1111,14 +1111,17 @@ Les notifications de l'appli partent aussi en **push** sur les appareils qui l'o
 3. **Les e-mails** (ton compte Resend sert déjà au SMTP de Supabase) :
    - sur resend.com › API Keys › « Create API Key » (droit « Sending access ») ; recopie `RESEND_API_KEY=re_…` ;
    - `EMAIL_EXPEDITEUR=Étudium <onboarding@resend.dev>` ;
+   - `EMAIL_REPONSE=` l'adresse de l'équipe qui lira les réponses (facultatif, mais utile : l'e-mail de suspension dit « répondez à cet e-mail ») ;
    - tant que ton domaine n'est pas vérifié chez Resend, les e-mails ne partent que vers **ta propre adresse** (celle du compte Resend) : assez pour tester. Une fois le domaine vérifié : `EMAIL_EXPEDITEUR=Étudium <equipe@ton-domaine>`.
 4. **Redémarre le serveur** (`npm run dev`), puis teste :
    - Profil › Notifications › « Notifications push » : allume-le, accepte l'autorisation du navigateur ;
    - depuis un autre compte, envoie-toi un message (ou publie une annonce) : une notification push s'affiche, un clic ouvre la page ;
-   - au back-office, attribue un abonnement à ton compte de test (celui de l'adresse Resend) : l'e-mail « Votre abonnement … est actif » arrive, avec le bouton « Ouvrir Étudium ».
+   - au back-office, attribue un abonnement à un **compte étudiant** dont l'adresse est celle de ton compte Resend (pas à ton propre compte d'équipe : on ne se notifie pas soi-même) : l'e-mail « Votre abonnement … est actif » arrive, avec le bouton « Ouvrir Étudium » ;
+   - rien n'arrive ? Dans l'éditeur SQL : `select canal, titre, statut, essais, erreur from public.envois order by id desc limit 20;` La colonne `erreur` donne la raison (clé refusée, adresse refusée par Resend, service de push…).
 5. **Bon à savoir :**
    - sans `ENVOIS_JETON`, rien ne part (ni push, ni e-mail) ; sans les clés du push, seuls les e-mails partent ; sans la clé Resend, seul le push part ;
    - l'interrupteur dit « Bientôt disponible » tant que `NEXT_PUBLIC_VAPID_PUBLIC_KEY` est vide ;
    - sur iPhone, le push ne marche que pour Étudium ajouté à l'écran d'accueil (Partager › Sur l'écran d'accueil) ; l'interrupteur le rappelle ;
+   - « Notifications push » est un réglage du compte : l'éteindre sur un appareil coupe le push partout ; se déconnecter désabonne l'appareil (un téléphone prêté ne reçoit plus rien) ;
    - la file se vide quand quelqu'un ouvre une page (la cloche), envoie un message ou une annonce, suspend ou réactive un compte, ou quand un paiement est confirmé ; un envoi de plus de 24 heures est abandonné ;
    - en ligne, ajoute les mêmes variables dans les réglages de l'hébergeur (avec `NEXT_PUBLIC_SITE_URL` = l'adresse du site, pour les liens des e-mails).
