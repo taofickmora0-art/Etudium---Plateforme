@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useRef, useState } from "react";
+import { InterrupteurPush } from "@/components/profile/InterrupteurPush";
 import { Switch } from "@/components/ui/Switch";
 import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
@@ -81,7 +82,11 @@ export function NotificationsTab({ profile }: { profile: ProfileData }) {
           {CHANNELS.map((c, i) => (
             <Fragment key={c.key}>
               {i > 0 && SEPARATEUR}
-              <Switch label={c.label} checked={prefs[c.key]} onCheckedChange={(v) => basculer(c.key, v)} className="min-h-11 py-2.5" />
+              {c.key === "canal_push" ? (
+                <InterrupteurPush actif={prefs.canal_push} onChange={(v) => basculer("canal_push", v)} />
+              ) : (
+                <Switch label={c.label} checked={prefs[c.key]} onCheckedChange={(v) => basculer(c.key, v)} className="min-h-11 py-2.5" />
+              )}
             </Fragment>
           ))}
           {SEPARATEUR}

@@ -8,6 +8,7 @@ import { DEMO_PROFILE } from "@/lib/demo-user";
 import { updatePreferences } from "@/lib/profile/actions";
 
 vi.mock("@/lib/profile/actions", () => ({ updatePreferences: vi.fn() }));
+vi.mock("@/lib/envois/actions", () => ({ enregistrerAppareil: vi.fn(), retirerAppareil: vi.fn() }));
 
 const afficher = () =>
   render(
@@ -27,6 +28,13 @@ describe("Onglet Notifications", () => {
     expect(screen.getByRole("switch", { name: "Messages" })).toHaveAccessibleDescription("Messages de vos formateurs et de l’équipe");
     expect(screen.getByRole("switch", { name: "Sessions live" })).toHaveAccessibleDescription("Programmation et rappels 1 h avant");
     expect(screen.getByText("Toujours actif")).toBeInTheDocument();
+  });
+
+  it("« Notifications push » est l'interrupteur de cet appareil : sans clé publique, « Bientôt disponible » et désactivé", () => {
+    afficher();
+    const push = screen.getByRole("switch", { name: "Notifications push" });
+    expect(push).toHaveAccessibleDescription("Bientôt disponible");
+    expect(push).toBeDisabled();
   });
 
   it("un interrupteur enregistre son nouvel état", async () => {
