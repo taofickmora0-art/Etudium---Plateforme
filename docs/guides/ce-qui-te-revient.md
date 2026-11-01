@@ -1096,3 +1096,29 @@ L'éditeur des leçons écrit maintenant des titres, des listes, des images, des
    - les questions des quiz s'enregistrent avec le bouton « Enregistrer les questions » ;
    - les réglages d'une leçon (commentaires, aperçu gratuit, genre d'exercice) s'enregistrent dès qu'on les coche ;
    - si deux personnes modifient la même leçon en même temps, la seconde voit « Cette leçon vient d’être modifiée par … » et recharge : rien n'est écrasé.
+
+## 59. Notifications push et e-mails importants (lot 5, étape B), 30 minutes
+
+Les notifications de l'appli partent aussi en **push** sur les appareils qui l'ont activé (téléphone, ordinateur). Les messages **importants** partent par **e-mail**, même si l'appli est coupée : paiement reçu (avec le numéro du reçu), rappels avant la fin de l'abonnement, abonnement attribué ou résilié, compte suspendu ou réactivé. Une file d'attente garde chaque envoi : en cas de panne, il est retenté après 1, 5 puis 15 minutes.
+
+1. **La migration** `web/supabase/migrations/0058_push_emails.sql`, dans l'éditeur SQL de Supabase, après la 0057.
+   - Le résultat affiche une ligne `jeton_envois` : **recopie-la tout de suite** dans `web/.env.local` : `ENVOIS_JETON=…` (64 caractères). Elle n'est affichée qu'une fois ; la base n'en garde que l'empreinte.
+   - Jeton perdu : lance `select public.nouveau_jeton_envois();` dans l'éditeur SQL ; recopie le nouveau (l'ancien ne marche plus).
+2. **Le push** : dans un terminal, dans le dossier `web/`, lance `npx web-push generate-vapid-keys`, puis recopie dans `web/.env.local` :
+   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY=` la clé « Public Key » ;
+   - `VAPID_PRIVATE_KEY=` la clé « Private Key » (secrète : ne la partage avec personne) ;
+   - `VAPID_SUJET=mailto:` suivi de ton adresse e-mail (les services de push l'utilisent pour te joindre en cas de souci).
+3. **Les e-mails** (ton compte Resend sert déjà au SMTP de Supabase) :
+   - sur resend.com › API Keys › « Create API Key » (droit « Sending access ») ; recopie `RESEND_API_KEY=re_…` ;
+   - `EMAIL_EXPEDITEUR=Étudium <onboarding@resend.dev>` ;
+   - tant que ton domaine n'est pas vérifié chez Resend, les e-mails ne partent que vers **ta propre adresse** (celle du compte Resend) : assez pour tester. Une fois le domaine vérifié : `EMAIL_EXPEDITEUR=Étudium <equipe@ton-domaine>`.
+4. **Redémarre le serveur** (`npm run dev`), puis teste :
+   - Profil › Notifications › « Notifications push » : allume-le, accepte l'autorisation du navigateur ;
+   - depuis un autre compte, envoie-toi un message (ou publie une annonce) : une notification push s'affiche, un clic ouvre la page ;
+   - au back-office, attribue un abonnement à ton compte de test (celui de l'adresse Resend) : l'e-mail « Votre abonnement … est actif » arrive, avec le bouton « Ouvrir Étudium ».
+5. **Bon à savoir :**
+   - sans `ENVOIS_JETON`, rien ne part (ni push, ni e-mail) ; sans les clés du push, seuls les e-mails partent ; sans la clé Resend, seul le push part ;
+   - l'interrupteur dit « Bientôt disponible » tant que `NEXT_PUBLIC_VAPID_PUBLIC_KEY` est vide ;
+   - sur iPhone, le push ne marche que pour Étudium ajouté à l'écran d'accueil (Partager › Sur l'écran d'accueil) ; l'interrupteur le rappelle ;
+   - la file se vide quand quelqu'un ouvre une page (la cloche), envoie un message ou une annonce, suspend ou réactive un compte, ou quand un paiement est confirmé ; un envoi de plus de 24 heures est abandonné ;
+   - en ligne, ajoute les mêmes variables dans les réglages de l'hébergeur (avec `NEXT_PUBLIC_SITE_URL` = l'adresse du site, pour les liens des e-mails).
