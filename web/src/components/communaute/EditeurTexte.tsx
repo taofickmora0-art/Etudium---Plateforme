@@ -58,7 +58,7 @@ const FENETRE = "z-50 rounded-carte border border-bordure-carte bg-panneau p-3 s
 const actif = "bg-bleu-clair text-bleu enabled:hover:bg-bleu-clair";
 
 /** « Lien » : le texte sélectionné devient cliquable (http ou https) ; sans sélection, l'adresse est insérée comme lien. */
-function BoutonLien({ editor, estActif }: { editor: Editor | null; estActif: boolean }) {
+export function BoutonLien({ editor, estActif }: { editor: Editor | null; estActif: boolean }) {
   const [ouvert, setOuvert] = useState(false);
   const [adresse, setAdresse] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);

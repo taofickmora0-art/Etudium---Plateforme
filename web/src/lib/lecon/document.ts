@@ -70,8 +70,9 @@ const REGLES: Record<string, Regle> = {
   horizontalRule: {},
   table: { enfants: ["tableRow"], plein: true },
   tableRow: { enfants: ["tableHeader", "tableCell"], plein: true },
-  tableHeader: { attrs: CELLULE, enfants: ["paragraph"], plein: true },
-  tableCell: { attrs: CELLULE, enfants: ["paragraph"], plein: true },
+  // L'alignement d'une cellule (ajouté par l'éditeur, jamais réglé ici) n'est pas gardé.
+  tableHeader: { attrs: CELLULE, ignores: ["align"], enfants: ["paragraph"], plein: true },
+  tableCell: { attrs: CELLULE, ignores: ["align"], enfants: ["paragraph"], plein: true },
   hardBreak: {},
 };
 
@@ -88,7 +89,7 @@ function marques(brut: unknown): MarqueDoc[] {
     }
     if (m.type === "link" && estObjet(m.attrs)) {
       const { href, ...reste } = m.attrs;
-      if (Object.keys(reste).some((k) => !["target", "rel", "class"].includes(k))) return refuser();
+      if (Object.keys(reste).some((k) => !["target", "rel", "class", "title"].includes(k))) return refuser();
       if (typeof href !== "string" || !adresseDeLien(href)) return refuser(LIEN);
       return { type: "link", attrs: { href } };
     }

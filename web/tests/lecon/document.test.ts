@@ -59,8 +59,9 @@ describe("Valider un document", () => {
   it("les attributs que l'éditeur ajoute de lui-même (cible du lien, type de liste) sont retirés", () => {
     const r = validerDocument(
       doc(
-        para(texte("lien", [{ type: "link", attrs: { href: "https://a.fr", target: "_blank", rel: "noopener nofollow ugc", class: null } } as never])),
+        para(texte("lien", [{ type: "link", attrs: { href: "https://a.fr", target: "_blank", rel: "noopener nofollow ugc", class: null, title: null } } as never])),
         { type: "orderedList", attrs: { start: 1, type: null }, content: [{ type: "listItem", content: [para(texte("un"))] }] },
+        { type: "table", content: [{ type: "tableRow", content: [{ ...cellule("tableCell", "A"), attrs: { colspan: 1, rowspan: 1, colwidth: null, align: null } }] }] },
       ),
     );
     expect(r).toEqual({
@@ -68,6 +69,7 @@ describe("Valider un document", () => {
       document: doc(
         para(texte("lien", [{ type: "link", attrs: { href: "https://a.fr" } }])),
         { type: "orderedList", attrs: { start: 1 }, content: [{ type: "listItem", content: [para(texte("un"))] }] },
+        { type: "table", content: [{ type: "tableRow", content: [cellule("tableCell", "A")] }] },
       ),
     });
   });
