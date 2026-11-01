@@ -348,9 +348,12 @@ async function enregistrerMonetisation(supabase: Supabase, id: string, parcoursC
   return null;
 }
 
-/** Publier (au moins une leçon), archiver ou republier une formation. */
-export async function setStatutFormation(id: string, statut: "publiee" | "archivee"): Promise<Resultat> {
-  if (!estUuid(id) || (statut !== "publiee" && statut !== "archivee")) return { ok: false, message: ECHEC };
+/**
+ * Publier (au moins une leçon), archiver, republier, désactiver ou réactiver une formation. La base garde les passages
+ * permis (0059 : seule une formation publiée se désactive ; une formation désactivée redevient publiée).
+ */
+export async function setStatutFormation(id: string, statut: "publiee" | "archivee" | "desactivee"): Promise<Resultat> {
+  if (!estUuid(id) || !["publiee", "archivee", "desactivee"].includes(statut)) return { ok: false, message: ECHEC };
   try {
     const garde = await exigerEquipe();
     if ("erreur" in garde) return { ok: false, message: garde.erreur };

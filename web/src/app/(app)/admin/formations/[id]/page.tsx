@@ -12,7 +12,7 @@ import { PublicationPanel } from "@/components/admin/PublicationPanel";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tag } from "@/components/ui/Tag";
-import { getFormationAdmin, listFormateurs, listParcours } from "@/lib/admin/data";
+import { getFormationAdmin, listFormateurs, listParcours, nombreSuiveurs } from "@/lib/admin/data";
 import { competencesAVendre } from "@/lib/catalogue/data";
 import { requireSpace } from "@/lib/auth/require-space";
 import { ETATS, TON_ETAT } from "@/lib/contenus/etat";
@@ -34,7 +34,10 @@ async function FicheFormation({ params, searchParams }: Params) {
   }
   const [formation, parcours, formateurs, { competences, liees }] = donnees;
   if (!formation) notFound();
-  const historique = await ongletHistorique(formation.id);
+  const [historique, suiveurs] = await Promise.all([
+    ongletHistorique(formation.id),
+    formation.statut === "publiee" ? nombreSuiveurs(formation.id) : Promise.resolve(null),
+  ]);
   return (
     <PageAdmin
       titre={formation.titre}
@@ -56,6 +59,7 @@ async function FicheFormation({ params, searchParams }: Params) {
             formation={formation}
             formateurNom={formateurs.find((f) => f.id === formation.formateurId)?.nom ?? null}
             version={historique.version}
+            suiveurs={suiveurs}
           />
         }
         historique={historique.onglet}

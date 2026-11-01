@@ -3,7 +3,7 @@ import { correspondAuFiltre, ETATS, etatFormation, TON_ETAT } from "@/lib/conten
 
 // État affiché d'une formation (spec de l'espace formateur, §2) : le statut enregistré, plus la relecture.
 
-const f = (statut: "brouillon" | "publiee" | "archivee", envoyeeLe: string | null = null, renvoyeeLe: string | null = null) => ({ statut, envoyeeLe, renvoyeeLe });
+const f = (statut: "brouillon" | "publiee" | "archivee" | "desactivee", envoyeeLe: string | null = null, renvoyeeLe: string | null = null) => ({ statut, envoyeeLe, renvoyeeLe });
 
 describe("État d'une formation", () => {
   it("les cinq états", () => {
@@ -12,6 +12,7 @@ describe("État d'une formation", () => {
     expect(etatFormation(f("brouillon", null, "2026-10-13T08:00:00Z"))).toBe("a_corriger");
     expect(etatFormation(f("publiee"))).toBe("publiee");
     expect(etatFormation(f("archivee"))).toBe("archivee");
+    expect(etatFormation(f("desactivee"))).toBe("desactivee");
   });
 
   it("une formation publiée ou archivée garde son état, même si une date de relecture traîne", () => {
@@ -24,8 +25,15 @@ describe("État d'une formation", () => {
   });
 
   it("les libellés et les tons", () => {
-    expect(ETATS).toEqual({ brouillon: "Brouillon", en_attente: "En attente de validation", a_corriger: "À corriger", publiee: "Publiée", archivee: "Archivée" });
-    expect(TON_ETAT).toEqual({ brouillon: "enAttente", en_attente: "populaire", a_corriger: "echoue", publiee: "valide", archivee: "aCorriger" });
+    expect(ETATS).toEqual({
+      brouillon: "Brouillon",
+      en_attente: "En attente de validation",
+      a_corriger: "À corriger",
+      publiee: "Publiée",
+      desactivee: "Désactivée",
+      archivee: "Archivée",
+    });
+    expect(TON_ETAT).toEqual({ brouillon: "enAttente", en_attente: "populaire", a_corriger: "echoue", publiee: "valide", desactivee: "echoue", archivee: "aCorriger" });
   });
 
   it("le filtre du back-office : Brouillons réunit les brouillons et ceux à corriger", () => {
@@ -35,5 +43,7 @@ describe("État d'une formation", () => {
     expect(correspondAuFiltre("en_attente", "en_attente")).toBe(true);
     expect(correspondAuFiltre("publiee", "publiee")).toBe(true);
     expect(correspondAuFiltre("archivee", "publiee")).toBe(false);
+    expect(correspondAuFiltre("desactivee", "desactivee")).toBe(true);
+    expect(correspondAuFiltre("desactivee", "publiee")).toBe(false);
   });
 });

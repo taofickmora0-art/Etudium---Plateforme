@@ -28,7 +28,7 @@ const NOUVELLE = (
   </Button>
 );
 
-const FILTRES: FiltreEtat[] = ["en_attente", "brouillon", "publiee", "archivee"];
+const FILTRES: FiltreEtat[] = ["en_attente", "brouillon", "publiee", "desactivee", "archivee"];
 
 const sousTitre = (f: FormationResume) =>
   [

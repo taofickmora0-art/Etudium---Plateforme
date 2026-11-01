@@ -8,6 +8,7 @@ const OPTIONS = [
   { value: "en_attente", label: "En attente" },
   { value: "brouillon", label: "Brouillons" },
   { value: "publiee", label: "Publiées" },
+  { value: "desactivee", label: "Désactivées" },
   { value: "archivee", label: "Archivées" },
 ];
 

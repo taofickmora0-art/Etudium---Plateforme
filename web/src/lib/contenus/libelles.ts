@@ -1,7 +1,7 @@
 // Valeurs et libellés des contenus du lot 1 (spec du lot 1, §1 Q5 et §4), les mêmes que les types de la migration 0004.
 
 export type Niveau = "debutant" | "intermediaire" | "avance";
-export type StatutFormation = "brouillon" | "publiee" | "archivee";
+export type StatutFormation = "brouillon" | "publiee" | "archivee" | "desactivee";
 export type CouleurParcours = "academique" | "digital" | "business";
 export type Badge = "populaire" | "nouveau";
 
@@ -15,6 +15,7 @@ export const STATUTS: Record<StatutFormation, string> = {
   brouillon: "Brouillon",
   publiee: "Publiée",
   archivee: "Archivée",
+  desactivee: "Désactivée",
 };
 
 export const COULEURS: { value: CouleurParcours; label: string }[] = [

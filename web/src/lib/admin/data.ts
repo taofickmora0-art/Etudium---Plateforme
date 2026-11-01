@@ -286,6 +286,16 @@ const versRessource = (r: Ligne): RessourceAdmin => ({
   ordre: Number(r.ordre ?? 0),
 });
 
+/** Le nombre d'étudiants qui suivent une formation (0059), pour la fenêtre « Désactiver » ; null s'il n'est pas lu. */
+export async function nombreSuiveurs(formationId: string): Promise<number | null> {
+  try {
+    const { data, error } = await (await createClient()).rpc("nombre_suiveurs_formation", { p_formation: formationId });
+    return error || typeof data !== "number" ? null : data;
+  } catch {
+    return null;
+  }
+}
+
 export async function getLeconAdmin(id: string): Promise<LeconAdmin | null> {
   if (demoModeActive() || !estUuid(id)) return null;
   const supabase = await createClient();

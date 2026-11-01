@@ -184,6 +184,7 @@ describe("Relecture au back-office", () => {
       "En attente",
       "Brouillons",
       "Publiées",
+      "Désactivées",
       "Archivées",
     ]);
     await user.click(screen.getByRole("button", { name: "En attente" }));

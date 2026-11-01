@@ -8,18 +8,20 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { deleteFormation, setStatutFormation } from "@/lib/admin/actions";
 import type { FormationAdmin } from "@/lib/admin/types";
+import { texteDesactivation } from "@/lib/admin/desactivation";
 import type { StatutFormation } from "@/lib/contenus/libelles";
 import { dateCourte } from "@/lib/utilisateurs/regles";
 import { ModificationsNonPubliees } from "@/components/editeur/ModificationsNonPubliees";
 import { RenvoyerAuFormateur } from "./RenvoyerAuFormateur";
 
 type Resultat = { ok: boolean; message?: string; redirection?: string };
-type Confirmation = "publier" | "archiver" | "supprimer" | null;
+type Confirmation = "publier" | "archiver" | "desactiver" | "reactiver" | "supprimer" | null;
 
 const EXPLICATION: Record<StatutFormation, string> = {
   brouillon: "Brouillon : visible seulement par l’équipe et par son formateur.",
   publiee: "Publiée : visible dans le catalogue.",
   archivee: "Archivée : retirée du catalogue. Rien n’est supprimé.",
+  desactivee: "Désactivée : plus aucun accès pour les étudiants. Leur progression, leurs certificats et leurs avis sont gardés.",
 };
 
 type Props = {
@@ -29,10 +31,12 @@ type Props = {
   formateurNom: string | null;
   /** La version en ligne (0057) : « Version 8 · aujourd’hui » ; null sans historique. */
   version?: string | null;
+  /** Le nombre d'étudiants qui suivent la formation (0059), pour la fenêtre « Désactiver » ; null s'il n'est pas lu. */
+  suiveurs?: number | null;
 };
 
 /** Ce que l'équipe doit savoir de la relecture (spec de l'espace formateur, §4). */
-function EtatRelecture({ formation, formateurNom }: Omit<Props, "id" | "version">) {
+function EtatRelecture({ formation, formateurNom }: Omit<Props, "id" | "version" | "suiveurs">) {
   if (formation.etat === "en_attente" && formation.envoyeeLe) {
     return (
       <p className="m-0 text-[15px] leading-6 font-medium text-encre">
@@ -54,8 +58,11 @@ function EtatRelecture({ formation, formateurNom }: Omit<Props, "id" | "version"
   return null;
 }
 
-/** Onglet « Publication » : publier, archiver, republier, renvoyer au formateur, ou supprimer un brouillon (spec du lot 1, §10). */
-export function PublicationPanel({ id, formation, formateurNom, version = null }: Props) {
+/**
+ * Onglet « Publication » : publier, archiver, republier, renvoyer au formateur, supprimer un brouillon (spec du lot 1,
+ * §10) ; désactiver ou réactiver une formation publiée (lot 5, étape C).
+ */
+export function PublicationPanel({ id, formation, formateurNom, version = null, suiveurs = null }: Props) {
   const { statut } = formation;
   const router = useRouter();
   const { toast } = useToast();
@@ -92,6 +99,12 @@ export function PublicationPanel({ id, formation, formateurNom, version = null }
             Archiver
           </Button>
         )}
+        {statut === "publiee" && (
+          <Button variant="dangerDoux" onClick={() => ouvrir("desactiver")}>
+            Désactiver
+          </Button>
+        )}
+        {statut === "desactivee" && <Button onClick={() => ouvrir("reactiver")}>Réactiver</Button>}
         {statut === "archivee" && <Button onClick={() => ouvrir("publier")}>Republier</Button>}
         {statut === "brouillon" && (
           <Button variant="dangerDoux" onClick={() => ouvrir("supprimer")}>
@@ -119,6 +132,25 @@ export function PublicationPanel({ id, formation, formateurNom, version = null }
         confirmLabel="Archiver"
         errorMessage={erreur}
         onConfirm={lancer(() => setStatutFormation(id, "archivee"), "Formation archivée")}
+      />
+      <ConfirmDialog
+        open={confirmation === "desactiver"}
+        onOpenChange={fermer}
+        tone="danger"
+        title="Désactiver cette formation ?"
+        description={texteDesactivation(suiveurs)}
+        confirmLabel="Désactiver"
+        errorMessage={erreur}
+        onConfirm={lancer(() => setStatutFormation(id, "desactivee"), "Formation désactivée")}
+      />
+      <ConfirmDialog
+        open={confirmation === "reactiver"}
+        onOpenChange={fermer}
+        title="Réactiver cette formation ?"
+        description="Elle revient dans le catalogue et ses leçons se rouvrent. Les étudiants qui la suivent sont prévenus."
+        confirmLabel="Réactiver"
+        errorMessage={erreur}
+        onConfirm={lancer(() => setStatutFormation(id, "publiee"), "Formation réactivée")}
       />
       <ConfirmDialog
         open={confirmation === "supprimer"}

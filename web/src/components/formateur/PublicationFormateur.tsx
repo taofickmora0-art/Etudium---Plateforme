@@ -66,6 +66,7 @@ export function PublicationFormateur({ id, formation, version = null }: Props) {
         <p className={TEXTE}>{`En ligne depuis le ${dateCourte(formation.publieeLe)}. Vos corrections sont visibles tout de suite.`}</p>
       )}
       {etat === "archivee" && <p className={TEXTE}>Archivée par l’équipe Étudium.</p>}
+      {etat === "desactivee" && <p className={TEXTE}>Désactivée par l’équipe Étudium : les étudiants n’y ont plus accès. Seule l’équipe peut la réactiver.</p>}
 
       {peutEnvoyer && (
         <div className="flex flex-wrap gap-2">

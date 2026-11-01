@@ -190,6 +190,14 @@ describe("Back-office : formations", () => {
     expect(faux.de("formations", "update")[1].valeurs).toEqual({ statut: "archivee" });
   });
 
+  it("lot 5 C : une formation publiée se désactive ; le refus de la base (passage interdit) s'affiche", async () => {
+    expect(await setStatutFormation(F, "desactivee")).toEqual({ ok: true });
+    expect(faux.de("formations", "update")[0].valeurs).toEqual({ statut: "desactivee" });
+    expect(faux.de("modules", "select")).toEqual([]);
+    faux.repondre("formations.update", { error: { code: "P0001", message: "Seule une formation publiée peut être désactivée." } });
+    expect(await setStatutFormation(F, "desactivee")).toEqual({ ok: false, message: "Seule une formation publiée peut être désactivée." });
+  });
+
   it("seul un brouillon s'efface, avec ses fichiers", async () => {
     faux.repondre("formations.select", { data: { statut: "archivee", publiee_le: "2026-10-01T00:00:00Z" } });
     expect(await deleteFormation(F)).toEqual({ ok: false, message: "Une formation publiée s’archive, elle ne s’efface pas." });

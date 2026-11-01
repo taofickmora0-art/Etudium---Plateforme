@@ -5,11 +5,19 @@ const faux = fauxSupabase();
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => faux.client }));
 vi.mock("@/lib/auth/current-user", () => ({ demoModeActive: () => false }));
 
-const { getFormationAdmin, getLeconAdmin, listFormations, listParcours, TablesAbsentesError } = await import("@/lib/admin/data");
+const { getFormationAdmin, getLeconAdmin, listFormations, listParcours, nombreSuiveurs, TablesAbsentesError } = await import("@/lib/admin/data");
 
 describe("Lecture des contenus du back-office", () => {
   beforeEach(() => {
     faux.vider();
+  });
+
+  it("lot 5 C : le nombre d'étudiants qui suivent une formation (0059) ; null si la base ne répond pas", async () => {
+    faux.repondre("rpc.nombre_suiveurs_formation", { data: 12 });
+    expect(await nombreSuiveurs("00000000-0000-4000-8000-000000000001")).toBe(12);
+    expect(faux.de("rpc", "nombre_suiveurs_formation")[0].valeurs).toEqual({ p_formation: "00000000-0000-4000-8000-000000000001" });
+    faux.repondre("rpc.nombre_suiveurs_formation", { error: { code: "PGRST202" } });
+    expect(await nombreSuiveurs("00000000-0000-4000-8000-000000000001")).toBeNull();
   });
 
   it("la formation porte sa couverture (0012) ; sans la colonne, le back-office s'ouvre quand même", async () => {
