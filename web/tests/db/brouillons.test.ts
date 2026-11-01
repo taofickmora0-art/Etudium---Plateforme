@@ -186,4 +186,31 @@ describe("Migration 0056 : les brouillons", () => {
       rpc({ id: F }, "select public.enregistrer_infos_formation($1, $2::jsonb, 0) as r", [BROUILLON_FORMATION, JSON.stringify({ titre: "Word", niveau: "expert" })]),
     ).rejects.toThrow(/niveau/);
   });
+
+  it("relecture (4) : abandonner augmente la révision ; un éditeur resté ouvert sur le brouillon abandonné est en conflit", async () => {
+    const r = (await edition(F, EN_LIGNE)).revision;
+    const brouillon = await enregistrer(F, EN_LIGNE, donnees("Brouillon de F"), r);
+    // L'équipe ouvre le même brouillon…
+    const vue = await edition(S, EN_LIGNE);
+    expect(vue).toMatchObject({ brouillon: true, revision: (brouillon as { revision: number }).revision });
+    // … F l'abandonne, puis repart d'un nouveau brouillon.
+    expect(await abandonner(F, FORMATION, EN_LIGNE)).toBe(1);
+    const apres = await edition(F, EN_LIGNE);
+    expect(apres.revision).toBeGreaterThan(vue.revision);
+    await enregistrer(F, EN_LIGNE, donnees("Nouveau travail de F"), apres.revision);
+    // L'équipe, restée sur l'ancien brouillon, n'écrase rien.
+    expect(await enregistrer(S, EN_LIGNE, donnees("Version périmée"), vue.revision)).toMatchObject({ etat: "conflit" });
+    expect(await edition(F, EN_LIGNE)).toMatchObject({ donnees: { titre: "Nouveau travail de F" } });
+    await abandonner(F, FORMATION);
+  });
+
+  it("relecture (7) : une image d'une autre formation est refusée avec un message clair", async () => {
+    const r = (await edition(F, CACHEE)).revision;
+    const ailleurs = `${randomUUID()}/${randomUUID()}.webp`;
+    const ici = `${FORMATION}/${randomUUID()}.webp`;
+    const avecImage = (chemin: string) =>
+      donnees("Avec image", "x", { document: { type: "doc", content: [{ type: "imageLecon", attrs: { chemin, alt: "", legende: "" } }] } });
+    await expect(enregistrer(F, CACHEE, avecImage(ailleurs), r)).rejects.toThrow(/autre formation/);
+    expect(await enregistrer(F, CACHEE, avecImage(ici), r)).toMatchObject({ etat: "enregistre" });
+  });
 });

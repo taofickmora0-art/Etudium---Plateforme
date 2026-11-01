@@ -159,4 +159,24 @@ describe("Migration 0057 : l'historique des versions", () => {
     }
     expect(await banc.en({ id: E }, "select id from public.versions_formations")).toEqual([]);
   });
+
+  it("relecture (5) : une leçon supprimée revient même si une autre leçon porte le même titre ; une seconde restauration ne la double pas", async () => {
+    const m3 = (await un<{ id: string }>("insert into public.modules (formation_id, titre, ordre) values ($1, 'Module 3', 10) returning id", [FORMATION])).id;
+    const m4 = (await un<{ id: string }>("insert into public.modules (formation_id, titre, ordre) values ($1, 'Module 4', 11) returning id", [FORMATION])).id;
+    for (const m of [m3, m4]) {
+      const id = (await un<{ id: string }>("insert into public.lecons (module_id, titre, publiee, ordre) values ($1, 'Introduction', false, 1) returning id", [m])).id;
+      await banc.db.query("insert into public.lecons_contenus (lecon_id, texte) values ($1, 'Intro')", [id]);
+    }
+    const intro4 = (await un<{ id: string }>("select id from public.lecons where module_id = $1", [m4])).id;
+    // Publier puis retirer l'introduction du module 4 : deux versions, dont la première la contient publiée.
+    await banc.en({ id: F }, "update public.lecons set publiee = true where id = $1", [intro4]);
+    const avec = (await versions())[0];
+    await banc.en({ id: F }, "delete from public.lecons where id = $1", [intro4]);
+    const r = await restaurer(F, avec.id);
+    expect(r.lecons_recreees).toBe(1);
+    expect(await un("select count(*)::int as n from public.lecons where module_id = $1 and titre = 'Introduction'", [m4])).toEqual({ n: 1 });
+    // Restaurer encore : la leçon recréée est reconnue, rien n'est doublé.
+    expect((await restaurer(F, avec.id)).lecons_recreees).toBe(0);
+    expect(await un("select count(*)::int as n from public.lecons where module_id = $1 and titre = 'Introduction'", [m4])).toEqual({ n: 1 });
+  });
 });

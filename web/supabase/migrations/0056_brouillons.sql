@@ -383,6 +383,12 @@ begin
   v_d := public.donnees_lecon_valides(p_donnees);
   select * into v_l from public.lecons l where l.id = p_lecon for update;
   v_formation := public.formation_de_la_lecon(p_lecon);
+  if exists (
+    select 1 from jsonb_path_query(coalesce(v_d -> 'document', 'null'::jsonb), 'lax $.**.chemin') c
+    where jsonb_typeof(c) = 'string' and split_part(c #>> '{}', '/', 1) <> v_formation::text
+  ) then
+    raise exception 'Une image vient d’une autre formation : ajoutez-la de nouveau dans cette leçon.';
+  end if;
 
   select * into v_b from public.brouillons_lecons b where b.lecon_id = p_lecon for update;
   if found then
@@ -550,20 +556,32 @@ security definer
 set search_path = ''
 as $$
 declare
+  v_moi uuid := (select auth.uid());
   v_n integer;
   v_m integer := 0;
 begin
   if not public.editeur_de_formation(p_formation) then
     raise exception 'Vous ne pouvez pas modifier cette formation.' using errcode = '42501';
   end if;
+  -- La révision avance au-delà du brouillon abandonné : un éditeur resté ouvert dessus sera en conflit, sans écraser
+  -- le travail qui suivra (le prochain brouillon ne reprend jamais le même numéro).
   if p_lecon is not null then
+    update public.lecons l set revision = greatest(l.revision, b.revision) + 1, revise_par = v_moi
+    from public.brouillons_lecons b
+    where b.lecon_id = l.id and l.id = p_lecon and public.formation_de_la_lecon(l.id) = p_formation;
     delete from public.brouillons_lecons b
     where b.lecon_id = p_lecon and public.formation_de_la_lecon(b.lecon_id) = p_formation;
     get diagnostics v_n = row_count;
     return v_n;
   end if;
+  update public.formations f set revision = greatest(f.revision, b.revision) + 1, revise_par = v_moi
+  from public.brouillons_formations b
+  where b.formation_id = f.id and f.id = p_formation;
   delete from public.brouillons_formations where formation_id = p_formation;
   get diagnostics v_m = row_count;
+  update public.lecons l set revision = greatest(l.revision, b.revision) + 1, revise_par = v_moi
+  from public.brouillons_lecons b, public.modules m
+  where b.lecon_id = l.id and m.id = l.module_id and m.formation_id = p_formation;
   delete from public.brouillons_lecons b
   using public.lecons l, public.modules m
   where l.id = b.lecon_id and m.id = l.module_id and m.formation_id = p_formation;

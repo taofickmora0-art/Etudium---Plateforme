@@ -7,6 +7,9 @@
 
 begin;
 
+-- ─── L'origine d'une leçon recréée par une restauration ─────────────────────────────────────────────
+alter table public.lecons add column if not exists restauree_de uuid;
+
 -- ─── Les versions ───────────────────────────────────────────────────────────────────────────────────
 create table if not exists public.versions_formations (
   id uuid primary key default gen_random_uuid(),
@@ -302,22 +305,18 @@ begin
     v_id_module := null;
     for v_lecon in select * from jsonb_array_elements(coalesce(v_module -> 'lecons', '[]'::jsonb)) loop
       v_d := public.donnees_lecon_valides(v_lecon);
+      -- La leçon de la version, ou celle qu'une restauration précédente a recréée à sa place.
       select l.id into v_id_lecon
       from public.lecons l join public.modules m on m.id = l.module_id
-      where l.id = (v_lecon ->> 'id')::uuid and m.formation_id = v.formation_id;
+      where (l.id = (v_lecon ->> 'id')::uuid or l.restauree_de = (v_lecon ->> 'id')::uuid) and m.formation_id = v.formation_id
+      order by (l.id = (v_lecon ->> 'id')::uuid) desc
+      limit 1;
       if found then
         v_actuel := coalesce((select b.donnees from public.brouillons_lecons b where b.lecon_id = v_id_lecon), public.donnees_lecon(v_id_lecon));
         if public.donnees_lecon_valides(v_actuel) is distinct from v_d then
           perform public.ecrire_lecon(v_id_lecon, v_d, v_moi);
           v_modifiees := v_modifiees + 1;
         end if;
-        continue;
-      end if;
-      -- Supprimée depuis. Déjà recréée par une restauration précédente (même titre, même type) : rien à refaire.
-      if exists (
-        select 1 from public.lecons l join public.modules m on m.id = l.module_id
-        where m.formation_id = v.formation_id and l.titre = v_d ->> 'titre' and l.type = coalesce(v_lecon ->> 'type', 'lecon')
-      ) then
         continue;
       end if;
       -- Son module : le même, ou un module du même titre, ou recréé à la fin.
@@ -333,8 +332,8 @@ begin
           returning id into v_id_module;
         end if;
       end if;
-      insert into public.lecons (module_id, titre, type, ordre, publiee)
-      select v_id_module, v_d ->> 'titre', coalesce(v_lecon ->> 'type', 'lecon'), coalesce(max(l.ordre), 0) + 1, false
+      insert into public.lecons (module_id, titre, type, ordre, publiee, restauree_de)
+      select v_id_module, v_d ->> 'titre', coalesce(v_lecon ->> 'type', 'lecon'), coalesce(max(l.ordre), 0) + 1, false, (v_lecon ->> 'id')::uuid
       from public.lecons l where l.module_id = v_id_module
       returning id into v_id_lecon;
       perform public.appliquer_donnees_lecon(v_id_lecon, v_d);
