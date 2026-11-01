@@ -8,7 +8,7 @@ vi.mock("next/navigation", () => ({ usePathname: () => chemin, useRouter: () => 
 const { SidebarNavLinks } = await import("@/components/layout/SidebarNav");
 const { BottomNavLinks } = await import("@/components/layout/MobileNav");
 const { BoutonAjouterFormation } = await import("@/components/layout/BoutonAjouterFormation");
-const { ComingSoonView } = await import("@/components/layout/ComingSoon");
+const { PAGES_A_VENIR } = await import("@/lib/pages-a-venir");
 
 const liens = (nav: HTMLElement) => within(nav).getAllByRole("link").map((l) => [l.textContent, l.getAttribute("href")]);
 
@@ -132,12 +132,8 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
     expect(screen.getByRole("link", { name: "Ajouter une formation" })).toHaveAttribute("href", "/formations");
   });
 
-  it("une page à venir du back-office ou de l'espace formateur ramène à son tableau de bord", () => {
-    const { unmount } = render(<ComingSoonView page="admin/paiements" />);
-    expect(screen.getByRole("heading", { level: 1, name: "Abonnements et paiements" })).toBeInTheDocument();
-    expect(screen.getByText(/au lot 2/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Retour au tableau de bord" })).toHaveAttribute("href", "/admin");
-    unmount();
-    // L'espace formateur n'a plus de page à venir depuis la messagerie (lot 5, étape A).
+  it("le back-office et l'espace formateur n'ont plus de page à venir", () => {
+    // « Abonnements et paiements » est arrivé avec le lot 2 ; l'espace formateur, avec la messagerie (lot 5, étape A).
+    expect(Object.keys(PAGES_A_VENIR).filter((page) => page.startsWith("admin/") || page.startsWith("formateur/"))).toEqual([]);
   });
 });

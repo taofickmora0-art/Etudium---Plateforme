@@ -30,10 +30,10 @@ describe("Pages de l'espace connecté", () => {
   });
 
   it("la page à venir dit quand elle arrive", () => {
-    render(<ComingSoonView page="admin/paiements" />);
-    expect(screen.getByRole("heading", { level: 1, name: "Abonnements et paiements" })).toBeInTheDocument();
-    expect(screen.getByText(/au lot 2/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Retour/ })).toHaveAttribute("href", "/admin");
+    render(<ComingSoonView page="admin" />);
+    expect(screen.getByRole("heading", { level: 1, name: "Back-office" })).toBeInTheDocument();
+    expect(screen.getByText(/au lot 1/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Retour à l’accueil" })).toHaveAttribute("href", "/accueil");
   });
 
   it("la page Profil du téléphone coupe un nom trop long", () => {

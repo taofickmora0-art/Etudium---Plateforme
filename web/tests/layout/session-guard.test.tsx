@@ -64,7 +64,7 @@ describe("Session vérifiée à chaque page", () => {
   });
 
   it("les pages « Bientôt disponible » vérifient la session", () => {
-    expect(contient(ComingSoon({ page: "admin/paiements" }), SessionGuard)).toBe(true);
+    expect(contient(ComingSoon({ page: "admin" }), SessionGuard)).toBe(true);
   });
 
   it("chaque page de l'espace connecté vérifie la session", () => {

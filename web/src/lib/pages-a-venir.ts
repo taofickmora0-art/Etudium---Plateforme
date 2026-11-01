@@ -6,8 +6,6 @@
  */
 export const PAGES_A_VENIR = {
   admin: { titre: "Back-office", quand: "au lot 1, avec le back-office de saisie", description: "L’équipe Étudium y gérera les formations et les comptes." },
-  // Back-office (menu de l'équipe)
-  "admin/paiements": { titre: "Abonnements et paiements", quand: "au lot 2, Abonnements et paiement", description: "Les formules, les abonnements et les paiements s’afficheront ici." },
 } satisfies Record<string, { titre: string; quand: string; description: string }>;
 
 export type PageAVenir = keyof typeof PAGES_A_VENIR;
