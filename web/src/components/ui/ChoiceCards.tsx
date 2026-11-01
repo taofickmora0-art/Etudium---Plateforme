@@ -40,14 +40,14 @@ export function ChoiceCards({ label, options, value, onValueChange, className }:
           disabled={option.disabled}
           className="group focus-etudium box-border flex w-full cursor-pointer items-center gap-3.5 rounded-bouton border border-bordure bg-panneau px-4 py-3.5 text-left text-texte transition-colors hover:bg-page data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60 data-[disabled]:hover:bg-panneau data-[state=checked]:border-bleu data-[state=checked]:shadow-[inset_0_0_0_1px_var(--color-bleu)]"
         >
-          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="flex min-w-[96px] flex-1 flex-col gap-0.5">
             <span className="flex flex-wrap items-center gap-2">
               <span className="text-[15px] leading-[22px] font-semibold text-encre">{option.title}</span>
               {option.badge && <Tag tone="nouveau">{option.badge}</Tag>}
             </span>
-            {option.subtitle && <span className="text-[13px] leading-5 text-discret">{option.subtitle}</span>}
+            {option.subtitle && <span className="text-[13px] leading-5 whitespace-nowrap text-discret">{option.subtitle}</span>}
           </span>
-          {option.price && <span className="text-right text-sm font-semibold text-encre">{option.price}</span>}
+          {option.price && <span className="min-w-0 shrink text-right text-sm font-semibold text-encre">{option.price}</span>}
           <span
             aria-hidden="true"
             className="flex size-5 flex-none items-center justify-center rounded-full border-[1.5px] border-inactif bg-panneau group-data-[state=checked]:border-bleu group-data-[state=checked]:bg-bleu"

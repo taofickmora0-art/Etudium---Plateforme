@@ -256,7 +256,7 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
                 </div>
               </div>
 
-              <div className="flex min-w-0 flex-[1_1_280px] flex-col gap-3.5 rounded-carte bg-page p-5 max-sm:p-4">
+              <div className="flex min-w-0 flex-[1_1_340px] flex-col gap-3.5 self-start rounded-carte bg-page p-5 max-sm:p-4">
                 <Heading level="card" as="h3">
                   Récapitulatif
                 </Heading>
