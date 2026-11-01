@@ -6,6 +6,7 @@ import { exigerEditeur } from "@/lib/admin/garde";
 import { estFonctionAbsente } from "@/lib/contenus/lecture";
 import { MIGRATION_QUIZ } from "@/lib/quiz/conversion";
 import type { Lecture, Resultat } from "@/lib/utilisateurs/types";
+import { messageRestauration } from "./historique";
 import { normaliserSaisieInfos, normaliserSaisieLecon } from "./saisie";
 import { MIGRATION_EDITEUR, type ModificationEnAttente, type ResultatSauvegarde, type SaisieInfos, type SaisieLecon } from "./types";
 
@@ -14,6 +15,7 @@ import { MIGRATION_EDITEUR, type ModificationEnAttente, type ResultatSauvegarde,
 // modifications. L'enregistrement automatique ne rafraîchit pas la page : l'éditeur reste tel qu'on l'écrit.
 
 const ECHEC = authErrorMessage(null);
+const MIGRATION_HISTORIQUE = "L’historique des versions n’est pas encore installé (migration 0057, guide « Ce qui te revient », section 58).";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Les messages de la base sont écrits avec l'apostrophe droite ; l'interface utilise l'apostrophe typographique. */
 const typographie = (message: string) => message.replace(/'/g, "’");
@@ -138,6 +140,30 @@ export async function publierModifications(formationId: string): Promise<Resulta
     const r = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
     refresh();
     return { ok: true, publiees: Number(r.publiees ?? 0), version: typeof r.version === "number" ? r.version : null };
+  } catch {
+    return { ok: false, message: ECHEC };
+  }
+}
+
+/** « Restaurer dans le brouillon » (0057) : le contenu d'une version revient dans les brouillons. */
+export async function restaurerVersion(versionId: string): Promise<Resultat> {
+  if (!UUID.test(versionId)) return { ok: false, message: ECHEC };
+  try {
+    const garde = await exigerEditeur();
+    if ("erreur" in garde) return { ok: false, message: garde.erreur };
+    const { data, error } = await garde.supabase.rpc("restaurer_version", { p_version: versionId });
+    if (error) return { ok: false, message: messageResultat(error, MIGRATION_HISTORIQUE) };
+    const r = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
+    refresh();
+    return {
+      ok: true,
+      message: messageRestauration({
+        numero: Number(r.numero ?? 0),
+        infos: r.infos === true,
+        leconsModifiees: Number(r.lecons_modifiees ?? 0),
+        leconsRecreees: Number(r.lecons_recreees ?? 0),
+      }),
+    };
   } catch {
     return { ok: false, message: ECHEC };
   }

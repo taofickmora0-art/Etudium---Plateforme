@@ -27,10 +27,12 @@ type Props = {
   formation: Pick<FormationAdmin, "statut" | "etat" | "envoyeeLe" | "renvoyeeLe" | "remarqueRelecture" | "modifieeParFormateurLe" | "publieeLe" | "modificationsNonPubliees">;
   /** Nom de la fiche formateur de la formation, ou null. */
   formateurNom: string | null;
+  /** La version en ligne (0057) : « Version 8 · aujourd’hui » ; null sans historique. */
+  version?: string | null;
 };
 
 /** Ce que l'équipe doit savoir de la relecture (spec de l'espace formateur, §4). */
-function EtatRelecture({ formation, formateurNom }: Omit<Props, "id">) {
+function EtatRelecture({ formation, formateurNom }: Omit<Props, "id" | "version">) {
   if (formation.etat === "en_attente" && formation.envoyeeLe) {
     return (
       <p className="m-0 text-[15px] leading-6 font-medium text-encre">
@@ -53,7 +55,7 @@ function EtatRelecture({ formation, formateurNom }: Omit<Props, "id">) {
 }
 
 /** Onglet « Publication » : publier, archiver, republier, renvoyer au formateur, ou supprimer un brouillon (spec du lot 1, §10). */
-export function PublicationPanel({ id, formation, formateurNom }: Props) {
+export function PublicationPanel({ id, formation, formateurNom, version = null }: Props) {
   const { statut } = formation;
   const router = useRouter();
   const { toast } = useToast();
@@ -81,6 +83,7 @@ export function PublicationPanel({ id, formation, formateurNom }: Props) {
       {formation.modificationsNonPubliees && <ModificationsNonPubliees formationId={id} />}
       <EtatRelecture formation={formation} formateurNom={formateurNom} />
       <p className="m-0 text-[15px] leading-6 text-texte">{EXPLICATION[statut]}</p>
+      {version && <p className="m-0 text-sm leading-[22px] text-discret">{version}</p>}
       <div className="flex flex-wrap gap-2">
         {statut === "brouillon" && <Button onClick={() => ouvrir("publier")}>Publier</Button>}
         {formation.etat === "en_attente" && <RenvoyerAuFormateur id={id} />}

@@ -53,4 +53,16 @@ export type ModificationEnAttente = {
   modifieLe: string;
 };
 
+/** Une version de l'historique d'une formation (0057). */
+export type VersionFormation = {
+  id: string;
+  numero: number;
+  creeLe: string;
+  /** Null : le compte a été supprimé. */
+  auteur: string | null;
+  resume: string;
+  /** La plus récente : ce que voient les étudiants. */
+  enLigne: boolean;
+};
+
 export const MIGRATION_EDITEUR = "L’enregistrement automatique n’est pas encore installé (migration 0056, guide « Ce qui te revient », section 58).";

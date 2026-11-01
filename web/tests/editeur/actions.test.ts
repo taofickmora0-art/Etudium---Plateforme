@@ -12,7 +12,7 @@ vi.mock("@/lib/auth/current-user", () => ({ getShellUser: () => getShellUser(), 
 const refresh = vi.fn();
 vi.mock("next/cache", () => ({ refresh: () => refresh() }));
 
-const { enregistrerLecon, enregistrerInfosFormation, enregistrerQuestions, reglerLecon, publierModifications, abandonnerModifications, lireModificationsEnAttente } = await import(
+const { enregistrerLecon, enregistrerInfosFormation, enregistrerQuestions, reglerLecon, publierModifications, abandonnerModifications, lireModificationsEnAttente, restaurerVersion } = await import(
   "@/lib/editeur/actions"
 );
 
@@ -116,6 +116,19 @@ describe("Les informations générales, les réglages, la publication", () => {
     expect(await enregistrerQuestions(L, QUESTIONS)).toEqual({ ok: false, message: "La question 1 doit avoir une seule bonne réponse." });
     faux.repondre("rpc.enregistrer_quiz", { error: { code: "PGRST202", message: "absente" } });
     expect(await enregistrerQuestions(L, QUESTIONS)).toEqual({ ok: false, message: "Appliquez la migration 0031 (guide « Ce qui te revient », section 37)." });
+  });
+
+  it("restaurer une version : le RPC, le message de ce qui revient ; avant la 0057, la migration", async () => {
+    const V = "55555555-5555-4555-8555-555555555555";
+    faux.repondre("rpc.restaurer_version", { data: { numero: 5, infos: true, lecons_modifiees: 2, lecons_recreees: 1 } });
+    expect(await restaurerVersion(V)).toEqual({
+      ok: true,
+      message: "Version 5 restaurée dans le brouillon : informations générales, 2 leçons modifiées, 1 leçon recréée (non publiée). Relisez, puis publiez.",
+    });
+    expect(faux.de("rpc", "restaurer_version")[0].valeurs).toEqual({ p_version: V });
+    expect(refresh).toHaveBeenCalled();
+    faux.repondre("rpc.restaurer_version", { error: { code: "PGRST202", message: "absente" } });
+    expect(await restaurerVersion(V)).toMatchObject({ ok: false, message: expect.stringContaining("migration 0057") });
   });
 
   it("réglages d'une leçon : enregistrés aussitôt", async () => {

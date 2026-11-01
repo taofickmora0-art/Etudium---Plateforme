@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { FormationInfosForm } from "@/components/admin/FormationInfosForm";
 import { FormationOnglets } from "@/components/admin/FormationOnglets";
 import { PageAdmin } from "@/components/admin/PageAdmin";
+import { ongletHistorique } from "@/components/editeur/historique-serveur";
 import { BoutonPublierModifications } from "@/components/editeur/FenetrePublication";
 import { OngletApprenants } from "@/components/admin/OngletApprenants";
 import { OngletLecons } from "@/components/admin/OngletLecons";
@@ -20,7 +21,7 @@ export const metadata: Metadata = { title: "Formation · Back-office · Étudium
 
 type Params = { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string }> };
 
-const ONGLETS = ["informations", "programme", "publication", "apprenants"];
+const ONGLETS = ["informations", "programme", "publication", "apprenants", "historique"];
 
 async function FicheFormation({ params, searchParams }: Params) {
   await requireSpace("admin");
@@ -33,6 +34,7 @@ async function FicheFormation({ params, searchParams }: Params) {
   }
   const [formation, parcours, formateurs, { competences, liees }] = donnees;
   if (!formation) notFound();
+  const historique = await ongletHistorique(formation.id);
   return (
     <PageAdmin
       titre={formation.titre}
@@ -48,7 +50,15 @@ async function FicheFormation({ params, searchParams }: Params) {
         ongletInitial={onglet && ONGLETS.includes(onglet) ? onglet : "informations"}
         informations={<FormationInfosForm formation={formation} parcours={parcours} formateurs={formateurs} competences={competences} liees={liees} />}
         programme={<OngletLecons formation={formation} />}
-        publication={<PublicationPanel id={formation.id} formation={formation} formateurNom={formateurs.find((f) => f.id === formation.formateurId)?.nom ?? null} />}
+        publication={
+          <PublicationPanel
+            id={formation.id}
+            formation={formation}
+            formateurNom={formateurs.find((f) => f.id === formation.formateurId)?.nom ?? null}
+            version={historique.version}
+          />
+        }
+        historique={historique.onglet}
         apprenants={
           <Suspense fallback={<Skeleton className="h-64 rounded-carte" />}>
             <OngletApprenants formationId={formation.id} espace="admin" />

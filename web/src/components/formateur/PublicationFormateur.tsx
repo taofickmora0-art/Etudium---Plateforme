@@ -16,6 +16,8 @@ type Resultat = { ok: boolean; message?: string; redirection?: string };
 type Props = {
   id: string;
   formation: Pick<FormationAdmin, "etat" | "envoyeeLe" | "renvoyeeLe" | "remarqueRelecture" | "publieeLe" | "modificationsNonPubliees">;
+  /** La version en ligne (0057) : « Version 8 · aujourd’hui » ; null sans historique. */
+  version?: string | null;
 };
 
 const TEXTE = "m-0 text-[15px] leading-6 text-texte";
@@ -24,7 +26,7 @@ const TEXTE = "m-0 text-[15px] leading-6 text-texte";
  * Onglet « Publication » du formateur (spec de l'espace formateur, §3) : il envoie son brouillon en relecture, voit la
  * remarque de l'admin s'il est renvoyé, et supprime un brouillon jamais publié. Publier et archiver reviennent à l'équipe.
  */
-export function PublicationFormateur({ id, formation }: Props) {
+export function PublicationFormateur({ id, formation, version = null }: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const [confirmation, setConfirmation] = useState<"envoyer" | "supprimer" | null>(null);
@@ -50,6 +52,7 @@ export function PublicationFormateur({ id, formation }: Props) {
   return (
     <div className="flex max-w-[680px] min-w-0 flex-col gap-4 rounded-carte border border-bordure-carte bg-panneau p-6">
       {formation.modificationsNonPubliees && <ModificationsNonPubliees formationId={id} />}
+      {version && <p className="m-0 text-sm leading-[22px] text-discret">{version}</p>}
       {etat === "brouillon" && <p className={TEXTE}>Brouillon : visible seulement par vous et l’équipe Étudium. Envoyez-le en relecture quand il est prêt.</p>}
       {etat === "en_attente" && formation.envoyeeLe && (
         <p className={TEXTE}>{`Envoyée en relecture le ${dateCourte(formation.envoyeeLe)}. Un admin la relit ; vous pouvez continuer à la modifier.`}</p>
