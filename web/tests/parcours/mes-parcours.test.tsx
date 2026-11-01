@@ -12,21 +12,27 @@ const DESCRIPTIONS = {
 };
 const PARCOURS = PARCOURS_DESIGN.map((p) => ({ ...p, description: DESCRIPTIONS[p.slug as keyof typeof DESCRIPTIONS] }));
 
-describe("Page Mes parcours", () => {
-  it("un onglet par parcours ; le premier montre sa carte, son état et le bloc « non inclus »", () => {
+describe("Page Parcours (restructuration, §5.2 : le parcours guide, l'abonnement ouvre tout)", () => {
+  it("un onglet par parcours, sans cadenas ; le premier montre sa carte et sa progression, sans « Non inclus »", () => {
     render(<MesParcours parcours={PARCOURS} cartes={CARTES_DESIGN} progressions={new Map()} />);
-    expect(screen.getByRole("heading", { level: 1, name: "Mes parcours" })).toBeInTheDocument();
-    expect(screen.getByText("Compte gratuit : aucun parcours actif. Les formations gratuites restent ouvertes à tous.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Parcours" })).toBeInTheDocument();
+    expect(screen.getByText("Trois parcours pour vous guider. Un abonnement ouvre toutes les formations ; les formations gratuites restent ouvertes à tous.")).toBeInTheDocument();
     const onglets = screen.getByRole("tablist", { name: "Choisir un parcours" });
     expect(within(onglets).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Académique", "Digital", "Business"]);
+    expect(onglets.querySelector("svg")).toBeNull();
     const panneau = screen.getByRole("tabpanel");
     expect(within(panneau).getByRole("heading", { name: "Réussite académique" })).toBeInTheDocument();
     expect(within(panneau).getByText(DESCRIPTIONS["reussite-academique"])).toBeInTheDocument();
-    expect(within(panneau).getByText("Non inclus")).toBeInTheDocument();
+    expect(within(panneau).queryByText("Non inclus")).toBeNull();
     expect(within(panneau).getByText("0 % du parcours")).toBeInTheDocument();
     expect(within(panneau).getByText("Aucune formation terminée sur 5")).toBeInTheDocument();
-    expect(within(panneau).getByText("Ce parcours n’est pas inclus dans votre compte gratuit")).toBeInTheDocument();
-    for (const lien of screen.getAllByRole("link", { name: "Voir les formules" })) expect(lien).toHaveAttribute("href", "/abonnement");
+    expect(within(panneau).queryByText(/n’est pas inclus/)).toBeNull();
+    // Des formations payantes restent fermées à un compte gratuit : la phrase et le lien.
+    expect(within(panneau).getByText("Un abonnement ouvre toutes les formations.")).toBeInTheDocument();
+    const liens = screen.getAllByRole("link", { name: "Voir les abonnements" });
+    expect(liens.length).toBeGreaterThan(0);
+    for (const lien of liens) expect(lien).toHaveAttribute("href", "/abonnement");
+    expect(screen.queryByRole("link", { name: "Voir les formules" })).toBeNull();
   });
 
   it("la liste des formations suit la position, avec numéro, état et lien vers la fiche", () => {

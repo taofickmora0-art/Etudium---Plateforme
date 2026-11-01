@@ -14,7 +14,7 @@ const ADRESSE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 const COLONNES_PARCOURS = "slug, nom, nom_court, couleur, ordre, actif";
 const COLONNES_CARTE =
-  "id, slug, titre, resume, niveau, gratuite, achat_separe, badge, publiee_le, " + `formations_parcours(ordre, parcours(${COLONNES_PARCOURS}))`;
+  "id, slug, titre, resume, niveau, gratuite, badge, publiee_le, " + `formations_parcours(ordre, parcours(${COLONNES_PARCOURS}))`;
 
 // Colonnes des migrations récentes : note et nombre d'avis (0010), couverture (0012). Une colonne absente (42703)
 // fait relire sans elle : le catalogue s'affiche avant que les migrations soient appliquées.
@@ -48,7 +48,6 @@ function versCarte(f: Ligne, lecons: Ligne[]): CarteCatalogue {
     resume: texte(f.resume),
     niveau: f.niveau as Niveau,
     gratuite: f.gratuite === true,
-    achatSepare: f.achat_separe === true,
     badge: (f.badge as Badge | null) ?? null,
     publieeLe: texte(f.publiee_le),
     dureeSecondes: contenu.reduce((total, l) => total + Number(l.duree_secondes ?? 0), 0),

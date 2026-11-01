@@ -76,8 +76,6 @@ const FORMATION: FormationAdmin = {
   competences: [],
   formateurId: "fa",
   gratuite: false,
-  achatSepare: false,
-  prixFcfa: null,
   badge: null,
   seuilVideo: 90,
   scoreQuiz: 70,

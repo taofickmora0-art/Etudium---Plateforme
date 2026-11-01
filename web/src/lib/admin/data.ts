@@ -186,7 +186,7 @@ export async function getFormationAdmin(id: string): Promise<FormationAdmin | nu
     return supabase
       .from("formations")
       .select(
-        `id, slug, titre, statut, niveau, resume, description, objectifs, competences, formateur_id, gratuite, achat_separe, prix_fcfa, badge, seuil_video, publiee_le${couverture}, ` +
+        `id, slug, titre, statut, niveau, resume, description, objectifs, competences, formateur_id, gratuite, badge, seuil_video, publiee_le${couverture}, ` +
           "formations_parcours(parcours_id, parcours(nom_court)), " +
           `modules(id, titre, ordre, lecons(id, titre, duree_secondes, apercu, ordre${statut}, lecons_contenus(video_id)))`,
       )
@@ -219,8 +219,6 @@ export async function getFormationAdmin(id: string): Promise<FormationAdmin | nu
     competences: textes(f.competences),
     formateurId: typeof f.formateur_id === "string" ? f.formateur_id : null,
     gratuite: f.gratuite === true,
-    achatSepare: f.achat_separe === true,
-    prixFcfa: typeof f.prix_fcfa === "number" ? f.prix_fcfa : null,
     badge: (f.badge as Badge | null) ?? null,
     seuilVideo: Number(f.seuil_video ?? 90),
     scoreQuiz: f.score_quiz === undefined ? null : Number(f.score_quiz ?? 70),

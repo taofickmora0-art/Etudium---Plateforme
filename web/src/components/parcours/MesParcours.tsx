@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight01Icon, Route01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, Route01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
@@ -67,14 +67,9 @@ function PanneauParcours({ parcours, cartes, progressions }: { parcours: Parcour
             <span className={cn("flex size-12 flex-none items-center justify-center rounded-[14px]", TUILE[parcours.couleur])}>
               <Icon icon={Route01Icon} size={22} />
             </span>
-            {/* Sur téléphone, le badge passe sous la description pour laisser la largeur au nom. */}
-            <div className="flex min-w-0 flex-1 flex-col items-start gap-2 sm:flex-row sm:gap-4">
-              <div className="flex min-w-0 flex-col gap-1 sm:flex-1">
-                <h2 className="m-0 text-xl leading-7 font-semibold text-encre">{parcours.nom}</h2>
-                {parcours.description && <p className="m-0 text-sm leading-[22px] text-pretty text-discret">{parcours.description}</p>}
-              </div>
-              {/* Lot 1 : aucun abonnement, aucun parcours actif (les formules arrivent au lot 2). */}
-              <Tag tone="enAttente" className="flex-none">Non inclus</Tag>
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <h2 className="m-0 text-xl leading-7 font-semibold text-encre">{parcours.nom}</h2>
+              {parcours.description && <p className="m-0 text-sm leading-[22px] text-pretty text-discret">{parcours.description}</p>}
             </div>
           </div>
           <ProgressBar value={pourcentage} label="Progression du parcours" className="mt-5" />
@@ -85,17 +80,6 @@ function PanneauParcours({ parcours, cartes, progressions }: { parcours: Parcour
           </div>
         </div>
 
-        <EmptyState
-          icon={SquareLock02Icon}
-          title="Ce parcours n’est pas inclus dans votre compte gratuit"
-          description="Choisissez une formule pour ouvrir toutes ses formations. Les formations gratuites restent accessibles dès maintenant."
-          action={
-            <Button asChild>
-              <Link href="/abonnement">Voir les formules</Link>
-            </Button>
-          }
-        />
-
         <section aria-labelledby={`${idListe}-titre`} className="flex min-w-0 flex-col gap-3.5">
           <div className="flex flex-wrap items-center gap-2.5">
             <h2 id={`${idListe}-titre`} className="m-0 text-xl leading-7 font-semibold text-encre">
@@ -103,6 +87,15 @@ function PanneauParcours({ parcours, cartes, progressions }: { parcours: Parcour
             </h2>
             <Tag tone="enAttente">{pluriel(formations.length, "formation")}</Tag>
           </div>
+          {/* Une formation payante reste fermée sans abonnement (restructuration, §5.2). */}
+          {formations.some((c) => etatFormation(c, progressions.get(c.slug)).verrou) && (
+            <p className="m-0 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-[22px] text-discret">
+              <span>Un abonnement ouvre toutes les formations.</span>
+              <Link href="/abonnement" className="focus-etudium font-medium text-bleu no-underline hover:underline">
+                Voir les abonnements
+              </Link>
+            </p>
+          )}
           {formations.length === 0 ? (
             <p className="m-0 text-sm leading-[22px] text-discret">Aucune formation dans ce parcours pour le moment.</p>
           ) : (
@@ -120,18 +113,21 @@ function PanneauParcours({ parcours, cartes, progressions }: { parcours: Parcour
   );
 }
 
-/** Mes parcours (NdParcours) : un onglet par parcours, sa progression et ses formations. */
+/**
+ * Parcours (NdParcours ; restructuration, §5.2) : un onglet par parcours, sa progression et ses formations. Le parcours
+ * guide, il n'ouvre plus l'accès : chaque abonnement ouvre toutes les formations. Plus de cadenas sur les onglets.
+ */
 export function MesParcours({ parcours, cartes, progressions, initial }: Props) {
   return (
     <div className="flex flex-col">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0 flex-[1_1_320px]">
-          <Heading level="page">Mes parcours</Heading>
-          <Lead className="mt-2.5">Compte gratuit : aucun parcours actif. Les formations gratuites restent ouvertes à tous.</Lead>
+          <Heading level="page">Parcours</Heading>
+          <Lead className="mt-2.5">Trois parcours pour vous guider. Un abonnement ouvre toutes les formations ; les formations gratuites restent ouvertes à tous.</Lead>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="contour">
-            <Link href="/abonnement">Voir les formules</Link>
+            <Link href="/abonnement">Voir les abonnements</Link>
           </Button>
         </div>
       </div>
@@ -145,7 +141,6 @@ export function MesParcours({ parcours, cartes, progressions, initial }: Props) 
             items={parcours.map((p) => ({
               value: p.slug,
               label: p.nomCourt,
-              icon: SquareLock02Icon,
               content: <PanneauParcours parcours={p} cartes={cartes} progressions={progressions} />,
             }))}
           />

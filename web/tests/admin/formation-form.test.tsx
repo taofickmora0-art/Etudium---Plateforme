@@ -28,8 +28,6 @@ const FORMATION: FormationAdmin = {
   competences: [],
   formateurId: null,
   gratuite: false,
-  achatSepare: true,
-  prixFcfa: null,
   badge: "populaire",
   seuilVideo: 90,
   scoreQuiz: 70,

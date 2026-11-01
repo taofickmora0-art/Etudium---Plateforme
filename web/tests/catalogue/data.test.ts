@@ -33,7 +33,7 @@ describe("Lecture du catalogue", () => {
   it("les cartes portent la durée totale et le nombre de leçons, et seules les formations publiées sont demandées", async () => {
     faux.repondre("formations.select", { data: [LIGNE] });
     const [carte] = await listCatalogue();
-    expect(carte).toMatchObject({ slug: "maitriser-microsoft-excel", dureeSecondes: 1920, nbLecons: 3, achatSepare: true, badge: "populaire" });
+    expect(carte).toMatchObject({ slug: "maitriser-microsoft-excel", dureeSecondes: 1920, nbLecons: 3, badge: "populaire" });
     expect(carte.parcours).toEqual([{ slug: "reussite-academique", nom: "Réussite académique", nomCourt: "Académique", couleur: "academique", ordre: 1, position: 2 }]);
     expect(faux.de("formations", "select")[0].filtres).toContainEqual(["eq", "statut", "publiee"]);
   });

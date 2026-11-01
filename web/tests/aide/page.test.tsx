@@ -24,15 +24,16 @@ const questions = (titre: string) => within(screen.getByRole("region", { name: t
 beforeEach(() => contacterEquipe.mockReset());
 
 describe("Page Aide (NdAide)", () => {
-  it("le titre, les 7 questions fréquentes (la première ouverte) et les 4 questions sur les formules", () => {
+  it("le titre, les 7 questions fréquentes (la première ouverte) et les 4 questions sur les abonnements", () => {
     afficher();
     expect(screen.getByRole("heading", { level: 1, name: "Aide" })).toBeInTheDocument();
     expect(screen.getByText("Trouvez une réponse dans les questions fréquentes ou écrivez à l’équipe Étudium.")).toBeInTheDocument();
     expect(questions("Questions fréquentes")).toHaveLength(7);
+    // Le nouveau modèle (restructuration, §5.2) : trois abonnements qui ne diffèrent que par leur durée.
     expect(questions("Questions sur les formules")).toEqual([
-      "Puis-je passer à une formule supérieure en cours de mois ?",
-      "Et pour une formule inférieure ?",
-      "Qu’est-ce qu’une formation complémentaire ?",
+      "Quelle différence entre Basique, Standard et Premium ?",
+      "Puis-je prolonger mon abonnement ?",
+      "Que se passe-t-il à la fin de mon abonnement ?",
       "Quels moyens de paiement ?",
     ]);
     expect(screen.getByRole("button", { name: "Le compte gratuit est-il vraiment gratuit ?" })).toHaveAttribute("aria-expanded", "true");

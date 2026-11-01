@@ -19,8 +19,6 @@ export type CarteCatalogue = {
   resume: string;
   niveau: Niveau;
   gratuite: boolean;
-  /** Disponible seule, en formation complémentaire. */
-  achatSepare: boolean;
   badge: Badge | null;
   publieeLe: string;
   /** Somme des durées des leçons. */

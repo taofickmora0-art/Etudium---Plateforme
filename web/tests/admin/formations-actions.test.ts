@@ -31,8 +31,6 @@ const INFOS = {
   niveau: "intermediaire",
   formateur_id: "",
   gratuite: "on",
-  achat_separe: "",
-  prix_fcfa: "",
   badge: "",
   seuil_video: "90",
   parcours: [P1, P2],
@@ -98,8 +96,6 @@ describe("Back-office : formations", () => {
       niveau: "intermediaire",
       formateur_id: null,
       gratuite: true,
-      achat_separe: false,
-      prix_fcfa: null,
       badge: null,
       seuil_video: 90,
     });
@@ -131,9 +127,9 @@ describe("Back-office : formations", () => {
     expect(faux.de("formations_parcours")).toEqual([]);
   });
 
-  it("un prix ou un seuil invalide est refusé avant la base", async () => {
-    const state = await saveFormationInfos(IDLE, form({ ...INFOS, prix_fcfa: "-5", seuil_video: "30" }));
-    expect(state.fieldErrors).toMatchObject({ prix_fcfa: "Un prix positif, en FCFA.", seuil_video: "Entre 50 et 100 %." });
+  it("un seuil invalide est refusé avant la base", async () => {
+    const state = await saveFormationInfos(IDLE, form({ ...INFOS, seuil_video: "30" }));
+    expect(state.fieldErrors).toMatchObject({ seuil_video: "Entre 50 et 100 %." });
     expect(faux.appels).toEqual([]);
   });
 

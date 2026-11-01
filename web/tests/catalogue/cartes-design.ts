@@ -23,7 +23,6 @@ const carte = (
   resume,
   niveau: "debutant",
   gratuite: false,
-  achatSepare: false,
   badge: null,
   publieeLe: "2026-08-01T00:00:00Z",
   dureeSecondes: 3600,
@@ -38,7 +37,6 @@ const carte = (
 export const CARTES_DESIGN: CarteCatalogue[] = [
   carte("maitriser-microsoft-excel", "Maîtriser Microsoft Excel", "Formules, tableaux croisés dynamiques et graphiques pour analyser vos données.", ACA, 2, {
     niveau: "intermediaire",
-    achatSepare: true,
     badge: "populaire",
     dureeSecondes: 22800,
     nbLecons: 12,
@@ -79,7 +77,6 @@ export const CARTES_DESIGN: CarteCatalogue[] = [
     publieeLe: "2026-09-17T00:00:00Z",
   }),
   carte("marketing-digital-debutants", "Marketing digital pour débutants", "Les bases pour trouver vos premiers clients en ligne : réseaux, contenu, publicité.", BUS, 1, {
-    achatSepare: true,
     dureeSecondes: 30600,
     publieeLe: "2026-09-22T00:00:00Z",
   }),

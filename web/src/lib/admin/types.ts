@@ -59,8 +59,6 @@ export type FormationAdmin = FormationResume & {
   competences: string[];
   formateurId: string | null;
   gratuite: boolean;
-  achatSepare: boolean;
-  prixFcfa: number | null;
   badge: Badge | null;
   seuilVideo: number;
   /** Score minimal aux quiz (0031) ; null avant la 0031 (le champ n'est pas affiché). */

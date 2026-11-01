@@ -59,9 +59,11 @@ describe("Tableau de bord du back-office : écran", () => {
 
   it("ce qui arrive avec le paiement (lot 2) et les sessions live (lot 5) a déjà sa place", () => {
     render(<TableauDeBordAdmin stats={STATS} />);
-    for (const libelle of ["Utilisateurs payants", "Taux de conversion", "Chiffre d’affaires", "Revenus par formule", "Formations achetées seules"]) {
+    for (const libelle of ["Utilisateurs payants", "Taux de conversion", "Chiffre d’affaires", "Revenus par formule"]) {
       expect(within(tuile(libelle)).getByText("Disponible au lot 2")).toBeInTheDocument();
     }
+    // Plus de formation achetée seule (restructuration, §5.2).
+    expect(screen.queryByText("Formations achetées seules")).toBeNull();
     expect(within(tuile("Sessions live à venir")).getByText("Disponible au lot 5")).toBeInTheDocument();
   });
 

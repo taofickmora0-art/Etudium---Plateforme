@@ -39,12 +39,11 @@ describe("Règles d'affichage du catalogue", () => {
     expect(nombreDeLecons(0)).toBe("0 leçon");
   });
 
-  it("une carte porte un seul badge : gratuit, puis le badge saisi, puis complémentaire", () => {
+  it("une carte porte un seul badge : gratuit, puis le badge saisi ; plus de « Complémentaire » (restructuration, §5.2)", () => {
     expect(badgeDeCarte(parSlug("zotero-gerer-ses-references"))).toEqual({ tone: "gratuit", label: "Gratuit" });
     expect(badgeDeCarte(parSlug("maitriser-microsoft-excel"))).toEqual({ tone: "populaire", label: "Populaire" });
     expect(badgeDeCarte(parSlug("intelligence-artificielle-etudes"))).toEqual({ tone: "nouveau", label: "Nouveau" });
-    // Couleurs du catalogue du design : « Complémentaire » en bleu, comme « Nouveau ».
-    expect(badgeDeCarte(parSlug("marketing-digital-debutants"))).toEqual({ tone: "nouveau", label: "Complémentaire" });
+    expect(badgeDeCarte(parSlug("marketing-digital-debutants"))).toBeUndefined();
     expect(badgeDeCarte(parSlug("microsoft-word-travaux-universitaires"))).toBeUndefined();
   });
 

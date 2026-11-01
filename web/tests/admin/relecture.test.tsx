@@ -47,8 +47,6 @@ const FORMATION: FormationAdmin = {
   competences: [],
   formateurId: "fa",
   gratuite: true,
-  achatSepare: false,
-  prixFcfa: 5000,
   badge: "populaire",
   seuilVideo: 90,
   scoreQuiz: 70,
@@ -79,18 +77,19 @@ describe("Éditeur réglé par l'espace", () => {
     expect(screen.queryByRole("switch", { name: /Disponible seule/ })).not.toBeInTheDocument();
     const bloc = screen.getByRole("region", { name: "Réglé par l’équipe Étudium" });
     expect(bloc).toHaveTextContent("Gratuite : oui");
-    expect(bloc).toHaveTextContent(/Prix : 5\s000 FCFA/);
-    expect(bloc).toHaveTextContent("Disponible seule : non");
+    // Plus d'achat seul ni de prix par formation (restructuration, §5.2).
+    expect(bloc).not.toHaveTextContent(/Prix|Disponible seule/);
     expect(bloc).toHaveTextContent("Badge : Populaire");
     expect(bloc).toHaveTextContent("Seuil des vidéos : 90 %");
     expect(container.querySelector('input[name="espace"]')).toHaveValue("formateur");
     expect(screen.getByLabelText("Titre")).toBeInTheDocument();
   });
 
-  it("au back-office, rien ne change", () => {
+  it("au back-office : le formateur ; plus de « Disponible seule » ni de prix (restructuration, §5.2)", () => {
     avecToast(<FormationInfosForm formation={FORMATION} parcours={[]} formateurs={[{ id: "fa", nom: "Awa", titre: "", domaine: "", presentation: "" }]} />);
     expect(screen.getByLabelText("Formateur")).toBeInTheDocument();
-    expect(screen.getByLabelText("Prix en FCFA")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Prix en FCFA")).toBeNull();
+    expect(screen.queryByRole("switch", { name: /Disponible seule/ })).toBeNull();
     expect(screen.queryByRole("region", { name: "Réglé par l’équipe Étudium" })).not.toBeInTheDocument();
   });
 

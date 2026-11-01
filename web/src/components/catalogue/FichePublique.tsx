@@ -33,9 +33,10 @@ function CarteOffre({ fiche }: { fiche: FicheFormation }) {
         </>
       ) : (
         <>
-          <span className="text-xs leading-[18px] text-discret">{parcours ? "Incluse dans le parcours" : "Formation"}</span>
-          <h2 className="m-0 text-lg leading-[26px] font-semibold text-encre">{parcours ? parcours.nom : fiche.titre}</h2>
-          <p className="m-0 mt-1 text-sm leading-[22px] text-pretty text-discret">Avec les formules Basique, Standard et Premium.</p>
+          {/* Chaque abonnement ouvre toutes les formations (restructuration, §5.2) ; le parcours guide. */}
+          <span className="text-xs leading-[18px] text-discret">{parcours ? `Parcours ${parcours.nom}` : "Formation"}</span>
+          <h2 className="m-0 text-lg leading-[26px] font-semibold text-encre">Incluse dans tous les abonnements</h2>
+          <p className="m-0 mt-1 text-sm leading-[22px] text-pretty text-discret">Basique, Standard ou Premium : 3 mois, 6 mois ou 1 an.</p>
         </>
       )}
       <Link
@@ -44,12 +45,6 @@ function CarteOffre({ fiche }: { fiche: FicheFormation }) {
       >
         Créer mon compte gratuit
       </Link>
-      {fiche.achatSepare && !fiche.gratuite && (
-        <>
-          <div aria-hidden="true" className="my-4 h-px bg-bordure-carte" />
-          <p className="m-0 text-[13px] leading-5 text-pretty text-discret">Disponible aussi seule, en formation complémentaire.</p>
-        </>
-      )}
       <div aria-hidden="true" className="my-4 h-px bg-bordure-carte" />
       <h3 className="m-0 mb-3 text-[15px] leading-[22px] font-semibold text-encre">Inclus dans la formation</h3>
       <ul className="m-0 grid list-none grid-cols-[minmax(0,1fr)] gap-x-6 gap-y-2.5 p-0">

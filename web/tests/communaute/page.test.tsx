@@ -546,7 +546,7 @@ describe("La page Communauté", () => {
 
   it("le catalogue : une nouvelle formation dans le fil, « Formations disponibles » ; illisible, le fil reste (spec du nouvel Accueil)", async () => {
     const recente = new Date(Date.now() - 2 * 86_400_000).toISOString();
-    const carte = { id: "f1", slug: "prise-de-notes", titre: "La prise de notes", resume: "", niveau: "debutant", gratuite: false, achatSepare: false, badge: null, publieeLe: recente, dureeSecondes: 0, nbLecons: 0, parcours: [], note: null, nbAvis: 0, couverture: null } satisfies CarteCatalogue;
+    const carte = { id: "f1", slug: "prise-de-notes", titre: "La prise de notes", resume: "", niveau: "debutant", gratuite: false, badge: null, publieeLe: recente, dureeSecondes: 0, nbLecons: 0, parcours: [], note: null, nbAvis: 0, couverture: null } satisfies CarteCatalogue;
     vi.mocked(listCatalogue).mockResolvedValueOnce([carte]);
     const { unmount } = afficher(await ContenuCommunaute());
     expect(screen.getByRole("article", { name: "Nouvelle formation : La prise de notes" })).toBeInTheDocument();

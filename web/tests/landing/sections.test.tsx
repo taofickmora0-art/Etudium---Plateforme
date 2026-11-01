@@ -45,7 +45,7 @@ describe("Sections à texte fixe de la landing (NdLanding)", () => {
       "Le diplôme ne suffit plus. Les outils et les compétences font la différence.",
       "Un seul endroit pour apprendre, pratiquer et être accompagné",
       "Quatre étapes, de l’inscription au certificat",
-      "Un abonnement mensuel, sans prélèvement automatique",
+      "Un abonnement de 3 mois à 1 an, sans prélèvement automatique",
       "Vous n’apprenez jamais seul",
       "Une communauté par parcours",
       "Tout ce qu’il faut savoir avant de commencer",

@@ -29,7 +29,7 @@ describe("Landing assemblée (spec du lot 1, §9)", () => {
       "Choisissez la direction qui vous ressemble",
       "Quatre étapes, de l’inscription au certificat",
       "Pour bien commencer",
-      "Un abonnement mensuel, sans prélèvement automatique",
+      "Un abonnement de 3 mois à 1 an, sans prélèvement automatique",
       "Vous n’apprenez jamais seul",
       "Une communauté par parcours",
       "Tout ce qu’il faut savoir avant de commencer",

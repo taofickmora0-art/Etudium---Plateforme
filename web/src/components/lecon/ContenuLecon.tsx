@@ -63,11 +63,11 @@ export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lie
           title="Vous regardez un aperçu gratuit"
           action={
             <Button asChild size="sm">
-              <Link href="/abonnement">Voir les formules</Link>
+              <Link href="/abonnement">Voir les abonnements</Link>
             </Button>
           }
         >
-          Les autres leçons de cette formation s’ouvrent avec une formule.
+          Les autres leçons de cette formation s’ouvrent avec un abonnement.
         </Banner>
       )}
       {ouverte && !connecte && (

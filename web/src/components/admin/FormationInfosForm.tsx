@@ -36,8 +36,6 @@ function ReglagesEquipe({ formation }: { formation: FormationAdmin }) {
   const badge = BADGES.find((b) => b.value === formation.badge)?.label ?? "Aucun";
   const lignes = [
     `Gratuite : ${ouiNon(formation.gratuite)}`,
-    `Prix : ${formation.prixFcfa === null ? "—" : `${formation.prixFcfa.toLocaleString("fr-FR")} FCFA`}`,
-    `Disponible seule : ${ouiNon(formation.achatSepare)}`,
     `Badge : ${badge}`,
     `Seuil des vidéos : ${formation.seuilVideo} %`,
   ];
@@ -184,23 +182,8 @@ export function FormationInfosForm({ formation, parcours, formateurs, espace = "
         </fieldset>
         {equipe ? (
           <>
+            {/* Plus d'achat seul ni de prix par formation : l'abonnement ouvre tout (restructuration, §5.2). */}
             <Switch name="gratuite" label="Formation gratuite" description="Ouverte à tout compte, sans abonnement." defaultChecked={coche("gratuite", formation.gratuite)} />
-            <Switch
-              name="achat_separe"
-              label="Disponible seule"
-              description="Achat individuel, en formation complémentaire (lot 2)."
-              defaultChecked={coche("achat_separe", formation.achatSepare)}
-            />
-            <Field label="Prix en FCFA" htmlFor="formation-prix" hint="Facultatif : le prix de l’achat individuel." error={e.prix_fcfa}>
-              <TextInput
-                id="formation-prix"
-                name="prix_fcfa"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                defaultValue={valeur("prix_fcfa", formation.prixFcfa === null ? "" : String(formation.prixFcfa))}
-              />
-            </Field>
           </>
         ) : (
           <ReglagesEquipe formation={formation} />

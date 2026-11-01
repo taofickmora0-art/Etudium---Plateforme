@@ -81,7 +81,8 @@ export function appliquerFiltres(cartes: CarteCatalogue[], filtres: Filtres): Ca
   return cartes
     .filter((c) => !recherche || sansAccents(`${c.titre} ${c.resume}`).includes(recherche))
     .filter((c) => filtres.parcours === "tous" || c.parcours.some((p) => p.slug === filtres.parcours))
-    .filter((c) => filtres.acces === "tout" || (filtres.acces === "gratuites" ? c.gratuite : !c.gratuite && c.parcours.length > 0))
+    // « Incluses dans un abonnement » : toutes les payantes, chaque abonnement ouvrant tout (restructuration, §5.2).
+    .filter((c) => filtres.acces === "tout" || (filtres.acces === "gratuites" ? c.gratuite : !c.gratuite))
     .filter((c) => filtres.niveau === "tous" || c.niveau === filtres.niveau)
     .sort(COMPARER[filtres.tri]);
 }

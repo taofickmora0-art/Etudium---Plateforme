@@ -953,3 +953,19 @@ Pas de migration. Recharge l'appli, puis :
    - sur une leçon d'aperçu, un bandeau dit « Vous regardez un aperçu gratuit », avec « Voir les formules ».
 3. **« Leçon suivante » (visiteur ou compte sans accès) :** elle mène à la prochaine leçon ouverte, jamais à un cadenas ; après le dernier aperçu, elle disparaît. Sur une leçon fermée, « Voir l'aperçu gratuit » propose l'aperçu suivant.
 4. **Sur téléphone,** les bandeaux (aperçu, informations) sont plus compacts.
+
+## 53. Les trois abonnements : les textes (liste du 31 octobre, tâche 13), 10 minutes
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0047_sans_achat_seul.sql`, après la 0046.
+   - Elle supprime « Disponible seule » et le prix des formations (colonnes `achat_separe` et `prix_fcfa`) : plus aucune formation ne s'achète seule.
+2. **La page d'accueil publique** (déconnecté) :
+   - « Comment ça marche » : « Basique, Standard ou Premium : 3 mois, 6 mois ou 1 an, avec accès à toutes les formations » ;
+   - « Formules » : le titre « Un abonnement de 3 mois à 1 an, sans prélèvement automatique », et trois cartes (Basique 3 mois, Standard 6 mois recommandée, Premium 1 an) avec les mêmes avantages ;
+   - les questions fréquentes : « Ai-je accès à tous les parcours ? », plus de « formations complémentaires ».
+3. **La page Aide** (connecté) : « Questions sur les formules » propose la différence entre les abonnements, la prolongation, la fin d'abonnement et les moyens de paiement.
+4. **La fiche d'une formation payante :** « Incluse dans tous les abonnements », plus de « Disponible aussi seule » ; plus de badge « Complémentaire » sur les cartes.
+5. **« Mes parcours » devient « Parcours »** (menu et page) : plus de « Non inclus », plus de cadenas sur les onglets ; « Un abonnement ouvre toutes les formations. » et « Voir les abonnements » sous les formations d'un parcours.
+6. **Une leçon verrouillée :** « Voir les abonnements » au lieu de « Voir les formules ».
+7. **Au back-office,** dans les informations d'une formation : plus de « Disponible seule » ni de « Prix en FCFA ».
+
+Le paiement lui-même (choisir un abonnement, payer par Mobile Money, l'accès qui s'ouvre) arrive au lot 2.

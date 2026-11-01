@@ -38,9 +38,10 @@ describe("Fiche d'une formation, pour un visiteur", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Maîtriser Microsoft Excel" })).toBeInTheDocument();
     const apercus = screen.getAllByRole("link", { name: /Voir l’aperçu gratuit/ });
     expect(apercus[0]).toHaveAttribute("href", `${ADRESSE}/l1`);
-    expect(screen.getByText("Incluse dans le parcours")).toBeInTheDocument();
-    expect(screen.getByText("Avec les formules Basique, Standard et Premium.")).toBeInTheDocument();
-    expect(screen.getByText("Disponible aussi seule, en formation complémentaire.")).toBeInTheDocument();
+    // Le nouveau modèle (restructuration, §5.2) : chaque abonnement ouvre tout ; plus de formation achetée seule.
+    expect(screen.getByRole("heading", { level: 2, name: "Incluse dans tous les abonnements" })).toBeInTheDocument();
+    expect(screen.getByText("Basique, Standard ou Premium : 3 mois, 6 mois ou 1 an.")).toBeInTheDocument();
+    expect(screen.queryByText(/formation complémentaire/)).toBeNull();
     expect(screen.getAllByRole("link", { name: "Créer mon compte gratuit" })[0]).toHaveAttribute("href", "/inscription");
     // Programme : les leçons d'aperçu ont leur lien, les autres ne sont pas cliquables.
     const programme = screen.getByRole("region", { name: "Programme" });
@@ -52,7 +53,7 @@ describe("Fiche d'une formation, pour un visiteur", () => {
   });
 
   it("une formation gratuite se présente comme telle", () => {
-    render(<FichePublique fiche={{ ...EXCEL, gratuite: true, achatSepare: false }} />);
+    render(<FichePublique fiche={{ ...EXCEL, gratuite: true }} />);
     expect(screen.getByText("Formation gratuite")).toBeInTheDocument();
     expect(screen.getByText("Toutes les leçons s’ouvrent avec un compte gratuit.")).toBeInTheDocument();
     expect(screen.queryByText("Disponible aussi seule, en formation complémentaire.")).toBeNull();
@@ -79,10 +80,10 @@ describe("Fiche d'une formation, pour un compte connecté", () => {
     expect(within(programme).getByRole("link", { name: /Découvrir l’interface/ })).toHaveAttribute("href", `${ADRESSE}/l1`);
     expect(within(programme).queryByRole("link", { name: /Les formules essentielles/ })).toBeNull();
     expect(within(programme).getByText("Les formules essentielles").closest("[aria-disabled]")).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByText("Incluse dans les formules Basique, Standard et Premium.")).toBeInTheDocument();
+    expect(screen.getByText("Incluse dans tous les abonnements.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Voir l’aperçu gratuit/ })).toHaveAttribute("href", `${ADRESSE}/l1`);
-    // Lot 1 : personne n'a encore d'abonnement, la formation n'est pas « dans votre parcours ».
-    expect(screen.getByText("Incluse dans le parcours Réussite académique.")).toBeInTheDocument();
+    // Le parcours guide, il n'ouvre plus l'accès (restructuration, §5.2).
+    expect(screen.getByText("Fait partie du parcours Réussite académique.")).toBeInTheDocument();
   });
 
   it("formation gratuite : toutes les leçons sont ouvertes, et l'on commence en un clic", () => {
@@ -99,6 +100,7 @@ describe("Fiche d'une formation, pour un compte connecté", () => {
     const fermee = EXCEL.modules.map((m) => ({ ...m, lecons: m.lecons.map((l) => ({ ...l, apercu: false, accessible: false })) }));
     render(<FicheConnectee fiche={{ ...EXCEL, modules: fermee }} />);
     expect(screen.getByText("Formation verrouillée")).toBeInTheDocument();
+    expect(screen.getByText("Incluse dans tous les abonnements.")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Commencer|Voir l’aperçu/ })).toBeNull();
   });
 

@@ -75,7 +75,7 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
     ]);
     expect(within(groupe).getAllByRole("link").map((l) => l.textContent)).toEqual([
       "Exercices",
-      "Mes parcours",
+      "Parcours",
       "Certificats",
       "Formations gratuites",
       "Favoris",

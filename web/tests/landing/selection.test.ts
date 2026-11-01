@@ -14,7 +14,6 @@ const carte = (slug: string, parcours: ParcoursCatalogue, jours: number, champs:
   resume: "",
   niveau: "debutant",
   gratuite: false,
-  achatSepare: false,
   badge: null,
   publieeLe: new Date(Date.UTC(2026, 9, 15) - jours * 86_400_000).toISOString(),
   dureeSecondes: 0,

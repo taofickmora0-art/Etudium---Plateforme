@@ -47,11 +47,10 @@ describe("Données d'exemple du lot 1", () => {
     expect(ouvertes.map((l) => l.titre)).toEqual(["Découvrir l’interface", "Saisir et mettre en forme des données"]);
   });
 
-  it("Zotero et Canva sont gratuites, Excel et Marketing se vendent seules", async () => {
+  it("Zotero et Canva sont gratuites", async () => {
     const slugs = async (colonne: string) =>
       (await banc.db.query<{ slug: string }>(`select slug from public.formations where ${colonne} order by slug`)).rows.map((r) => r.slug);
     expect(await slugs("gratuite")).toEqual(["canva-debutant-a-expert", "zotero-gerer-ses-references"]);
-    expect(await slugs("achat_separe")).toEqual(["maitriser-microsoft-excel", "marketing-digital-debutants"]);
   });
 
   it("chaque formation appartient à son parcours", async () => {

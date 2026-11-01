@@ -13,7 +13,6 @@ const FORMATION: CarteCatalogue = {
   resume: "Des méthodes simples pour ne rien perdre en cours.",
   niveau: "debutant",
   gratuite: false,
-  achatSepare: false,
   badge: null,
   publieeLe: "2026-10-13T10:00:00Z",
   dureeSecondes: 3600,

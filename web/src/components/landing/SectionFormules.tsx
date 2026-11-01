@@ -14,7 +14,7 @@ export function SectionFormules() {
       <EnTeteSection
         pastille="Formules"
         ton="blanc"
-        titre="Un abonnement mensuel, sans prélèvement automatique"
+        titre="Un abonnement de 3 mois à 1 an, sans prélèvement automatique"
         idTitre="titre-formules"
         chapeau="Vous renouvelez quand vous voulez. Vos formations et vos certificats restent sur votre compte."
         centre

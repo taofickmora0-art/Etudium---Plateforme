@@ -127,7 +127,7 @@ export function verrou(
   }
   return {
     titre: "Cette leçon est verrouillée",
-    texte: "Elle fait partie d’un parcours. Les leçons d’aperçu restent ouvertes à tous.",
+    texte: "Un abonnement ouvre toutes les formations. Les leçons d’aperçu restent ouvertes à tous.",
     inscription: !connecte,
     connexion: false,
     formules: connecte,

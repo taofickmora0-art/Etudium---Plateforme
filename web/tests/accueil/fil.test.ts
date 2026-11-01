@@ -13,7 +13,6 @@ const formation = (id: string, publieeLe: string): CarteCatalogue => ({
   resume: "",
   niveau: "debutant",
   gratuite: false,
-  achatSepare: false,
   badge: null,
   publieeLe,
   dureeSecondes: 0,

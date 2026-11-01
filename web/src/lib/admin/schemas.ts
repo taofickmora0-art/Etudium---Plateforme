@@ -41,7 +41,6 @@ export const formateurSchema = z.object({
 });
 
 const SEUIL = { error: "Entre 50 et 100 %." };
-const PRIX = { error: "Un prix positif, en FCFA." };
 
 export const formationInfosSchema = z.object({
   titre: requis("Entrez le titre de la formation.", 120),
@@ -53,8 +52,6 @@ export const formationInfosSchema = z.object({
   niveau: z.enum(["debutant", "intermediaire", "avance"], { error: "Choisissez un niveau." }),
   formateur_id: z.uuid({ error: "Choisissez un formateur de la liste." }).nullable(),
   gratuite: z.boolean(),
-  achat_separe: z.boolean(),
-  prix_fcfa: z.number(PRIX).int(PRIX).min(0, PRIX).nullable(),
   badge: z.enum(["populaire", "nouveau"], { error: "Choisissez un badge de la liste." }).nullable(),
   seuil_video: z.number(SEUIL).int(SEUIL).min(50, SEUIL).max(100, SEUIL),
 });

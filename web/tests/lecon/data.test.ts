@@ -19,7 +19,6 @@ const ligneFormation = (fiche: FicheFormation) => ({
   resume: fiche.resume,
   niveau: fiche.niveau,
   gratuite: fiche.gratuite,
-  achat_separe: fiche.achatSepare,
   badge: fiche.badge,
   publiee_le: fiche.publieeLe,
   seuil_video: 85,

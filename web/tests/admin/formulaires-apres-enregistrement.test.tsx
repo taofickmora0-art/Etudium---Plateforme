@@ -51,8 +51,6 @@ const FORMATION = {
   competences: [],
   formateurId: null,
   gratuite: false,
-  achatSepare: false,
-  prixFcfa: null,
   badge: null,
   seuilVideo: 90,
   publieeLe: null,

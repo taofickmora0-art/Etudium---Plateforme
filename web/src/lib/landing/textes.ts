@@ -15,31 +15,22 @@ export const PROBLEMES: Bloc[] = [
 /** « Comment ça marche » (§7). */
 export const ETAPES: Bloc[] = [
   { titre: "Créez votre compte gratuit", texte: "Accédez tout de suite aux formations gratuites et au catalogue complet." },
-  { titre: "Choisissez votre formule", texte: "Basique, Standard ou Premium : 1, 2 ou tous les parcours. Paiement par Mobile Money." },
+  { titre: "Choisissez votre formule", texte: "Basique, Standard ou Premium : 3 mois, 6 mois ou 1 an, avec accès à toutes les formations. Paiement par Mobile Money." },
   { titre: "Apprenez et pratiquez", texte: "Vidéos, quiz, exercices corrigés et sessions live, à votre rythme, sur téléphone ou ordinateur." },
   { titre: "Obtenez vos certificats", texte: "Une formation validée, c’est un certificat en PDF avec un QR Code de vérification." },
 ];
 
-/** Formules (§9) : sans prix au lot 1 (Q10). Les prix viendront du back-office au lot 2. */
+/** Ce que chaque abonnement ouvre : tout (restructuration, §5.1). */
+const TOUT: string[] = ["Toutes les formations et tous les parcours", "La communauté complète", "Les lives et leurs replays", "Les certificats vérifiables"];
+
+/**
+ * Formules (§9) : trois abonnements qui ne diffèrent que par leur durée (restructuration validée le 20 octobre 2026,
+ * §5.2). Sans prix tant que le back-office ne les fixe pas (lot 2).
+ */
 export const FORMULES: { nom: string; description: string; points: string[]; recommandee: boolean }[] = [
-  {
-    nom: "Basique",
-    description: "Pour se concentrer sur un objectif.",
-    points: ["1 parcours au choix", "Quiz, exercices et certificats", "Communauté du parcours"],
-    recommandee: false,
-  },
-  {
-    nom: "Standard",
-    description: "Pour combiner deux compétences.",
-    points: ["2 parcours au choix", "Sessions live et exercices corrigés", "Plus de formations complémentaires"],
-    recommandee: true,
-  },
-  {
-    nom: "Premium",
-    description: "Pour tout apprendre, avec un suivi renforcé.",
-    points: ["Tous les parcours", "Accompagnement renforcé", "Fonctionnalités Premium"],
-    recommandee: false,
-  },
+  { nom: "Basique", description: "3 mois", points: TOUT, recommandee: false },
+  { nom: "Standard", description: "6 mois", points: TOUT, recommandee: true },
+  { nom: "Premium", description: "1 an", points: TOUT, recommandee: false },
 ];
 
 /** Texte qui remplace le prix des formules (spec du lot 1, Q10). */

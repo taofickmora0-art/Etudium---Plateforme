@@ -54,7 +54,7 @@ export const NAV_PRINCIPALE: NavEntry[] = [
 /** Groupe « Mon espace » de la barre latérale. */
 export const NAV_MON_ESPACE: NavEntry[] = [
   { href: "/exercices", label: "Exercices", icon: AssignmentsIcon },
-  { href: "/parcours", label: "Mes parcours", icon: Route01Icon },
+  { href: "/parcours", label: "Parcours", icon: Route01Icon },
   { href: "/certificats", label: "Certificats", icon: Certificate01Icon },
   { href: "/formations-gratuites", label: "Formations gratuites", icon: GiftIcon },
   { href: "/favoris", label: "Favoris", icon: FavouriteIcon },

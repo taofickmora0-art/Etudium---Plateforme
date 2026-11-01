@@ -69,7 +69,7 @@ describe("Règles de la page leçon", () => {
     });
     expect(verrou(EXCEL, false)).toMatchObject({
       titre: "Cette leçon est verrouillée",
-      texte: "Elle fait partie d’un parcours. Les leçons d’aperçu restent ouvertes à tous.",
+      texte: "Un abonnement ouvre toutes les formations. Les leçons d’aperçu restent ouvertes à tous.",
       inscription: true,
       connexion: false,
       formules: false,

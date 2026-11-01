@@ -29,43 +29,42 @@ where not exists (select 1 from public.formateurs where nom = 'Dr Mireille Adjov
 
 -- ─── Les dix formations du catalogue ───────────────────────────────────────
 -- Dates de publication échelonnées (tri « Les plus récentes ») : l'IA, badge « Nouveau », est la dernière parue.
-insert into public.formations (slug, titre, resume, niveau, gratuite, achat_separe, badge, statut, publiee_le) values
+insert into public.formations (slug, titre, resume, niveau, gratuite, badge, statut, publiee_le) values
   ('maitriser-microsoft-excel', 'Maîtriser Microsoft Excel',
    'Formules, tableaux croisés dynamiques et graphiques pour analyser vos données.',
-   'intermediaire', false, true, 'populaire', 'publiee', now() - interval '60 days'),
+   'intermediaire', false, 'populaire', 'publiee', now() - interval '60 days'),
   ('microsoft-word-travaux-universitaires', 'Microsoft Word pour vos travaux universitaires',
    'Styles, sommaire automatique et mise en page du mémoire, étape par étape.',
-   'debutant', false, false, null, 'publiee', now() - interval '55 days'),
+   'debutant', false, null, 'publiee', now() - interval '55 days'),
   ('zotero-gerer-ses-references', 'Zotero : gérer ses références',
    'Collectez vos sources et générez citations et bibliographie sans erreur.',
-   'debutant', true, false, null, 'publiee', now() - interval '50 days'),
+   'debutant', true, null, 'publiee', now() - interval '50 days'),
   ('powerpoint-reussir-sa-soutenance', 'PowerPoint : réussir sa soutenance',
    'Structurez vos diapositives et présentez avec assurance le jour de la soutenance.',
-   'debutant', false, false, null, 'publiee', now() - interval '45 days'),
+   'debutant', false, null, 'publiee', now() - interval '45 days'),
   ('methodologie-du-memoire', 'Méthodologie du mémoire',
    'De la problématique à la rédaction : la méthode pour avancer sans vous perdre.',
-   'intermediaire', false, false, 'populaire', 'publiee', now() - interval '40 days'),
+   'intermediaire', false, 'populaire', 'publiee', now() - interval '40 days'),
   ('canva-debutant-a-expert', 'Canva, de débutant à expert',
    'Créez affiches, présentations et visuels soignés, même sans base en design.',
-   'debutant', true, false, null, 'publiee', now() - interval '35 days'),
+   'debutant', true, null, 'publiee', now() - interval '35 days'),
   ('intelligence-artificielle-etudes', 'L’intelligence artificielle au service de vos études',
    'Utilisez l’IA pour réviser, résumer et rédiger, en gardant un regard critique.',
-   'debutant', false, false, 'nouveau', 'publiee', now() - interval '5 days'),
+   'debutant', false, 'nouveau', 'publiee', now() - interval '5 days'),
   ('montage-video-smartphone', 'Montage vidéo sur smartphone',
    'Tournez, montez et exportez des vidéos propres avec votre seul téléphone.',
-   'intermediaire', false, false, null, 'publiee', now() - interval '25 days'),
+   'intermediaire', false, null, 'publiee', now() - interval '25 days'),
   ('marketing-digital-debutants', 'Marketing digital pour débutants',
    'Les bases pour trouver vos premiers clients en ligne : réseaux, contenu, publicité.',
-   'debutant', false, true, null, 'publiee', now() - interval '20 days'),
+   'debutant', false, null, 'publiee', now() - interval '20 days'),
   ('lancer-son-activite-freelance', 'Lancer son activité de freelance',
    'Offre, tarifs, premiers clients : les étapes pour démarrer une activité en ligne.',
-   'intermediaire', false, false, 'populaire', 'publiee', now() - interval '15 days')
+   'intermediaire', false, 'populaire', 'publiee', now() - interval '15 days')
 on conflict (slug) do update
   set titre = excluded.titre,
       resume = excluded.resume,
       niveau = excluded.niveau,
       gratuite = excluded.gratuite,
-      achat_separe = excluded.achat_separe,
       badge = excluded.badge,
       statut = excluded.statut;
 

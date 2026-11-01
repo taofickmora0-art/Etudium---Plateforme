@@ -70,9 +70,6 @@ export function TableauDeBordAdmin({
           <Carte titre="Revenus par formule" lot={2}>
             <p className="m-0 text-[13px] leading-5 text-discret">Basique, Standard et Premium.</p>
           </Carte>
-          <Carte titre="Formations achetées seules" lot={2}>
-            <p className="m-0 text-[13px] leading-5 text-discret">Les formations complémentaires achetées hors abonnement.</p>
-          </Carte>
         </div>
       </div>
 

@@ -214,8 +214,6 @@ const CHAMPS_DU_CONTENU = { titre: true, slug: true, resume: true, description: 
 
 const SCORE_QUIZ = "Score minimal entre 0 et 100 %.";
 
-const nombreOuNull = (saisie: string) => (saisie.trim() === "" ? null : Number(saisie.replace(/\s/g, "").replace(",", ".")));
-
 /** Onglet « Informations » d'une formation, puis ses parcours (ajoutés en fin de liste, retirés s'ils sont décochés). */
 export async function saveFormationInfos(_prev: FormState, fd: FormData): Promise<FormState> {
   const id = texte(fd, "id");
@@ -231,8 +229,6 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
     niveau: texte(fd, "niveau"),
     formateur_id: texte(fd, "formateur_id") || null,
     gratuite: coche(fd, "gratuite"),
-    achat_separe: coche(fd, "achat_separe"),
-    prix_fcfa: nombreOuNull(texte(fd, "prix_fcfa")),
     badge: texte(fd, "badge") || null,
     seuil_video: Number(texte(fd, "seuil_video")),
   };
@@ -242,7 +238,7 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
   // « Exercices obligatoires » (0033) : une case à cocher, envoyée seulement si la carte « Certification » l'affiche.
   const obligatoires = fd.has("certification") ? coche(fd, "exercices_obligatoires") : null;
   const values = {
-    ...enTextes({ ...saisie, prix_fcfa: texte(fd, "prix_fcfa"), seuil_video: texte(fd, "seuil_video") }),
+    ...enTextes({ ...saisie, seuil_video: texte(fd, "seuil_video") }),
     objectifs: saisie.objectifs.join("\n"),
     competences: saisie.competences.join("\n"),
     parcours: parcoursCoches.join(","),

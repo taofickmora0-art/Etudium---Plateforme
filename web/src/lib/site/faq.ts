@@ -15,13 +15,14 @@ export const QUESTIONS_FREQUENTES: { question: string; reponse: string }[] = [
     reponse: "Non. Vous recevez des rappels avant l’expiration et vous renouvelez quand vous le décidez. Aucun prélèvement automatique.",
   },
   {
-    question: "Puis-je changer de parcours ?",
-    reponse: "Vos parcours restent les mêmes pendant la période d’abonnement. À chaque renouvellement, vous pouvez en choisir de nouveaux.",
+    // Restructuration (§5.2) : chaque abonnement ouvre tous les parcours ; il n'y a plus de parcours au choix.
+    question: "Ai-je accès à tous les parcours ?",
+    reponse: "Oui. Tous les abonnements donnent accès à tous les parcours et à toutes les formations.",
   },
   {
     question: "Que se passe-t-il quand mon abonnement expire ?",
     reponse:
-      "Vos formations sont verrouillées mais rien n’est supprimé : votre progression, vos formations complémentaires et vos certificats restent sur votre compte. Tout redevient accessible dès que vous renouvelez.",
+      "Vos formations sont verrouillées mais rien n’est supprimé : votre progression et vos certificats restent sur votre compte. Tout redevient accessible dès que vous renouvelez.",
   },
   {
     question: "Comment un recruteur vérifie-t-il mon certificat ?",
@@ -34,19 +35,20 @@ export const QUESTIONS_FREQUENTES: { question: string; reponse: string }[] = [
   },
 ];
 
-// Questions sur les formules (NdAide, page Aide de l'espace connecté) : textes du design, tels quels.
+// Questions sur les formules (NdAide, page Aide de l'espace connecté) : le nouveau modèle (restructuration, §5.2), trois
+// abonnements qui ne diffèrent que par leur durée ; plus de changement au prorata ni de formation complémentaire.
 export const QUESTIONS_FORMULES: { question: string; reponse: string }[] = [
   {
-    question: "Puis-je passer à une formule supérieure en cours de mois ?",
-    reponse: "Oui. Le changement est immédiat : vous payez seulement la différence, calculée au prorata des jours restants.",
+    question: "Quelle différence entre Basique, Standard et Premium ?",
+    reponse: "Seulement la durée : 3 mois, 6 mois ou 1 an. Toutes donnent accès à toutes les formations.",
   },
   {
-    question: "Et pour une formule inférieure ?",
-    reponse: "Le changement est programmé au prochain renouvellement. Vous gardez vos avantages actuels jusqu’à l’expiration.",
+    question: "Puis-je prolonger mon abonnement ?",
+    reponse: "Oui. Un nouvel abonnement pris avant la fin s’ajoute à la date de fin de l’actuel.",
   },
   {
-    question: "Qu’est-ce qu’une formation complémentaire ?",
-    reponse: "Une formation hors de vos parcours, achetée une seule fois. Elle reste liée à votre compte et reste accessible tant que votre abonnement est actif.",
+    question: "Que se passe-t-il à la fin de mon abonnement ?",
+    reponse: "Les formations payantes se verrouillent, mais votre progression et vos certificats restent. Tout se rouvre dès que vous renouvelez.",
   },
   {
     question: "Quels moyens de paiement ?",

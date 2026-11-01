@@ -30,14 +30,12 @@ export const libelleExercice = (statut?: StatutRendu) => (statut ? `Exercice · 
 
 /**
  * Le badge d'une carte, un seul et le même partout (spec §11) : « Gratuit » d'abord, puis le badge saisi au
- * back-office (Populaire, Nouveau), puis « Complémentaire » pour une formation disponible seule.
+ * back-office (Populaire, Nouveau). Plus de « Complémentaire » : aucune formation ne s'achète seule (restructuration, §5.2).
  */
-export function badgeDeCarte(carte: Pick<CarteCatalogue, "gratuite" | "badge" | "achatSepare">): CardTag | undefined {
+export function badgeDeCarte(carte: Pick<CarteCatalogue, "gratuite" | "badge">): CardTag | undefined {
   if (carte.gratuite) return { tone: "gratuit", label: "Gratuit" };
   if (carte.badge === "populaire") return { tone: "populaire", label: "Populaire" };
   if (carte.badge === "nouveau") return { tone: "nouveau", label: "Nouveau" };
-  // Couleurs du catalogue du design : « Complémentaire » en bleu, comme « Nouveau ».
-  if (carte.achatSepare) return { tone: "nouveau", label: "Complémentaire" };
   return undefined;
 }
 

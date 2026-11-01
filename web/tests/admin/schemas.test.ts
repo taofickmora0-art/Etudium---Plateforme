@@ -16,8 +16,6 @@ const FORMATION = {
   niveau: "debutant",
   formateur_id: null,
   gratuite: false,
-  achat_separe: false,
-  prix_fcfa: null,
   badge: null,
   seuil_video: 90,
 };
@@ -39,8 +37,10 @@ describe("Règles de saisie du back-office", () => {
     expect(formationInfosSchema.safeParse(FORMATION).success).toBe(true);
   });
 
-  it("un prix n'est jamais négatif", () => {
-    expect(erreurs(formationInfosSchema.safeParse({ ...FORMATION, prix_fcfa: -1 })).prix_fcfa).toBe("Un prix positif, en FCFA.");
+  it("plus de prix par formation (restructuration, §5.2) : un prix envoyé est ignoré", () => {
+    const lu = formationInfosSchema.safeParse({ ...FORMATION, prix_fcfa: -1 });
+    expect(lu.success).toBe(true);
+    expect(lu.data).not.toHaveProperty("prix_fcfa");
   });
 
   it("seuls les PDF et les images passent en consultation seule", () => {

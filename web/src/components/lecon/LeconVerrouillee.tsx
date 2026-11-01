@@ -27,7 +27,7 @@ export function LeconVerrouillee({ fiche, leconId, connecte }: { fiche: FicheFor
           )}
           {v.formules && (
             <Button asChild>
-              <Link href="/abonnement">Voir les formules</Link>
+              <Link href="/abonnement">Voir les abonnements</Link>
             </Button>
           )}
           {v.connexion && (

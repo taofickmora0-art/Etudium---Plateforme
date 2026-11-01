@@ -109,7 +109,7 @@ function Reprise({ fiche, progression }: { fiche: FicheFormation; progression: E
 
 /**
  * Carte d'accès (à droite). Formation commencée (1.7) : la progression, puis « Poursuivre le cours ». Sinon : commencer une
- * formation ouverte, voir l'aperçu, ou savoir qu'elle est verrouillée. Les favoris arrivent en 1.9, les formules au lot 2.
+ * formation ouverte, voir l'aperçu, ou savoir qu'elle est verrouillée. Les favoris arrivent en 1.9, les abonnements au lot 2.
  */
 function CarteAcces({ fiche, progression, favori }: { fiche: FicheFormation; progression: EtatProgression | null; favori: boolean | null }) {
   const etat = etatAcces(fiche, true);
@@ -150,7 +150,7 @@ function CarteAcces({ fiche, progression, favori }: { fiche: FicheFormation; pro
           <p className="m-0 mt-2 text-sm leading-[22px] text-texte">
             {apercus.length > 1 ? `${apercus.length} leçons sont ouvertes en aperçu.` : "Une leçon est ouverte en aperçu."}
           </p>
-          <p className="m-0 mt-1 text-sm leading-[22px] text-texte">Incluse dans les formules Basique, Standard et Premium.</p>
+          <p className="m-0 mt-1 text-sm leading-[22px] text-texte">Incluse dans tous les abonnements.</p>
           {apercus[0] && (
             <Link href={adresseLecon(fiche.slug, apercus[0].id)} className={BOUTON_PRINCIPAL}>
               <span>Voir l’aperçu gratuit</span>
@@ -165,7 +165,7 @@ function CarteAcces({ fiche, progression, favori }: { fiche: FicheFormation; pro
             <Icon icon={SquareLock02Icon} size={18} />
             Formation verrouillée
           </span>
-          <p className="m-0 mt-2 text-sm leading-[22px] text-texte">Incluse dans les formules Basique, Standard et Premium.</p>
+          <p className="m-0 mt-2 text-sm leading-[22px] text-texte">Incluse dans tous les abonnements.</p>
         </>
       )}
       {/* Favoris (tâche 1.9) : absent tant que la table n'est pas dans la base (null). */}
@@ -174,7 +174,8 @@ function CarteAcces({ fiche, progression, favori }: { fiche: FicheFormation; pro
           <BoutonFavori formationId={fiche.id} favoriInitial={favori} />
         </div>
       )}
-      {parcours && <p className="m-0 mt-3.5 text-center text-xs leading-[18px] text-pretty text-discret">Incluse dans le parcours {parcours.nom}.</p>}
+      {/* Le parcours guide, il n'ouvre plus l'accès (restructuration, §5.2). */}
+      {parcours && <p className="m-0 mt-3.5 text-center text-xs leading-[18px] text-pretty text-discret">Fait partie du parcours {parcours.nom}.</p>}
     </div>
   );
 }
