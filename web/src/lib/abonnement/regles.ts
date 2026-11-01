@@ -1,7 +1,7 @@
 import type { TagTone } from "@/components/ui/Tag";
 import { FUSEAU_BENIN } from "@/lib/dates/fuseau";
 import { messageEchec } from "@/lib/paiements/regles";
-import type { CartePaiement, EtapePaiement, EtatAbonnement, StatutPaiement } from "./types";
+import type { CartePaiement, EtapePaiement, EtatAbonnement, MoyenManuel, StatutPaiement } from "./types";
 
 // Les règles des abonnements (lot 2) : durées, montants, dates (à l'heure du Bénin), étapes d'un paiement.
 
@@ -61,8 +61,16 @@ const STATUTS: Record<StatutPaiement, { libelle: string; ton: TagTone }> = {
 
 export const libelleStatut = (s: StatutPaiement) => STATUTS[s];
 
-/** « MTN Mobile Money », « Moov Money », ou « Offert » (code promo à 100 %). */
-export function libelleMoyen(p: Pick<CartePaiement, "montant" | "operateur">): string {
+const MOYENS_MANUELS: Record<MoyenManuel, string> = {
+  mobile_money: "Mobile Money hors plateforme",
+  especes: "Espèces",
+  virement: "Virement",
+  offert: "Offert",
+};
+
+/** « MTN Mobile Money », « Moov Money », un moyen enregistré à la main (0054), ou « Offert » (code promo à 100 %). */
+export function libelleMoyen(p: Pick<CartePaiement, "montant" | "operateur"> & { moyenManuel?: MoyenManuel | null }): string {
+  if (p.moyenManuel) return MOYENS_MANUELS[p.moyenManuel];
   if (p.montant === 0) return "Offert";
   if (p.operateur === "moov") return "Moov Money";
   if (p.operateur === "mtn") return "MTN Mobile Money";

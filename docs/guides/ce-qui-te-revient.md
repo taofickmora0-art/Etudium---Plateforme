@@ -1058,3 +1058,17 @@ Tout se passe en **mode test** : le simulateur de Payiz ne prend aucun argent. L
     - copie le secret de cette adresse dans `PAYIZ_SECRET_WEBHOOK` ;
     - après la vérification de ton compte par Payiz, remplace la clé par `sk_live_…`.
     En local, pas besoin de notifications : l'écran d'attente et « Mon abonnement » relisent chaque paiement chez Payiz.
+
+## 57. Donner ou retirer un abonnement à la main, 10 minutes
+
+Pour une personne qui te paie hors de la plateforme (Mobile Money sur ton numéro, espèces, virement), ou à qui tu offres l'accès.
+
+1. **La migration.** Dans l'éditeur SQL de Supabase, applique `web/supabase/migrations/0054_abonnements_manuels.sql`, après la 0053.
+2. **Attribuer**, avec ton compte administrateur :
+   - depuis la fiche de la personne (Utilisateurs › son nom), section « Abonnement », bouton « Attribuer un abonnement » ;
+   - ou depuis « Abonnements et paiements », bouton « Attribuer un abonnement » : cherche son nom ou son adresse, puis choisis-la ;
+   - choisis l'abonnement (Basique, Standard, Premium), le moyen (Mobile Money hors plateforme, Espèces, Virement, Offert), corrige le montant reçu s'il diffère du prix, et note la référence de la transaction si tu l'as ;
+   - « Attribuer » : l'accès s'ouvre aussitôt (à la suite de l'abonnement en cours s'il y en a un), la personne reçoit une notification et retrouve son reçu dans « Mon abonnement ».
+3. **Vérifie :** la fiche affiche « Standard, actif jusqu'au … » et l'abonnement avec son origine ; l'onglet Paiements montre le paiement (moyen « Mobile Money hors plateforme ») ; le chiffre d'affaires l'inclut (0 pour un abonnement offert).
+4. **Résilier :** sur la fiche, « Résilier », avec un motif : l'abonnement en cours et ceux qui suivent sont annulés, l'accès aux formations payantes s'arrête tout de suite, la personne est prévenue (sa progression et ses certificats restent). « Annuler » sur une ligne n'annule que cet abonnement ; les suivants avancent d'autant.
+5. **Un modérateur** voit la section « Abonnement », sans les boutons.

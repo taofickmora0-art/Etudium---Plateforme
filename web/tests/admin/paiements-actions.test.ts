@@ -98,6 +98,31 @@ describe("Formules, codes promo, abonnements", () => {
     });
   });
 
+  it("attribuer un abonnement à la main : montant lu sans espaces, 0 si offert, refus d'une saisie (0054)", async () => {
+    faux.repondre("rpc.attribuer_abonnement", { data: { id: ID } });
+    const base = { compteId: ID, formuleId: ID, moyen: "mobile_money" as const, montant: "15 000", reference: " MP2611.1234 " };
+    expect(await actions.attribuerAbonnement(base)).toEqual({ ok: true });
+    expect(faux.de("rpc", "attribuer_abonnement")[0].valeurs).toEqual({
+      p_compte: ID,
+      p_formule: ID,
+      p_moyen: "mobile_money",
+      p_montant: 15000,
+      p_reference: "MP2611.1234",
+    });
+    await actions.attribuerAbonnement({ ...base, moyen: "offert", montant: "" });
+    expect(faux.de("rpc", "attribuer_abonnement")[1].valeurs).toMatchObject({ p_moyen: "offert", p_montant: 0 });
+    expect(await actions.attribuerAbonnement({ ...base, montant: "15,5" })).toEqual({ ok: false, message: "Indiquez le montant reçu, en FCFA, sans décimales." });
+    expect(await actions.attribuerAbonnement({ ...base, montant: "" })).toEqual({ ok: false, message: "Indiquez le montant reçu, en FCFA, sans décimales." });
+    expect(faux.de("rpc", "attribuer_abonnement")).toHaveLength(2);
+  });
+
+  it("résilier : le motif, puis le message de la base (0054)", async () => {
+    expect(await actions.resilierAbonnements(ID, " Remboursé ")).toEqual({ ok: true });
+    expect(faux.de("rpc", "resilier_abonnements")[0].valeurs).toEqual({ p_compte: ID, p_motif: "Remboursé" });
+    faux.repondre("rpc.resilier_abonnements", { error: { code: "P0001", message: "Ce compte n’a pas d’abonnement en cours." } });
+    expect(await actions.resilierAbonnements(ID, "Remboursé")).toEqual({ ok: false, message: "Ce compte n’a pas d’abonnement en cours." });
+  });
+
   it("annuler un abonnement : le message de la base", async () => {
     faux.repondre("rpc.annuler_abonnement", { error: { code: "P0001", message: "Indiquez le motif (3 à 300 caractères)." } });
     expect(await actions.annulerAbonnement(ID, "x")).toEqual({ ok: false, message: "Indiquez le motif (3 à 300 caractères)." });

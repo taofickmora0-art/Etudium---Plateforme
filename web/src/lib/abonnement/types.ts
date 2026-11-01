@@ -5,6 +5,8 @@ export type CodeFormule = "basique" | "standard" | "premium";
 export type Operateur = "mtn" | "moov";
 export type StatutPaiement = "en_attente" | "reussi" | "echoue" | "expire" | "annule";
 export type DureeMois = 3 | 6 | 12;
+/** Un paiement reçu hors plateforme, enregistré à la main au back-office (0054). */
+export type MoyenManuel = "mobile_money" | "especes" | "virement" | "offert";
 
 /** Basique (3 mois), Standard (6 mois), Premium (1 an) ; sans prix tant que l'équipe ne l'a pas fixé. */
 export type Formule = { id: string; code: CodeFormule; nom: string; dureeMois: DureeMois; prix: number | null; recommandee: boolean; active: boolean };
@@ -27,6 +29,10 @@ export type CartePaiement = {
   motifEchec: string | null;
   numeroRecu: string | null;
   payizId: string | null;
+  /** Payé chez Payiz, ou attribué à la main au back-office (0054). */
+  source: "payiz" | "manuel";
+  moyenManuel: MoyenManuel | null;
+  referenceManuelle: string | null;
   creeLe: string;
   essaiLe: string | null;
   confirmeLe: string | null;

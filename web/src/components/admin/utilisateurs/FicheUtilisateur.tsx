@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
+import { SectionAbonnement } from "@/components/admin/abonnements/SectionAbonnement";
 import { PageAdmin } from "@/components/admin/PageAdmin";
 import { Avatar } from "@/components/ui/Avatar";
 import { getAuthUser } from "@/lib/auth/current-user";
+import { lireFormules } from "@/lib/abonnement/data";
+import { lireAbonnementsCompte } from "@/lib/admin/paiements/data";
 import type { Role } from "@/lib/auth/permissions";
 import { lireCompte, lireRemarquesFormateurs } from "@/lib/utilisateurs/data";
 import { dateCourte, droitsSurCompte, initialesCompte, nomAffiche } from "@/lib/utilisateurs/regles";
@@ -34,8 +37,16 @@ export async function FicheUtilisateur({ params, roles }: { params: Promise<{ id
 
   const connecte = await getAuthUser();
   const droits = droitsSurCompte({ id: connecte?.id ?? "", roles }, { id: compte.id, roles: compte.roles, suspendu: compte.suspension !== null });
-  const remarques = await lireRemarquesFormateurs(compte.id);
+  const formateur = compte.roles.includes("formateur");
+  // L'abonnement (0054) : pas pour un formateur, qui n'a pas d'espace étudiant ; rien sans la migration.
+  const [remarques, abonnements, formules] = await Promise.all([
+    lireRemarquesFormateurs(compte.id),
+    formateur ? Promise.resolve(null) : lireAbonnementsCompte(compte.id),
+    formateur ? Promise.resolve([]) : lireFormules(),
+  ]);
   const nom = nomAffiche(compte.prenom, compte.nom);
+  // L'argent (attribuer, résilier) : administrateurs seulement ; la base le revérifie.
+  const ecritureAbonnement = roles.includes("admin") || roles.includes("super_admin");
 
   return (
     <PageAdmin titre={nom} fil={[FIL_LISTE, { label: nom }]}>
@@ -53,6 +64,7 @@ export async function FicheUtilisateur({ params, roles }: { params: Promise<{ id
           </div>
         </Section>
         <RoleCompte compte={compte} modifiable={droits.changerRole} />
+        {abonnements && <SectionAbonnement compte={{ id: compte.id, nom }} donnees={abonnements} formules={formules} ecriture={ecritureAbonnement} maintenant={new Date().toISOString()} />}
         <ActiviteCompte compte={compte} />
         <RemarquesFormateurs remarques={remarques.migrationAbsente ? null : remarques.donnees} />
         <SuspensionCompte compte={compte} droits={{ suspendre: droits.suspendre, reactiver: droits.reactiver }} />

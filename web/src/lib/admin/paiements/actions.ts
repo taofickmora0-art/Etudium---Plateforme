@@ -87,6 +87,34 @@ export async function enregistrerCodePromo(e: {
   });
 }
 
+const MONTANT_RECU = "Indiquez le montant reçu, en FCFA, sans décimales.";
+
+/** Un abonnement payé hors plateforme (ou offert), enregistré à la main (0054) : l'accès s'ouvre aussitôt. */
+export async function attribuerAbonnement(e: {
+  compteId: string;
+  formuleId: string;
+  moyen: "mobile_money" | "especes" | "virement" | "offert";
+  montant: string;
+  reference: string;
+}): Promise<Resultat> {
+  if (!UUID.test(e.compteId) || !UUID.test(e.formuleId)) return { ok: false, message: ECHEC };
+  const montant = e.moyen === "offert" ? 0 : lireMontant(e.montant);
+  if (montant === null || Number.isNaN(montant)) return { ok: false, message: MONTANT_RECU };
+  return appeler("attribuer_abonnement", {
+    p_compte: e.compteId,
+    p_formule: e.formuleId,
+    p_moyen: e.moyen,
+    p_montant: montant,
+    p_reference: e.reference.trim() || null,
+  });
+}
+
+/** Résilier : l'abonnement en cours et ceux qui suivent sont annulés (0054). */
+export async function resilierAbonnements(compteId: string, motif: string): Promise<Resultat> {
+  if (!UUID.test(compteId)) return { ok: false, message: ECHEC };
+  return appeler("resilier_abonnements", { p_compte: compteId, p_motif: motif.trim() });
+}
+
 export async function annulerAbonnement(abonnementId: string, motif: string): Promise<Resultat> {
   if (!UUID.test(abonnementId)) return { ok: false, message: ECHEC };
   return appeler("annuler_abonnement", { p_abonnement: abonnementId, p_motif: motif });

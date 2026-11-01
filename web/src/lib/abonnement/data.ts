@@ -3,8 +3,8 @@ import { demoModeActive } from "@/lib/auth/current-user";
 import { liste } from "@/lib/contenus/lecture";
 import { configurationPaiement } from "@/lib/paiements/config";
 import { createClient } from "@/lib/supabase/server";
-import { versCartePaiement, versEtatAbonnement, versFormule } from "./conversion";
-import type { CartePaiement, EtatAbonnement, Formule, Operateur } from "./types";
+import { versCartePaiement, versEtatAbonnement, versFormule, versMoyenManuel } from "./conversion";
+import type { CartePaiement, EtatAbonnement, Formule, MoyenManuel, Operateur } from "./types";
 
 // Les lectures des abonnements (0049). Sans la migration, l'appli se comporte comme avant le lot 2 : compte gratuit,
 // prix « annoncés au lancement », aucun paiement.
@@ -25,6 +25,9 @@ export type Recu = {
   montant: number;
   operateur: Operateur | null;
   telephoneMasque: string | null;
+  /** Attribué à la main au back-office (0054). */
+  moyenManuel: MoyenManuel | null;
+  referenceManuelle: string | null;
 };
 
 /** Les trois formules, dans leur ordre ; [] sans la migration. */
@@ -78,6 +81,8 @@ export async function lireRecu(numero: string): Promise<Recu | null> {
     montant: nombre(r.montant),
     operateur: r.operateur === "mtn" || r.operateur === "moov" ? r.operateur : null,
     telephoneMasque: texteOuNull(r.telephone_masque),
+    moyenManuel: versMoyenManuel(r.moyen_manuel),
+    referenceManuelle: texteOuNull(r.reference_manuelle),
   };
 }
 

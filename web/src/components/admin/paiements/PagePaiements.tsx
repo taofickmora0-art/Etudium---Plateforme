@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertCircleIcon, CheckmarkCircle02Icon, CreditCardIcon, UserMultipleIcon } from "@hugeicons/core-free-icons";
+import { BoutonAttribuer } from "@/components/admin/abonnements/BoutonAttribuer";
 import { GRILLE_CHIFFRES, Tuile } from "@/components/tableau/Blocs";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
 import type { CodePromo, EtatReglage, PagePaiements as Page, ResumePaiements } from "@/lib/admin/paiements/types";
@@ -36,6 +37,12 @@ export function PagePaiements({ resume, etat, formules, codes, paiements, ecritu
         <Tuile icon={AlertCircleIcon} label="Paiements échoués" value={chiffre.format(resume.echouesMois)} hint="Ce mois" />
         <Tuile icon={UserMultipleIcon} tone="information" label="Abonnés actifs" value={chiffre.format(resume.abonnesActifs)} />
       </div>
+      {/* Un paiement reçu hors plateforme, ou un abonnement offert (0054) : administrateurs seulement. */}
+      {ecriture && (
+        <div className="flex justify-end">
+          <BoutonAttribuer formules={formules} />
+        </div>
+      )}
       <ReglagePaiements etat={etat} ecriture={ecriture} />
       <SegmentedTabs
         label="Abonnements et paiements"

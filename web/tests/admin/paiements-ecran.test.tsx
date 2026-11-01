@@ -18,7 +18,9 @@ vi.mock("@/lib/admin/paiements/actions", () => ({
   chargerPaiements: vi.fn(),
   chargerPaiement: vi.fn(),
 }));
+vi.mock("@/lib/utilisateurs/actions", () => ({ chercherComptes: vi.fn() }));
 const actions = await import("@/lib/admin/paiements/actions");
+const { chercherComptes } = await import("@/lib/utilisateurs/actions");
 const { PagePaiements } = await import("@/components/admin/paiements/PagePaiements");
 
 const texte = (t: string) => t.replace(/ /g, " ");
@@ -44,6 +46,8 @@ const PAIEMENTS: Page = {
       operateur: "mtn",
       telephoneMasque: "+229 01 •• •• •• 00",
       numeroRecu: "ET-R-2026-000001",
+      source: "payiz",
+      moyenManuel: null,
     },
   ],
 };
@@ -101,6 +105,9 @@ describe("Les chiffres et les onglets", () => {
         motifEchec: null,
         numeroRecu: "ET-R-2026-000001",
         payizId: "pay_1",
+        source: "payiz",
+        moyenManuel: null,
+        referenceManuelle: null,
         creeLe: "2026-11-01T09:00:00Z",
         essaiLe: "2026-11-01T09:00:00Z",
         confirmeLe: "2026-11-01T09:01:00Z",
@@ -135,6 +142,32 @@ describe("Les chiffres et les onglets", () => {
     expect(ligne).toHaveTextContent("3 / 50");
     expect(ligne).toHaveTextContent("Actif");
     expect(screen.getByRole("button", { name: "Nouveau code" })).toBeInTheDocument();
+  });
+});
+
+describe("Attribuer un abonnement depuis la page des paiements (0054)", () => {
+  it("chercher le compte, puis la fenêtre d'attribution", async () => {
+    vi.mocked(chercherComptes).mockResolvedValue({
+      ok: true,
+      page: {
+        total: 1,
+        comptes: [{ id: "c1", prenom: "Awa", nom: "Kpadé", email: "awa@exemple.com", roles: ["etudiant"], inscritLe: "2026-10-01T09:00:00Z", derniereConnexion: null, suspendu: false }],
+      },
+    });
+    const user = userEvent.setup();
+    afficher();
+    await user.click(screen.getByRole("button", { name: "Attribuer un abonnement" }));
+    const recherche = screen.getByRole("dialog", { name: "Attribuer un abonnement" });
+    await user.type(within(recherche).getByLabelText("Compte (nom ou adresse e-mail)"), "awa");
+    await user.click(within(recherche).getByRole("button", { name: "Chercher" }));
+    expect(chercherComptes).toHaveBeenCalledWith("awa", "etudiants", 1);
+    await user.click(await within(recherche).findByRole("button", { name: /Awa Kpadé/ }));
+    expect(await screen.findByRole("dialog", { name: "Attribuer un abonnement à Awa Kpadé" })).toBeInTheDocument();
+  });
+
+  it("un modérateur n'a pas le bouton", () => {
+    afficher({ ecriture: false });
+    expect(screen.queryByRole("button", { name: "Attribuer un abonnement" })).toBeNull();
   });
 });
 

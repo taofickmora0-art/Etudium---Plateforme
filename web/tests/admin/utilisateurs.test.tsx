@@ -27,6 +27,9 @@ const getAuthUser = vi.fn();
 vi.mock("@/lib/auth/current-user", () => ({ getAuthUser: () => getAuthUser(), getShellUser: vi.fn(), demoModeActive: () => false }));
 const lireCompte = vi.fn();
 const lireRemarquesFormateurs = vi.fn(async () => ({ migrationAbsente: false, donnees: [] as unknown[] }));
+// La section « Abonnement » (0054) a ses propres tests (abonnements-manuels.test.tsx) : rien à lire ici.
+vi.mock("@/lib/admin/paiements/data", () => ({ lireAbonnementsCompte: async () => null }));
+vi.mock("@/lib/abonnement/data", () => ({ lireFormules: async () => [] }));
 vi.mock("@/lib/utilisateurs/data", () => ({
   lireCompte: (...a: unknown[]) => lireCompte(...a),
   lireComptes: vi.fn(),

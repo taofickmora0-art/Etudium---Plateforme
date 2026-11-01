@@ -70,6 +70,11 @@ describe("Libellés", () => {
     expect(libelleMoyen(carte({ operateur: "mtn" }))).toBe("MTN Mobile Money");
     expect(libelleMoyen(carte({ operateur: "moov" }))).toBe("Moov Money");
     expect(libelleMoyen(carte({ montant: 0, operateur: null }))).toBe("Offert");
+    // Attribué à la main au back-office (0054).
+    expect(libelleMoyen(carte({ source: "manuel", moyen_manuel: "mobile_money" }))).toBe("Mobile Money hors plateforme");
+    expect(libelleMoyen(carte({ source: "manuel", moyen_manuel: "especes" }))).toBe("Espèces");
+    expect(libelleMoyen(carte({ source: "manuel", moyen_manuel: "virement" }))).toBe("Virement");
+    expect(libelleMoyen(carte({ source: "manuel", moyen_manuel: "offert", montant: 0 }))).toBe("Offert");
   });
 
   it("la formule du profil", () => {

@@ -1,4 +1,4 @@
-import type { CartePaiement, CodeFormule, DureeMois, Operateur, StatutPaiement } from "@/lib/abonnement/types";
+import type { CartePaiement, CodeFormule, DureeMois, EtatAbonnement, MoyenManuel, Operateur, StatutPaiement } from "@/lib/abonnement/types";
 
 // Les formes du back-office « Abonnements et paiements », sans rien du serveur : les composants clients les importent.
 
@@ -26,6 +26,8 @@ export type LignePaiement = {
   operateur: Operateur | null;
   telephoneMasque: string | null;
   numeroRecu: string | null;
+  source: "payiz" | "manuel";
+  moyenManuel: MoyenManuel | null;
 };
 export type PagePaiements = { total: number; lignes: LignePaiement[] };
 export type DetailPaiement = CartePaiement & {
@@ -36,3 +38,19 @@ export type DetailPaiement = CartePaiement & {
 export type EtatReglage = { ouverts: boolean; jeton: "reconnu" | "non_reconnu" | "absent"; cle: "test" | "reel" | "absente"; webhook: boolean };
 
 export const PAIEMENTS_PAR_PAGE = 20;
+
+/** La section « Abonnement » de la fiche d'un compte (0054) : son état et ses abonnements, du plus récent au plus ancien. */
+export type AbonnementCompte = {
+  id: string;
+  formule: { code: CodeFormule; nom: string; dureeMois: DureeMois };
+  debut: string;
+  fin: string;
+  annuleLe: string | null;
+  motifAnnulation: string | null;
+  source: "payiz" | "manuel";
+  moyenManuel: MoyenManuel | null;
+  operateur: Operateur | null;
+  montant: number;
+  numeroRecu: string | null;
+};
+export type AbonnementsCompte = { etat: EtatAbonnement; abonnements: AbonnementCompte[] };

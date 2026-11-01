@@ -29,6 +29,8 @@ const RECU: DonneesRecu = {
   montant: 12000,
   operateur: "mtn",
   telephoneMasque: "+229 01 •• •• •• 00",
+  moyenManuel: null,
+  referenceManuelle: null,
 };
 
 describe("Le reçu", () => {
@@ -53,6 +55,11 @@ describe("Le reçu", () => {
     expect(document.body).toHaveTextContent(texte(montantFcfa(12000)));
     await userEvent.click(screen.getByRole("button", { name: "Imprimer ou enregistrer en PDF" }));
     expect(imprimer).toHaveBeenCalled();
+  });
+
+  it("payé hors plateforme : le moyen et la référence (0054)", () => {
+    render(<Recu recu={{ ...RECU, operateur: null, telephoneMasque: null, moyenManuel: "mobile_money", referenceManuelle: "MP2611.1234" }} />);
+    expect(document.body).toHaveTextContent("Moyen : Mobile Money hors plateforme · réf. MP2611.1234");
   });
 
   it("abonnement offert : « Offert », sans numéro", () => {

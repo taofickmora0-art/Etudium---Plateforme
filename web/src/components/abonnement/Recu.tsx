@@ -52,8 +52,10 @@ export function Recu({ recu }: { recu: DonneesRecu }) {
         <Ligne libelle="Montant payé" valeur={montantFcfa(recu.montant)} forte />
       </dl>
 
-      <p className="m-0 text-sm leading-[22px] text-texte">{`Moyen : ${moyen}${recu.montant > 0 && recu.telephoneMasque ? ` · ${recu.telephoneMasque}` : ""}`}</p>
-      <p className="m-0 text-[13px] leading-5 text-discret">Étudium · Paiement traité par Payiz</p>
+      <p className="m-0 text-sm leading-[22px] text-texte">
+        {`Moyen : ${moyen}${recu.montant > 0 && recu.telephoneMasque ? ` · ${recu.telephoneMasque}` : ""}${recu.referenceManuelle ? ` · réf. ${recu.referenceManuelle}` : ""}`}
+      </p>
+      <p className="m-0 text-[13px] leading-5 text-discret">{recu.moyenManuel ? "Étudium · Paiement enregistré par l’équipe" : "Étudium · Paiement traité par Payiz"}</p>
 
       <div className="print:hidden">
         <Button variant="contour" onClick={() => window.print()}>

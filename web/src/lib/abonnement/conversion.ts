@@ -1,4 +1,4 @@
-import type { CartePaiement, CodeFormule, DureeMois, EssaiCode, EtatAbonnement, Formule, Operateur, StatutPaiement } from "./types";
+import type { CartePaiement, CodeFormule, DureeMois, EssaiCode, EtatAbonnement, Formule, MoyenManuel, Operateur, StatutPaiement } from "./types";
 
 // Des réponses de la base (0049, en snake_case) vers les types de l'appli. Ce module n'importe rien du serveur : la coque
 // (`current-user.ts`) s'en sert aussi.
@@ -15,6 +15,8 @@ const nombre = (v: unknown) => Number(v ?? 0) || 0;
 const code = (v: unknown): CodeFormule => (CODES.includes(v as CodeFormule) ? (v as CodeFormule) : "standard");
 const duree = (v: unknown): DureeMois => (Number(v) === 12 ? 12 : Number(v) === 6 ? 6 : 3);
 const operateur = (v: unknown): Operateur | null => (v === "mtn" || v === "moov" ? v : null);
+const MOYENS: MoyenManuel[] = ["mobile_money", "especes", "virement", "offert"];
+export const versMoyenManuel = (v: unknown): MoyenManuel | null => (MOYENS.includes(v as MoyenManuel) ? (v as MoyenManuel) : null);
 
 export function versFormule(l: Ligne): Formule {
   return {
@@ -54,6 +56,9 @@ export function versCartePaiement(j: unknown): CartePaiement {
     motifEchec: texteOuNull(o.motif_echec),
     numeroRecu: texteOuNull(o.numero_recu),
     payizId: texteOuNull(o.payiz_id),
+    source: o.source === "manuel" ? "manuel" : "payiz",
+    moyenManuel: versMoyenManuel(o.moyen_manuel),
+    referenceManuelle: texteOuNull(o.reference_manuelle),
     creeLe: texte(o.cree_le),
     essaiLe: texteOuNull(o.essai_le),
     confirmeLe: texteOuNull(o.confirme_le),

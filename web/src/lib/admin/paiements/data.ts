@@ -1,9 +1,9 @@
-import { versCartePaiement } from "@/lib/abonnement/conversion";
+import { versCartePaiement, versEtatAbonnement, versMoyenManuel } from "@/lib/abonnement/conversion";
 import { estFonctionAbsente, liste } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
-import type { CodePromo, ComptePaiement, DetailPaiement, EtatReglage, PagePaiements, ResumePaiements } from "./types";
+import type { AbonnementsCompte, CodePromo, ComptePaiement, DetailPaiement, EtatReglage, PagePaiements, ResumePaiements } from "./types";
 
-export type { CodePromo, ComptePaiement, DetailPaiement, EtatReglage, LignePaiement, PagePaiements, ResumePaiements } from "./types";
+export type { AbonnementCompte, AbonnementsCompte, CodePromo, ComptePaiement, DetailPaiement, EtatReglage, LignePaiement, PagePaiements, ResumePaiements } from "./types";
 
 // Les lectures du back-office « Abonnements et paiements » (0051). La clé Payiz et le jeton du serveur ne sortent
 // jamais d'ici : l'écran ne reçoit que leur état.
@@ -53,6 +53,8 @@ export function versPagePaiements(v: unknown): PagePaiements {
         operateur: carte.operateur,
         telephoneMasque: carte.telephoneMasque,
         numeroRecu: carte.numeroRecu,
+        source: carte.source,
+        moyenManuel: carte.moyenManuel,
       };
     }),
   };
@@ -107,4 +109,34 @@ export async function lireEtatPaiements(): Promise<EtatReglage> {
     cle: !cle ? "absente" : cle.startsWith("sk_live_") ? "reel" : "test",
     webhook: Boolean(process.env.PAYIZ_SECRET_WEBHOOK?.trim()),
   };
+}
+
+export function versAbonnementsCompte(v: unknown): AbonnementsCompte {
+  const o = objet(v);
+  return {
+    etat: versEtatAbonnement(o.etat),
+    abonnements: liste(o.abonnements).map((a) => {
+      const carte = versCartePaiement({ formule: a.formule, montant: a.montant, operateur: a.operateur, numero_recu: a.numero_recu });
+      return {
+        id: texte(a.id),
+        formule: carte.formule,
+        debut: texte(a.debut),
+        fin: texte(a.fin),
+        annuleLe: texteOuNull(a.annule_le),
+        motifAnnulation: texteOuNull(a.motif_annulation),
+        source: a.source === "manuel" ? "manuel" : "payiz",
+        moyenManuel: versMoyenManuel(a.moyen_manuel),
+        operateur: carte.operateur,
+        montant: carte.montant,
+        numeroRecu: carte.numeroRecu,
+      };
+    }),
+  };
+}
+
+/** La section « Abonnement » de la fiche d'un compte ; null sans la migration 0054. */
+export async function lireAbonnementsCompte(compteId: string): Promise<AbonnementsCompte | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("abonnements_compte", { p_compte: compteId });
+  return error ? null : versAbonnementsCompte(data);
 }
