@@ -1,3 +1,6 @@
+-- Ne plus appliquer (2026-11-02) : les formations d'exemple ont été retirées à la demande de l'utilisateur ; voir
+-- retirer-lot-1.sql.
+--
 -- Étudium · données d'exemple du lot 1 (textes du design « Nouveau design »).
 -- SEULEMENT sur la base de test etudium-dev : ne jamais appliquer en production.
 -- À appliquer après la migration 0004 : SQL Editor → New query → coller tout le fichier → Run.
