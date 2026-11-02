@@ -63,22 +63,22 @@ export function ListeCochee({
   );
 }
 
-/** Formateur (carte de la fiche) ; absent si la formation n'en a pas. */
-export function CarteFormateur({ formateur, variante }: { formateur: FormateurFiche; variante: "public" | "connecte" }) {
-  const publique = variante === "public";
+/**
+ * Le formateur, d'après la fiche de la formation : le bloc d'avant, gardé en repli quand sa fiche publique ne se lit pas
+ * (sans la migration 0070) : nom, titre, présentation et initiales, sans lien, survol ni « Message ».
+ */
+export function CarteFormateur({ formateur }: { formateur: FormateurFiche }) {
   return (
-    <div className={cn("box-border flex min-w-0 flex-col rounded-carte", publique ? "bg-page p-[22px]" : "border border-bordure-carte bg-panneau p-5")}>
-      <h3 className="m-0 text-base leading-6 font-semibold text-encre">Votre formateur·rice</h3>
-      <div className={cn("flex items-center gap-3", publique ? "mt-4" : "mt-3.5")}>
-        <Avatar initials={initialesDe(formateur.nom)} size={publique ? 52 : 44} />
+    <div className="box-border flex min-w-0 flex-col rounded-carte border border-bordure-carte bg-panneau p-5 max-sm:p-4">
+      <h2 className="m-0 text-base leading-6 font-semibold text-encre max-sm:text-[15px] max-sm:leading-[22px]">Votre formateur·rice</h2>
+      <div className="mt-3.5 flex items-center gap-3">
+        <Avatar initials={initialesDe(formateur.nom)} size={44} />
         <span className="flex min-w-0 flex-col">
-          <span className={cn("text-[15px] leading-[22px] text-encre", publique ? "font-semibold" : "font-medium")}>{formateur.nom}</span>
-          <span className={cn("text-[13px] leading-5", publique ? "text-ardoise" : "text-discret")}>{publique ? formateur.domaine || formateur.titre : formateur.titre}</span>
+          <span className="text-[15px] leading-[22px] font-medium text-encre max-sm:text-sm max-sm:leading-5">{formateur.nom}</span>
+          <span className="text-[13px] leading-5 text-discret max-sm:text-xs max-sm:leading-[18px]">{formateur.titre}</span>
         </span>
       </div>
-      {formateur.presentation && (
-        <p className={cn("m-0 text-sm leading-[22px] text-pretty", publique ? "mt-3.5 text-ardoise" : "mt-3 text-texte")}>{formateur.presentation}</p>
-      )}
+      {formateur.presentation && <p className="m-0 mt-3 text-sm leading-[22px] text-pretty text-texte max-sm:text-[13px] max-sm:leading-5">{formateur.presentation}</p>}
     </div>
   );
 }

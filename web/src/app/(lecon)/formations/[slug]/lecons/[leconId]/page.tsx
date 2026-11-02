@@ -19,8 +19,9 @@ import { getFiche } from "@/lib/catalogue/data";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { apercuFormateur } from "@/lib/catalogue/garde-formateur";
 import { compteConnecte } from "@/lib/catalogue/visiteur";
+import { lireAccesFormation } from "@/lib/inscriptions/data";
 import { getLeconDans } from "@/lib/lecon/data";
-import { videoMesuree, voisines } from "@/lib/lecon/regles";
+import { formationPartielle, videoMesuree, voisines } from "@/lib/lecon/regles";
 import { lireProgression } from "@/lib/progression/data";
 import { etatFormation } from "@/lib/progression/regles";
 import { lireMesScores } from "@/lib/quiz/data";
@@ -88,6 +89,17 @@ async function Lecon({ params }: Params) {
   // En aperçu, le retour mène à l'onglet Programme de l'éditeur de la formation, pour l'équipe comme pour le formateur, et
   // la progression ne s'affiche pas : rien n'y est enregistré (tâche 12 du 31 octobre 2026).
   const retourEdition = apercu && lienModifier ? lienModifier.replace(/\/lecons\/[^/?]+$/, "?onglet=programme") : null;
+  // Des leçons fermées alors que la formation est ouverte au compte (0069) : il n'y est pas inscrit. La leçon fermée et le
+  // bandeau d'aperçu proposent « S’inscrire à ce cours » ; sans la migration, rien ne change.
+  let aInscrire = false;
+  if (connecte && !apercu && formationPartielle(donnees.fiche)) {
+    try {
+      const acces = await lireAccesFormation(donnees.fiche.id);
+      aInscrire = acces !== null && acces.ouverte && !acces.inscrit;
+    } catch (erreur) {
+      return siTablesAbsentes(erreur);
+    }
+  }
   const progression = connecte && !apercu;
   const terminees = lignes ? etatFormation(donnees.fiche, lignes).terminees : new Set<string>();
   const { precedente, suivante } = voisines(donnees.fiche.modules, leconId);
@@ -129,7 +141,7 @@ async function Lecon({ params }: Params) {
           </TiroirLecons>
         }
       >
-        <ContenuLecon donnees={donnees} connecte={connecte} apercu={apercu} moi={moi} lienModifier={lienModifier} />
+        <ContenuLecon donnees={donnees} connecte={connecte} apercu={apercu} moi={moi} lienModifier={lienModifier} aInscrire={aInscrire} />
       </CadreLecon>
     </EtatLeconProvider>
   );

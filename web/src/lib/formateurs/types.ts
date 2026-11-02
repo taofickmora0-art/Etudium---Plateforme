@@ -25,3 +25,9 @@ export type FormateurPublic = {
   /** Le compte connecté peut lui écrire (bouton « Message ») : inscrit à une de ses formations, fiche reliée à un compte formateur. */
   peutEcrire: boolean;
 };
+
+/**
+ * Le formateur d'une formation, pour sa fiche (bloc « Formateur du cours », carte au survol) : sa fiche publique sans la
+ * liste de ses formations, leur nombre suffit. Données simples : elles passent du serveur aux composants du navigateur.
+ */
+export type ApercuFormateur = Omit<FormateurPublic, "formations">;

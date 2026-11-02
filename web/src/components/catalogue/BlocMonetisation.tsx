@@ -7,17 +7,6 @@ import { cn } from "@/lib/cn";
 
 // Le lien compétence → monétisation sur une fiche (restructuration, §5.3 ; liste du 31 octobre 2026, tâche 14).
 
-type Variante = "public" | "connecte";
-
-const SECTION: Record<Variante, string> = {
-  public: "box-border flex flex-col gap-5 rounded-panneau bg-panneau p-[clamp(24px,4vw,48px)]",
-  connecte: "flex min-w-0 flex-col gap-4",
-};
-const TITRE: Record<Variante, string> = {
-  public: "m-0 text-[clamp(28px,3.5vw,44px)] leading-[1.08] font-medium tracking-[-0.028em] text-balance text-titre",
-  connecte: "m-0 text-xl leading-7 font-semibold text-encre",
-};
-
 /** Une formation liée : son titre, son résumé, et la flèche vers sa fiche. */
 function Lien({ carte }: { carte: CarteCatalogue }) {
   return (
@@ -38,11 +27,11 @@ function Lien({ carte }: { carte: CarteCatalogue }) {
   );
 }
 
-function Bloc({ id, titre, texte, cartes, variante }: { id: string; titre: string; texte: string; cartes: CarteCatalogue[]; variante: Variante }) {
+function Bloc({ id, titre, texte, cartes }: { id: string; titre: string; texte: string; cartes: CarteCatalogue[] }) {
   return (
-    <section aria-labelledby={`${id}-titre`} className={SECTION[variante]}>
+    <section aria-labelledby={`${id}-titre`} className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <h2 id={`${id}-titre`} className={TITRE[variante]}>
+        <h2 id={`${id}-titre`} className="m-0 text-xl leading-7 font-semibold text-encre max-sm:text-lg max-sm:leading-[26px]">
           {titre}
         </h2>
         <p className="m-0 text-sm leading-[22px] text-pretty text-discret">{texte}</p>
@@ -59,8 +48,9 @@ function Bloc({ id, titre, texte, cartes, variante }: { id: string; titre: strin
 /**
  * Sur la fiche d'une formation Business : « À suivre d'abord », les compétences qu'elle apprend à vendre. Sur la fiche
  * d'une compétence : « Et ensuite ? Vendre cette compétence », les formations Business qui la monétisent. Rien sans lien.
+ * La même présentation pour un visiteur et pour un compte connecté (spec du 2 novembre 2026, §5).
  */
-export function BlocMonetisation({ monetisation, variante }: { monetisation?: Monetisation | null; variante: Variante }) {
+export function BlocMonetisation({ monetisation }: { monetisation?: Monetisation | null }) {
   if (!monetisation) return null;
   return (
     <>
@@ -70,7 +60,6 @@ export function BlocMonetisation({ monetisation, variante }: { monetisation?: Mo
           titre="À suivre d’abord"
           texte="Cette formation vous apprend à vendre une compétence : commencez par l’acquérir."
           cartes={monetisation.aSuivre}
-          variante={variante}
         />
       )}
       {monetisation.aVendre.length > 0 && (
@@ -79,7 +68,6 @@ export function BlocMonetisation({ monetisation, variante }: { monetisation?: Mo
           titre="Et ensuite ? Vendre cette compétence"
           texte="Les formations du parcours Business qui vous apprennent à trouver des clients avec cette compétence."
           cartes={monetisation.aVendre}
-          variante={variante}
         />
       )}
     </>

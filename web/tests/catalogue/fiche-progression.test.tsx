@@ -35,7 +35,7 @@ describe("Fiche connectée : progression", () => {
   it("le programme montre les leçons terminées, « Vous êtes ici » et l'état des modules", () => {
     const progression = etatFormation(EXCEL_OUVERTE, [ligne(1, true, 40), ligne(2, true, 30), ligne(3, true, 20), ligne(4, false, 10)]);
     render(<FicheConnectee fiche={EXCEL_OUVERTE} progression={progression} />);
-    const programme = screen.getByRole("region", { name: "Programme" });
+    const programme = screen.getByRole("region", { name: "Contenus du cours" });
     expect(within(programme).getByRole("link", { name: /Découvrir l’interface.*terminée/ })).toBeInTheDocument();
     const ici = within(programme).getByRole("link", { name: /Références relatives et absolues/ });
     expect(within(ici).getByText("Vous êtes ici")).toBeInTheDocument();
@@ -51,12 +51,13 @@ describe("Fiche connectée : progression", () => {
     expect(screen.getAllByText("Terminé").length).toBeGreaterThan(0);
   });
 
-  it("formation non commencée, ou sans progression en base : la carte de départ", () => {
+  it("formation non commencée, ou sans progression en base : la carte de départ, et « Commencer le cours » en haut", () => {
     const { unmount } = render(<FicheConnectee fiche={{ ...EXCEL_OUVERTE, gratuite: true }} progression={etatFormation(EXCEL_OUVERTE, [])} />);
     expect(screen.queryByText("Progression du cours")).toBeNull();
-    expect(screen.getByRole("link", { name: "Commencer" })).toBeInTheDocument();
+    expect(screen.getByText("Formation gratuite : toutes les leçons sont ouvertes.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Commencer le cours" })).toHaveAttribute("href", `${ADRESSE}/${id(1)}`);
     unmount();
     render(<FicheConnectee fiche={{ ...EXCEL_OUVERTE, gratuite: true }} progression={null} />);
-    expect(screen.getByRole("link", { name: "Commencer" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Commencer le cours" })).toHaveAttribute("href", `${ADRESSE}/${id(1)}`);
   });
 });

@@ -4,7 +4,7 @@ import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
 import { Icon, type IconSvgElement } from "@/components/ui/Icon";
 import { Tag } from "@/components/ui/Tag";
 import { formatDuree } from "@/lib/admin/duree";
-import { estLeconDeContenu, libelleExercice, libelleQuiz } from "@/lib/catalogue/regles";
+import { estLeconDeContenu, libelleExercice, libelleQuiz, titreModule } from "@/lib/catalogue/regles";
 import type { StatutRendu } from "@/lib/exercices/types";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
@@ -43,7 +43,7 @@ export function ProgrammeMobile({ fiche, leconId, connecte, terminees, scores = 
         <div key={module.id} className="flex min-w-0 flex-col">
           {index > 0 && <div aria-hidden="true" className="mt-1.5 mb-2.5 h-px bg-bordure-carte" />}
           <div className="flex items-center justify-between gap-3 px-1 pt-1.5 pb-0.5">
-            <h3 className="m-0 text-base leading-6 font-semibold text-encre">{`Module ${index + 1} : ${module.titre}`}</h3>
+            <h3 className="m-0 text-base leading-6 font-semibold text-encre">{titreModule(index + 1, module.titre)}</h3>
             {progression && (
               <span className="text-xs leading-[18px] whitespace-nowrap text-discret">
                 {`${module.lecons.filter((l) => estLeconDeContenu(l) && terminees.has(l.id)).length}/${module.lecons.filter(estLeconDeContenu).length}`}

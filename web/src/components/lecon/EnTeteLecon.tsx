@@ -6,8 +6,10 @@ import { iconButtonVariants } from "@/components/ui/IconButton";
 import { Tag } from "@/components/ui/Tag";
 import { Icon } from "@/components/ui/Icon";
 import { MetaDot } from "@/components/ui/Progress";
+import { formatDuree } from "@/lib/admin/duree";
+import { titreModule } from "@/lib/catalogue/regles";
 import type { FicheFormation, TypeLecon } from "@/lib/catalogue/types";
-import { dureeLecon, rangDansFormation, situation, voisines } from "@/lib/lecon/regles";
+import { rangDansFormation, situation, voisines } from "@/lib/lecon/regles";
 import type { LeconDetail } from "@/lib/lecon/types";
 
 const META = "flex flex-wrap items-center gap-[7px] text-sm leading-[22px] text-discret";
@@ -54,9 +56,10 @@ export function EnTeteLecon({ fiche, lecon, lienModifier = null, type = "lecon" 
   const ou = situation(fiche.modules, lecon.id);
   const rang = rangDansFormation(fiche.modules, lecon.id);
   const { precedente, suivante } = voisines(fiche.modules, lecon.id);
-  const nomModule = ou ? `Module ${ou.numero} · ${ou.titreModule}` : "";
+  const nomModule = ou ? titreModule(ou.numero, ou.titreModule) : "";
   const formateur = fiche.formateur?.nom ?? "";
-  const duree = dureeLecon(lecon.dureeSecondes);
+  // Le même format court que dans les programmes (« 12:40 ») : une seule écriture de la durée d'une leçon.
+  const duree = formatDuree(lecon.dureeSecondes);
   return (
     <div>
       {(rang || lienModifier) && (

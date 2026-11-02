@@ -43,11 +43,13 @@ describe("Fiche d'une formation, pour un visiteur", () => {
     expect(screen.getByText("Basique, Standard ou Premium : 3 mois, 6 mois ou 1 an.")).toBeInTheDocument();
     expect(screen.queryByText(/formation complémentaire/)).toBeNull();
     expect(screen.getAllByRole("link", { name: "Créer mon compte gratuit" })[0]).toHaveAttribute("href", "/inscription");
-    // Programme : les leçons d'aperçu ont leur lien, les autres ne sont pas cliquables.
-    const programme = screen.getByRole("region", { name: "Programme" });
-    expect(within(programme).getAllByRole("link", { name: "Aperçu" }).map((a) => a.getAttribute("href"))).toEqual([`${ADRESSE}/l1`, `${ADRESSE}/l2`]);
+    // Programme (« Contenus du cours ») : les leçons d'aperçu sont des liens marqués « Aperçu », les autres ne sont pas cliquables.
+    const programme = screen.getByRole("region", { name: "Contenus du cours" });
+    const liens = within(programme).getAllByRole("link");
+    expect(liens.map((a) => a.getAttribute("href"))).toEqual([`${ADRESSE}/l1`, `${ADRESSE}/l2`]);
+    for (const lien of liens) expect(within(lien).getByText("Aperçu")).toBeInTheDocument();
     expect(within(programme).queryByRole("link", { name: /Les formules essentielles/ })).toBeNull();
-    expect(within(programme).getByText("2 modules · 12 leçons · 2 h 20")).toBeInTheDocument();
+    expect(screen.getByText("2 modules • 12 leçons • 2 h 20")).toBeInTheDocument();
     expect(screen.getByText("Commencez gratuitement dès aujourd’hui")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Découvrir les formations" })).toHaveAttribute("href", "/formations");
   });
@@ -76,7 +78,7 @@ describe("Fiche d'une formation, pour un visiteur", () => {
 describe("Fiche d'une formation, pour un compte connecté", () => {
   it("formation payante : leçons d'aperçu ouvertes, les autres fermées par un cadenas", () => {
     render(<FicheConnectee fiche={EXCEL} />);
-    const programme = screen.getByRole("region", { name: "Programme" });
+    const programme = screen.getByRole("region", { name: "Contenus du cours" });
     expect(within(programme).getByRole("link", { name: /Découvrir l’interface/ })).toHaveAttribute("href", `${ADRESSE}/l1`);
     expect(within(programme).queryByRole("link", { name: /Les formules essentielles/ })).toBeNull();
     expect(within(programme).getByText("Les formules essentielles").closest("[aria-disabled]")).toHaveAttribute("aria-disabled", "true");
@@ -89,10 +91,10 @@ describe("Fiche d'une formation, pour un compte connecté", () => {
   it("formation gratuite : toutes les leçons sont ouvertes, et l'on commence en un clic", () => {
     const ouverte = EXCEL.modules.map((m) => ({ ...m, lecons: m.lecons.map((l) => ({ ...l, accessible: true })) }));
     render(<FicheConnectee fiche={{ ...EXCEL, gratuite: true, modules: ouverte }} />);
-    const programme = screen.getByRole("region", { name: "Programme" });
+    const programme = screen.getByRole("region", { name: "Contenus du cours" });
     // Module 1 ouvert par défaut : ses 3 leçons sont des liens (le module 2 se déplie au clic).
     expect(within(programme).getAllByRole("link")).toHaveLength(3);
-    expect(screen.getByRole("link", { name: "Commencer" })).toHaveAttribute("href", `${ADRESSE}/l1`);
+    expect(screen.getByRole("link", { name: "Commencer le cours" })).toHaveAttribute("href", `${ADRESSE}/l1`);
     expect(screen.getByText("Formation gratuite : toutes les leçons sont ouvertes.")).toBeInTheDocument();
   });
 
@@ -106,8 +108,8 @@ describe("Fiche d'une formation, pour un compte connecté", () => {
 
   it("la durée et le nombre de leçons viennent des données ; pas d'avis inventé", () => {
     render(<FicheConnectee fiche={EXCEL} />);
-    expect(screen.getAllByText("2 h 20").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("12 leçons").length).toBeGreaterThan(0);
+    expect(screen.getByText("2 modules • 12 leçons • 2 h 20")).toBeInTheDocument();
+    expect(screen.getByText("12 leçons, 2 h 20 au total")).toBeInTheDocument();
     expect(screen.getByText("Pas encore d’avis")).toBeInTheDocument();
     expect(screen.queryByText(/Écrire à la formatrice/)).toBeNull();
   });
@@ -153,20 +155,17 @@ describe("Note de la formation dans le bandeau (tâche 1.11)", () => {
 
 describe("Image de couverture de la fiche", () => {
   const AVEC = { ...EXCEL, couverture: "11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222.jpg" };
-  const image = (racine: HTMLElement) =>
-    [...racine.querySelectorAll("[data-couverture-fiche] img")].some((i) => decodeURIComponent(i.getAttribute("src") ?? "").includes("https://projet.supabase.co/storage/v1/object/public/couvertures/11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222.jpg"));
 
-  it("fiche publique et fiche connectée : la couverture quand elle existe, la couverture par défaut sinon", () => {
+  // Spec du 2 novembre 2026, §5 et §9.9 : la couverture reste sur la carte du catalogue, elle n'est plus répétée sur la fiche.
+  it("fiche publique et fiche connectée : la couverture n'est plus affichée, ni l'image ni celle du parcours par défaut", () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://projet.supabase.co");
-    const publique = render(<FichePublique fiche={AVEC} />);
-    expect(image(publique.container)).toBe(true);
-    publique.unmount();
-    const connectee = render(<FicheConnectee fiche={AVEC} />);
-    expect(image(connectee.container)).toBe(true);
-    connectee.unmount();
-    const sans = render(<FicheConnectee fiche={EXCEL} />);
-    expect(sans.container.querySelector("[data-couverture-fiche] img")).toBeNull();
-    expect(sans.container.querySelector("[data-couverture-fiche] [data-parcours='academique']")).not.toBeNull();
+    for (const fiche of [<FichePublique key="p" fiche={AVEC} />, <FicheConnectee key="c" fiche={AVEC} />, <FicheConnectee key="s" fiche={EXCEL} />]) {
+      const { container, unmount } = render(fiche);
+      expect(container.querySelector("[data-couverture-fiche]")).toBeNull();
+      expect(container.innerHTML).not.toContain("/storage/v1/object/public/couvertures/");
+      expect(container.querySelector("[data-parcours]")).toBeNull();
+      unmount();
+    }
     vi.unstubAllEnvs();
   });
 });

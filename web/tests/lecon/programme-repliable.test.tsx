@@ -14,10 +14,10 @@ const { TiroirLecons } = await import("@/components/lecon/TiroirLecons");
 describe("Le programme de la leçon, sur ordinateur", () => {
   it("les modules se replient : celui de la leçon ouverte est déplié, les autres repliés", async () => {
     render(<ProgrammeLecon fiche={EXCEL} leconId={id(6)} connecte terminees={new Set([id(1)])} />);
-    const enCours = screen.getByRole("button", { name: /2 · Formules et fonctions/ });
+    const enCours = screen.getByRole("button", { name: /Module 2 - Formules et fonctions/ });
     expect(enCours).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("link", { name: /RECHERCHEX/ })).toHaveAttribute("aria-current", "page");
-    const premier = screen.getByRole("button", { name: /1 · Bases d’Excel/ });
+    const premier = screen.getByRole("button", { name: /Module 1 - Bases d’Excel/ });
     expect(premier).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("Découvrir l’interface")).toBeNull();
     await userEvent.click(premier);
@@ -32,7 +32,7 @@ describe("Le programme de la leçon, sur ordinateur", () => {
     expect(within(screen.getByRole("link", { name: /RECHERCHEX/ })).getByText("15:00")).toBeInTheDocument();
     expect(within(screen.getByRole("link", { name: /SI, ET, OU/ })).getByText("13:20")).toBeInTheDocument();
     const barre = screen.getByRole("progressbar", { name: "Progression de la formation" });
-    const dernierModule = screen.getByRole("button", { name: /4 · Automatisation/ });
+    const dernierModule = screen.getByRole("button", { name: /Module 4 - Automatisation/ });
     expect(dernierModule.compareDocumentPosition(barre) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText("8 % terminé")).toBeInTheDocument();
   });

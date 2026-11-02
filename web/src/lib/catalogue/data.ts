@@ -126,7 +126,7 @@ const versLecon = (l: Ligne): LeconFiche & { ordre: number } => ({
 const colonnesFiche = (variante: string) => {
   const [notes, lecons = ""] = variante.split("|");
   return (
-    `${COLONNES_CARTE}${notes}, description, seuil_video, objectifs, competences, formateurs(nom, titre, domaine, presentation), ` +
+    `${COLONNES_CARTE}${notes}, description, seuil_video, objectifs, competences, formateurs(id, nom, titre, domaine, presentation), ` +
     `modules(id, titre, ordre, lecons(id, titre, titre_court, duree_secondes, apercu, ordre, accessible${lecons}))`
   );
 };
@@ -148,7 +148,13 @@ function versFiche(f: Ligne): FicheFormation {
     objectifs: textes(f.objectifs),
     competences: textes(f.competences),
     formateur: formateur
-      ? { nom: texte(formateur.nom), titre: texte(formateur.titre), domaine: texte(formateur.domaine), presentation: texte(formateur.presentation) }
+      ? {
+          ...(texte(formateur.id) ? { id: texte(formateur.id) } : {}),
+          nom: texte(formateur.nom),
+          titre: texte(formateur.titre),
+          domaine: texte(formateur.domaine),
+          presentation: texte(formateur.presentation),
+        }
       : null,
     modules: modules.map(
       (m): ModuleFiche => ({

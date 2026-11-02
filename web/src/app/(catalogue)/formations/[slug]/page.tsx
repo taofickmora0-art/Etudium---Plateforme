@@ -17,6 +17,8 @@ import type { FicheFormation } from "@/lib/catalogue/types";
 import { renvoyerFormateur } from "@/lib/catalogue/garde-formateur";
 import { compteConnecte } from "@/lib/catalogue/visiteur";
 import { lireFavoris } from "@/lib/favoris/data";
+import { lireFormateurDeFiche } from "@/lib/formateurs/data";
+import { lireAccesFormation } from "@/lib/inscriptions/data";
 import { lireProgression } from "@/lib/progression/data";
 import { etatFormation } from "@/lib/progression/regles";
 import { lireMesScores } from "@/lib/quiz/data";
@@ -55,13 +57,17 @@ async function Fiche({ params }: Params) {
   // Le lien compétence → monétisation (0048 ; restructuration, §5.3) : « À suivre d'abord », « Et ensuite ? ».
   const [liens, cartes] = await Promise.all([lireMonetisation(), listCatalogue()]);
   const monetisation = monetisationDe(fiche.id, liens, cartes);
-  // Avis (1.11), progression (1.7) et favoris (1.9) : absents tant que leurs migrations ne sont pas appliquées.
-  if (!compte) return <FichePublique fiche={fiche} avis={await lireAvis(fiche.id)} monetisation={monetisation} />;
+  // Avis (1.11), progression (1.7) et favoris (1.9) : absents tant que leurs migrations ne sont pas appliquées. Le formateur
+  // du cours (0070) : le bloc d'avant sans la migration.
+  if (!compte) {
+    const [avis, formateur] = await Promise.all([lireAvis(fiche.id), lireFormateurDeFiche(fiche.formateur?.id)]);
+    return <FichePublique fiche={fiche} avis={avis} monetisation={monetisation} formateur={formateur} />;
+  }
   // L'équipe ou le formateur voit les informations générales du brouillon (fin du lot 4).
   const vue = peutLireBrouillons(compte.roles) ? await avecBrouillonFormation(fiche) : { fiche, brouillon: false };
   // Le meilleur score de chaque quiz, dans le programme (lot 3).
   const aDes = (type: string) => fiche.modules.some((m) => m.lecons.some((l) => l.type === type));
-  const [lignes, favoris, avis, lienModifier, scores, statuts] = await Promise.all([
+  const [lignes, favoris, avis, lienModifier, scores, statuts, acces, formateur] = await Promise.all([
     lireProgression(),
     lireFavoris(),
     lireAvis(fiche.id),
@@ -69,6 +75,9 @@ async function Fiche({ params }: Params) {
     aDes("quiz") ? lireMesScores(fiche.id) : {},
     // Le dernier statut de chaque exercice (lot 3).
     aDes("exercice") ? lireStatutsExercices(fiche.id) : {},
+    // L'inscription (0069) : « S’inscrire à ce cours ». Pas en aperçu (formation non publiée) : on ne s'y inscrit pas.
+    apercu ? null : lireAccesFormation(fiche.id),
+    lireFormateurDeFiche(fiche.formateur?.id),
   ]);
   const page = (
     <FicheConnectee
@@ -80,6 +89,8 @@ async function Fiche({ params }: Params) {
       scores={scores}
       statuts={statuts}
       monetisation={monetisation}
+      acces={acces}
+      formateur={formateur}
     />
   );
   const avecBrouillon = vue.brouillon ? (

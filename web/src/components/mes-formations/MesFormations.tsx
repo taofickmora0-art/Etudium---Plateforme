@@ -36,7 +36,7 @@ const garder: Record<FiltreMesFormations, (v: VueCarteSuivie) => boolean> = {
 };
 
 
-/** Mes formations (NdMesFormations, NdMobFormations) : les formations commencées, de la plus récente à la plus ancienne. */
+/** Mes formations (NdMesFormations, NdMobFormations) : les formations où le compte est inscrit, la plus récente d'abord. */
 export function MesFormations({ suivies }: { suivies: VueCarteSuivie[] }) {
   const [filtre, setFiltre] = useState<FiltreMesFormations>("toutes");
   const visibles = suivies.filter(garder[filtre]);
@@ -44,7 +44,7 @@ export function MesFormations({ suivies }: { suivies: VueCarteSuivie[] }) {
     <div className="flex flex-col">
       <div className="min-w-0">
         <Heading level="page">Mes formations</Heading>
-        <Lead className="mt-2.5">Les formations que vous avez commencées, de la plus récente à la plus ancienne.</Lead>
+        <Lead className="mt-2.5">Les formations où vous êtes inscrit·e, de la plus récente à la plus ancienne.</Lead>
       </div>
       {suivies.length === 0 ? (
         <>

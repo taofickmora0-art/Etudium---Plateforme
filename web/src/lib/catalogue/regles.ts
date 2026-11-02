@@ -1,6 +1,7 @@
 import { LIBELLES_STATUT, type StatutRendu } from "@/lib/exercices/types";
 import type { CardTag } from "@/components/ui/CourseCard";
 import type { CouleurParcours } from "@/lib/contenus/libelles";
+import type { AccesFormation } from "@/lib/inscriptions/types";
 import type { CarteCatalogue, EtatsCartes, FicheFormation, LeconFiche } from "./types";
 
 // Règles d'affichage du catalogue et de la fiche (spec du lot 1, §2, §3 et §11).
@@ -97,3 +98,37 @@ export const leconsApercu = (fiche: Pick<FicheFormation, "modules">): LeconFiche
 
 /** Une leçon de contenu (vidéo, texte) : les quiz et les exercices ne comptent pas dans la progression (R17). */
 export const estLeconDeContenu = (l: { type?: string }) => (l.type ?? "lecon") === "lecon";
+
+/** Le titre d'un module, le même partout (fiche, programme de la leçon, tiroir, en-tête) : « Module 2 - Formules ». */
+export const titreModule = (numero: number, titre: string) => `Module ${numero} - ${titre}`;
+
+/** Le bouton du haut de la fiche (spec du 2 novembre 2026, §5) : un seul, selon l'inscription et l'accès. */
+export type ActionFiche =
+  /** « S'inscrire à ce cours » ; `apres` : la leçon de « Commencer le cours » une fois inscrit (la première du programme). */
+  | { type: "inscrire"; apres: LeconFiche | null }
+  | { type: "lecon"; libelle: "Commencer le cours" | "Poursuivre le cours" | "Revoir la formation"; lecon: LeconFiche }
+  | { type: "abonnements" };
+
+/**
+ * Le bouton du haut de la fiche d'un compte connecté. Avec l'inscription (migration 0069) : non inscrit à une formation
+ * ouverte, « S'inscrire à ce cours » ; formation payante fermée (sans abonnement, inscrit ou non), « Voir les
+ * abonnements » ; inscrit, « Commencer le cours » (aucune leçon ouverte), « Poursuivre le cours » ou « Revoir la
+ * formation ». Sans la 0069 (`acces` null) : les boutons d'avant, d'après les leçons ouvertes par la base.
+ */
+export function actionFiche(
+  fiche: Pick<FicheFormation, "gratuite" | "modules">,
+  progression: { commencee: boolean; aReprendre: LeconFiche | null; terminee: boolean } | null,
+  acces: AccesFormation | null,
+): ActionFiche | null {
+  if (acces && !acces.ouverte) return fiche.gratuite ? null : { type: "abonnements" };
+  if (acces && !acces.inscrit) return { type: "inscrire", apres: lecons(fiche)[0] ?? null };
+  const premiere = premiereLeconOuverte(fiche);
+  const suivie = progression?.commencee ? progression : null;
+  if (suivie?.aReprendre) return { type: "lecon", libelle: "Poursuivre le cours", lecon: suivie.aReprendre };
+  if (suivie?.terminee) return premiere ? { type: "lecon", libelle: "Revoir la formation", lecon: premiere } : null;
+  if (suivie) return null;
+  if (acces) return premiere ? { type: "lecon", libelle: "Commencer le cours", lecon: premiere } : null;
+  const etat = etatAcces(fiche, true);
+  if (etat === "gratuite" || etat === "incluse") return premiere ? { type: "lecon", libelle: "Commencer le cours", lecon: premiere } : null;
+  return fiche.gratuite ? null : { type: "abonnements" };
+}

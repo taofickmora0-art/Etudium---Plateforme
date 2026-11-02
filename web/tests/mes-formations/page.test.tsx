@@ -34,7 +34,7 @@ describe("Page Mes formations", () => {
   it("en-tête, filtres et cartes ; une formation verrouillée n'est pas un lien", () => {
     render(<MesFormations suivies={SUIVIES} />);
     expect(screen.getByRole("heading", { level: 1, name: "Mes formations" })).toBeInTheDocument();
-    expect(screen.getByText("Les formations que vous avez commencées, de la plus récente à la plus ancienne.")).toBeInTheDocument();
+    expect(screen.getByText("Les formations où vous êtes inscrit·e, de la plus récente à la plus ancienne.")).toBeInTheDocument();
     const filtres = screen.getByRole("group", { name: "Filtrer mes formations" });
     expect(within(filtres).getAllByRole("button").map((b) => b.textContent)).toEqual(["Toutes", "En cours", "Terminées", "Verrouillées", "Favoris"]);
     expect(within(filtres).getByRole("button", { name: "Toutes" })).toHaveAttribute("aria-pressed", "true");

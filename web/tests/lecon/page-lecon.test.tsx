@@ -61,12 +61,13 @@ describe("Page leçon : contenu", () => {
     render(<ContenuLecon donnees={donnees({})} connecte />);
     expect(screen.getByRole("heading", { level: 1, name: "Saisir et mettre en forme des données" })).toBeInTheDocument();
     expect(screen.getByText("Leçon 2 sur 12")).toBeInTheDocument();
-    expect(screen.getByText("12 min 30")).toBeInTheDocument();
+    // La durée d'une leçon a un seul format, le format court des programmes (spec du 2 novembre 2026, §1.8).
+    expect(screen.getByText("12:30")).toBeInTheDocument();
     // Le lecteur Étudium : bouton central, légende et piste.
     expect(screen.getByRole("button", { name: "Lire la vidéo" })).toBeInTheDocument();
     // Sur la vidéo, le titre de la leçon regardée, sans le module (retour du 15 octobre).
     expect(screen.getByText("Saisir et mettre en forme des données", { selector: "[data-commandes] span" })).toBeInTheDocument();
-    expect(screen.queryByText("Module 1 · Saisir et mettre en forme des données")).toBeNull();
+    expect(screen.queryByText("Module 1 - Saisir et mettre en forme des données")).toBeNull();
     expect(screen.getByRole("slider", { name: "Avancer dans la vidéo" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Leçon précédente" })).toHaveAttribute("href", `${ADRESSE}/${id(1)}`);
     expect(screen.getByRole("link", { name: "Leçon suivante" })).toHaveAttribute("href", `${ADRESSE}/${id(3)}`);
@@ -155,7 +156,7 @@ describe("Page leçon : programme", () => {
     expect(screen.getByRole("progressbar", { name: "Progression de la formation" })).toHaveAttribute("aria-valuenow", "8");
     expect(screen.getByText("8 % terminé")).toBeInTheDocument();
     expect(screen.getByText("2 h 14 restantes")).toBeInTheDocument();
-    expect(screen.getByText("1 · Bases d’Excel")).toBeInTheDocument();
+    expect(screen.getByText("Module 1 - Bases d’Excel")).toBeInTheDocument();
   });
 
   it("ordinateur, visiteur : retour au catalogue, sans progression", () => {
@@ -164,9 +165,9 @@ describe("Page leçon : programme", () => {
     expect(screen.queryByRole("progressbar")).toBeNull();
   });
 
-  it("téléphone : modules « Module 1 : … », durées, et « En cours » sur la leçon ouverte", () => {
+  it("téléphone : modules « Module 1 - … », durées, et « En cours » sur la leçon ouverte", () => {
     render(<ProgrammeMobile fiche={EXCEL} leconId={id(2)} connecte terminees={new Set([id(1)])} />);
-    expect(screen.getByRole("heading", { level: 3, name: "Module 1 : Bases d’Excel" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "Module 1 - Bases d’Excel" })).toBeInTheDocument();
     expect(screen.getByText("1/4")).toBeInTheDocument();
     const courante = screen.getByRole("link", { name: /Saisir et mettre en forme des données/ });
     expect(courante).toHaveAttribute("aria-current", "page");

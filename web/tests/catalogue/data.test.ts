@@ -59,7 +59,7 @@ describe("Lecture du catalogue", () => {
         description: "Description",
         objectifs: ["A"],
         competences: ["B"],
-        formateurs: { nom: "Dr Mireille Adjovi", titre: "Enseignante", domaine: "Stats", presentation: "Bio" },
+        formateurs: { id: "fo1", nom: "Dr Mireille Adjovi", titre: "Enseignante", domaine: "Stats", presentation: "Bio" },
         modules: [
           { id: "m2", titre: "Formules et fonctions", ordre: 2, lecons: [{ id: "l3", titre: "SI, ET, OU", duree_secondes: 800, apercu: false, ordre: 1, accessible: false }] },
           {
@@ -78,7 +78,10 @@ describe("Lecture du catalogue", () => {
     expect(fiche?.modules.map((m) => m.titre)).toEqual(["Bases d’Excel", "Formules et fonctions"]);
     expect(fiche?.modules[0].lecons.map((l) => l.id)).toEqual(["l1", "l2"]);
     expect(fiche).toMatchObject({ dureeSecondes: 1920, nbModules: 2, nbLecons: 3, formateur: { nom: "Dr Mireille Adjovi" }, objectifs: ["A"] });
+    // L'identifiant de la fiche du formateur : son bloc « Formateur du cours » (0070) et son profil /formateurs/[id].
+    expect(fiche?.formateur?.id).toBe("fo1");
     const [appel] = faux.de("formations", "select");
+    expect(String(appel.valeurs)).toContain("formateurs(id, nom, titre, domaine, presentation)");
     expect(String(appel.valeurs)).not.toContain("lecons_contenus");
     expect(String(appel.valeurs)).toContain("accessible");
     expect(appel.filtres).toContainEqual(["eq", "statut", "publiee"]);

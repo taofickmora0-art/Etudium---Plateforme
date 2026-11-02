@@ -23,11 +23,11 @@ const ligne = (n: number, terminee: boolean, ilYa: number): LigneProgression => 
 const COMMENCEE = () => etatFormation(EXCEL_OUVERTE, [ligne(1, true, 40), ligne(2, true, 30), ligne(3, true, 20), ligne(4, false, 10)]);
 
 describe("La page du cours", () => {
-  it("« Poursuivre le cours » en haut à droite et dans la carte ; « Progression du cours » : « Terminé 3 sur 12 » et 25 %", () => {
+  it("« Poursuivre le cours » en haut à droite, un seul bouton (spec du 2 novembre 2026, §5) ; « Progression du cours » : « Terminé 3 sur 12 » et 25 %", () => {
     render(<FicheConnectee fiche={EXCEL_OUVERTE} progression={COMMENCEE()} />);
     const liens = screen.getAllByRole("link", { name: "Poursuivre le cours" });
-    expect(liens).toHaveLength(2);
-    for (const lien of liens) expect(lien).toHaveAttribute("href", `${ADRESSE}/${id(4)}`);
+    expect(liens).toHaveLength(1);
+    expect(liens[0]).toHaveAttribute("href", `${ADRESSE}/${id(4)}`);
     expect(screen.getByText("Progression du cours")).toBeInTheDocument();
     expect(screen.getByText("Terminé 3 sur 12")).toBeInTheDocument();
     expect(screen.getByText("25 %")).toBeInTheDocument();
@@ -39,11 +39,11 @@ describe("La page du cours", () => {
     expect(screen.queryByRole("link", { name: "Poursuivre le cours" })).toBeNull();
   });
 
-  it("le programme : « 4 modules · 12 leçons », la durée de chaque module, « Tout déplier / Tout replier »", async () => {
+  it("le programme : « 4 modules • 12 leçons » sous le titre, la durée de chaque module, « Tout déplier / Tout replier »", async () => {
     render(<FicheConnectee fiche={EXCEL_OUVERTE} progression={COMMENCEE()} />);
-    const programme = screen.getByRole("region", { name: "Programme" });
-    expect(within(programme).getByText(/^4 modules · 12 leçons/)).toBeInTheDocument();
-    expect(within(programme).getByText("4 leçons · 43 min")).toBeInTheDocument();
+    const programme = screen.getByRole("region", { name: "Contenus du cours" });
+    expect(screen.getByText(/^4 modules • 12 leçons/)).toBeInTheDocument();
+    expect(within(programme).getByText("4 leçons • 43 min")).toBeInTheDocument();
     const modules = () => within(programme).getAllByRole("button", { name: /^Module/ }).map((b) => b.getAttribute("aria-expanded"));
     expect(modules()).toEqual(["true", "false", "false", "false"]);
     await userEvent.click(within(programme).getByRole("button", { name: "Tout déplier" }));

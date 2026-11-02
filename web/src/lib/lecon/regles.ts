@@ -43,7 +43,7 @@ export function rangDansFormation(modules: ModuleFiche[], leconId: string): { ra
   return i < 0 ? null : { rang: i + 1, total: lecons.length };
 }
 
-/** « Module 3 · Analyse de données », « Leçon 2 sur 3 de ce module ». */
+/** Le module de la leçon (« Module 3 - Analyse de données », avec titreModule) et « Leçon 2 sur 3 de ce module ». */
 export function situation(modules: ModuleFiche[], leconId: string): { numero: number; titreModule: string; rang: number; total: number } | null {
   for (const [index, m] of modules.entries()) {
     const rang = m.lecons.findIndex((l) => l.id === leconId);
@@ -74,7 +74,7 @@ export const formatVideo = (video: VideoLecon) => (estVertical(video.fournisseur
 
 const deuxChiffres = (n: number) => String(n).padStart(2, "0");
 
-/** Durée de l'en-tête : « 12 min 40 », « 12 min », « 45 s », « 1 h 02 min » ; vide si nulle. */
+/** Une durée en mots, pour le lecteur Étudium : « 12 min 40 », « 12 min », « 45 s », « 1 h 02 min » ; vide si nulle. */
 export function dureeLecon(secondes: number): string {
   if (secondes <= 0) return "";
   const heures = Math.floor(secondes / 3600);
@@ -107,14 +107,17 @@ export function metaRessource(r: RessourceLecon): string {
 
 /**
  * Ce que dit une leçon fermée. Au lot 1, une formation gratuite ne se ferme qu'au visiteur : un compte gratuit l'ouvre.
- * Sinon, la leçon fait partie d'un parcours (formules au lot 2) ; l'aperçu gratuit reste proposé.
+ * Sinon, la leçon fait partie d'un parcours (formules au lot 2) ; l'aperçu gratuit reste proposé. Un compte à qui la
+ * formation est ouverte mais qui n'y est pas inscrit (migration 0069) : « S’inscrire à ce cours » (`sInscrire`).
  */
 export function verrou(
   fiche: Pick<FicheFormation, "gratuite" | "modules">,
   connecte: boolean,
   /** La leçon fermée : l'aperçu proposé est le prochain après elle (sinon le premier). */
   leconId?: string,
-): { titre: string; texte: string; inscription: boolean; connexion: boolean; formules: boolean; apercu: LeconFiche | null } {
+  /** Le compte connecté peut s'inscrire à la formation (ouverte, pas inscrit) : c'est ce qui ferme la leçon. */
+  { aInscrire = false }: { aInscrire?: boolean } = {},
+): { titre: string; texte: string; inscription: boolean; connexion: boolean; formules: boolean; sInscrire: boolean; apercu: LeconFiche | null } {
   if (fiche.gratuite && !connecte) {
     return {
       titre: "Cette leçon est réservée aux comptes Étudium",
@@ -122,6 +125,18 @@ export function verrou(
       inscription: true,
       connexion: true,
       formules: false,
+      sInscrire: false,
+      apercu: null,
+    };
+  }
+  if (connecte && aInscrire) {
+    return {
+      titre: "Cette leçon est verrouillée",
+      texte: "Inscrivez-vous à cette formation pour suivre cette leçon.",
+      inscription: false,
+      connexion: false,
+      formules: false,
+      sInscrire: true,
       apercu: null,
     };
   }
@@ -131,6 +146,7 @@ export function verrou(
     inscription: !connecte,
     connexion: false,
     formules: connecte,
+    sInscrire: false,
     apercu: apercuSuivant(fiche, leconId),
   };
 }

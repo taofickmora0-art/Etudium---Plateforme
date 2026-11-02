@@ -65,6 +65,7 @@ describe("Règles de la page leçon", () => {
       inscription: true,
       connexion: true,
       formules: false,
+      sInscrire: false,
       apercu: null,
     });
     expect(verrou(EXCEL, false)).toMatchObject({
@@ -75,6 +76,21 @@ describe("Règles de la page leçon", () => {
       formules: false,
       apercu: { id: id(1) },
     });
-    expect(verrou(EXCEL, true)).toMatchObject({ inscription: false, connexion: false, formules: true, apercu: { id: id(1) } });
+    expect(verrou(EXCEL, true)).toMatchObject({ inscription: false, connexion: false, formules: true, sInscrire: false, apercu: { id: id(1) } });
+  });
+
+  it("une leçon fermée faute d'inscription (formation ouverte au compte, migration 0069) : « S’inscrire à ce cours »", () => {
+    expect(verrou(ZOTERO, true, undefined, { aInscrire: true })).toEqual({
+      titre: "Cette leçon est verrouillée",
+      texte: "Inscrivez-vous à cette formation pour suivre cette leçon.",
+      inscription: false,
+      connexion: false,
+      formules: false,
+      sInscrire: true,
+      apercu: null,
+    });
+    expect(verrou(EXCEL, true, id(3), { aInscrire: true })).toMatchObject({ formules: false, sInscrire: true });
+    // Un visiteur ne s'inscrit pas : il crée d'abord son compte.
+    expect(verrou(ZOTERO, false, undefined, { aInscrire: true })).toMatchObject({ inscription: true, connexion: true, sInscrire: false });
   });
 });

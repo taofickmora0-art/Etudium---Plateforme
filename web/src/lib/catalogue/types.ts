@@ -72,7 +72,14 @@ export type LeconFiche = {
 
 export type ModuleFiche = { id: string; titre: string; lecons: LeconFiche[] };
 
-export type FormateurFiche = { nom: string; titre: string; domaine: string; presentation: string };
+export type FormateurFiche = {
+  /** Identifiant de sa fiche (formateurs.id) : bloc « Formateur du cours » (0070) et profil /formateurs/[id]. */
+  id?: string;
+  nom: string;
+  titre: string;
+  domaine: string;
+  presentation: string;
+};
 
 export type FicheFormation = CarteCatalogue & {
   description: string;

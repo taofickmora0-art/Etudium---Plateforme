@@ -8,7 +8,7 @@ let demonstration = false;
 vi.mock("@/lib/auth/current-user", () => ({ demoModeActive: () => demonstration, getAuthUser: async () => compte }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => faux.client }));
 
-const { lireApprenants, lireInscriptions } = await import("@/lib/inscriptions/data");
+const { lireAccesFormation, lireApprenants, lireInscriptions } = await import("@/lib/inscriptions/data");
 
 describe("Inscriptions du compte", () => {
   beforeEach(() => {
@@ -77,5 +77,38 @@ describe("Apprenants des formations", () => {
     await expect(lireApprenants()).rejects.toThrow();
     demonstration = true;
     expect(await lireApprenants()).toBeNull();
+  });
+});
+
+describe("Accès du compte à une formation (bouton « S'inscrire à ce cours »)", () => {
+  beforeEach(() => {
+    faux.vider();
+    demonstration = false;
+  });
+
+  it("inscrit_formation et formation_ouverte, pour cette formation", async () => {
+    faux.repondre("rpc.inscrit_formation", { data: false });
+    faux.repondre("rpc.formation_ouverte", { data: true });
+    expect(await lireAccesFormation("f1")).toEqual({ inscrit: false, ouverte: true });
+    expect(faux.de("rpc", "inscrit_formation")[0].valeurs).toEqual({ p_formation: "f1" });
+    expect(faux.de("rpc", "formation_ouverte")[0].valeurs).toEqual({ p_formation: "f1" });
+    faux.repondre("rpc.inscrit_formation", { data: true });
+    faux.repondre("rpc.formation_ouverte", { data: false });
+    expect(await lireAccesFormation("f1")).toEqual({ inscrit: true, ouverte: false });
+  });
+
+  it("sans la 0069 (fonction absente) ou en démonstration : null ; une autre erreur remonte", async () => {
+    faux.repondre("rpc.inscrit_formation", { error: { code: "PGRST202" } });
+    faux.repondre("rpc.formation_ouverte", { data: true });
+    expect(await lireAccesFormation("f1")).toBeNull();
+    faux.repondre("rpc.inscrit_formation", { data: true });
+    faux.repondre("rpc.formation_ouverte", { error: { code: "42883" } });
+    expect(await lireAccesFormation("f1")).toBeNull();
+    faux.repondre("rpc.formation_ouverte", { error: { code: "XX000", message: "panne" } });
+    await expect(lireAccesFormation("f1")).rejects.toThrow();
+    faux.vider();
+    demonstration = true;
+    expect(await lireAccesFormation("f1")).toBeNull();
+    expect(faux.appels).toHaveLength(0);
   });
 });

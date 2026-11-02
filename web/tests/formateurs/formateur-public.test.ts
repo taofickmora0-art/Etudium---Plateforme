@@ -10,11 +10,12 @@ const getShellUser = vi.fn();
 const demoModeActive = vi.fn(() => false);
 vi.mock("@/lib/auth/current-user", () => ({ getShellUser: () => getShellUser(), demoModeActive: () => demoModeActive() }));
 
-const { lireFormateurPublic, MIGRATION_FORMATEURS } = await import("@/lib/formateurs/data");
+const { lireFormateurDeFiche, lireFormateurPublic, MIGRATION_FORMATEURS } = await import("@/lib/formateurs/data");
 const { versFormateurPublic } = await import("@/lib/formateurs/conversion");
 const { RESEAUX, CLES_RESEAUX, reseauxRenseignes, versReseaux } = await import("@/lib/formateurs/reseaux");
 const { ecrireAuFormateur } = await import("@/lib/formateurs/actions");
 const { photoPublicUrl } = await import("@/lib/profile/photo-url");
+const { arriveeDuFormateur, nombreDeFormations } = await import("@/lib/formateurs/regles");
 
 const ID = "11111111-1111-4111-8111-111111111111";
 const CONVERSATION = "22222222-2222-4222-8222-222222222222";
@@ -176,6 +177,49 @@ describe("lireFormateurPublic", () => {
     faux.repondre("rpc.formateur_public", { error: { code: "57014", message: "timeout" } });
     await expect(lireFormateurPublic(ID)).rejects.toThrow(/formateur/);
     expect(MIGRATION_FORMATEURS).toMatch(/0070/);
+  });
+});
+
+describe("Règles d'affichage du formateur", () => {
+  it("« N formations » s'accorde ; « A rejoint : il y a … » suit le temps relatif de la communauté, rien sans date", () => {
+    expect([0, 1, 3].map(nombreDeFormations)).toEqual(["0 formation", "1 formation", "3 formations"]);
+    const maintenant = new Date("2026-11-02T12:00:00+01:00");
+    expect(arriveeDuFormateur("2026-10-30T12:00:00+01:00", maintenant)).toBe("A rejoint : il y a 3 jours");
+    expect(arriveeDuFormateur("2026-11-01T12:00:00+01:00", maintenant)).toBe("A rejoint : hier");
+    expect(arriveeDuFormateur("", maintenant)).toBe("");
+    expect(arriveeDuFormateur("pas une date", maintenant)).toBe("");
+  });
+});
+
+describe("lireFormateurDeFiche (le bloc « Formateur du cours » de la fiche)", () => {
+  it("le formateur de la formation, sans la liste de ses formations (leur nombre suffit)", async () => {
+    faux.repondre("rpc.formateur_public", { data: { ...BRUT, nb_formations: 3 } });
+    expect(await lireFormateurDeFiche(ID)).toEqual({
+      id: ID,
+      nom: "Koffi Mensah",
+      titre: "Expert Excel",
+      domaine: "Bureautique",
+      presentation: "Dix ans de formation.",
+      reseaux: { instagram: "https://instagram.com/koffi", tiktok: "https://tiktok.com/@koffi" },
+      photoUrl: photoPublicUrl(PHOTO),
+      rejointLe: "2026-09-01T10:00:00+00:00",
+      nbFormations: 3,
+      peutEcrire: true,
+    });
+  });
+
+  it("formation sans formateur, fiche inconnue, migration 0070 absente ou lecture en échec : null (la fiche garde le bloc d'avant)", async () => {
+    expect(await lireFormateurDeFiche(undefined)).toBeNull();
+    expect(faux.appels).toEqual([]);
+    faux.repondre("rpc.formateur_public", { data: null });
+    expect(await lireFormateurDeFiche(ID)).toBeNull();
+    faux.repondre("rpc.formateur_public", ABSENTE);
+    expect(await lireFormateurDeFiche(ID)).toBeNull();
+    const trace = vi.spyOn(console, "error").mockImplementation(() => {});
+    faux.repondre("rpc.formateur_public", { error: { code: "57014", message: "timeout" } });
+    expect(await lireFormateurDeFiche(ID)).toBeNull();
+    expect(trace).toHaveBeenCalled();
+    trace.mockRestore();
   });
 });
 

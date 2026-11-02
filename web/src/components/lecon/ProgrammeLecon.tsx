@@ -6,7 +6,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Tag } from "@/components/ui/Tag";
 import { ProgressBar } from "@/components/ui/Progress";
 import { formatDuree } from "@/lib/admin/duree";
-import { dureeLisible, estLeconDeContenu, libelleExercice, libelleQuiz, parcoursPrincipal } from "@/lib/catalogue/regles";
+import { dureeLisible, estLeconDeContenu, libelleExercice, libelleQuiz, parcoursPrincipal, titreModule } from "@/lib/catalogue/regles";
 import type { StatutRendu } from "@/lib/exercices/types";
 import type { FicheFormation, LeconFiche } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
@@ -148,7 +148,7 @@ export function ProgrammeLecon({ fiche, leconId, connecte, terminees, scores = {
           ouverts={enCours ? [enCours.id] : []}
           sections={fiche.modules.map((module, index) => ({
             cle: module.id,
-            titre: `${index + 1} · ${module.titre}`,
+            titre: titreModule(index + 1, module.titre),
             contenu: (
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
                 {module.lecons.map((lecon) => (

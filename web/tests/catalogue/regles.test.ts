@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   actionDeCarte,
+  actionFiche,
   badgeDeCarte,
   dureeLisible,
   etatAcces,
@@ -11,6 +12,7 @@ import {
   parcoursPrincipal,
   premiereLeconOuverte,
   programmeDeCarte,
+  titreModule,
 } from "@/lib/catalogue/regles";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { parSlug } from "./cartes-design";
@@ -111,5 +113,48 @@ describe("Cartes du catalogue (spec du 2 novembre 2026, §4)", () => {
     // Sans la 0069 : pas d'apprenants ; visiteur : pas de cœur.
     expect(etatDeCarte({ apprenants: null, inscrites: {}, favoris: null }, "f1")).toEqual({ apprenants: undefined, progression: undefined, favori: undefined });
     expect(etatDeCarte(undefined, "f1")).toEqual({ apprenants: undefined, progression: undefined, favori: undefined });
+  });
+});
+
+describe("La fiche d'une formation (spec du 2 novembre 2026, §5)", () => {
+  const ouverte = (f: FicheFormation): FicheFormation => ({ ...f, modules: f.modules.map((m) => ({ ...m, lecons: m.lecons.map((l) => ({ ...l, accessible: true })) })) });
+  const NON_COMMENCEE = { commencee: false, aReprendre: null, terminee: false };
+
+  it("un seul format de module partout : « Module N - Titre »", () => {
+    expect(titreModule(1, "Bases d’Excel")).toBe("Module 1 - Bases d’Excel");
+    expect(titreModule(12, "Automatisation")).toBe("Module 12 - Automatisation");
+  });
+
+  it("non inscrit, formation ouverte : « S'inscrire à ce cours », puis la première leçon du programme", () => {
+    const action = actionFiche(fiche({ gratuite: true }), null, { inscrit: false, ouverte: true });
+    expect(action).toEqual({ type: "inscrire", apres: expect.objectContaining({ id: "l1" }) });
+    // Une progression d'aperçu ne dispense pas de s'inscrire.
+    expect(actionFiche(fiche({ gratuite: true }), { commencee: true, aReprendre: null, terminee: false }, { inscrit: false, ouverte: true })?.type).toBe("inscrire");
+  });
+
+  it("inscrit : « Commencer le cours », « Poursuivre le cours » ou « Revoir la formation », vers la bonne leçon", () => {
+    const f = ouverte(fiche({ gratuite: true }));
+    const [l1, l2] = f.modules[0].lecons;
+    const inscrit = { inscrit: true, ouverte: true };
+    expect(actionFiche(f, null, inscrit)).toEqual({ type: "lecon", libelle: "Commencer le cours", lecon: l1 });
+    expect(actionFiche(f, NON_COMMENCEE, inscrit)).toEqual({ type: "lecon", libelle: "Commencer le cours", lecon: l1 });
+    expect(actionFiche(f, { commencee: true, aReprendre: l2, terminee: false }, inscrit)).toEqual({ type: "lecon", libelle: "Poursuivre le cours", lecon: l2 });
+    expect(actionFiche(f, { commencee: true, aReprendre: null, terminee: true }, inscrit)).toEqual({ type: "lecon", libelle: "Revoir la formation", lecon: l1 });
+    // Sans leçon : pas de bouton.
+    expect(actionFiche({ ...f, modules: [] }, null, inscrit)).toBeNull();
+  });
+
+  it("formation payante sans abonnement : « Voir les abonnements », inscrit ou non ; gratuite fermée (compte suspendu) : rien", () => {
+    expect(actionFiche(fiche({ gratuite: false }), null, { inscrit: false, ouverte: false })).toEqual({ type: "abonnements" });
+    expect(actionFiche(fiche({ gratuite: false }), { commencee: true, aReprendre: null, terminee: false }, { inscrit: true, ouverte: false })).toEqual({ type: "abonnements" });
+    expect(actionFiche(fiche({ gratuite: true }), null, { inscrit: false, ouverte: false })).toBeNull();
+  });
+
+  it("sans la 0069 : pas d'inscription, les boutons d'avant", () => {
+    const gratuite = ouverte(fiche({ gratuite: true }));
+    expect(actionFiche(gratuite, null, null)).toEqual({ type: "lecon", libelle: "Commencer le cours", lecon: gratuite.modules[0].lecons[0] });
+    const l1 = fiche({}).modules[0].lecons[0];
+    expect(actionFiche(fiche({ gratuite: false }), { commencee: true, aReprendre: l1, terminee: false }, null)).toEqual({ type: "lecon", libelle: "Poursuivre le cours", lecon: l1 });
+    expect(actionFiche(fiche({ gratuite: false }), null, null)).toEqual({ type: "abonnements" });
   });
 });

@@ -110,14 +110,15 @@ describe("Un exercice dans le programme", () => {
   });
 
   it("la fiche : « 2 exercices », le statut dans le programme ; la fiche publique dit « Exercice »", () => {
-    expect(resumeProgramme(FICHE)).toContain(" · 2 exercices · ");
+    expect(resumeProgramme(FICHE)).toContain(" • 2 exercices • ");
     expect(elementsInclus({ ...FICHE, nbExercices: 1 }).map((e) => e.texte)).toContain("1 exercice pratique, à faire ou à rendre");
     const lignes = EXCEL_OUVERTE.modules.flatMap((m) => m.lecons).map((l) => ({ leconId: l.id, formationId: FICHE.id, termineeLe: null, vueLe: "2026-10-15T08:00:00Z", positionSecondes: 0 }));
     const { unmount } = render(<FicheConnectee fiche={FICHE} progression={etatFormation(FICHE, lignes)} statuts={STATUTS} />);
-    expect(screen.getAllByText("2 exercices").length).toBeGreaterThan(0);
+    // Sous le titre : « 4 modules • 12 leçons • 2 exercices • … ».
+    expect(screen.getByText(resumeProgramme(FICHE))).toHaveTextContent(/ • 2 exercices • /);
     expect(screen.getByRole("link", { name: /Tableau des ventes/ })).toHaveTextContent("Exercice · À corriger");
     unmount();
-    render(<ProgrammeFiche fiche={FICHE} variante="public" />);
-    expect(screen.getByText("Tableau des ventes").parentElement).toHaveTextContent(/Tableau des ventes\s*Exercice$/);
+    render(<ProgrammeFiche fiche={FICHE} />);
+    expect(screen.getByText("Tableau des ventes").closest("li")).toHaveTextContent(/Tableau des ventes\s*Exercice$/);
   });
 });

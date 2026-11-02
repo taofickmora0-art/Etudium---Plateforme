@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
+import { BoutonInscription } from "@/components/inscriptions/BoutonInscription";
 import { QuizLecon } from "@/components/quiz/QuizLecon";
 import { ExerciceLecon } from "@/components/exercices/ExerciceLecon";
 import { formationPartielle, videoMesuree, voisines } from "@/lib/lecon/regles";
@@ -31,6 +32,11 @@ type Props = {
   moi?: MoiCommunaute | null;
   /** « Modifier la leçon », pour l'équipe et le formateur de la formation. */
   lienModifier?: string | null;
+  /**
+   * La formation est ouverte au compte, qui n'y est pas inscrit (migration 0069) : une leçon fermée l'est faute
+   * d'inscription, et « S’inscrire à ce cours » l'ouvre.
+   */
+  aInscrire?: boolean;
 };
 
 /**
@@ -45,29 +51,34 @@ type Props = {
  */
 const discussionsOuvertes = (apercu: Apercu | null) => !apercu || apercu === "formateur";
 
-export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lienModifier = null }: Props) {
+export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lienModifier = null, aInscrire = false }: Props) {
   const { fiche, lecon, note, notesDisponibles } = donnees;
   const ouverte = lecon.accessible;
   const quiz = fiche.modules.some((m) => m.lecons.some((l) => l.id === lecon.id && l.type === "quiz"));
-  if (quiz) return <ContenuQuiz donnees={donnees} connecte={connecte} apercu={apercu} moi={moi} lienModifier={lienModifier} />;
+  if (quiz) return <ContenuQuiz donnees={donnees} connecte={connecte} apercu={apercu} moi={moi} lienModifier={lienModifier} aInscrire={aInscrire} />;
   const exercice = fiche.modules.some((m) => m.lecons.some((l) => l.id === lecon.id && l.type === "exercice"));
-  if (exercice) return <ContenuExercice donnees={donnees} connecte={connecte} apercu={apercu} moi={moi} lienModifier={lienModifier} />;
+  if (exercice) return <ContenuExercice donnees={donnees} connecte={connecte} apercu={apercu} moi={moi} lienModifier={lienModifier} aInscrire={aInscrire} />;
   return (
     <div className="flex min-w-0 flex-col gap-6">
       {apercu && <BandeauApercu apercu={apercu} />}
       {ouverte && connecte && !apercu && <VisiteLecon leconId={lecon.id} />}
       {ouverte && connecte && !apercu && lecon.apercu && formationPartielle(fiche) && (
-        // Un compte sans accès à la formation sur une leçon d'aperçu (tâche 12) : il le sait, et sait comment tout ouvrir.
+        // Un compte sans accès à la formation sur une leçon d'aperçu (tâche 12) : il le sait, et sait comment tout ouvrir
+        // (s'inscrire, si la formation lui est ouverte ; sinon un abonnement).
         <Banner
           tone="information"
           title="Vous regardez un aperçu gratuit"
           action={
-            <Button asChild size="sm">
-              <Link href="/abonnement/souscrire">Voir les abonnements</Link>
-            </Button>
+            aInscrire ? (
+              <BoutonInscription formationId={fiche.id} taille="sm" />
+            ) : (
+              <Button asChild size="sm">
+                <Link href="/abonnement/souscrire">Voir les abonnements</Link>
+              </Button>
+            )
           }
         >
-          Les autres leçons de cette formation s’ouvrent avec un abonnement.
+          {aInscrire ? "Inscrivez-vous à cette formation pour suivre toutes ses leçons." : "Les autres leçons de cette formation s’ouvrent avec un abonnement."}
         </Banner>
       )}
       {ouverte && !connecte && (
@@ -85,7 +96,7 @@ export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lie
         </Banner>
       )}
       {!ouverte ? (
-        <LeconVerrouillee fiche={fiche} leconId={lecon.id} connecte={connecte} />
+        <LeconVerrouillee fiche={fiche} leconId={lecon.id} connecte={connecte} aInscrire={aInscrire} />
       ) : (
         lecon.video &&
         (!videoMesuree(lecon) ? (
@@ -139,12 +150,12 @@ export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lie
 }
 
 /** La page d'un quiz : l'en-tête, le quiz (ou ce qui empêche de le passer), la navigation et les discussions. */
-function ContenuQuiz({ donnees, connecte, apercu = null, moi = null, lienModifier = null }: Props) {
+function ContenuQuiz({ donnees, connecte, apercu = null, moi = null, lienModifier = null, aInscrire = false }: Props) {
   const { fiche, lecon } = donnees;
   const { precedente, suivante } = voisines(fiche.modules, lecon.id);
   let quiz: ReactNode;
   if (!lecon.accessible) {
-    quiz = <LeconVerrouillee fiche={fiche} leconId={lecon.id} connecte={connecte} />;
+    quiz = <LeconVerrouillee fiche={fiche} leconId={lecon.id} connecte={connecte} aInscrire={aInscrire} />;
   } else if (!connecte) {
     quiz = <InviterConnexion fiche={fiche} leconId={lecon.id} titre="Connectez-vous pour passer ce quiz et garder votre score." />;
   } else if (donnees.quiz) {
@@ -195,11 +206,11 @@ function InviterConnexion({ fiche, leconId, titre }: { fiche: DonneesLecon["fich
 }
 
 /** La page d'un exercice : l'en-tête, la consigne et ses fichiers, le travail (ou ce qui empêche de le faire), la suite. */
-function ContenuExercice({ donnees, connecte, apercu = null, moi = null, lienModifier = null }: Props) {
+function ContenuExercice({ donnees, connecte, apercu = null, moi = null, lienModifier = null, aInscrire = false }: Props) {
   const { fiche, lecon } = donnees;
   let travail: ReactNode;
   if (!lecon.accessible) {
-    travail = <LeconVerrouillee fiche={fiche} leconId={lecon.id} connecte={connecte} />;
+    travail = <LeconVerrouillee fiche={fiche} leconId={lecon.id} connecte={connecte} aInscrire={aInscrire} />;
   } else if (!connecte) {
     travail = <InviterConnexion fiche={fiche} leconId={lecon.id} titre="Connectez-vous pour faire cet exercice." />;
   } else if (apercu) {
