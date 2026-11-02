@@ -1265,3 +1265,38 @@ Les deux pages prennent le style de l'espace étudiant :
    - **Avis** : la note moyenne et le nombre des avis visibles, les nouveaux sur 30 jours, les masqués ; puis un filtre (tous, visibles, masqués, notes basses) et les avis sur deux colonnes. Masquer un avis met les chiffres à jour tout de suite ;
    - **Corrections** : les travaux à corriger, ceux qui attendent depuis plus de 7 jours, les formations concernées et le plus ancien dépôt (l'espace formateur, lui, garde sa planche du design) ;
    - **Annonces** : les annonces envoyées, celles des 30 derniers jours, la date de la dernière et le nombre de comptes qu'elle a touchés.
+
+## 68. L'inscription aux formations, 10 minutes
+
+Une formation se suit maintenant après un clic sur « S'inscrire à ce cours », en haut de sa fiche. Tant qu'on n'est pas inscrit, ses leçons ont un cadenas, sauf les leçons d'aperçu. On ne peut s'inscrire qu'à une formation gratuite, ou à n'importe quelle formation avec un abonnement en cours ; sans abonnement, le bouton devient « Voir les abonnements ». Le catalogue affiche le nombre d'inscrits de chaque formation (« N apprenants »), et « Mes formations » montre aussi les formations où l'on est inscrit sans avoir commencé.
+
+Personne ne perd l'accès : chaque compte qui avait déjà ouvert une leçon d'une formation (ou obtenu son certificat) y est inscrit automatiquement par la migration.
+
+1. **La migration**, dans l'éditeur SQL de Supabase, après la 0068 (section 67) : `web/supabase/migrations/0069_inscriptions_formations.sql`.
+2. **À vérifier** avec un compte étudiant de test :
+   - sur une formation gratuite (ou avec un abonnement) : les leçons ont un cadenas, sauf les aperçus ; « S'inscrire à ce cours », puis « Inscription confirmée. » : les cadenas tombent et le bouton devient « Commencer le cours » ;
+   - la formation apparaît dans « Mes formations » à 0 %, et sa carte du catalogue dit « 0 % terminé » ;
+   - sans abonnement, sur une formation payante : le bouton dit « Voir les abonnements » ;
+   - ouvrir directement l'adresse d'une leçon sans être inscrit : la page propose « S'inscrire à ce cours ».
+3. **La messagerie suit l'inscription** : dans « Nouveau message », un étudiant ne voit que les formateurs des formations où il est inscrit (et l'Équipe Étudium).
+
+## 69. Le profil public des formateurs et leurs réseaux, 10 minutes
+
+Sur la fiche d'une formation, à droite, le bloc « Formateur du cours » montre la photo du formateur (celle de son compte), son nom, « N formations », sa présentation et ses réseaux. Au survol du nom, sur ordinateur, une carte propose « Voir le profil » et « Message ». La page du formateur (`/formateurs/…`) montre son profil et ses formations.
+
+« Message » n'apparaît que si l'étudiant est inscrit à une formation de ce formateur et que la fiche du formateur est reliée à un compte formateur.
+
+1. **La migration**, dans l'éditeur SQL de Supabase, après la 0069 : `web/supabase/migrations/0070_formateurs_public.sql`.
+2. **Les réseaux** : back-office › Formateurs › une fiche › bloc « Réseaux » : Instagram, YouTube, LinkedIn, Facebook, Telegram, TikTok. Chaque adresse doit commencer par https://. Les champs vides ne s'affichent pas.
+3. **La photo** : c'est celle du compte relié à la fiche (le formateur la change depuis son profil). Sans compte relié, ou sans photo, ce sont ses initiales.
+4. **À vérifier** : une fiche avec deux réseaux renseignés les montre sous la présentation ; un étudiant inscrit voit « Message », qui ouvre la conversation dans Messages ; un étudiant non inscrit ne le voit pas.
+
+## 70. Retirer les formations d'exemple, 5 minutes
+
+Les dix formations d'exemple (Excel, Word, Zotero, PowerPoint, Méthodologie du mémoire, Canva, IA, Montage vidéo, Marketing digital, Freelance) et leur formatrice d'exemple « Dr Mireille Adjovi » sont retirées par un script, à lancer une seule fois. Les trois parcours restent : ce sont les vrais.
+
+1. Après la 0069 (section 68), ouvre la base de test etudium-dev dans Supabase › SQL Editor › New query, colle tout le fichier `web/supabase/exemples/retirer-lot-1.sql` et clique sur Run.
+2. Le tableau affiché à la fin dit ce qui a été retiré ; il doit montrer « Formations d'exemple restantes : 0 ». Tu peux le relancer sans risque : il ne retire plus rien.
+3. Ce qui est retiré avec elles : leurs modules, leçons, quiz, exercices, progressions, inscriptions, favoris, avis et certificats de test. Les fichiers déjà déposés pour elles (couvertures, vidéos) restent dans Storage : retire-les à la main s'il y en avait.
+4. **Ne relance plus jamais `lot-1.sql`** : il recréerait ces formations.
+5. **Pourquoi tes modifications semblaient ne pas passer** : sur une formation déjà publiée, ce que tu changes au back-office part dans un brouillon. Les étudiants ne le voient qu'après « Publier les modifications », en haut de la fiche de la formation. C'est voulu : on peut préparer des changements sans casser ce que suivent les étudiants.
