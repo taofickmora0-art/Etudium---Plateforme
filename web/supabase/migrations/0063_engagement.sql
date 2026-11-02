@@ -291,6 +291,47 @@ begin
 end
 $rattrapage$;
 
+-- ─── Ma progression : série, points, niveau, semaine, badges (en-tête, profil, tableau de bord) ──────
+create or replace function public.ma_progression_jeu()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_moi uuid := (select auth.uid());
+  v_aujourdhui date := public.jour_benin(now());
+  v_lundi date := date_trunc('week', public.jour_benin(now())::timestamp)::date;
+  v_total integer;
+begin
+  if v_moi is null then
+    raise exception 'Connectez-vous pour voir votre progression.' using errcode = '42501';
+  end if;
+  select coalesce(sum(g.points), 0)::integer into v_total from public.points_gagnes g where g.profil_id = v_moi;
+  return jsonb_build_object(
+    'serie', public.serie_de(v_moi, v_aujourdhui),
+    'points_total', v_total,
+    'points_semaine', (
+      select coalesce(sum(g.points), 0)::integer from public.points_gagnes g
+      where g.profil_id = v_moi and g.gagne_le >= (v_lundi::timestamp at time zone 'Africa/Porto-Novo')
+    ),
+    -- Un niveau tous les 200 points : niveau 1 de 0 à 199, niveau 2 à partir de 200…
+    'niveau', v_total / 200 + 1,
+    'points_avant_niveau', (v_total / 200 + 1) * 200 - v_total,
+    'objectif_jours', coalesce((select p.objectif_jours from public.profils p where p.id = v_moi), 5),
+    'jours_semaine', (
+      select jsonb_agg(exists (select 1 from public.activite_jours a where a.profil_id = v_moi and a.jour = v_lundi + i) order by i)
+      from generate_series(0, 6) as i
+    ),
+    'badges', coalesce((
+      select jsonb_agg(jsonb_build_object('code', b.badge, 'obtenu_le', b.obtenu_le) order by b.obtenu_le, b.badge)
+      from public.badges_obtenus b where b.profil_id = v_moi
+    ), '[]'::jsonb)
+  );
+end;
+$$;
+
 -- ─── Les droits ─────────────────────────────────────────────────────────────────────────────────────
 revoke execute on function public.jour_benin(timestamptz) from public, anon, authenticated;
 revoke execute on function public.serie_de(uuid, date) from public, anon, authenticated;
@@ -302,5 +343,7 @@ revoke execute on function public.engagement_rendu() from public, anon, authenti
 revoke execute on function public.engagement_certificat() from public, anon, authenticated;
 revoke execute on function public.choisir_objectif(integer) from public, anon;
 grant execute on function public.choisir_objectif(integer) to authenticated;
+revoke execute on function public.ma_progression_jeu() from public, anon;
+grant execute on function public.ma_progression_jeu() to authenticated;
 
 commit;
