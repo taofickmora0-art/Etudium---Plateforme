@@ -4,6 +4,7 @@ import { Icon } from "@/components/ui/Icon";
 import { CounterPill, LogoButton, SearchButton } from "@/components/ui/TopBarButtons";
 import type { ShellUser } from "@/lib/auth/current-user";
 import { canAccess, type Espace } from "@/lib/auth/permissions";
+import { jours, points } from "@/lib/engagement/regles";
 import { LIENS_ENTETE_TELEPHONE } from "@/lib/navigation";
 import { BoutonAjouterFormation } from "./BoutonAjouterFormation";
 import { BoutonMenuLateral } from "./BoutonMenuLateral";
@@ -53,17 +54,33 @@ export function AppHeader({ account, espace }: { account?: ReactNode; espace?: E
 }
 
 /**
- * Partie de l'en-tête propre au compte : série, points, cloche et rond de profil. Ni série ni points pour un formateur,
- * qui ne suit pas de formation (restructuration R1).
+ * Partie de l'en-tête propre au compte : série, points de la semaine (vers le tableau de bord, lot 6 B), cloche et rond
+ * de profil. Ni série ni points pour un formateur, qui ne suit pas de formation (restructuration R1).
  */
 export function HeaderAccount({ user }: { user: ShellUser }) {
   const apprenant = canAccess("etudiant", user.roles);
   return (
     <>
       {apprenant && (
-        <CounterPill icon="serie" value={user.serie} label="Série d’apprentissage" className="max-lg:h-12 max-lg:gap-[7px] max-lg:px-3.5 max-sm:h-10 max-sm:gap-1.5 max-sm:px-3" />
+        <CounterPill
+          icon="serie"
+          value={user.serie}
+          label="Série d’apprentissage"
+          href="/tableau-de-bord"
+          nomAccessible={`Série d’apprentissage : ${jours(user.serie)}`}
+          className="max-lg:h-12 max-lg:gap-[7px] max-lg:px-3.5 max-sm:h-10 max-sm:gap-1.5 max-sm:px-3"
+        />
       )}
-      {apprenant && <CounterPill icon="points" value={user.points} label="Points" className="hidden lg:flex" />}
+      {apprenant && (
+        <CounterPill
+          icon="points"
+          value={user.points}
+          label="Points"
+          href="/tableau-de-bord"
+          nomAccessible={`Points gagnés cette semaine : ${points(user.points)}`}
+          className="hidden lg:flex"
+        />
+      )}
       <HeaderActions user={user} />
     </>
   );

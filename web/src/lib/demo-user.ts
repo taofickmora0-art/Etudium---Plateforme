@@ -1,4 +1,5 @@
 import type { ShellUser } from "@/lib/auth/current-user";
+import type { ProgressionJeu } from "@/lib/engagement/types";
 import type { ProfileData } from "@/lib/profile/data";
 import { readPreferences } from "@/lib/profile/preferences";
 
@@ -18,6 +19,22 @@ export const DEMO_USER: ShellUser = {
   serie: 8,
   points: 165,
   photoUrl: null,
+};
+
+/** La progression du jeu des écrans du design (NdAccueil, NdProfil : niveau 4, 8 jours, 3 badges, encore 80 points). */
+export const DEMO_JEU: ProgressionJeu = {
+  serie: DEMO_USER.serie,
+  pointsTotal: 720,
+  pointsSemaine: DEMO_USER.points,
+  niveau: 4,
+  pointsAvantNiveau: 80,
+  objectifJours: 5,
+  joursSemaine: [true, true, true, false, false, false, false],
+  badges: [
+    { code: "premier_pas", obtenuLe: "2026-09-02T09:00:00Z" },
+    { code: "serie_3", obtenuLe: "2026-09-04T09:00:00Z" },
+    { code: "serie_7", obtenuLe: "2026-10-30T09:00:00Z" },
+  ],
 };
 
 /** Profil des écrans du design (NdProfil), affiché sur /profil en mode démonstration. */

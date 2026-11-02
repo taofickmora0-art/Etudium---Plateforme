@@ -5,6 +5,7 @@ import { versEtatAbonnement } from "@/lib/abonnement/conversion";
 import { formuleDuCompte } from "@/lib/abonnement/regles";
 import type { Role } from "@/lib/auth/permissions";
 import { DEMO_USER } from "@/lib/demo-user";
+import { versProgressionJeu } from "@/lib/engagement/regles";
 import { getPublicEnv } from "@/lib/env";
 import { photoPublicUrl } from "@/lib/profile/photo-url";
 import { createClient } from "@/lib/supabase/server";
@@ -76,7 +77,8 @@ export const getAuthUser = cache(async (): Promise<User | null> => {
 /**
  * La personne connectée, lue une seule fois par requête (React.cache) : session, profil et rôles.
  * Tant que le profil n'est pas lisible, on se rabat sur les données d'inscription.
- * Série et points arrivent au lot 6, les formules payantes au lot 2.
+ * La série et les points de la semaine viennent de ma_progression_jeu (lot 6 B) : 0 si elle manque ou échoue (l'en-tête
+ * ne casse jamais une page).
  */
 export const getShellUser = cache(async (): Promise<ShellUser | null> => {
   if (demoModeActive()) return DEMO_USER;
@@ -85,12 +87,13 @@ export const getShellUser = cache(async (): Promise<ShellUser | null> => {
   if (!user) return null;
 
   const supabase = await createClient();
-  const [profil, roles, suspendu, abonnement] = await Promise.all([
+  const [profil, roles, suspendu, abonnement, progression] = await Promise.all([
     supabase.from("profils").select("prenom, nom, photo_url").eq("id", user.id).maybeSingle(),
     supabase.from("roles").select("role").eq("profil_id", user.id),
     estSuspendu(supabase),
     // La formule de l'abonnement en cours (0049) ; sans la migration, « Gratuite ».
     supabase.rpc("mon_abonnement"),
+    supabase.rpc("ma_progression_jeu"),
   ]);
   // Compte suspendu : déconnecté par la route dédiée (une page n'écrit pas de cookies), message sur la connexion.
   if (suspendu) redirect(ADRESSE_SUSPENDU);
@@ -101,6 +104,7 @@ export const getShellUser = cache(async (): Promise<ShellUser | null> => {
   const email = chaine(user.email);
   const lus = new Set(((roles.data as { role: Role }[] | null) ?? []).map((r) => r.role));
   const tries = ORDRE_DES_ROLES.filter((r) => lus.has(r));
+  const jeu = versProgressionJeu(progression.error ? null : progression.data);
 
   return {
     prenom,
@@ -110,8 +114,8 @@ export const getShellUser = cache(async (): Promise<ShellUser | null> => {
     roles: tries.length > 0 ? tries : ["etudiant"],
     statut: "Étudiant·e",
     formule: abonnement.error ? "Gratuite" : formuleDuCompte(versEtatAbonnement(abonnement.data)),
-    serie: 0,
-    points: 0,
+    serie: jeu.serie,
+    points: jeu.pointsSemaine,
     photoUrl: photoPublicUrl(chaine(profil.data?.photo_url)),
   };
 });

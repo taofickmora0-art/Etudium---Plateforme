@@ -15,7 +15,7 @@ const compte = (roles: Role[]) => ({ ...DEMO_USER, roles });
 const liens = () => within(screen.getByRole("list", { name: "Mon compte" })).getAllByRole("link").map((l) => [l.textContent, l.getAttribute("href")]);
 
 describe("La page Profil du téléphone", () => {
-  it("l'étudiant : son profil, son abonnement et la déconnexion ; ni raccourcis ni série ni points", () => {
+  it("l'étudiant : son profil, son abonnement et la déconnexion ; pas de raccourcis", () => {
     render(<MobileProfileMenu user={compte(["etudiant"])} />);
     expect(liens()).toEqual([
       ["Mon profil", "/profil"],
@@ -25,8 +25,12 @@ describe("La page Profil du téléphone", () => {
     for (const ancien of ["Mes parcours", "Exercices", "Certificats", "Formations gratuites", "Favoris", "Événements", "Messages", "Aide"]) {
       expect(screen.queryByRole("link", { name: ancien })).toBeNull();
     }
-    expect(screen.queryByText("Série d’apprentissage")).toBeNull();
-    expect(screen.queryByText("Gagnés cette semaine")).toBeNull();
+  });
+
+  it("l'étudiant : sa série et ses points de la semaine (NdMobMenu, lot 6 B), vers son tableau de bord", () => {
+    render(<MobileProfileMenu user={{ ...compte(["etudiant"]), serie: 8, points: 165 }} />);
+    expect(screen.getByRole("link", { name: "Série d’apprentissage : 8 jours" })).toHaveAttribute("href", "/tableau-de-bord");
+    expect(screen.getByRole("link", { name: "Points gagnés cette semaine : 165 points" })).toHaveAttribute("href", "/tableau-de-bord");
   });
 
   it("un admin : en plus, le changement d'espace (Espace étudiant, Back-office)", () => {
@@ -43,5 +47,7 @@ describe("La page Profil du téléphone", () => {
     render(<MobileProfileMenu user={compte(["etudiant", "formateur"])} espace="formateur" />);
     expect(liens()).toEqual([["Mon profil", "/formateur/profil"]]);
     expect(screen.getByRole("button", { name: "Se déconnecter" })).toBeInTheDocument();
+    expect(screen.queryByText("Série d’apprentissage")).toBeNull();
+    expect(screen.queryByText("Gagnés cette semaine")).toBeNull();
   });
 });

@@ -42,11 +42,11 @@ describe("L'en-tête de l'espace formateur", () => {
 
   it("ni série ni points pour un formateur", () => {
     const { unmount } = render(<HeaderAccount user={FORMATEUR} />);
-    expect(screen.queryByText("Série d’apprentissage")).toBeNull();
-    expect(screen.queryByText("Points")).toBeNull();
+    expect(screen.queryByRole("link", { name: /^Série d’apprentissage/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /^Points/ })).toBeNull();
     unmount();
     render(<HeaderAccount user={compte(["etudiant"])} />);
-    expect(screen.getByText("Série d’apprentissage")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Série d’apprentissage/ })).toBeInTheDocument();
   });
 
   it("la cloche mène à ses notifications", async () => {
@@ -83,7 +83,7 @@ describe("La page « Profil » du téléphone, côté formateur", () => {
     render(<MobileProfileMenu user={FORMATEUR} espace="formateur" />);
     const compte = within(screen.getByRole("list", { name: "Mon compte" }));
     expect(compte.getAllByRole("link").map((l) => [l.textContent, l.getAttribute("href")])).toEqual([["Mon profil", "/formateur/profil"]]);
-    expect(screen.queryByText("Série d’apprentissage")).toBeNull();
+    expect(screen.queryByRole("link", { name: /^Série d’apprentissage/ })).toBeNull();
     expect(screen.getByText(/Formateur·rice/)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Espace formateur|Back-office/ })).toBeNull();
   });

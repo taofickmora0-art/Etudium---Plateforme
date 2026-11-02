@@ -21,6 +21,11 @@ describe("TopBarButtons", () => {
     expect(screen.getByText("165")).toBeVisible();
   });
 
+  it("une pastille avec une adresse est un lien, qui dit ce qu'il compte et combien", () => {
+    render(<CounterPill icon="serie" value={8} label="Série d’apprentissage" href="/tableau-de-bord" nomAccessible="Série d’apprentissage : 8 jours" />);
+    expect(screen.getByRole("link", { name: "Série d’apprentissage : 8 jours" })).toHaveAttribute("href", "/tableau-de-bord");
+  });
+
   it("les boutons sans texte ont un nom", () => {
     render(
       <>

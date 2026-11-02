@@ -32,21 +32,22 @@ describe("Coque", () => {
     for (const lien of within(entete).getAllByRole("link", { name: "Rechercher" })) expect(lien).toHaveAttribute("href", "/recherche");
     expect(within(entete).getByRole("link", { name: "Ajouter une formation" })).toHaveAttribute("href", "/formations");
     expect(within(entete).getByRole("link", { name: "Étudium, accueil" })).toHaveAttribute("href", "/accueil");
-    expect(within(entete).getByText("Série d’apprentissage")).toBeInTheDocument();
+    expect(within(entete).getByRole("link", { name: /^Série d’apprentissage/ })).toHaveAttribute("href", "/tableau-de-bord");
   });
 
   it("la page s'affiche sans attendre le compte : l'en-tête n'a pas encore de compteurs", () => {
     render(<AppShell>Contenu de la page</AppShell>);
     expect(screen.getByRole("main")).toHaveTextContent("Contenu de la page");
-    expect(screen.queryByText("Série d’apprentissage")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^Série d’apprentissage/ })).not.toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Navigation" })).toBeInTheDocument();
   });
 
   it("le compte s'affiche dans l'en-tête : série, points et profil", () => {
     render(<AppShell account={<HeaderAccount user={DEMO_USER} />}>Contenu</AppShell>);
     const entete = screen.getByRole("banner");
-    expect(within(entete).getByText("Série d’apprentissage").parentElement).toHaveTextContent("8");
-    expect(within(entete).getByText("Points").parentElement).toHaveTextContent("165");
+    // Lot 6 B : des liens vers le tableau de bord, qui disent ce qu'ils comptent.
+    expect(within(entete).getByRole("link", { name: "Série d’apprentissage : 8 jours" })).toHaveTextContent("8");
+    expect(within(entete).getByRole("link", { name: "Points gagnés cette semaine : 165 points" })).toHaveTextContent("165");
     expect(within(entete).getByRole("button", { name: "Mon profil" })).toBeInTheDocument();
   });
 });

@@ -108,6 +108,22 @@ describe("Compte affiché par la coque", () => {
     expect(user).toMatchObject({ serie: 0, points: 0, formule: "Gratuite", statut: "Étudiant·e" });
   });
 
+  it("la série et les points de la semaine viennent de ma_progression_jeu (lot 6 B) ; 0 si elle manque ou échoue", async () => {
+    auth.getUser.mockResolvedValue(session({}));
+    tables.profils = { data: { prenom: "Aïcha", nom: "Kpadé" }, error: null };
+    tables.roles = { data: [{ role: "etudiant" }], error: null };
+    rpc.mockImplementation(async (nom?: string) => ({
+      data: nom === "mon_abonnement" ? { etat: "gratuit" } : nom === "ma_progression_jeu" ? { serie: 8, points_total: 765, points_semaine: 40, niveau: 4 } : false,
+      error: null,
+    }));
+    expect(await getShellUser()).toMatchObject({ serie: 8, points: 40 });
+    for (const erreur of [{ code: "PGRST202" }, { code: "500", message: "panne" }]) {
+      rpc.mockImplementation(async (nom?: string) => (nom === "ma_progression_jeu" ? { data: null, error: erreur } : { data: { etat: "gratuit" }, error: null }));
+      expect(await getShellUser()).toMatchObject({ serie: 0, points: 0, formule: "Gratuite" });
+    }
+    rpc.mockReset().mockImplementation(async (nom?: string) => ({ data: nom === "mon_abonnement" ? { etat: "gratuit" } : false, error: null }));
+  });
+
   it("la formule affichée est celle de l'abonnement en cours (lot 2)", async () => {
     auth.getUser.mockResolvedValue(session({}));
     tables.profils = { data: { prenom: "Aïcha", nom: "Kpadé" }, error: null };

@@ -75,12 +75,24 @@ type CounterPillProps = {
   value: number | string;
   /** Ce que compte la pastille (« Série de jours », « Points ») : lu par les lecteurs d'écran seulement. */
   label: string;
+  /** Avec une adresse, la pastille est un lien (vers le tableau de bord, lot 6 B). */
+  href?: string;
+  /** Nom du lien, valeur comprise (« Série d’apprentissage : 8 jours ») ; `label` sinon. */
+  nomAccessible?: string;
   className?: string;
 };
 
 /** Pastille de compteur : série de jours (éclair) ou points (cadeau). */
-export function CounterPill({ icon, value, label, className }: CounterPillProps) {
+export function CounterPill({ icon, value, label, href, nomAccessible, className }: CounterPillProps) {
   const { Glyph, spacing } = COUNTERS[icon];
+  if (href) {
+    return (
+      <Link href={href} aria-label={nomAccessible ?? label} className={cn(SURFACE, INTERACTIVE, spacing, "no-underline", className)}>
+        <Glyph />
+        <span>{value}</span>
+      </Link>
+    );
+  }
   return (
     <div className={cn(SURFACE, spacing, className)}>
       <Glyph />
