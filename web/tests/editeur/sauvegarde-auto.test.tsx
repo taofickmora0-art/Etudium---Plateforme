@@ -162,6 +162,24 @@ describe("La sauvegarde automatique", () => {
     expect(enregistrer).toHaveBeenCalledTimes(6);
   });
 
+  it("point reporté du lot 4 : un envoi qui ne répond jamais compte comme un échec après 30 s ; les suivants repartent", async () => {
+    const jamais = differe<ResultatSauvegarde>();
+    const enregistrer = vi
+      .fn<(v: V, r: number) => Promise<ResultatSauvegarde>>()
+      .mockReturnValueOnce(jamais.promesse)
+      .mockResolvedValue({ ok: true, revision: 4, brouillon: false, enregistreLe: "2026-11-02T10:00:00" });
+    const { result, rerender } = monter(enregistrer);
+    rerender({ valeur: { titre: "AB" } });
+    await avancer(1500);
+    expect(enregistrer).toHaveBeenCalledTimes(1);
+    rerender({ valeur: { titre: "ABC" } });
+    await avancer(30_000);
+    expect(result.current.etat.type).toBe("echec");
+    await avancer(2000);
+    expect(enregistrer).toHaveBeenCalledTimes(2);
+    expect(enregistrer.mock.calls[1][0]).toEqual({ titre: "ABC" });
+  });
+
   it("relecture (3) : en conflit ou en refus, quitter la page est retenu (rien n'est enregistré)", async () => {
     const enregistrer = vi.fn(async (): Promise<ResultatSauvegarde> => ({ ok: false, code: "conflit", par: null }));
     const { rerender } = monter(enregistrer);

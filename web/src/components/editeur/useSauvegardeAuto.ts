@@ -37,6 +37,8 @@ type Options<T> = {
 const NOUVEAUX_ESSAIS_MS = [2000, 5000, 15000];
 /** Après les trois premiers essais, l'éditeur continue d'essayer, à ce rythme, tant que la page est ouverte. */
 const ESSAI_SUIVANT_MS = 30_000;
+/** Un envoi sans réponse (réseau figé) compte comme un échec au bout de ce délai : il ne bloque plus les suivants. */
+const DELAI_ENVOI_MS = 30_000;
 const ECHEC = "L’enregistrement n’a pas abouti.";
 const hydrate = () => () => {};
 const horsLigne = () => typeof navigator !== "undefined" && navigator.onLine === false;
@@ -82,10 +84,18 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
     enCours.current = true;
     setPhase({ type: "en_cours" });
     let r: ResultatSauvegarde;
+    let minuterie: ReturnType<typeof setTimeout> | undefined;
     try {
-      r = await enregistrerActuel.current(aEnvoyer, revision.current);
+      r = await Promise.race([
+        enregistrerActuel.current(aEnvoyer, revision.current),
+        new Promise<never>((_, refuser) => {
+          minuterie = setTimeout(() => refuser(new Error("Délai dépassé")), DELAI_ENVOI_MS);
+        }),
+      ]);
     } catch {
       r = { ok: false, code: "echec", message: ECHEC };
+    } finally {
+      clearTimeout(minuterie);
     }
     enCours.current = false;
 
