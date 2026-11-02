@@ -2,12 +2,12 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { PageAnnonceCommunaute } from "@/components/admin/communaute/PageAnnonceCommunaute";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { requireSpace } from "@/lib/auth/require-space";
+import { requireDomaine } from "@/lib/auth/require-domaine";
 
 export const metadata: Metadata = { title: "Annonce de la communauté · Back-office · Étudium" };
 
 async function AnnonceCommunaute() {
-  await requireSpace("admin");
+  await requireDomaine("communaute");
   return <PageAnnonceCommunaute />;
 }
 

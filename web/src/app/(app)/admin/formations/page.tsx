@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { Tag } from "@/components/ui/Tag";
 import { listFormations } from "@/lib/admin/data";
 import type { FormationResume } from "@/lib/admin/types";
-import { requireSpace } from "@/lib/auth/require-space";
+import { requireDomaine } from "@/lib/auth/require-domaine";
 import { correspondAuFiltre, ETATS, TON_ETAT, type FiltreEtat } from "@/lib/contenus/etat";
 import { libelleNiveau } from "@/lib/contenus/libelles";
 import { dateCourte } from "@/lib/utilisateurs/regles";
@@ -42,7 +42,7 @@ const sousTitre = (f: FormationResume) =>
     .join(" · ");
 
 async function ListeFormations({ searchParams }: Recherche) {
-  await requireSpace("admin");
+  await requireDomaine("contenus");
   const { statut } = await searchParams;
   const filtre = FILTRES.find((f) => f === statut) ?? null;
   let formations: FormationResume[];

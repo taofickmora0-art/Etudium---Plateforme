@@ -4,13 +4,13 @@ import { ListeAvis } from "@/components/admin/ListeAvis";
 import { PageAdmin } from "@/components/admin/PageAdmin";
 import { Banner } from "@/components/ui/Banner";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { requireSpace } from "@/lib/auth/require-space";
+import { requireDomaine } from "@/lib/auth/require-domaine";
 import { lireAvisEquipe } from "@/lib/avis/data";
 
 export const metadata: Metadata = { title: "Avis · Back-office · Étudium" };
 
 async function Avis() {
-  await requireSpace("admin");
+  await requireDomaine("communaute");
   const avis = await lireAvisEquipe();
   return (
     <PageAdmin titre="Avis" description="Masquez un avis inapproprié : il disparaît de la fiche et ne compte plus dans la note." fil={[{ label: "Avis" }]}>

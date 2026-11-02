@@ -1,4 +1,5 @@
 import { getShellUser } from "@/lib/auth/current-user";
+import { aDomaine, type Domaine } from "@/lib/auth/domaines";
 import { canAccess } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
 
@@ -16,6 +17,21 @@ export async function exigerEquipe(): Promise<{ supabase: Supabase } | { erreur:
   const user = await getShellUser();
   if (!user) return { erreur: SESSION_EXPIREE };
   if (!canAccess("admin", user.roles)) return { erreur: ACCES_EQUIPE };
+  return { supabase: await createClient() };
+}
+
+export const ACCES_DOMAINE = "Vous n’avez pas accès à cette partie du back-office.";
+
+/**
+ * Les actions d'un domaine du back-office (lot 6 A, spec §1.2) : contenus, utilisateurs, paiements… Le modérateur
+ * n'a que la communauté ; la base revérifie (0060).
+ */
+export async function exigerDomaine(domaine: Domaine): Promise<{ supabase: Supabase } | { erreur: string }> {
+  const user = await getShellUser();
+  if (!user) return { erreur: SESSION_EXPIREE };
+  // Hors de l'équipe : le message de toujours ; un membre hors de son domaine : celui du domaine.
+  if (!canAccess("admin", user.roles)) return { erreur: ACCES_EQUIPE };
+  if (!aDomaine(user.roles, domaine)) return { erreur: ACCES_DOMAINE };
   return { supabase: await createClient() };
 }
 
@@ -39,7 +55,8 @@ export const ACCES_EDITEUR = "Accès réservé aux formateurs et à l’équipe.
 export async function exigerEditeur(): Promise<{ supabase: Supabase; equipe: boolean } | { erreur: string }> {
   const user = await getShellUser();
   if (!user) return { erreur: SESSION_EXPIREE };
-  const equipe = canAccess("admin", user.roles);
-  if (!equipe && !user.roles.includes("formateur")) return { erreur: ACCES_EDITEUR };
+  // Les contenus sont au domaine « contenus » (lot 6 A) : un modérateur n'est pas éditeur.
+  const equipe = aDomaine(user.roles, "contenus");
+  if (!equipe && !user.roles.includes("formateur")) return { erreur: canAccess("admin", user.roles) ? ACCES_DOMAINE : ACCES_EDITEUR };
   return { supabase: await createClient(), equipe };
 }

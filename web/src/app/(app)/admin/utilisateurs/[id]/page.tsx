@@ -2,14 +2,14 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { FicheUtilisateur } from "@/components/admin/utilisateurs/FicheUtilisateur";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { requireSpace } from "@/lib/auth/require-space";
+import { requireDomaine } from "@/lib/auth/require-domaine";
 
 export const metadata: Metadata = { title: "Utilisateur · Back-office · Étudium" };
 
 type Params = { params: Promise<{ id: string }> };
 
 async function Fiche({ params }: Params) {
-  const moi = await requireSpace("admin");
+  const moi = await requireDomaine("utilisateurs");
   return <FicheUtilisateur params={params} roles={moi.roles} />;
 }
 

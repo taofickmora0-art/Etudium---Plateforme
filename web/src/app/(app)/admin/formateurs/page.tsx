@@ -11,7 +11,7 @@ import { List, ListRow } from "@/components/ui/ListRow";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { listFormateurs } from "@/lib/admin/data";
 import type { FormateurAdmin } from "@/lib/admin/types";
-import { requireSpace } from "@/lib/auth/require-space";
+import { requireDomaine } from "@/lib/auth/require-domaine";
 
 export const metadata: Metadata = { title: "Formateurs · Back-office · Étudium" };
 
@@ -22,7 +22,7 @@ const NOUVELLE = (
 );
 
 async function ListeFormateurs() {
-  await requireSpace("admin");
+  await requireDomaine("contenus");
   let formateurs: FormateurAdmin[];
   try {
     formateurs = await listFormateurs();

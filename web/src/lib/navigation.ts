@@ -24,6 +24,7 @@ import {
   Video01Icon,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@/components/ui/Icon";
+import type { Domaine } from "@/lib/auth/domaines";
 import type { Espace } from "@/lib/auth/permissions";
 
 // Source unique des entrées de menu de l'espace connecté (écran NdAccueil, téléphone NdMobAccueil et NdMobMenu).
@@ -35,6 +36,8 @@ export type NavEntry = {
   exact?: boolean;
   /** D'autres pages où l'entrée est marquée aussi (« Mes formations » sous l'onglet Formations). */
   aussi?: string[];
+  /** Back-office : le domaine qu'il faut pour voir l'entrée (lot 6 A) ; sans domaine, toujours visible. */
+  domaine?: Domaine;
 };
 
 // Un seul onglet pour le catalogue et les formations suivies (spec Formations et Événements, §1).
@@ -110,23 +113,23 @@ export const MENUS: Record<Espace, { libelle: string; groupes: GroupeNav[] }> = 
       {
         titre: "Contenus",
         entrees: [
-          { href: "/admin/parcours", label: "Parcours", icon: Route01Icon },
-          { href: "/admin/formateurs", label: "Formateurs", icon: TeachingIcon },
-          { href: "/admin/formations", label: "Formations", icon: BookOpen01Icon },
-          { href: "/admin/corrections", label: "Corrections", icon: AssignmentsIcon },
-          { href: "/admin/avis", label: "Avis", icon: StarIcon },
-          { href: "/admin/sessions", label: "Sessions live", icon: Video01Icon },
+          { href: "/admin/parcours", label: "Parcours", icon: Route01Icon, domaine: "contenus" },
+          { href: "/admin/formateurs", label: "Formateurs", icon: TeachingIcon, domaine: "contenus" },
+          { href: "/admin/formations", label: "Formations", icon: BookOpen01Icon, domaine: "contenus" },
+          { href: "/admin/corrections", label: "Corrections", icon: AssignmentsIcon, domaine: "contenus" },
+          { href: "/admin/avis", label: "Avis", icon: StarIcon, domaine: "communaute" },
+          { href: "/admin/sessions", label: "Sessions live", icon: Video01Icon, domaine: "communaute" },
         ],
       },
       {
         titre: "Plateforme",
         entrees: [
-          { href: "/admin/utilisateurs", label: "Utilisateurs", icon: UserMultipleIcon },
-          { href: "/admin/messages", label: "Messages", icon: BubbleChatIcon },
-          { href: "/admin/annonces", label: "Annonces", icon: Megaphone01Icon },
-          { href: "/admin/paiements", label: "Abonnements et paiements", icon: CreditCardIcon },
-          { href: "/admin/communaute", label: "Communauté", icon: UserGroupIcon },
-          { href: "/admin/moderation", label: "Modération", icon: Shield01Icon },
+          { href: "/admin/utilisateurs", label: "Utilisateurs", icon: UserMultipleIcon, domaine: "utilisateurs" },
+          { href: "/admin/messages", label: "Messages", icon: BubbleChatIcon, domaine: "communaute" },
+          { href: "/admin/annonces", label: "Annonces", icon: Megaphone01Icon, domaine: "utilisateurs" },
+          { href: "/admin/paiements", label: "Abonnements et paiements", icon: CreditCardIcon, domaine: "paiements" },
+          { href: "/admin/communaute", label: "Communauté", icon: UserGroupIcon, domaine: "communaute" },
+          { href: "/admin/moderation", label: "Modération", icon: Shield01Icon, domaine: "communaute" },
         ],
       },
     ],
@@ -155,9 +158,9 @@ export const NAV_BAS_PAR_ESPACE: Record<Espace, NavEntry[]> = {
   etudiant: NAV_BAS,
   admin: [
     TABLEAU_ADMIN,
-    { href: "/admin/formations", label: "Formations", icon: BookOpen01Icon },
-    { href: "/admin/avis", label: "Avis", icon: StarIcon },
-    { href: "/admin/utilisateurs", label: "Utilisateurs", icon: UserMultipleIcon },
+    { href: "/admin/formations", label: "Formations", icon: BookOpen01Icon, domaine: "contenus" },
+    { href: "/admin/avis", label: "Avis", icon: StarIcon, domaine: "communaute" },
+    { href: "/admin/utilisateurs", label: "Utilisateurs", icon: UserMultipleIcon, domaine: "utilisateurs" },
     PROFIL,
   ],
   formateur: [
@@ -179,4 +182,17 @@ export function isActive(pathname: string, href: string, exact = false): boolean
 /** L'entrée d'un menu est marquée sur sa page, ses sous-pages, et les pages de `aussi` (et leurs sous-pages). */
 export function entreeActive(pathname: string, e: NavEntry): boolean {
   return isActive(pathname, e.href, e.exact) || (e.aussi ?? []).some((autre) => isActive(pathname, autre));
+}
+
+/**
+ * Les entrées qu'un compte voit selon ses domaines (lot 6 A) : une entrée sans domaine reste ; domaines inconnus (null,
+ * compte pas encore lu) : seulement celles sans domaine.
+ */
+export function filtrerEntrees(entrees: NavEntry[], domaines: Domaine[] | null): NavEntry[] {
+  return entrees.filter((e) => !e.domaine || (domaines ?? []).includes(e.domaine));
+}
+
+/** Les groupes du menu selon les domaines ; un groupe sans entrée disparaît. */
+export function filtrerGroupes(groupes: GroupeNav[], domaines: Domaine[] | null): GroupeNav[] {
+  return groupes.map((g) => ({ ...g, entrees: filtrerEntrees(g.entrees, domaines) })).filter((g) => g.entrees.length > 0);
 }

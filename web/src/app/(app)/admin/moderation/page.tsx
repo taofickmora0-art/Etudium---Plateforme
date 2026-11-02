@@ -3,12 +3,12 @@ import type { Metadata } from "next";
 import { ContenuModeration } from "@/components/admin/moderation/ContenuModeration";
 import { PageAdmin } from "@/components/admin/PageAdmin";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { requireSpace } from "@/lib/auth/require-space";
+import { requireDomaine } from "@/lib/auth/require-domaine";
 
 export const metadata: Metadata = { title: "Modération · Back-office · Étudium" };
 
 async function Moderation() {
-  await requireSpace("admin");
+  await requireDomaine("communaute");
   return (
     <PageAdmin titre="Modération" description="Examinez les publications signalées par l’analyse automatique ou par les membres." fil={[{ label: "Modération" }]}>
       <ContenuModeration />

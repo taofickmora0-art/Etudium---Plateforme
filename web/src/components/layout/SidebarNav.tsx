@@ -6,9 +6,10 @@ import { SidebarGroup } from "@/components/ui/SidebarGroup";
 import { useMessagesNonLus } from "@/components/messages/useMessagesNonLus";
 import { useNouvellesSessions } from "@/components/sessions/useNouvellesSessions";
 import { SidebarItem } from "@/components/ui/SidebarItem";
+import { useDomaines } from "@/lib/auth/domaines-du-compte";
 import { spaceOf, type Espace } from "@/lib/auth/permissions";
 import { cn } from "@/lib/cn";
-import { MENUS, entreeActive, type NavEntry } from "@/lib/navigation";
+import { MENUS, entreeActive, filtrerGroupes, type NavEntry } from "@/lib/navigation";
 
 // La barre garde toujours 337 px de contenu : réduite, sa place n'en montre que la colonne d'icônes (84 px), sans se
 // déplier au survol ni au clavier : on la rouvre avec son bouton (règles « menu-lateral » de globals.css).
@@ -36,6 +37,9 @@ export function SidebarNavLinks({
 }) {
   const actuel = pathname !== null ? spaceOf(pathname) : espace;
   const menu = actuel ? MENUS[actuel] : null;
+  // Le back-office : seulement les entrées des domaines du compte (lot 6 A).
+  const domaines = useDomaines();
+  const groupesVisibles = menu ? (actuel === "admin" ? filtrerGroupes(menu.groupes, domaines) : menu.groupes) : [];
   // La pastille rouge des nouvelles sessions live, sur l'entrée Événements de l'espace étudiant.
   const nouvelles = useNouvellesSessions(pathname, actuel === "etudiant");
   // Les conversations non lues, sur l'entrée « Messages » de l'espace (l'équipe : l'assistance).
@@ -58,7 +62,7 @@ export function SidebarNavLinks({
       pastille={pastilleDe(e.href)}
     />
   );
-  const groupes = menu?.groupes.map((groupe, index) => (
+  const groupes = groupesVisibles.map((groupe, index) => (
     <Fragment key={groupe.titre ?? index}>
       <SidebarGroup title={groupe.titre}>{groupe.entrees.map(entree)}</SidebarGroup>
       {index === 0 && apresPremierGroupe}

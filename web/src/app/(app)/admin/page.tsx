@@ -3,9 +3,12 @@ import type { Metadata } from "next";
 import { unstable_rethrow } from "next/navigation";
 import { PageAdmin } from "@/components/admin/PageAdmin";
 import { TableauDeBordAdmin } from "@/components/admin/TableauDeBordAdmin";
+import { TableauModerateur } from "@/components/admin/TableauModerateur";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { lireStatistiques } from "@/lib/admin/statistiques";
+import { aDomaine } from "@/lib/auth/domaines";
 import { requireSpace } from "@/lib/auth/require-space";
+import { compterMessagesNonLus } from "@/lib/messages/actions";
 import { lireNombreAExaminer } from "@/lib/moderation/data";
 import { lireSessionsEquipe } from "@/lib/sessions/data";
 
@@ -35,8 +38,27 @@ async function aExaminer(): Promise<number | null> {
   }
 }
 
+/** Les conversations d'assistance non lues ; null si la lecture échoue. */
+async function messagesNonLus(): Promise<number | null> {
+  try {
+    return await compterMessagesNonLus("equipe");
+  } catch (erreur) {
+    unstable_rethrow(erreur);
+    return null;
+  }
+}
+
 async function AccueilAdmin() {
-  await requireSpace("admin");
+  const user = await requireSpace("admin");
+  // Sans le domaine « statistiques » (le modérateur, lot 6 A) : seulement ce qu'il a à traiter.
+  if (!aDomaine(user.roles, "statistiques")) {
+    const [moderation, messages, sessions] = await Promise.all([aExaminer(), messagesNonLus(), sessionsAVenir()]);
+    return (
+      <PageAdmin titre="Tableau de bord" description="Ce qui attend l’équipe de la communauté.">
+        <TableauModerateur aExaminer={moderation} messagesNonLus={messages} sessionsAVenir={sessions} />
+      </PageAdmin>
+    );
+  }
   const [stats, sessions, moderation] = await Promise.all([lireStatistiques(), sessionsAVenir(), aExaminer()]);
   return (
     <PageAdmin titre="Tableau de bord" description="Vue d’ensemble de la plateforme : inscriptions, apprentissage et, à partir du lot 2, revenus.">

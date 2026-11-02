@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { Tag } from "@/components/ui/Tag";
 import { getFormationAdmin, listFormateurs, listParcours, nombreSuiveurs } from "@/lib/admin/data";
 import { competencesAVendre } from "@/lib/catalogue/data";
-import { requireSpace } from "@/lib/auth/require-space";
+import { requireDomaine } from "@/lib/auth/require-domaine";
 import { ETATS, TON_ETAT } from "@/lib/contenus/etat";
 
 export const metadata: Metadata = { title: "Formation · Back-office · Étudium" };
@@ -24,7 +24,7 @@ type Params = { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?
 const ONGLETS = ["informations", "programme", "publication", "apprenants", "historique"];
 
 async function FicheFormation({ params, searchParams }: Params) {
-  await requireSpace("admin");
+  await requireDomaine("contenus");
   const [{ id }, { onglet }] = await Promise.all([params, searchParams]);
   let donnees;
   try {

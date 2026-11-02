@@ -60,7 +60,7 @@ describe("Les pages Messages", () => {
     expect(lire("src/app/(app)/(etudiant)/messages/page.tsx")).toContain("<SessionGuard");
     expect(lire("src/app/(app)/formateur/messages/page.tsx")).toContain('requireSpace("formateur")');
     expect(lire("src/app/(app)/formateur/messages/page.tsx")).toContain('<PageMessages espace="formateur" base="/formateur/messages"');
-    expect(lire("src/app/(app)/admin/messages/page.tsx")).toContain('requireSpace("admin")');
+    expect(lire("src/app/(app)/admin/messages/page.tsx")).toContain('requireDomaine("communaute")');
     expect(lire("src/app/(app)/admin/messages/page.tsx")).toContain('<PageMessages espace="equipe" base="/admin/messages"');
     expect(PAGES_A_VENIR).not.toHaveProperty("messages");
     expect(PAGES_A_VENIR).not.toHaveProperty("formateur/messages");

@@ -1,4 +1,6 @@
 import { HeaderAccount } from "@/components/layout/AppHeader";
+import { DomainesDuCompte } from "@/components/layout/DomainesDuCompte";
+import { domainesDe } from "@/lib/auth/domaines";
 import { getShellUser } from "@/lib/auth/current-user";
 import { redirectToSortie } from "@/lib/auth/sortie";
 import { AuthUnavailableError } from "@/lib/auth/session-state";
@@ -16,5 +18,11 @@ export async function CompteDeLEntete() {
   // Le proxy a déjà renvoyé les visiteurs sans session. Ici, Supabase ne reconnaît plus la session (fermée sur un autre
   // appareil, compte supprimé) : /auth/sortie l'efface de l'appareil, sinon proxy et connexion se renverraient la balle.
   if (!user) return redirectToSortie();
-  return <HeaderAccount user={user} />;
+  return (
+    <>
+      <HeaderAccount user={user} />
+      {/* Le menu du back-office n'affiche que les domaines du compte (lot 6 A). */}
+      <DomainesDuCompte domaines={domainesDe(user.roles)} />
+    </>
+  );
 }

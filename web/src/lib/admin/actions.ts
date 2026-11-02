@@ -7,7 +7,7 @@ import type { createClient } from "@/lib/supabase/server";
 import { estFonctionAbsente } from "@/lib/contenus/lecture";
 import { cheminValide } from "@/lib/couvertures/regles";
 import { baseFormations, espaceDe, type EspaceEdition } from "./espace";
-import { ACCES_EQUIPE, exigerEditeur, exigerEquipe } from "./garde";
+import { ACCES_EQUIPE, exigerDomaine, exigerEditeur } from "./garde";
 import { formatParMime } from "./fichiers";
 import { formateurSchema, formationInfosSchema, leconSchema, moduleSchema, parcoursSchema, ressourceSchema } from "./schemas";
 import { slugify } from "./slug";
@@ -81,7 +81,7 @@ export async function saveParcours(_prev: FormState, fd: FormData): Promise<Form
   if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values };
 
   try {
-    const garde = await exigerEquipe();
+    const garde = await exigerDomaine("contenus");
     if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
     const { supabase } = garde;
     if (id) {
@@ -110,7 +110,7 @@ export async function saveFormateur(_prev: FormState, fd: FormData): Promise<For
   if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values };
 
   try {
-    const garde = await exigerEquipe();
+    const garde = await exigerDomaine("contenus");
     if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
     const { supabase } = garde;
     const { error } = id ? await supabase.from("formateurs").update(parsed.data).eq("id", id) : await supabase.from("formateurs").insert(parsed.data);
@@ -356,7 +356,7 @@ async function enregistrerMonetisation(supabase: Supabase, id: string, parcoursC
 export async function setStatutFormation(id: string, statut: "publiee" | "archivee" | "desactivee"): Promise<Resultat> {
   if (!estUuid(id) || !["publiee", "archivee", "desactivee"].includes(statut)) return { ok: false, message: ECHEC };
   try {
-    const garde = await exigerEquipe();
+    const garde = await exigerDomaine("contenus");
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { supabase } = garde;
     if (statut === "publiee") {
@@ -727,7 +727,7 @@ export async function envoyerEnRelecture(id: string): Promise<Resultat> {
 export async function renvoyerAuFormateur(id: string, remarque: string): Promise<Resultat> {
   if (!estUuid(id)) return { ok: false, message: ECHEC };
   try {
-    const garde = await exigerEquipe();
+    const garde = await exigerDomaine("contenus");
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { error } = await garde.supabase.rpc("renvoyer_au_formateur", { p_formation: id, p_remarque: (remarque ?? "").trim().slice(0, 1000) });
     if (error) {

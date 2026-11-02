@@ -3,12 +3,12 @@ import type { Metadata } from "next";
 import { PageAdmin } from "@/components/admin/PageAdmin";
 import { FormateurForm } from "@/components/admin/FormateurForm";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { requireSpace } from "@/lib/auth/require-space";
+import { requireDomaine } from "@/lib/auth/require-domaine";
 
 export const metadata: Metadata = { title: "Nouvelle fiche formateur · Back-office · Étudium" };
 
 async function NouveauFormateur() {
-  await requireSpace("admin");
+  await requireDomaine("contenus");
   return (
     <PageAdmin titre="Nouvelle fiche formateur" fil={[{ label: "Formateurs", href: "/admin/formateurs" }, { label: "Nouvelle fiche formateur" }]}>
       <FormateurForm />

@@ -6,7 +6,7 @@ import { Banner } from "@/components/ui/Banner";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { lireFormules } from "@/lib/abonnement/data";
 import { lireCodesPromo, lireEtatPaiements, lirePaiementsEquipe, lireResumePaiements } from "@/lib/admin/paiements/data";
-import { requireSpace } from "@/lib/auth/require-space";
+import { requireDomaine } from "@/lib/auth/require-domaine";
 
 export const metadata: Metadata = { title: "Abonnements et paiements · Back-office · Étudium" };
 
@@ -14,7 +14,7 @@ const TITRE = "Abonnements et paiements";
 const DESCRIPTION = "Les prix des abonnements, les codes promo et les paiements Mobile Money.";
 
 async function Paiements() {
-  const moi = await requireSpace("admin");
+  const moi = await requireDomaine("paiements");
   const resume = await lireResumePaiements();
   if (!resume) {
     return (

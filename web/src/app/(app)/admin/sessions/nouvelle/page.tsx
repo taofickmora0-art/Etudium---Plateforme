@@ -2,12 +2,12 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { PageFormulaireSession } from "@/components/sessions/PageSessionsEdition";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { requireSpace } from "@/lib/auth/require-space";
+import { requireDomaine } from "@/lib/auth/require-domaine";
 
 export const metadata: Metadata = { title: "Nouvelle session · Back-office · Étudium" };
 
 async function Nouvelle() {
-  await requireSpace("admin");
+  await requireDomaine("communaute");
   return <PageFormulaireSession espace="admin" />;
 }
 

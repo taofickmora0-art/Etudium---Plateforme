@@ -1,7 +1,7 @@
 "use server";
 
 import { refresh } from "next/cache";
-import { ACCES_EQUIPE, exigerEquipe } from "@/lib/admin/garde";
+import { ACCES_EQUIPE, exigerDomaine } from "@/lib/admin/garde";
 import { estFonctionAbsente } from "@/lib/contenus/lecture";
 import { versDetailPaiement, versPagePaiements, type DetailPaiement, type PagePaiements } from "./data";
 
@@ -25,7 +25,7 @@ function message(error: { code?: string; message?: string }): string {
 }
 
 async function appeler(fonction: string, args?: Record<string, unknown>): Promise<Resultat> {
-  const garde = await exigerEquipe();
+  const garde = await exigerDomaine("paiements");
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   const { error } = await garde.supabase.rpc(fonction, args);
   if (error) return { ok: false, message: message(error) };
@@ -35,7 +35,7 @@ async function appeler(fonction: string, args?: Record<string, unknown>): Promis
 
 /** « Activer les paiements » : la base garde l'empreinte du jeton du serveur. */
 export async function activerPaiements(): Promise<Resultat> {
-  const garde = await exigerEquipe();
+  const garde = await exigerDomaine("paiements");
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   const jeton = process.env.PAIEMENT_JETON?.trim();
   if (!jeton || !process.env.PAYIZ_CLE_SECRETE?.trim()) return { ok: false, message: GUIDE };
@@ -125,7 +125,7 @@ export async function annulerAbonnement(abonnementId: string, motif: string): Pr
 
 /** La liste des paiements : jamais par l'adresse de la page (données personnelles), toujours par cette action. */
 export async function chargerPaiements(f: { statut: string | null; recherche: string; page: number }): Promise<{ ok: true; page: PagePaiements } | { ok: false; message: string }> {
-  const garde = await exigerEquipe();
+  const garde = await exigerDomaine("paiements");
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   const { data, error } = await garde.supabase.rpc("paiements_equipe", {
     p_statut: f.statut && STATUTS.includes(f.statut) ? f.statut : null,
@@ -138,7 +138,7 @@ export async function chargerPaiements(f: { statut: string | null; recherche: st
 
 export async function chargerPaiement(id: string): Promise<{ ok: true; detail: DetailPaiement } | { ok: false; message: string }> {
   if (!UUID.test(id)) return { ok: false, message: ECHEC };
-  const garde = await exigerEquipe();
+  const garde = await exigerDomaine("paiements");
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   const { data, error } = await garde.supabase.rpc("paiement_equipe", { p_id: id });
   if (error) return { ok: false, message: error.code === "42501" ? ACCES_EQUIPE : ECHEC };

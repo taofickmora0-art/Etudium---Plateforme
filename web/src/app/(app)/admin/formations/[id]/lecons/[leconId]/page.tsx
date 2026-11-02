@@ -6,7 +6,7 @@ import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { getLeconAdmin } from "@/lib/admin/data";
 import type { LeconAdmin } from "@/lib/admin/types";
-import { requireSpace } from "@/lib/auth/require-space";
+import { requireDomaine } from "@/lib/auth/require-domaine";
 import { lireQuizEditeur } from "@/lib/quiz/data";
 
 export const metadata: Metadata = { title: "Leçon · Back-office · Étudium" };
@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: "Leçon · Back-office · Étudium" }
 type Params = { params: Promise<{ id: string; leconId: string }> };
 
 async function FicheLecon({ params }: Params) {
-  await requireSpace("admin");
+  await requireDomaine("contenus");
   const { id, leconId } = await params;
   let lecon: LeconAdmin | null;
   try {

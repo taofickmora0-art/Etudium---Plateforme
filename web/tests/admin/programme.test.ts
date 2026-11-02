@@ -25,7 +25,8 @@ describe("Back-office : programme d'une formation", () => {
     faux.vider();
     refresh.mockReset();
     getShellUser.mockReset();
-    getShellUser.mockResolvedValue({ roles: ["moderateur"] });
+    // Lot 6 A : les contenus sont au domaine des admins.
+    getShellUser.mockResolvedValue({ roles: ["etudiant", "admin"] });
   });
 
   it("un module s'ajoute à la fin de la formation", async () => {
@@ -83,6 +84,13 @@ describe("Back-office : programme d'une formation", () => {
     expect(await deleteModule(M)).toEqual({ ok: false, message: "Accès réservé aux formateurs et à l’équipe." });
     expect(await deleteLecon(L)).toEqual({ ok: false, message: "Accès réservé aux formateurs et à l’équipe." });
     expect((await addModule(IDLE, form({ formation_id: F, titre: "Pirate" }))).message).toBe("Accès réservé aux formateurs et à l’équipe.");
+    expect(faux.appels).toEqual([]);
+  });
+
+  it("lot 6 A : un modérateur ne touche pas au programme (domaine des contenus)", async () => {
+    getShellUser.mockResolvedValue({ roles: ["etudiant", "moderateur"] });
+    expect(await deleteModule(M)).toEqual({ ok: false, message: "Vous n’avez pas accès à cette partie du back-office." });
+    expect((await addModule(IDLE, form({ formation_id: F, titre: "Pirate" }))).message).toBe("Vous n’avez pas accès à cette partie du back-office.");
     expect(faux.appels).toEqual([]);
   });
 });

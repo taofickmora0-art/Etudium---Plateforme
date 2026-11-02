@@ -1,7 +1,7 @@
 "use server";
 
 import { refresh } from "next/cache";
-import { ACCES_EQUIPE, exigerEquipe } from "@/lib/admin/garde";
+import { ACCES_EQUIPE, exigerDomaine } from "@/lib/admin/garde";
 import type { Role } from "@/lib/auth/permissions";
 import { estFonctionAbsente } from "@/lib/contenus/lecture";
 import { viderFileApres } from "@/lib/envois/declencher";
@@ -27,7 +27,7 @@ export async function chercherComptes(
   filtre: FiltreComptes,
   page: number,
 ): Promise<{ ok: true; page: PageComptes } | { ok: false; message: string }> {
-  const garde = await exigerEquipe();
+  const garde = await exigerDomaine("utilisateurs");
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   const { data, error } = await garde.supabase.rpc("comptes_equipe", {
     p_recherche: (recherche ?? "").trim().slice(0, 200),
@@ -43,7 +43,7 @@ export async function chercherComptes(
  * formateur, ou lui rend la sienne : la base s'en charge.
  */
 export async function changerRole(compteId: string, role: Role): Promise<Resultat> {
-  const garde = await exigerEquipe();
+  const garde = await exigerDomaine("utilisateurs");
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   if (!UUID.test(compteId) || !estRole(role)) return { ok: false, message: ECHEC };
   const { error } = await garde.supabase.rpc("changer_role", { p_compte: compteId, p_role: role });
@@ -56,7 +56,7 @@ export async function changerRole(compteId: string, role: Role): Promise<Resulta
 
 /** Suspend un compte, avec un motif facultatif (500 caractères au plus, visible de l'équipe seulement). */
 export async function suspendreCompte(compteId: string, motif: string): Promise<Resultat> {
-  const garde = await exigerEquipe();
+  const garde = await exigerDomaine("utilisateurs");
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   if (!UUID.test(compteId)) return { ok: false, message: ECHEC };
   const { error } = await garde.supabase.rpc("suspendre_compte", { p_compte: compteId, p_motif: (motif ?? "").trim().slice(0, MOTIF_MAX) });
@@ -68,7 +68,7 @@ export async function suspendreCompte(compteId: string, motif: string): Promise<
 
 /** Réactive un compte suspendu : il retrouve tout, immédiatement. */
 export async function reactiverCompte(compteId: string): Promise<Resultat> {
-  const garde = await exigerEquipe();
+  const garde = await exigerDomaine("utilisateurs");
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   if (!UUID.test(compteId)) return { ok: false, message: ECHEC };
   const { error } = await garde.supabase.rpc("reactiver_compte", { p_compte: compteId });

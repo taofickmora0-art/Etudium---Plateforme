@@ -9,6 +9,10 @@ const { SidebarNavLinks } = await import("@/components/layout/SidebarNav");
 const { BottomNavLinks } = await import("@/components/layout/MobileNav");
 const { BoutonAjouterFormation } = await import("@/components/layout/BoutonAjouterFormation");
 const { PAGES_A_VENIR } = await import("@/lib/pages-a-venir");
+const { fixerDomaines } = await import("@/lib/auth/domaines-du-compte");
+
+// Le menu du back-office d'un admin (lot 6 A : le menu suit les domaines du compte).
+fixerDomaines(["communaute", "contenus", "utilisateurs", "paiements", "statistiques"]);
 
 const liens = (nav: HTMLElement) => within(nav).getAllByRole("link").map((l) => [l.textContent, l.getAttribute("href")]);
 

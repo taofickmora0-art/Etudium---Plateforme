@@ -2,14 +2,14 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { PageMessages } from "@/components/messages/PageMessages";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { requireSpace } from "@/lib/auth/require-space";
+import { requireDomaine } from "@/lib/auth/require-domaine";
 
 export const metadata: Metadata = { title: "Messages · Back-office · Étudium" };
 
 type Recherche = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 async function Contenu({ searchParams }: Recherche) {
-  await requireSpace("admin");
+  await requireDomaine("communaute");
   const { c } = await searchParams;
   return <PageMessages espace="equipe" base="/admin/messages" c={typeof c === "string" ? c : null} />;
 }

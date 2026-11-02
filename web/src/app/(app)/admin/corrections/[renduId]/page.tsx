@@ -2,14 +2,14 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { PageCorrection } from "@/components/corrections/PagesCorrections";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { requireSpace } from "@/lib/auth/require-space";
+import { requireDomaine } from "@/lib/auth/require-domaine";
 
 export const metadata: Metadata = { title: "Correction · Back-office · Étudium" };
 
 type Params = { params: Promise<{ renduId: string }> };
 
 async function Contenu({ params }: Params) {
-  await requireSpace("admin");
+  await requireDomaine("contenus");
   const { renduId } = await params;
   return <PageCorrection espace="admin" renduId={renduId} />;
 }

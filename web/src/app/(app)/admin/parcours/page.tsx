@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { Tag } from "@/components/ui/Tag";
 import { listParcours } from "@/lib/admin/data";
 import type { ParcoursAdmin } from "@/lib/admin/types";
-import { requireSpace } from "@/lib/auth/require-space";
+import { requireDomaine } from "@/lib/auth/require-domaine";
 
 export const metadata: Metadata = { title: "Parcours · Back-office · Étudium" };
 
@@ -24,7 +24,7 @@ const NOUVEAU = (
 );
 
 async function ListeParcours() {
-  await requireSpace("admin");
+  await requireDomaine("contenus");
   let parcours: ParcoursAdmin[];
   try {
     parcours = await listParcours();

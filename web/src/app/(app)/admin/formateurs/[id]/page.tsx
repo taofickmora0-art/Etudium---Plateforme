@@ -7,14 +7,14 @@ import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { getFormateur } from "@/lib/admin/data";
 import type { FormateurAdmin } from "@/lib/admin/types";
-import { requireSpace } from "@/lib/auth/require-space";
+import { requireDomaine } from "@/lib/auth/require-domaine";
 
 export const metadata: Metadata = { title: "Formateur · Back-office · Étudium" };
 
 type Params = { params: Promise<{ id: string }> };
 
 async function FicheFormateur({ params }: Params) {
-  await requireSpace("admin");
+  await requireDomaine("contenus");
   const { id } = await params;
   let formateur: FormateurAdmin | null;
   try {

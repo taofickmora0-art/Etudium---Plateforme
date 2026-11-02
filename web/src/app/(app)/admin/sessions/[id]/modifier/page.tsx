@@ -2,14 +2,14 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { PageFormulaireSession } from "@/components/sessions/PageSessionsEdition";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { requireSpace } from "@/lib/auth/require-space";
+import { requireDomaine } from "@/lib/auth/require-domaine";
 
 export const metadata: Metadata = { title: "Modifier la session · Back-office · Étudium" };
 
 type Params = { params: Promise<{ id: string }> };
 
 async function Modifier({ params }: Params) {
-  await requireSpace("admin");
+  await requireDomaine("communaute");
   const { id } = await params;
   return <PageFormulaireSession espace="admin" id={id} />;
 }

@@ -2,12 +2,12 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { PageCorrections } from "@/components/corrections/PagesCorrections";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { requireSpace } from "@/lib/auth/require-space";
+import { requireDomaine } from "@/lib/auth/require-domaine";
 
 export const metadata: Metadata = { title: "Corrections · Back-office · Étudium" };
 
 async function Contenu() {
-  await requireSpace("admin");
+  await requireDomaine("contenus");
   return <PageCorrections espace="admin" />;
 }
 

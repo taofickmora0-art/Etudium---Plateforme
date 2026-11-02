@@ -1,7 +1,7 @@
 "use server";
 
 import { refresh } from "next/cache";
-import { exigerEquipe, SESSION_EXPIREE } from "@/lib/admin/garde";
+import { exigerDomaine, SESSION_EXPIREE } from "@/lib/admin/garde";
 import { demoModeActive, getShellUser } from "@/lib/auth/current-user";
 import { viderFileApres } from "@/lib/envois/declencher";
 import { createClient } from "@/lib/supabase/server";
@@ -62,7 +62,7 @@ export async function marquerLues(ids: string[] | null): Promise<{ ok: boolean; 
 
 /** Envoie une annonce à tous les comptes (l'équipe) ; rend le nombre de comptes qui la reçoivent. */
 export async function publierAnnonce(titre: string, texte: string, lien: string): Promise<{ ok: true; destinataires: number } | { ok: false; message: string }> {
-  const garde = await exigerEquipe();
+  const garde = await exigerDomaine("utilisateurs");
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   const [t, x, l] = [(titre ?? "").trim(), (texte ?? "").trim(), (lien ?? "").trim()];
   if (t.length === 0 || t.length > ANNONCE_TITRE_MAX) return { ok: false, message: REFUS_ANNONCE.titre };

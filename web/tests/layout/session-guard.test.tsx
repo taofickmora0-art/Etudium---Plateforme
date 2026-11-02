@@ -70,7 +70,7 @@ describe("Session vérifiée à chaque page", () => {
   it("chaque page de l'espace connecté vérifie la session", () => {
     const sansVerification = pages(join(process.cwd(), "src/app/(app)")).filter((p) => {
       const code = readFileSync(p, "utf8");
-      return !["<SessionGuard", "<ComingSoon", "<ReservedComingSoon", "redirectToSortie()", "requireSpace(\""].some((m) => code.includes(m));
+      return !["<SessionGuard", "<ComingSoon", "<ReservedComingSoon", "redirectToSortie()", "requireSpace(\"", "requireDomaine(\""].some((m) => code.includes(m));
     });
     expect(sansVerification).toEqual([]);
   });
@@ -80,7 +80,9 @@ describe("Session vérifiée à chaque page", () => {
     for (const espace of ["admin", "formateur"]) {
       const sansRole = pages(join(process.cwd(), "src/app/(app)", espace)).filter((p) => {
         const code = readFileSync(p, "utf8");
-        return ![`requireSpace("${espace}")`, `<ReservedComingSoon espace="${espace}"`].some((m) => code.includes(m));
+        // Lot 6 A : une page du back-office demande son domaine (requireDomaine passe par requireSpace("admin")).
+        const marques = [`requireSpace("${espace}")`, `<ReservedComingSoon espace="${espace}"`, ...(espace === "admin" ? ['requireDomaine("'] : [])];
+        return !marques.some((m) => code.includes(m));
       });
       expect(sansRole, espace).toEqual([]);
     }

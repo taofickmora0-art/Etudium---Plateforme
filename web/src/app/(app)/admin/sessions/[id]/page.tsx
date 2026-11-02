@@ -2,14 +2,14 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { FicheSession } from "@/components/sessions/FicheSession";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { requireSpace } from "@/lib/auth/require-space";
+import { requireDomaine } from "@/lib/auth/require-domaine";
 
 export const metadata: Metadata = { title: "Session live · Back-office · Étudium" };
 
 type Params = { params: Promise<{ id: string }> };
 
 async function Fiche({ params }: Params) {
-  await requireSpace("admin");
+  await requireDomaine("communaute");
   const { id } = await params;
   return <FicheSession espace="admin" id={id} />;
 }
