@@ -7,9 +7,10 @@ import { lireFormules } from "@/lib/abonnement/data";
 import { lireAbonnementsCompte } from "@/lib/admin/paiements/data";
 import type { Role } from "@/lib/auth/permissions";
 import { lireCompte, lireRemarquesFormateurs } from "@/lib/utilisateurs/data";
-import { dateCourte, droitsSurCompte, initialesCompte, nomAffiche } from "@/lib/utilisateurs/regles";
+import { dateCourte, droitsSurCompte, initialesCompte, nomAffiche, nomCourt } from "@/lib/utilisateurs/regles";
 import { ActiviteCompte } from "./ActiviteCompte";
 import { EtiquettesRoles } from "./EtiquettesRoles";
+import { GestionCompte } from "./GestionCompte";
 import { MigrationAbsente } from "./MigrationAbsente";
 import { RemarquesFormateurs } from "./RemarquesFormateurs";
 import { RoleCompte } from "./RoleCompte";
@@ -68,6 +69,11 @@ export async function FicheUtilisateur({ params, roles }: { params: Promise<{ id
         <ActiviteCompte compte={compte} />
         <RemarquesFormateurs remarques={remarques.migrationAbsente ? null : remarques.donnees} />
         <SuspensionCompte compte={compte} droits={{ suspendre: droits.suspendre, reactiver: droits.reactiver }} />
+        <GestionCompte
+          key={`${compte.prenom} ${compte.nom}`}
+          compte={{ id: compte.id, prenom: compte.prenom, nom: compte.nom, nomCourt: nomCourt(compte.prenom, compte.nom, compte.email) }}
+          droits={{ renommer: droits.renommer, supprimer: droits.supprimer }}
+        />
       </div>
     </PageAdmin>
   );

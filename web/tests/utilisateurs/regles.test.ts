@@ -69,22 +69,22 @@ describe("Règles de la page Utilisateurs", () => {
   });
 
   it("un modérateur voit, sans rien changer", () => {
-    expect(droitsSurCompte(moi(["moderateur"]), compte([]))).toEqual({ changerRole: false, suspendre: false, reactiver: false });
-    expect(droitsSurCompte(moi(["moderateur"]), compte([], true))).toEqual({ changerRole: false, suspendre: false, reactiver: false });
+    expect(droitsSurCompte(moi(["moderateur"]), compte([]))).toEqual({ changerRole: false, suspendre: false, reactiver: false, renommer: false, supprimer: false });
+    expect(droitsSurCompte(moi(["moderateur"]), compte([], true))).toEqual({ changerRole: false, suspendre: false, reactiver: false, renommer: false, supprimer: false });
   });
 
   it("un admin suspend un étudiant ou un formateur, pas l'équipe ; il ne change pas les rôles", () => {
-    expect(droitsSurCompte(moi(["admin"]), compte([]))).toEqual({ changerRole: false, suspendre: true, reactiver: false });
+    expect(droitsSurCompte(moi(["admin"]), compte([]))).toEqual({ changerRole: false, suspendre: true, reactiver: false, renommer: true, supprimer: false });
     expect(droitsSurCompte(moi(["admin"]), compte(["formateur"]))).toMatchObject({ suspendre: true });
     expect(droitsSurCompte(moi(["admin"]), compte(["admin"]))).toMatchObject({ suspendre: false });
     expect(droitsSurCompte(moi(["admin"]), compte(["moderateur"]))).toMatchObject({ suspendre: false });
-    expect(droitsSurCompte(moi(["admin"]), compte([], true))).toEqual({ changerRole: false, suspendre: false, reactiver: true });
+    expect(droitsSurCompte(moi(["admin"]), compte([], true))).toEqual({ changerRole: false, suspendre: false, reactiver: true, renommer: true, supprimer: false });
     expect(droitsSurCompte(moi(["admin"]), compte(["moderateur"], true))).toMatchObject({ reactiver: false });
   });
 
   it("le super admin change les rôles et suspend l'équipe, jamais lui-même ni un super admin", () => {
-    expect(droitsSurCompte(moi(["super_admin"]), compte(["admin"]))).toEqual({ changerRole: true, suspendre: true, reactiver: false });
-    expect(droitsSurCompte(moi(["super_admin"], "moi"), compte(["super_admin"], false, "moi"))).toEqual({ changerRole: true, suspendre: false, reactiver: false });
+    expect(droitsSurCompte(moi(["super_admin"]), compte(["admin"]))).toEqual({ changerRole: true, suspendre: true, reactiver: false, renommer: true, supprimer: true });
+    expect(droitsSurCompte(moi(["super_admin"], "moi"), compte(["super_admin"], false, "moi"))).toEqual({ changerRole: true, suspendre: false, reactiver: false, renommer: true, supprimer: false });
     expect(droitsSurCompte(moi(["super_admin"]), compte(["super_admin"]))).toMatchObject({ suspendre: false });
     expect(droitsSurCompte(moi(["super_admin"]), compte(["admin"], true))).toMatchObject({ suspendre: false, reactiver: true });
   });

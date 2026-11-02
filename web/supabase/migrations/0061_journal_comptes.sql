@@ -506,6 +506,107 @@ begin
 end;
 $$;
 
+-- ─── Renommer un compte (domaine « utilisateurs » ; un membre de l'équipe : le super admin seul) ────
+create or replace function public.renommer_compte(p_compte uuid, p_prenom text, p_nom text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_prenom text := btrim(coalesce(p_prenom, ''));
+  v_nom text := btrim(coalesce(p_nom, ''));
+  v_ancien text;
+begin
+  if not public.a_domaine('utilisateurs') then
+    raise exception 'Réservé aux administrateurs.' using errcode = '42501';
+  end if;
+  if not exists (select 1 from public.profils where id = p_compte) then
+    raise exception 'Compte introuvable.' using errcode = 'P0001';
+  end if;
+  if exists (select 1 from public.roles where profil_id = p_compte and role in ('moderateur', 'admin', 'super_admin'))
+     and not public.a_domaine('roles') then
+    raise exception 'Seul le super admin renomme un membre de l’équipe.' using errcode = 'P0001';
+  end if;
+  if char_length(v_prenom) not between 1 and 60 or char_length(v_nom) not between 1 and 60 then
+    raise exception 'Écrivez le prénom et le nom (60 caractères au plus).' using errcode = 'P0001';
+  end if;
+  v_ancien := coalesce(public.nom_du_profil(p_compte), 'un compte');
+  update public.profils set prenom = v_prenom, nom = v_nom where id = p_compte;
+  perform public.journaliser('comptes', 'compte_renomme', 'compte', p_compte::text, v_prenom || ' ' || v_nom,
+    format('Compte de %s renommé en %s', v_ancien, v_prenom || ' ' || v_nom));
+end;
+$$;
+
+-- ─── Les fichiers d'un compte, à retirer avant sa suppression (le super admin) ──────────────────────
+-- Photos de profil, travaux rendus, pièces jointes de ses conversations (comme « Supprimer mon compte »).
+create or replace function public.fichiers_du_compte(p_compte uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.a_domaine('roles') then
+    raise exception 'Réservé au super admin.' using errcode = '42501';
+  end if;
+  return jsonb_build_object(
+    'photos', (select coalesce(jsonb_agg(o.name order by o.name), '[]'::jsonb) from storage.objects o
+               where o.bucket_id = 'photos-profil' and o.name like p_compte::text || '/%'),
+    'rendus', (select coalesce(jsonb_agg(r.fichier order by r.fichier), '[]'::jsonb) from public.rendus_exercices r
+               where r.profil_id = p_compte and r.fichier is not null),
+    'messages', (select coalesce(jsonb_agg(m.fichier order by m.fichier), '[]'::jsonb)
+                 from public.messages m join public.conversations c on c.id = m.conversation_id
+                 where m.fichier is not null
+                   and (c.etudiant_id = p_compte or c.formateur_id = p_compte or (storage.foldername(m.fichier))[1] = p_compte::text))
+  );
+end;
+$$;
+
+-- ─── Supprimer un compte (le super admin ; jamais soi-même ni un autre super admin) ─────────────────
+-- Le compte part avec tout ce que la base efface en cascade ; les paiements restent sans propriétaire et les
+-- certificats délivrés restent vérifiables. La ligne du journal est écrite avant, avec le nom et l'adresse figés.
+create or replace function public.supprimer_compte(p_compte uuid, p_motif text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_motif text := btrim(coalesce(p_motif, ''));
+  v_nom text;
+  v_email text;
+begin
+  if not public.a_domaine('roles') then
+    raise exception 'Réservé au super admin.' using errcode = '42501';
+  end if;
+  if p_compte = (select auth.uid()) then
+    raise exception 'Vous ne pouvez pas supprimer votre propre compte d’ici : passez par votre profil.' using errcode = 'P0001';
+  end if;
+  if exists (select 1 from public.roles where profil_id = p_compte and role = 'super_admin') then
+    raise exception 'Un compte super admin ne se supprime pas.' using errcode = 'P0001';
+  end if;
+  if char_length(v_motif) = 0 then
+    raise exception 'Indiquez le motif de la suppression.' using errcode = 'P0001';
+  end if;
+  select u.email into v_email from auth.users u where u.id = p_compte;
+  if not found then
+    raise exception 'Compte introuvable.' using errcode = 'P0001';
+  end if;
+  v_nom := coalesce(public.nom_du_profil(p_compte), 'un compte');
+  perform public.journaliser('comptes', 'compte_supprime', 'compte', p_compte::text, v_nom,
+    format('Compte de %s (%s) supprimé', v_nom, v_email), jsonb_build_object('motif', left(v_motif, 500), 'email', v_email));
+  delete from auth.users where id = p_compte;
+end;
+$$;
+
+-- Les fichiers d'un compte supprimé : le super admin les retire avec l'API de stockage, avant la suppression.
+drop policy if exists "super admin : supprimer les fichiers d'un compte" on storage.objects;
+create policy "super admin : supprimer les fichiers d'un compte" on storage.objects
+  for delete to authenticated
+  using (bucket_id in ('photos-profil', 'rendus', 'messages') and (select public.a_domaine('roles')));
+
 -- ─── Droits ─────────────────────────────────────────────────────────────────────────────────────────
 revoke execute on function public.journaliser(text, text, text, text, text, text, jsonb) from public, anon, authenticated;
 revoke execute on function public.libelle_role(text) from public, anon;
@@ -532,5 +633,11 @@ grant execute on function public.libelle_statut_formation(text) to authenticated
 grant execute on function public.montant_lisible(integer) to authenticated;
 grant execute on function public.lire_journal(text, uuid, integer, bigint, integer) to authenticated;
 grant execute on function public.auteurs_journal() to authenticated;
+revoke execute on function public.renommer_compte(uuid, text, text) from public, anon;
+revoke execute on function public.fichiers_du_compte(uuid) from public, anon;
+revoke execute on function public.supprimer_compte(uuid, text) from public, anon;
+grant execute on function public.renommer_compte(uuid, text, text) to authenticated;
+grant execute on function public.fichiers_du_compte(uuid) to authenticated;
+grant execute on function public.supprimer_compte(uuid, text) to authenticated;
 
 commit;

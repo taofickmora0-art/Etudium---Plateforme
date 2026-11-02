@@ -85,12 +85,14 @@ export const dateCourte = (iso: string) => DATE_COURTE.format(new Date(iso));
  * - changer le rôle : le super admin seul ;
  * - suspendre : un admin ou le super admin ; un membre de l'équipe, le super admin seul ; jamais soi-même ni un
  *   compte super admin (retirer d'abord son rôle) ;
- * - réactiver : les mêmes droits, sur un compte suspendu.
+ * - réactiver : les mêmes droits, sur un compte suspendu ;
+ * - renommer : un admin ou le super admin ; un membre de l'équipe, le super admin seul (lot 6 A) ;
+ * - supprimer : le super admin seul ; jamais soi-même ni un compte super admin (lot 6 A).
  */
 export function droitsSurCompte(
   moi: { id: string; roles: Role[] },
   compte: { id: string; roles: Role[]; suspendu: boolean },
-): { changerRole: boolean; suspendre: boolean; reactiver: boolean } {
+): { changerRole: boolean; suspendre: boolean; reactiver: boolean; renommer: boolean; supprimer: boolean } {
   const superAdmin = moi.roles.includes("super_admin");
   const admin = superAdmin || moi.roles.includes("admin");
   const cibleEquipe = compte.roles.some((r) => EQUIPE.includes(r));
@@ -99,5 +101,7 @@ export function droitsSurCompte(
     changerRole: superAdmin,
     suspendre: !compte.suspendu && peutAgir && moi.id !== compte.id && !compte.roles.includes("super_admin"),
     reactiver: compte.suspendu && peutAgir,
+    renommer: peutAgir,
+    supprimer: superAdmin && moi.id !== compte.id && !compte.roles.includes("super_admin"),
   };
 }

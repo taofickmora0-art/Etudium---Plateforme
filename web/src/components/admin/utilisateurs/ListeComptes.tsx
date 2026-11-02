@@ -29,6 +29,7 @@ import {
 } from "@/lib/utilisateurs/regles";
 import type { CompteResume, FiltreComptes, PageComptes } from "@/lib/utilisateurs/types";
 import { FenetreRole } from "./FenetreRole";
+import { FenetresCompte, type FenetreCompte } from "./FenetresCompte";
 import { FenetresSuspension, type FenetreSuspension } from "./FenetresSuspension";
 
 const DELAI_RECHERCHE_MS = 300;
@@ -52,8 +53,8 @@ export function ListeComptes({ initial, moi }: Props) {
   const [donnees, setDonnees] = useState(initial);
   const [erreur, setErreur] = useState<string | null>(null);
   const [chargement, demarrer] = useTransition();
-  const [cible, setCible] = useState<{ id: string; nomCourt: string; role: Role }>({ id: "", nomCourt: "", role: "etudiant" });
-  const [fenetre, setFenetre] = useState<FenetreSuspension | "role">(null);
+  const [cible, setCible] = useState<{ id: string; nomCourt: string; role: Role; prenom: string; nom: string }>({ id: "", nomCourt: "", role: "etudiant", prenom: "", nom: "" });
+  const [fenetre, setFenetre] = useState<FenetreSuspension | FenetreCompte | "role">(null);
   const minuterie = useRef<ReturnType<typeof setTimeout> | null>(null);
   const derniere = useRef(0);
   // Une entrée du menu ouvre une fenêtre : le menu, en se fermant, ne doit pas lui reprendre le focus.
@@ -77,16 +78,18 @@ export function ListeComptes({ initial, moi }: Props) {
 
   const actions = (c: CompteResume): MenuEntry[] => {
     const droits = droitsSurCompte(moi, c);
-    const ouvrir = (quoi: FenetreSuspension | "role") => () => {
+    const ouvrir = (quoi: FenetreSuspension | FenetreCompte | "role") => () => {
       fenetreDemandee.current = true;
-      setCible({ id: c.id, nomCourt: nomCourt(c.prenom, c.nom, c.email), role: rolePrincipal(c.roles) });
+      setCible({ id: c.id, nomCourt: nomCourt(c.prenom, c.nom, c.email), role: rolePrincipal(c.roles), prenom: c.prenom, nom: c.nom });
       setFenetre(quoi);
     };
     return [
       { label: "Voir le profil", href: `/admin/utilisateurs/${c.id}` },
       ...(droits.changerRole ? [{ label: "Changer le rôle", onSelect: ouvrir("role") }] : []),
+      ...(droits.renommer ? [{ label: "Modifier le nom", onSelect: ouvrir("renommer") }] : []),
       ...(droits.suspendre ? [{ label: "Suspendre le compte", danger: true, onSelect: ouvrir("suspendre") }] : []),
       ...(droits.reactiver ? [{ label: "Réactiver le compte", onSelect: ouvrir("reactiver") }] : []),
+      ...(droits.supprimer ? [{ label: "Supprimer le compte", danger: true, onSelect: ouvrir("supprimer") }] : []),
     ];
   };
 
@@ -181,7 +184,15 @@ export function ListeComptes({ initial, moi }: Props) {
       </div>
       <FenetresSuspension
         compte={cible}
-        fenetre={fenetre === "role" ? null : fenetre}
+        fenetre={fenetre === "suspendre" || fenetre === "reactiver" ? fenetre : null}
+        onFenetreChange={setFenetre}
+        onTermine={() => charger(recherche, filtre, page)}
+        retourFocus={() => document.querySelector<HTMLElement>(`[data-actions-compte="${cible.id}"]`)}
+      />
+      <FenetresCompte
+        key={cible.id}
+        compte={cible}
+        fenetre={fenetre === "renommer" || fenetre === "supprimer" ? fenetre : null}
         onFenetreChange={setFenetre}
         onTermine={() => charger(recherche, filtre, page)}
         retourFocus={() => document.querySelector<HTMLElement>(`[data-actions-compte="${cible.id}"]`)}
