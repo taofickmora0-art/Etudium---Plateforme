@@ -1180,9 +1180,9 @@ L'étudiant a maintenant un **tableau de bord** (« Mon espace » › « Tableau
 
 1. **La migration**, dans l'éditeur SQL de Supabase, après la 0062 : `web/supabase/migrations/0063_engagement.sql`. Elle se termine par la tâche planifiée du rappel de 18 h. Si « Cron » n'est pas activé, un avertissement s'affiche : active-le (Database › Extensions › `pg_cron`), puis relance le dernier bloc (`do $cron$ … $cron$;`). Pour vérifier :
    ```sql
-   select jobname, schedule from cron.job where jobname = 'etudium-rappel-serie';
+   select jobname, schedule from cron.job where jobname in ('etudium-rappel-serie', 'etudium-popularite');
    ```
-   La ligne attendue : `0 17 * * *` (17 h UTC, soit 18 h au Bénin).
+   Deux lignes attendues : `etudium-rappel-serie` à `0 17 * * *` (17 h UTC, soit 18 h au Bénin), et `etudium-popularite` à `20 4 * * *` (le classement des formations les plus suivies, recalculé chaque nuit pour les recommandations).
 2. **Ce qui part de zéro** : la série et les points commencent à l'application de la migration. Seule exception : les certificats déjà obtenus donnent tout de suite leurs 100 points et leurs badges.
 3. **À vérifier avec un compte étudiant de test** :
    - ouvre une leçon, puis va sur ton tableau de bord : la série affiche « 1 jour » et « Points gagnés cette semaine » 5. L'en-tête de la page de leçon ne change pas tout de suite : il se met à jour à la page suivante ;
@@ -1196,3 +1196,22 @@ L'étudiant a maintenant un **tableau de bord** (« Mon espace » › « Tableau
    - le jour compte à l'heure du Bénin (minuit à Porto-Novo) ; la semaine commence le lundi ;
    - un niveau tous les 200 points ; pas de classement : chacun ne voit que ses points ;
    - le formateur n'a rien de tout cela (pas d'espace étudiant).
+
+## 63. Les points mineurs reportés (migration 0064), 10 minutes
+
+Les petites corrections des lots 4, 5, 6 A et 6 B, faites avant ta recette.
+
+1. **Les migrations**, dans l'éditeur SQL de Supabase, dans l'ordre :
+   - `web/supabase/migrations/0063_engagement.sql`, si ce n'est pas déjà fait (section 62) ;
+   - puis `web/supabase/migrations/0064_finitions_lot_6.sql`.
+2. **Ce qui change pour toi** :
+   - **le journal** :
+     - résilier les abonnements d'un compte écrit une seule ligne « … résilié » (ou « N abonnements de … résiliés ») ;
+     - un membre de l'équipe dont le compte a été supprimé reste dans le filtre « Auteur » ;
+   - **l'historique d'une formation** : une formation repassée en brouillon n'a plus de version « En ligne », et une remise en ligne sans changement ne crée plus de version en double ;
+   - **l'éditeur** :
+     - une vidéo collée depuis un autre site doit avoir un lien valide de sa plateforme ;
+     - la limite de 300 Ko est la même à l'écran et à l'enregistrement ;
+   - **le push** : ton téléphone est rattaché à ton compte à chaque visite. Si le navigateur renouvelle son abonnement, tu n'as plus à rallumer l'interrupteur.
+3. **Vérification rapide** : sur la fiche d'un compte de test (back-office › Utilisateurs), résilie son abonnement (avec un motif), puis regarde le journal (Pilotage › Journal) : une seule ligne.
+
