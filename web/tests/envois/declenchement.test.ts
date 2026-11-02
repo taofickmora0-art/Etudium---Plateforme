@@ -39,13 +39,22 @@ describe("Vider la file après la réponse", () => {
     expect(() => viderFileApres()).not.toThrow();
   });
 
-  it("la cloche vide la file ; sans session, non", async () => {
+  it("la cloche vide la file, au plus une fois toutes les 10 secondes (point reporté) ; sans session, non", async () => {
     faux.repondre("rpc.mes_notifications", { data: { lignes: [], suite: false, non_lues: 0 } });
     await chargerCloche();
     expect(viderFile).toHaveBeenCalledTimes(1);
-    getShellUser.mockResolvedValue(null);
     await chargerCloche();
     expect(viderFile).toHaveBeenCalledTimes(1);
+    const plusTard = Date.now() + 11_000;
+    const horloge = vi.spyOn(Date, "now").mockReturnValue(plusTard);
+    await chargerCloche();
+    expect(viderFile).toHaveBeenCalledTimes(2);
+    horloge.mockRestore();
+    viderFile.mockClear();
+    getShellUser.mockResolvedValue(null);
+    vi.spyOn(Date, "now").mockReturnValueOnce(plusTard + 60_000);
+    await chargerCloche();
+    expect(viderFile).not.toHaveBeenCalled();
   });
 
   it("une annonce publiée, un message envoyé : la file se vide ; un refus de la base, non", async () => {

@@ -286,6 +286,10 @@ begin
   -- Plus de 24 heures : trop tard pour prévenir.
   update public.envois set statut = 'abandonne', erreur = coalesce(erreur, 'Trop ancien'), pris_le = null
   where statut = 'a_envoyer' and cree_le < now() - interval '24 hours';
+  -- Un compte sans adresse e-mail : rien à essayer.
+  update public.envois e set statut = 'abandonne', erreur = 'Pas d’adresse e-mail', pris_le = null
+  where e.statut = 'a_envoyer' and e.canal = 'email'
+    and not exists (select 1 from auth.users u where u.id = e.destinataire and coalesce(btrim(u.email), '') <> '');
 
   with pris as (
     select e.id from public.envois e

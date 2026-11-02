@@ -123,6 +123,8 @@ describe("Payer", () => {
     faux.repondre("rpc.preparer_paiement", { data: carteSql({ statut: "reussi", montant: 0, remise: 15000, numero_recu: "ET-R-2026-000002", repris: false }) });
     expect(await payer({ ...ENTREE, code: "OFFERT", telephone: "" })).toMatchObject({ etat: "reussi", paiement: { numeroRecu: "ET-R-2026-000002" } });
     expect(fetchPayiz).not.toHaveBeenCalled();
+    // Point reporté du lot 5 B : la confirmation (e-mail « Votre abonnement … est actif ») part tout de suite.
+    expect(viderFileApres).toHaveBeenCalledTimes(1);
   });
 
   it("numéro vide avec un code qui ne rend pas le paiement gratuit : message", async () => {

@@ -110,8 +110,11 @@ export async function payer(e: { formuleId: string; code: string; telephone: str
   const { data, error } = await supabase.rpc("preparer_paiement", { p_formule: e.formuleId, p_code: e.code.trim() || null });
   if (error) return erreur(messageBase(error));
   const carte = versCartePaiement(data);
-  // Code à 100 % : l'abonnement est offert, sans Payiz.
-  if (carte.statut === "reussi") return { etat: "reussi", paiement: carte };
+  // Code à 100 % : l'abonnement est offert, sans Payiz ; sa confirmation par e-mail part tout de suite (0058).
+  if (carte.statut === "reussi") {
+    viderFileApres();
+    return { etat: "reussi", paiement: carte };
+  }
 
   const config = configurationPaiement();
   if (!config) return erreur(INDISPONIBLE);

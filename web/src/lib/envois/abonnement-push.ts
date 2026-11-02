@@ -13,6 +13,9 @@ export const MESSAGES_PUSH: Record<Exclude<EtatPush, "possible">, string> = {
 };
 
 const ECHEC = "L’abonnement aux notifications push a échoué. Réessayez.";
+const PAS_PRET = "Le navigateur n’a pas pu préparer les notifications. Rechargez la page, puis réessayez.";
+/** Le service worker a 10 secondes pour s'activer ; au-delà, on n'attend plus (l'interrupteur ne reste pas bloqué). */
+const ATTENTE_SERVICE_WORKER_MS = 10_000;
 
 function surIphone(): boolean {
   const n = window.navigator;
@@ -57,7 +60,15 @@ export async function abonnerPush(clePublique: string): Promise<{ ok: true; abon
     const permission = await Notification.requestPermission();
     if (permission !== "granted") return { ok: false, message: MESSAGES_PUSH.refuse };
     const enregistrement = await window.navigator.serviceWorker.register("/sw.js", { scope: "/" });
-    await window.navigator.serviceWorker.ready;
+    let minuterie: ReturnType<typeof setTimeout> | undefined;
+    const pret = await Promise.race([
+      window.navigator.serviceWorker.ready.then(() => true),
+      new Promise<false>((resoudre) => {
+        minuterie = setTimeout(() => resoudre(false), ATTENTE_SERVICE_WORKER_MS);
+      }),
+    ]);
+    clearTimeout(minuterie);
+    if (!pret) return { ok: false, message: PAS_PRET };
     const cle = octetsDeCle(clePublique);
     let abonnement = await enregistrement.pushManager.getSubscription();
     // Un abonnement fait avec une autre clé (clés changées) est refait.

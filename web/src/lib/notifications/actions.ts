@@ -24,8 +24,8 @@ export async function chargerCloche(): Promise<LotNotifications | null> {
     } catch {
       // Ignoré : la cloche lit ce qu'elle a.
     }
-    // Les push et les e-mails en attente (migration 0058) partent après la réponse.
-    viderFileApres();
+    // Les push et les e-mails en attente (migration 0058) partent après la réponse, au plus toutes les 10 secondes.
+    viderFileApres({ espacementMs: 10_000 });
   }
   try {
     const lecture = await lireNotifications({ nombre: NOMBRE_CLOCHE });

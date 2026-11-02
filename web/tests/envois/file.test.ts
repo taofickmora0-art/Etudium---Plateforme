@@ -91,6 +91,15 @@ describe("Vider la file", () => {
     expect(terminaisons(f.rpc).map((t) => (t as { p_id: number }).p_id)).toEqual([1]);
   });
 
+  it("points reportés : sans les clés des e-mails, seul le push est pris ; un jeton sans aucune clé ne prend rien", async () => {
+    const f = fauxClient([]);
+    await viderFile({ client: f.client, config: configurationEnvois({ ...CLES, RESEND_API_KEY: "" }) });
+    expect(f.rpc).toHaveBeenCalledWith("prendre_envois", { p_jeton: CLES.ENVOIS_JETON, p_canaux: ["push"], p_limite: 10 });
+    const g = fauxClient([]);
+    expect(await viderFile({ client: g.client, config: configurationEnvois({ ENVOIS_JETON: CLES.ENVOIS_JETON }) })).toEqual({ envoyes: 0, echecs: 0 });
+    expect(g.rpc).not.toHaveBeenCalled();
+  });
+
   it("une base qui refuse (jeton faux, migration absente) : rien ne lève", async () => {
     const f = fauxClient({ error: { code: "42501", message: "Jeton d’envoi non reconnu." } });
     expect(await viderFile({ client: f.client, config: configurationEnvois(CLES) })).toEqual({ envoyes: 0, echecs: 0 });
@@ -108,6 +117,11 @@ describe("Envoyer un push", () => {
     expect(JSON.parse(envoi.mock.calls[0][1])).toEqual(charge);
     // Relecture (3, 4) : un service qui ne répond pas ne bloque pas la file.
     expect(envoi.mock.calls[0][2]).toMatchObject({ TTL: 86_400, timeout: 10_000 });
+  });
+
+  it("point reporté : un appareil qui répond 404 a disparu aussi ; l'envoi est fait", async () => {
+    const envoi = vi.fn().mockRejectedValue(Object.assign(new Error("Not Found"), { statusCode: 404 }));
+    expect(await envoyerPush(config, [appareil(1)], charge, envoi)).toEqual({ ok: true, disparus: ["https://push.exemple/1"] });
   });
 
   it("une panne du service de push : échec, avec son message ; aucun appareil : rien à faire", async () => {

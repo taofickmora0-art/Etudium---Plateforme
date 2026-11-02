@@ -163,6 +163,15 @@ describe("Migration 0058 : push et e-mails", () => {
     expect(push[0].appareils).toEqual([{ adresse: "https://fcm.googleapis.com/fcm/send/b1", p256dh: "B" + "x".repeat(86), auth: "a".repeat(22) }]);
   });
 
+  it("point reporté : un e-mail pour un compte sans adresse est abandonné tout de suite, sans 4 essais", async () => {
+    const SANS = randomUUID();
+    await banc.creerCompte(SANS);
+    await banc.db.query("update auth.users set email = null where id = $1", [SANS]);
+    await notifier([SANS], "expiration_renouvellement", "Votre abonnement expire demain", "/abonnement/souscrire");
+    expect(await prendre("anon", JETON, ["email"])).toEqual([]);
+    expect((await envois()).find((e) => e.destinataire === SANS)).toMatchObject({ statut: "abandonne" });
+  });
+
   it("terminer_envoi : envoyé ; échec puis nouvel essai à 1 min ; abandon au 4e échec ; appareils disparus retirés ; plus de 24 h abandonné", async () => {
     await appareil(B, "https://fcm.googleapis.com/fcm/send/b2");
     await notifier([B], "messages", "Essais");
