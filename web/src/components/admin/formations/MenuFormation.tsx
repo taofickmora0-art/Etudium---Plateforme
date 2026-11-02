@@ -66,6 +66,7 @@ export function MenuFormation({ formation: f, suiveurs }: Props) {
       <Menu
         label={nom}
         align="start"
+        className="w-[250px]"
         trigger={<IconButton ref={bouton} icon={MoreVerticalIcon} label={nom} variant="contour" size="sm" className="max-sm:size-9" />}
         items={items}
         rendreLeFocus={() => {
