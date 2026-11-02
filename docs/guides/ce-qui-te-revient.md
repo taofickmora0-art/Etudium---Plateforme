@@ -1094,9 +1094,10 @@ L'éditeur des leçons écrit maintenant des titres, des listes, des images, des
 
 Les notifications de l'appli partent aussi en **push** sur les appareils qui l'ont activé (téléphone, ordinateur). Les messages **importants** partent par **e-mail**, même si l'appli est coupée : paiement reçu (avec le numéro du reçu), rappels avant la fin de l'abonnement, abonnement attribué ou résilié, compte suspendu ou réactivé. Une file d'attente garde chaque envoi : en cas de panne, il est retenté après 1, 5 puis 15 minutes.
 
-1. **La migration** `web/supabase/migrations/0058_push_emails.sql`, dans l'éditeur SQL de Supabase, après la 0057.
-   - Le résultat affiche une ligne `jeton_envois` : **recopie-la tout de suite** dans `web/.env.local` : `ENVOIS_JETON=…` (64 caractères). Elle n'est affichée qu'une fois ; la base n'en garde que l'empreinte.
-   - Jeton perdu : lance `select public.nouveau_jeton_envois();` dans l'éditeur SQL ; recopie le nouveau (l'ancien ne marche plus).
+1. **Les migrations** `web/supabase/migrations/0058_push_emails.sql`, dans l'éditeur SQL de Supabase, après la 0057, puis, le moment venu, `0071_production.sql` (après la 0070).
+   - **Plus aucun jeton à recopier** (depuis la 0071) : la ligne `jeton_envois` affichée à la fin de la 0058 ne sert plus, ignore-la. Le jeton du serveur est tiré de la clé Resend (à défaut, de la clé privée VAPID) ; `ENVOIS_JETON` n'est plus lue, tu peux la retirer de `web/.env.local`.
+   - À la place, un clic au back-office : « Abonnements et paiements » › bloc « Envois (e-mails et notifications push) » › **« Activer les envois »** (étape 4). La base n'en garde que l'empreinte.
+   - Le bloc dit « Sans clé » tant qu'il n'y a ni `RESEND_API_KEY` ni clé VAPID, « À activer » tant que tu n'as pas cliqué, et de nouveau quand la clé change (nouvelle clé Resend, ou clé Resend ajoutée après les clés VAPID) : reclique alors « Activer les envois ».
 2. **Le push** : dans un terminal, dans le dossier `web/`, lance `npx web-push generate-vapid-keys`, puis recopie dans `web/.env.local` :
    - `NEXT_PUBLIC_VAPID_PUBLIC_KEY=` la clé « Public Key » ;
    - `VAPID_PRIVATE_KEY=` la clé « Private Key » (secrète : ne la partage avec personne) ;
@@ -1106,18 +1107,18 @@ Les notifications de l'appli partent aussi en **push** sur les appareils qui l'o
    - `EMAIL_EXPEDITEUR=Étudium <onboarding@resend.dev>` ;
    - `EMAIL_REPONSE=` l'adresse de l'équipe qui lira les réponses (facultatif, mais utile : l'e-mail de suspension dit « répondez à cet e-mail ») ;
    - tant que ton domaine n'est pas vérifié chez Resend, les e-mails ne partent que vers **ta propre adresse** (celle du compte Resend) : assez pour tester. Une fois le domaine vérifié : `EMAIL_EXPEDITEUR=Étudium <equipe@ton-domaine>`.
-4. **Redémarre le serveur** (`npm run dev`), puis teste :
+4. **Redémarre le serveur** (`npm run dev`), clique **« Activer les envois »** au back-office (« Abonnements et paiements », réservé aux admins) : le bloc passe à « Actifs ». Puis teste :
    - Profil › Notifications › « Notifications push » : allume-le, accepte l'autorisation du navigateur ;
    - depuis un autre compte, envoie-toi un message (ou publie une annonce) : une notification push s'affiche, un clic ouvre la page ;
    - au back-office, attribue un abonnement à un **compte étudiant** dont l'adresse est celle de ton compte Resend (pas à ton propre compte d'équipe : on ne se notifie pas soi-même) : l'e-mail « Votre abonnement … est actif » arrive, avec le bouton « Ouvrir Étudium » ;
    - rien n'arrive ? Dans l'éditeur SQL : `select canal, titre, statut, essais, erreur from public.envois order by id desc limit 20;` La colonne `erreur` donne la raison (clé refusée, adresse refusée par Resend, service de push…).
 5. **Bon à savoir :**
-   - sans `ENVOIS_JETON`, rien ne part (ni push, ni e-mail) ; sans les clés du push, seuls les e-mails partent ; sans la clé Resend, seul le push part ;
+   - tant que le bloc « Envois » ne dit pas « Actifs », rien ne part (ni push, ni e-mail) ; sans les clés du push, seuls les e-mails partent ; sans la clé Resend (ou sans `EMAIL_EXPEDITEUR`), seul le push part : le bloc le dit, canal par canal ;
    - l'interrupteur dit « Bientôt disponible » tant que `NEXT_PUBLIC_VAPID_PUBLIC_KEY` est vide ;
    - sur iPhone, le push ne marche que pour Étudium ajouté à l'écran d'accueil (Partager › Sur l'écran d'accueil) ; l'interrupteur le rappelle ;
    - « Notifications push » est un réglage du compte : l'éteindre sur un appareil coupe le push partout ; se déconnecter désabonne l'appareil (un téléphone prêté ne reçoit plus rien) ;
    - la file se vide quand quelqu'un ouvre une page (la cloche), envoie un message ou une annonce, suspend ou réactive un compte, ou quand un paiement est confirmé ; un envoi de plus de 24 heures est abandonné ;
-   - en ligne, ajoute les mêmes variables dans les réglages de l'hébergeur (avec `NEXT_PUBLIC_SITE_URL` = l'adresse du site, pour les liens des e-mails).
+   - en ligne, ajoute les mêmes variables dans les réglages de l'hébergeur (avec `NEXT_PUBLIC_SITE_URL` = l'adresse du site, pour les liens des e-mails), redéploie, puis « Activer les envois » au back-office du site en ligne.
 
 ## 60. Désactiver une formation (lot 5, étape C), 10 minutes
 

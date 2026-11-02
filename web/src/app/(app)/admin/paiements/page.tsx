@@ -5,6 +5,7 @@ import { PagePaiements } from "@/components/admin/paiements/PagePaiements";
 import { Banner } from "@/components/ui/Banner";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { lireFormules } from "@/lib/abonnement/data";
+import { lireEtatEnvois } from "@/lib/admin/envois/data";
 import { lireCodesPromo, lireEtatPaiements, lirePaiementsEquipe, lireResumePaiements } from "@/lib/admin/paiements/data";
 import { requireDomaine } from "@/lib/auth/require-domaine";
 
@@ -23,17 +24,18 @@ async function Paiements() {
       </PageAdmin>
     );
   }
-  const [etat, formules, codes, paiements] = await Promise.all([
+  const [etat, formules, codes, paiements, envois] = await Promise.all([
     lireEtatPaiements(),
     lireFormules(),
     lireCodesPromo(),
     lirePaiementsEquipe({ statut: null, recherche: "", page: 1 }),
+    lireEtatEnvois(),
   ]);
   // L'argent (prix, codes, activation, annulation) : administrateurs seulement ; la base le revérifie (0051).
   const ecriture = moi.roles.some((r) => r === "admin" || r === "super_admin");
   return (
     <PageAdmin titre={TITRE} description={DESCRIPTION} fil={[{ label: TITRE }]}>
-      <PagePaiements resume={resume} etat={etat} formules={formules} codes={codes} paiements={paiements} ecriture={ecriture} />
+      <PagePaiements resume={resume} etat={etat} formules={formules} codes={codes} paiements={paiements} envois={envois} ecriture={ecriture} />
     </PageAdmin>
   );
 }

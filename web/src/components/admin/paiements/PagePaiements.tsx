@@ -2,8 +2,10 @@
 
 import { AlertCircleIcon, CheckmarkCircle02Icon, CreditCardIcon, UserMultipleIcon } from "@hugeicons/core-free-icons";
 import { BoutonAttribuer } from "@/components/admin/abonnements/BoutonAttribuer";
+import { ReglageEnvois } from "@/components/admin/envois/ReglageEnvois";
 import { GRILLE_CHIFFRES, Tuile } from "@/components/tableau/Blocs";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
+import type { EtatEnvois } from "@/lib/admin/envois/types";
 import type { CodePromo, EtatReglage, PagePaiements as Page, ResumePaiements } from "@/lib/admin/paiements/types";
 import { montantFcfa } from "@/lib/abonnement/regles";
 import type { Formule } from "@/lib/abonnement/types";
@@ -18,6 +20,8 @@ type Props = {
   formules: Formule[];
   codes: CodePromo[];
   paiements: Page;
+  /** Le bloc « Envois (e-mails et notifications push) » (mise en ligne, 0071), sous le réglage des paiements. */
+  envois?: EtatEnvois;
   /** Administrateur : prix, codes, activation, annulation. Un modérateur voit tout sans rien changer. */
   ecriture: boolean;
 };
@@ -26,9 +30,10 @@ const chiffre = new Intl.NumberFormat("fr-FR");
 
 /**
  * « Abonnements et paiements » au back-office (lot 2, spec §6 ; NdAdminPaiements, sans remboursement) : les chiffres
- * du mois, le réglage des paiements, puis les paiements, les prix des abonnements et les codes promo.
+ * du mois, le réglage des paiements et celui des envois (e-mails et push), puis les paiements, les prix des abonnements
+ * et les codes promo.
  */
-export function PagePaiements({ resume, etat, formules, codes, paiements, ecriture }: Props) {
+export function PagePaiements({ resume, etat, formules, codes, paiements, envois, ecriture }: Props) {
   return (
     <div className="flex min-w-0 flex-col gap-5">
       <div className={GRILLE_CHIFFRES}>
@@ -44,6 +49,7 @@ export function PagePaiements({ resume, etat, formules, codes, paiements, ecritu
         </div>
       )}
       <ReglagePaiements etat={etat} ecriture={ecriture} />
+      {envois && <ReglageEnvois etat={envois} ecriture={ecriture} />}
       <SegmentedTabs
         label="Abonnements et paiements"
         items={[

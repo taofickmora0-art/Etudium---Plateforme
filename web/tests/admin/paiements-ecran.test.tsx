@@ -19,6 +19,7 @@ vi.mock("@/lib/admin/paiements/actions", () => ({
   chargerPaiement: vi.fn(),
 }));
 vi.mock("@/lib/utilisateurs/actions", () => ({ chercherComptes: vi.fn() }));
+vi.mock("@/lib/admin/envois/actions", () => ({ activerEnvois: vi.fn(async () => ({ ok: true })) }));
 const actions = await import("@/lib/admin/paiements/actions");
 const { chercherComptes } = await import("@/lib/utilisateurs/actions");
 const { PagePaiements } = await import("@/components/admin/paiements/PagePaiements");
@@ -78,6 +79,14 @@ describe("Le réglage « Paiements activés »", () => {
     expect(screen.getByText(/La clé Payiz a changé : cliquez sur « Réactiver »/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Réactiver" }));
     expect(actions.activerPaiements).toHaveBeenCalled();
+  });
+
+  it("mise en ligne (0071) : le bloc des envois suit le réglage des paiements", () => {
+    afficher({ envois: { etat: "a_activer", email: true, push: false } });
+    const paiements = screen.getByRole("heading", { name: "Paiements Mobile Money" });
+    const envois = screen.getByRole("heading", { name: "Envois (e-mails et notifications push)" });
+    expect(paiements.compareDocumentPosition(envois) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Activer les envois" })).toBeInTheDocument();
   });
 });
 

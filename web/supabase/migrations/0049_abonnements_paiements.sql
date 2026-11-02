@@ -1,8 +1,8 @@
 -- Migration 0049 : les abonnements et leur paiement (lot 2, spec du 1er novembre 2026). Trois formules (Basique 3 mois,
 -- Standard 6 mois, Premium 1 an) dont l'équipe fixe le prix ; des codes promo ; les paiements Mobile Money passés par
 -- Payiz ; les abonnements qu'ils ouvrent, dont les durées s'ajoutent. L'étudiant prépare un paiement ; seul le serveur,
--- muni du jeton PAIEMENT_JETON (la base n'en garde que l'empreinte SHA-256, posée quand l'équipe active les paiements),
--- note un essai, le confirme ou l'échec. Personne n'écrit directement dans ces tables. Rejouable.
+-- muni de son jeton (tiré de la clé Payiz par l'appli ; la base n'en garde que l'empreinte SHA-256, posée quand l'équipe
+-- active les paiements), note un essai, le confirme ou l'échec. Personne n'écrit directement dans ces tables. Rejouable.
 
 begin;
 
@@ -117,7 +117,8 @@ create table if not exists public.reglages_paiement (
   id boolean primary key default true check (id),
   -- « Payer » est proposé aux étudiants. Désactiver ne touche pas l'empreinte : un paiement déjà envoyé se confirme encore.
   ouverts boolean not null default false,
-  -- Empreinte SHA-256 (hexadécimale) de PAIEMENT_JETON, posée à l'activation ; elle autorise le serveur à confirmer.
+  -- Empreinte SHA-256 (hexadécimale) du jeton du serveur (tiré de la clé Payiz), posée à l'activation ; elle autorise
+  -- le serveur à confirmer.
   empreinte text,
   active_le timestamptz,
   active_par uuid references public.profils (id) on delete set null
@@ -553,7 +554,7 @@ as $$
     and (p.profil_id = (select auth.uid()) or public.equipe_contenus());
 $$;
 
--- ─── Ce que seul le serveur fait (jeton PAIEMENT_JETON) ─────────────────────────────────────────────
+-- ─── Ce que seul le serveur fait (jeton tiré de la clé Payiz) ───────────────────────────────────────
 -- Un essai lancé chez Payiz (premier envoi ou nouvel essai) : le paiement repasse en attente.
 create or replace function public.noter_essai(p_paiement uuid, p_payiz text, p_operateur text, p_telephone_masque text, p_jeton text)
 returns jsonb

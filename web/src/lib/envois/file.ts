@@ -5,7 +5,8 @@ import { modeleEmail } from "./email";
 import { envoyerEmail as envoyerEmailResend } from "./resend";
 import { envoyerPush as envoyerPushWeb, type AppareilPush } from "./push";
 
-// Vider la file d'envoi (migration 0058) : le serveur prend les envois prêts avec son jeton (réservés 2 minutes), les
+// Vider la file d'envoi (migration 0058) : le serveur prend les envois prêts (réservés 2 minutes) avec son jeton, tiré
+// de sa clé Resend ou VAPID (config.ts) et reconnu par la base une fois « Activer les envois » cliqué (0071). Il les
 // envoie un par un (Resend limite le débit), puis termine chacun avec l'identifiant de sa prise. Seuls les canaux dont
 // les clés existent sont pris. Chaque envoi dure 10 secondes au plus ; après 90 secondes, plus rien ne part (le reste
 // est repris quand sa réservation expire) : un envoi n'est jamais terminé hors de sa réservation.

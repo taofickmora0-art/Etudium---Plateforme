@@ -1,14 +1,15 @@
+import { createHmac } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { describe, expect, it, vi } from "vitest";
-import { configurationEnvois } from "@/lib/envois/config";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { configurationEnvois, jetonEnvois } from "@/lib/envois/config";
 import { envoyerPush } from "@/lib/envois/push";
 import { viderFile } from "@/lib/envois/file";
 
 // Vider la file d'envoi (lot 5, étape B) : le serveur prend les envois prêts avec son jeton, envoie (push ou e-mail),
 // puis termine chacun. Sans jeton, rien ; sans les clés d'un canal, ce canal n'est pas pris ; jamais d'exception.
+// Le jeton est tiré de la clé Resend, à défaut de la clé privée VAPID (mise en ligne, 0071) : ENVOIS_JETON n'est plus lue.
 
 const CLES = {
-  ENVOIS_JETON: "j".repeat(64),
   NEXT_PUBLIC_VAPID_PUBLIC_KEY: "BPub",
   VAPID_PRIVATE_KEY: "priv",
   VAPID_SUJET: "mailto:equipe@etudium.app",
@@ -28,19 +29,64 @@ const PRISE = "11111111-2222-4333-8444-555555555555";
 const CREE = "2026-11-01T10:00:00.123+00:00";
 const terminaisons = (rpc: ReturnType<typeof fauxClient>["rpc"]) => rpc.mock.calls.filter((c) => c[0] === "terminer_envoi").map((c) => c[1]);
 
+/** HMAC-SHA256 hexadécimal de la clé, avec l'étiquette des envois (comme le jeton des paiements). */
+const hmac = (cle: string) => createHmac("sha256", cle).update("etudium:jeton-des-envois").digest("hex");
+const JETON = hmac(CLES.RESEND_API_KEY);
+
+afterEach(() => vi.unstubAllEnvs());
+
+describe("Le jeton des envois", () => {
+  it("tiré de la clé Resend : 64 caractères hexadécimaux, qui ne laissent rien voir de la clé", () => {
+    expect(jetonEnvois({ RESEND_API_KEY: "re_test" })).toBe(JETON);
+    expect(JETON).toMatch(/^[0-9a-f]{64}$/);
+    expect(JETON).not.toContain("re_test");
+    expect(jetonEnvois({ RESEND_API_KEY: " re_test " })).toBe(JETON);
+    // Différent du jeton des paiements tiré de la même chaîne (étiquettes distinctes).
+    expect(JETON).not.toBe(createHmac("sha256", "re_test").update("etudium:jeton-des-paiements").digest("hex"));
+  });
+
+  it("à défaut, tiré de la clé privée VAPID ; la clé Resend passe avant", () => {
+    expect(jetonEnvois({ VAPID_PRIVATE_KEY: "priv" })).toBe(hmac("priv"));
+    expect(jetonEnvois({ RESEND_API_KEY: "  ", VAPID_PRIVATE_KEY: "priv" })).toBe(hmac("priv"));
+    expect(jetonEnvois({ RESEND_API_KEY: "re_test", VAPID_PRIVATE_KEY: "priv" })).toBe(JETON);
+  });
+
+  it("sans aucune des deux clés : null ; ENVOIS_JETON n'est plus lue", () => {
+    expect(jetonEnvois({})).toBeNull();
+    expect(jetonEnvois({ RESEND_API_KEY: "", VAPID_PRIVATE_KEY: " " })).toBeNull();
+    expect(jetonEnvois({ ENVOIS_JETON: "j".repeat(64) })).toBeNull();
+    expect(configurationEnvois({ ENVOIS_JETON: "j".repeat(64), NEXT_PUBLIC_SITE_URL: "https://etudium.online" })).toBeNull();
+  });
+
+  it("par défaut, lu dans l'environnement du serveur", () => {
+    vi.stubEnv("RESEND_API_KEY", "");
+    vi.stubEnv("VAPID_PRIVATE_KEY", "");
+    expect(jetonEnvois()).toBeNull();
+    vi.stubEnv("VAPID_PRIVATE_KEY", "priv");
+    expect(jetonEnvois()).toBe(hmac("priv"));
+  });
+});
+
 describe("La configuration", () => {
-  it("sans jeton : rien ; chaque canal selon ses clés ; le site par défaut en local", () => {
+  it("sans clé : rien ; chaque canal selon ses clés ; le site par défaut en local", () => {
     expect(configurationEnvois({})).toBeNull();
-    expect(configurationEnvois({ ENVOIS_JETON: "court" })).toBeNull();
-    expect(configurationEnvois({ ENVOIS_JETON: "j".repeat(64), RESEND_API_KEY: "re", EMAIL_EXPEDITEUR: "É <a@b.c>" })).toEqual({
-      jeton: "j".repeat(64),
+    expect(configurationEnvois({ RESEND_API_KEY: "re", EMAIL_EXPEDITEUR: "É <a@b.c>" })).toEqual({
+      jeton: hmac("re"),
       push: null,
       email: { cle: "re", expediteur: "É <a@b.c>", reponse: null },
+      site: "http://localhost:3000",
+    });
+    // Le push seul : le jeton vient de la clé privée VAPID.
+    expect(configurationEnvois({ NEXT_PUBLIC_VAPID_PUBLIC_KEY: "BPub", VAPID_PRIVATE_KEY: "priv", VAPID_SUJET: "mailto:e@e.e" })).toEqual({
+      jeton: hmac("priv"),
+      push: { publique: "BPub", privee: "priv", sujet: "mailto:e@e.e" },
+      email: null,
       site: "http://localhost:3000",
     });
     // Relecture (5) : l'adresse de l'équipe reçoit les réponses (un compte suspendu répond à l'e-mail).
     expect(configurationEnvois({ ...CLES, EMAIL_REPONSE: " equipe@etudium.app " })?.email?.reponse).toBe("equipe@etudium.app");
     expect(configurationEnvois(CLES)?.push).toEqual({ publique: "BPub", privee: "priv", sujet: "mailto:equipe@etudium.app" });
+    expect(configurationEnvois({ ...CLES, NEXT_PUBLIC_SITE_URL: "https://etudium.online/" })?.site).toBe("https://etudium.online");
   });
 });
 
@@ -51,10 +97,24 @@ describe("Vider la file", () => {
     expect(f.rpc).not.toHaveBeenCalled();
   });
 
+  it("sans configuration donnée : le jeton est tiré de la clé lue dans l'environnement", async () => {
+    for (const [nom, valeur] of Object.entries(CLES)) vi.stubEnv(nom, valeur);
+    vi.stubEnv("ENVOIS_JETON", "j".repeat(64));
+    const f = fauxClient([]);
+    await viderFile({ client: f.client });
+    expect(f.rpc).toHaveBeenCalledWith("prendre_envois", { p_jeton: JETON, p_canaux: ["push", "email"], p_limite: 10 });
+    // Plus aucune clé : plus de jeton, aucun appel (ENVOIS_JETON ne suffit pas).
+    vi.stubEnv("RESEND_API_KEY", "");
+    vi.stubEnv("VAPID_PRIVATE_KEY", "");
+    const g = fauxClient([]);
+    expect(await viderFile({ client: g.client })).toEqual({ envoyes: 0, echecs: 0 });
+    expect(g.rpc).not.toHaveBeenCalled();
+  });
+
   it("Review Focus 4 : sans les clés du push, seuls les e-mails sont pris", async () => {
     const f = fauxClient([]);
     await viderFile({ client: f.client, config: configurationEnvois({ ...CLES, VAPID_PRIVATE_KEY: "" }) });
-    expect(f.rpc).toHaveBeenCalledWith("prendre_envois", { p_jeton: CLES.ENVOIS_JETON, p_canaux: ["email"], p_limite: 10 });
+    expect(f.rpc).toHaveBeenCalledWith("prendre_envois", { p_jeton: JETON, p_canaux: ["email"], p_limite: 10 });
   });
 
   it("un e-mail envoyé, un e-mail refusé : chacun terminé avec son résultat", async () => {
@@ -68,8 +128,8 @@ describe("Vider la file", () => {
     expect(envoyerEmail.mock.calls[0][1]).toMatchObject({ a: "a@exemple.com", sujet: "Paiement reçu", idempotence: `envoi-1-${Date.parse(CREE)}` });
     expect(envoyerEmail.mock.calls[0][1].html).toContain('href="https://etudium.app/abonnement"');
     expect(terminaisons(f.rpc)).toEqual([
-      { p_jeton: CLES.ENVOIS_JETON, p_id: 1, p_prise: PRISE, p_reussi: true, p_erreur: null, p_disparus: [] },
-      { p_jeton: CLES.ENVOIS_JETON, p_id: 2, p_prise: PRISE, p_reussi: false, p_erreur: "Adresse refusée", p_disparus: [] },
+      { p_jeton: JETON, p_id: 1, p_prise: PRISE, p_reussi: true, p_erreur: null, p_disparus: [] },
+      { p_jeton: JETON, p_id: 2, p_prise: PRISE, p_reussi: false, p_erreur: "Adresse refusée", p_disparus: [] },
     ]);
   });
 
@@ -79,7 +139,7 @@ describe("Vider la file", () => {
     const envoyerPushFaux = vi.fn().mockResolvedValue({ ok: true, disparus: ["https://push.exemple/1"] });
     await viderFile({ client: f.client, config: configurationEnvois(CLES), envoyerPush: envoyerPushFaux });
     expect(envoyerPushFaux.mock.calls[0][2]).toEqual({ titre: "Nouveau message", texte: "Bonjour", lien: "/messages" });
-    expect(terminaisons(f.rpc)).toEqual([{ p_jeton: CLES.ENVOIS_JETON, p_id: 3, p_prise: PRISE, p_reussi: true, p_erreur: null, p_disparus: ["https://push.exemple/1"] }]);
+    expect(terminaisons(f.rpc)).toEqual([{ p_jeton: JETON, p_id: 3, p_prise: PRISE, p_reussi: true, p_erreur: null, p_disparus: ["https://push.exemple/1"] }]);
   });
 
   it("relecture (3) : au-delà de 90 secondes, plus rien ne part (la réservation dure 2 minutes) ; le reste attend sa reprise", async () => {
@@ -91,12 +151,12 @@ describe("Vider la file", () => {
     expect(terminaisons(f.rpc).map((t) => (t as { p_id: number }).p_id)).toEqual([1]);
   });
 
-  it("points reportés : sans les clés des e-mails, seul le push est pris ; un jeton sans aucune clé ne prend rien", async () => {
+  it("points reportés : sans la clé Resend, seul le push est pris (jeton de la clé VAPID) ; une clé sans le reste de son canal ne prend rien", async () => {
     const f = fauxClient([]);
     await viderFile({ client: f.client, config: configurationEnvois({ ...CLES, RESEND_API_KEY: "" }) });
-    expect(f.rpc).toHaveBeenCalledWith("prendre_envois", { p_jeton: CLES.ENVOIS_JETON, p_canaux: ["push"], p_limite: 10 });
+    expect(f.rpc).toHaveBeenCalledWith("prendre_envois", { p_jeton: hmac(CLES.VAPID_PRIVATE_KEY), p_canaux: ["push"], p_limite: 10 });
     const g = fauxClient([]);
-    expect(await viderFile({ client: g.client, config: configurationEnvois({ ENVOIS_JETON: CLES.ENVOIS_JETON }) })).toEqual({ envoyes: 0, echecs: 0 });
+    expect(await viderFile({ client: g.client, config: configurationEnvois({ RESEND_API_KEY: CLES.RESEND_API_KEY }) })).toEqual({ envoyes: 0, echecs: 0 });
     expect(g.rpc).not.toHaveBeenCalled();
   });
 
