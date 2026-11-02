@@ -10,7 +10,7 @@ import { formatDuree } from "@/lib/admin/duree";
 import { peutDonnerAvis } from "@/lib/avis/regles";
 import type { AvisFormation } from "@/lib/avis/types";
 import type { Monetisation } from "@/lib/catalogue/monetisation";
-import { actionFiche, dureeLisible, estLeconDeContenu, etatAcces, leconsApercu, type ActionFiche } from "@/lib/catalogue/regles";
+import { actionFiche, dureeLisible, estLeconDeContenu, etatAcces, leconsApercu, toutOuvert, type ActionFiche } from "@/lib/catalogue/regles";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
 import type { StatutRendu } from "@/lib/exercices/types";
@@ -82,9 +82,13 @@ function ProchaineLecon({ fiche, progression }: { fiche: FicheFormation; progres
   );
 }
 
-/** Ce que la carte dit de l'accès, avant la première leçon : d'après l'inscription (0069), sinon d'après les leçons ouvertes. */
-function etatDeLaCarte(fiche: FicheFormation, acces: AccesFormation | null): "inscrite" | "a-inscrire" | "gratuite" | "incluse" | "apercu" | "verrouillee" {
-  if (acces?.ouverte) return acces.inscrit ? "inscrite" : "a-inscrire";
+/**
+ * Ce que la carte dit de l'accès, avant la première leçon : d'après l'inscription (0069), sinon d'après les leçons
+ * ouvertes. Rien de fermé sans inscription (équipe des contenus, formateur de la formation) : « ouverte », sans phrase
+ * d'inscription.
+ */
+function etatDeLaCarte(fiche: FicheFormation, acces: AccesFormation | null): "inscrite" | "a-inscrire" | "ouverte" | "gratuite" | "incluse" | "apercu" | "verrouillee" {
+  if (acces?.ouverte) return acces.inscrit ? "inscrite" : toutOuvert(fiche) ? "ouverte" : "a-inscrire";
   if (acces) return leconsApercu(fiche).length > 0 ? "apercu" : "verrouillee";
   return etatAcces(fiche, true);
 }
@@ -105,6 +109,7 @@ function CarteAcces({ fiche, progression, favori, acces }: { fiche: FicheFormati
   const OUVERTE = {
     inscrite: "Vous êtes inscrit·e : toutes les leçons sont ouvertes.",
     "a-inscrire": fiche.gratuite ? "Formation gratuite : inscrivez-vous pour ouvrir toutes les leçons." : "Incluse dans votre abonnement : inscrivez-vous pour ouvrir toutes les leçons.",
+    ouverte: "Toutes les leçons vous sont ouvertes.",
     gratuite: "Formation gratuite : toutes les leçons sont ouvertes.",
     incluse: "Incluse dans votre abonnement : toutes les leçons sont ouvertes.",
   } as const;

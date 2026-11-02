@@ -116,6 +116,15 @@ describe("Le bouton du haut de la fiche", () => {
     expect(screen.getByText("25 %")).toBeInTheDocument();
   });
 
+  it("équipe des contenus ou formateur de la formation (toutes les leçons ouvertes, pas d'inscription) : « Commencer le cours », ni bouton ni phrase d'inscription", () => {
+    render(<FicheConnectee fiche={EXCEL_OUVERTE} acces={{ inscrit: false, ouverte: true }} lienModifier="/admin/formations/excel?onglet=lecons" />);
+    expect(screen.getByRole("link", { name: "Commencer le cours" })).toHaveAttribute("href", `${ADRESSE}/${id(1)}`);
+    expect(screen.queryByRole("button", { name: "S’inscrire à ce cours" })).toBeNull();
+    expect(screen.queryByText(/inscri/i)).toBeNull();
+    expect(screen.getByText("Toutes les leçons vous sont ouvertes.")).toBeInTheDocument();
+    expect(repere("Les formules essentielles")).toBe("rond");
+  });
+
   it("formation payante sans abonnement : « Voir les abonnements »", () => {
     render(<FicheConnectee fiche={EXCEL} acces={{ inscrit: false, ouverte: false }} />);
     expect(screen.getByRole("link", { name: "Voir les abonnements" })).toHaveAttribute("href", "/abonnement/souscrire");

@@ -91,6 +91,12 @@ export function etatAcces(fiche: Pick<FicheFormation, "gratuite" | "modules">, c
 export const premiereLeconOuverte = (fiche: Pick<FicheFormation, "modules">): LeconFiche | null => lecons(fiche).find((l) => l.accessible) ?? null;
 
 /**
+ * Aucune leçon fermée (règle de la base) : l'équipe des contenus et le formateur de la formation ouvrent tout sans
+ * inscription (0069). S'inscrire n'ouvrirait rien de plus : ni bouton ni phrase d'inscription.
+ */
+export const toutOuvert = (fiche: Pick<FicheFormation, "modules">): boolean => lecons(fiche).every((l) => l.accessible);
+
+/**
  * Leçons d'aperçu, dans l'ordre du programme. L'aperçu concerne les leçons de contenu : un quiz ou un exercice resté
  * coché (avant que la case disparaisse de leur éditeur) n'en est pas un.
  */
@@ -111,9 +117,10 @@ export type ActionFiche =
 
 /**
  * Le bouton du haut de la fiche d'un compte connecté. Avec l'inscription (migration 0069) : non inscrit à une formation
- * ouverte, « S'inscrire à ce cours » ; formation payante fermée (sans abonnement, inscrit ou non), « Voir les
- * abonnements » ; inscrit, « Commencer le cours » (aucune leçon ouverte), « Poursuivre le cours » ou « Revoir la
- * formation ». Sans la 0069 (`acces` null) : les boutons d'avant, d'après les leçons ouvertes par la base.
+ * ouverte dont une leçon reste fermée, « S'inscrire à ce cours » ; formation payante fermée (sans abonnement, inscrit ou
+ * non), « Voir les abonnements » ; inscrit, ou rien de fermé (équipe des contenus, formateur de la formation),
+ * « Commencer le cours » (aucune leçon ouverte), « Poursuivre le cours » ou « Revoir la formation ». Sans la 0069
+ * (`acces` null) : les boutons d'avant, d'après les leçons ouvertes par la base.
  */
 export function actionFiche(
   fiche: Pick<FicheFormation, "gratuite" | "modules">,
@@ -121,7 +128,7 @@ export function actionFiche(
   acces: AccesFormation | null,
 ): ActionFiche | null {
   if (acces && !acces.ouverte) return fiche.gratuite ? null : { type: "abonnements" };
-  if (acces && !acces.inscrit) return { type: "inscrire", apres: lecons(fiche)[0] ?? null };
+  if (acces && !acces.inscrit && !toutOuvert(fiche)) return { type: "inscrire", apres: lecons(fiche)[0] ?? null };
   const premiere = premiereLeconOuverte(fiche);
   const suivie = progression?.commencee ? progression : null;
   if (suivie?.aReprendre) return { type: "lecon", libelle: "Poursuivre le cours", lecon: suivie.aReprendre };

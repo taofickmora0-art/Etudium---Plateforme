@@ -154,6 +154,15 @@ describe("La fiche d'une formation (spec du 2 novembre 2026, §5)", () => {
     expect(actionFiche({ ...f, modules: [] }, null, inscrit)).toBeNull();
   });
 
+  it("aucune leçon fermée sans inscription (équipe des contenus, formateur de la formation) : les boutons d'avant, jamais « S'inscrire »", () => {
+    const f = ouverte(fiche({ gratuite: false }));
+    const [l1, l2] = f.modules[0].lecons;
+    const sansInscription = { inscrit: false, ouverte: true };
+    expect(actionFiche(f, null, sansInscription)).toEqual({ type: "lecon", libelle: "Commencer le cours", lecon: l1 });
+    expect(actionFiche(f, { commencee: true, aReprendre: l2, terminee: false }, sansInscription)).toEqual({ type: "lecon", libelle: "Poursuivre le cours", lecon: l2 });
+    expect(actionFiche(f, { commencee: true, aReprendre: null, terminee: true }, sansInscription)).toEqual({ type: "lecon", libelle: "Revoir la formation", lecon: l1 });
+  });
+
   it("formation payante sans abonnement : « Voir les abonnements », inscrit ou non ; gratuite fermée (compte suspendu) : rien", () => {
     expect(actionFiche(fiche({ gratuite: false }), null, { inscrit: false, ouverte: false })).toEqual({ type: "abonnements" });
     expect(actionFiche(fiche({ gratuite: false }), { commencee: true, aReprendre: null, terminee: false }, { inscrit: true, ouverte: false })).toEqual({ type: "abonnements" });
