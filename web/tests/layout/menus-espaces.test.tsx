@@ -79,6 +79,7 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
       ["Événements", "/evenements"],
     ]);
     expect(within(groupe).getAllByRole("link").map((l) => l.textContent)).toEqual([
+      "Tableau de bord",
       "Exercices",
       "Parcours",
       "Certificats",
@@ -89,7 +90,8 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
     ]);
     // « Mes formations » (la liste complète) reste marquée sous l'onglet Formations.
     expect(within(nav).getByRole("link", { name: "Formations" })).toHaveAttribute("aria-current", "page");
-    expect(within(nav).queryByRole("link", { name: "Tableau de bord" })).toBeNull();
+    // Lot 6 B (Q1) : le tableau de bord de l'étudiant, en tête de « Mon espace » ; l'Accueil reste le fil.
+    expect(within(groupe).getByRole("link", { name: "Tableau de bord" })).toHaveAttribute("href", "/tableau-de-bord");
   });
 
   it("adresse encore inconnue (rendu préalable) : pas le menu d'un autre espace", () => {

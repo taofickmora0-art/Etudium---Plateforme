@@ -56,8 +56,9 @@ export const NAV_PRINCIPALE: NavEntry[] = [
   { href: "/evenements", label: "Événements", icon: Calendar03Icon },
 ];
 
-/** Groupe « Mon espace » de la barre latérale. */
+/** Groupe « Mon espace » de la barre latérale ; le tableau de bord en tête (lot 6 B, Q1 : l'Accueil reste le fil). */
 export const NAV_MON_ESPACE: NavEntry[] = [
+  { href: "/tableau-de-bord", label: "Tableau de bord", icon: DashboardSquare02Icon, exact: true },
   { href: "/exercices", label: "Exercices", icon: AssignmentsIcon },
   { href: "/parcours", label: "Parcours", icon: Route01Icon },
   { href: "/certificats", label: "Certificats", icon: Certificate01Icon },
