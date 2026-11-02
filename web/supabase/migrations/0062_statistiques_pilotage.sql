@@ -20,7 +20,8 @@ begin
 end;
 $$;
 
--- Un étudiant : un compte sans autre rôle (ni l'équipe, ni un formateur).
+-- Un étudiant : un compte sans autre rôle (ni l'équipe, ni un formateur). Dans les requêtes ci-dessous, la condition est
+-- écrite en ligne : la base l'optimise (une fonction security definer ne se déplie pas).
 create or replace function public.compte_etudiant(p_profil uuid)
 returns boolean
 language sql
@@ -157,7 +158,7 @@ begin
         select jsonb_build_object('id', p.id, 'nom', public.nom_du_profil(p.id), 'cree_le', p.cree_le,
                  'formule', public.formule_a(p.id, p_maintenant)) as e, p.cree_le
         from public.profils p
-        where public.compte_etudiant(p.id) and p.cree_le <= p_maintenant
+        where not exists (select 1 from public.roles r where r.profil_id = p.id and r.role <> 'etudiant') and p.cree_le <= p_maintenant
         order by p.cree_le desc limit 4
       ) x
     ),
@@ -201,7 +202,7 @@ begin
   select count(*)::integer, count(*) filter (where exists (select 1 from public.abonnements a where a.profil_id = p.id))::integer
   into v_inscrits, v_convertis
   from public.profils p
-  where public.compte_etudiant(p.id) and p.cree_le >= v_debut and p.cree_le <= p_maintenant;
+  where not exists (select 1 from public.roles r where r.profil_id = p.id and r.role <> 'etudiant') and p.cree_le >= v_debut and p.cree_le <= p_maintenant;
 
   return jsonb_build_object(
     'etudiants', jsonb_build_object(
@@ -209,7 +210,7 @@ begin
       'courbe', (
         select jsonb_agg(jsonb_build_object('debut', to_char(b.debut, 'YYYY-MM-DD'),
           'nombre', (select count(*)::integer from public.profils p
-                     where public.compte_etudiant(p.id) and p.cree_le >= greatest(b.debut at time zone v_tz, v_debut)
+                     where not exists (select 1 from public.roles r where r.profil_id = p.id and r.role <> 'etudiant') and p.cree_le >= greatest(b.debut at time zone v_tz, v_debut)
                        and p.cree_le < least((b.debut + v_pas) at time zone v_tz, p_maintenant + interval '1 microsecond'))
         ) order by b.debut)
         from generate_series(date_trunc(v_unite, v_debut at time zone v_tz), date_trunc(v_unite, p_maintenant at time zone v_tz), v_pas) as b(debut)
