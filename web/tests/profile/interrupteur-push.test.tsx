@@ -110,7 +110,7 @@ describe("L'interrupteur des notifications push", () => {
     render(<Controle depart={false} onChange={onChange} />);
     await waitFor(() => expect(interrupteur()).toBeEnabled());
     expect(interrupteur()).not.toBeChecked();
-    expect(interrupteur()).toHaveAccessibleDescription("Sur cet appareil");
+    expect(interrupteur()).toHaveAccessibleDescription("À allumer sur chaque appareil ; l’éteindre les coupe partout.");
     await user.click(interrupteur());
     await waitFor(() => expect(onChange).toHaveBeenCalledWith(true));
     expect(n.notification.requestPermission).toHaveBeenCalled();

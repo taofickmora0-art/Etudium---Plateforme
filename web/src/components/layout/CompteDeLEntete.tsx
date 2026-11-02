@@ -1,5 +1,6 @@
 import { HeaderAccount } from "@/components/layout/AppHeader";
 import { DomainesDuCompte } from "@/components/layout/DomainesDuCompte";
+import { RattacherPush } from "@/components/layout/RattacherPush";
 import { domainesDe } from "@/lib/auth/domaines";
 import { getShellUser } from "@/lib/auth/current-user";
 import { redirectToSortie } from "@/lib/auth/sortie";
@@ -23,6 +24,8 @@ export async function CompteDeLEntete() {
       <HeaderAccount user={user} />
       {/* Le menu du back-office n'affiche que les domaines du compte (lot 6 A). */}
       <DomainesDuCompte domaines={domainesDe(user.roles)} />
+      {/* L'abonnement push de cet appareil, rattaché au compte une fois par session (point reporté du lot 5). */}
+      <RattacherPush />
     </>
   );
 }

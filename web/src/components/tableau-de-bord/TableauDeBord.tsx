@@ -64,7 +64,7 @@ export function TableauDeBord({ donnees: d, bandeau }: { donnees: DonneesTableau
           {d.recommandees.length > 0 ? (
             <div className={GRILLE_RECOMMANDATIONS}>
               {d.recommandees.map((carte) => (
-                <CarteFormation key={carte.id} carte={carte} variante="connecte" titleAs="h3" />
+                <CarteFormation key={carte.id} carte={carte} titleAs="h3" />
               ))}
             </div>
           ) : (

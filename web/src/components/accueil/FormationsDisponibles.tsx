@@ -23,7 +23,7 @@ export function FormationsDisponibles({ cartes }: { cartes: CarteCatalogue[] }) 
       <div className="grid gap-5 sm:grid-cols-2 max-sm:-mx-4 max-sm:flex max-sm:snap-x max-sm:gap-3 max-sm:overflow-x-auto max-sm:px-4 max-sm:pb-1 max-sm:[scrollbar-width:none]">
         {cartes.map((carte) => (
           <div key={carte.id} className="flex min-w-0 max-sm:w-[248px] max-sm:flex-none max-sm:snap-start">
-            <CarteFormation carte={carte} variante="connecte" titleAs="h3" />
+            <CarteFormation carte={carte} titleAs="h3" />
           </div>
         ))}
       </div>

@@ -92,7 +92,7 @@ export function Catalogue({ cartes, parcours, filtresInitiaux, variante, chemin,
     ) : (
       <div className={classe}>
         {visibles.map((carte) => (
-          <CarteFormation key={carte.id} carte={carte} variante={variante} />
+          <CarteFormation key={carte.id} carte={carte} />
         ))}
       </div>
     );

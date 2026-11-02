@@ -21,7 +21,7 @@ export function SectionFormations({ cartes }: { cartes: CarteCatalogue[] }) {
       <EnTeteFormations />
       <div className={`mt-9 max-sm:mt-6 max-sm:gap-3 ${GRILLE_QUATRE_OU_DEUX}`}>
         {choix.map((carte) => (
-          <CarteFormation key={carte.id} carte={carte} variante="public" titleAs="h3" />
+          <CarteFormation key={carte.id} carte={carte} titleAs="h3" />
         ))}
       </div>
     </section>

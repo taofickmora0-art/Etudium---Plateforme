@@ -93,7 +93,7 @@ export function PageRecherche({ q, resultats, cartes, recommandees, suivies, ter
     <Groupe titre="Recommandé pour vous" lien={{ href: "/formations", libelle: "Tout voir" }}>
       <div className={GRILLE_CARTES}>
         {recommandees.map((carte) => (
-          <CarteFormation key={carte.id} carte={carte} variante="connecte" />
+          <CarteFormation key={carte.id} carte={carte} />
         ))}
       </div>
     </Groupe>
@@ -134,7 +134,7 @@ export function PageRecherche({ q, resultats, cartes, recommandees, suivies, ter
                 <div className={GRILLE_CARTES}>
                   {resultats.formations.map((carte) => {
                     const suivie = suivies.get(carte.id);
-                    return suivie ? <CarteSuivie key={carte.id} vue={suivie} /> : <CarteFormation key={carte.id} carte={carte} variante="connecte" />;
+                    return suivie ? <CarteSuivie key={carte.id} vue={suivie} /> : <CarteFormation key={carte.id} carte={carte} />;
                   })}
                 </div>
               </Groupe>

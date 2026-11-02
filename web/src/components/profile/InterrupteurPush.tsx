@@ -68,7 +68,7 @@ export function InterrupteurPush({ actif, onChange }: { actif: boolean; onChange
     <div className="flex flex-col">
       <Switch
         label="Notifications push"
-        description={etat && etat !== "possible" ? MESSAGES_PUSH[etat] : "Sur cet appareil"}
+        description={etat && etat !== "possible" ? MESSAGES_PUSH[etat] : "À allumer sur chaque appareil ; l’éteindre les coupe partout."}
         checked={possible && actif && abonne === true}
         disabled={!possible || abonne === null || occupe}
         onCheckedChange={(v) => void basculer(v)}

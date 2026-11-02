@@ -11,12 +11,10 @@ import { urlCouverture } from "@/lib/couvertures/adresse";
  */
 export function CarteFormation({
   carte,
-  variante,
   sansEtiquette = false,
   titleAs = "h2",
 }: {
   carte: CarteCatalogue;
-  variante: "public" | "connecte";
   sansEtiquette?: boolean;
   /** h3 sous le titre d'une section (« Formations disponibles » de l'Accueil). */
   titleAs?: "h2" | "h3";

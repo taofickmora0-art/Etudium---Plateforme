@@ -17,6 +17,6 @@ export function cartesFavorites(ids: string[], fiches: FicheSuivie[], lignes: Li
     const suivie = suivies.find((s) => s.fiche.id === id);
     if (suivie) return [{ id, titre: fiche.titre, carte: <CarteSuivie vue={versVueCarte(suivie)} sansEtiquette /> }];
     if (fiche.statut !== "publiee") return [];
-    return [{ id, titre: fiche.titre, carte: <CarteFormation carte={fiche} variante="connecte" sansEtiquette /> }];
+    return [{ id, titre: fiche.titre, carte: <CarteFormation carte={fiche} sansEtiquette /> }];
   });
 }
