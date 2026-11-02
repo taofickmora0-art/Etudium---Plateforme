@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
+import { abonner } from "./abonner";
 import { creerBanc, type Banc } from "./banc";
 import { creerFormation, creerParcours, MIGRATIONS_ENGAGEMENT, poserCertificat, type FormationTest } from "./engagement-banc";
 
@@ -8,7 +9,7 @@ import { creerFormation, creerParcours, MIGRATIONS_ENGAGEMENT, poserCertificat, 
 // nouvelles), et le catalogue. Jamais une formation déjà commencée.
 
 let banc: Banc;
-const [E1, E2, E3, E4, E5, E6, E7, S1, S2, ADMIN] = Array.from({ length: 10 }, () => randomUUID());
+const [E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, S1, S2, ADMIN] = Array.from({ length: 13 }, () => randomUUID());
 const f: Record<string, FormationTest> = {};
 
 type Reco = { id: string; slug: string; titre: string; motif: string; message: string | null };
@@ -18,7 +19,7 @@ const ouvrir = (qui: string, formation: FormationTest) =>
 
 beforeAll(async () => {
   banc = await creerBanc(MIGRATIONS_ENGAGEMENT);
-  for (const id of [E1, E2, E3, E4, E5, E6, E7, S1, S2]) await banc.creerCompte(id);
+  for (const id of [E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, S1, S2]) await banc.creerCompte(id);
   await banc.creerCompte(ADMIN, ["admin"]);
   const P = await creerParcours(banc, "Réussite académique");
   const D = await creerParcours(banc, "Compétences digitales", "digital");
@@ -43,6 +44,13 @@ beforeAll(async () => {
   const P2 = await creerParcours(banc, "Méthodes de travail");
   f.A2 = await creerFormation(banc, "Organisation", { quiz: true, exercice: null, parcours: [P2], ordre: 1 });
   f.B2 = await creerFormation(banc, "Prise de notes", { ...options, parcours: [P2], ordre: 2 });
+  // Un parcours désactivé : il ne sert plus de suite ni de « ses parcours ».
+  const PI = await creerParcours(banc, "Ancien parcours");
+  await banc.db.query("update public.parcours set actif = false where id = $1", [PI]);
+  f.AI = await creerFormation(banc, "Ancienne base", { ...options, parcours: [PI], ordre: 1 });
+  f.BI = await creerFormation(banc, "Ancienne suite", { ...options, parcours: [PI], ordre: 2 });
+  // Une formation payante, avec une leçon d'aperçu.
+  f.PAY = await creerFormation(banc, "Payante", { ...options, gratuite: false, apercu: true });
   f.Q1 = await creerFormation(banc, "Problématique", { ...options, parcours: [Q] });
   f.Q2 = await creerFormation(banc, "Plan", { ...options, parcours: [Q], publieeLe: "now() - interval '60 days'" });
   f.Q3 = await creerFormation(banc, "Rédaction", { ...options, parcours: [Q], publieeLe: "now()" });
@@ -50,6 +58,9 @@ beforeAll(async () => {
   // Popularité : deux étudiants ont commencé Q2 ; seul un admin a commencé Q3 (il ne compte pas).
   for (const qui of [S1, S2]) await ouvrir(qui, f.Q2);
   await ouvrir(ADMIN, f.Q3);
+  // La popularité est calculée une fois par jour (tâche planifiée) ; ici, tout de suite.
+  await banc.db.query("select public.rafraichir_popularite()");
+  for (const qui of [E4, E9]) await abonner(banc, qui);
 }, 60_000);
 
 describe("Migration 0063 : les recommandations", () => {
@@ -80,7 +91,7 @@ describe("Migration 0063 : les recommandations", () => {
     const liste = await recos(E2, 12);
     expect(liste.filter((r) => r.motif === "monetisation").map((r) => r.titre)).toEqual(["Vendre ses visuels"]);
     expect(liste[0].titre).toBe("Vendre ses visuels");
-    for (const autre of [f.Z2, f.Z3, f.Z4]) expect(liste.find((r) => r.id === autre.id)?.motif).toBe("catalogue");
+    for (const autre of [f.Z2, f.Z3, f.Z4]) expect(liste.find((r) => r.id === autre.id)?.motif).not.toBe("monetisation");
   });
 
   it("une compétence sans formation Business liée : une seule formation « pour toutes les compétences », la première du parcours Business", async () => {
@@ -107,6 +118,33 @@ describe("Migration 0063 : les recommandations", () => {
     for (const exclue of [f.Q1, f.W1, f.W2, f.W3]) expect(ids).not.toContain(exclue.id);
     expect(liste.slice(3).every((r) => r.motif === "catalogue")).toBe(true);
     expect(liste.length).toBe(12);
+  });
+
+  it("un parcours désactivé : ni suite, ni « ses parcours »", async () => {
+    await poserCertificat(banc, E10, f.AI);
+    const liste = await recos(E10, 12);
+    expect(liste.find((r) => r.id === f.BI.id)?.motif).toBe("catalogue");
+    expect(liste.some((r) => r.motif === "suite" || r.motif === "parcours")).toBe(false);
+  });
+
+  it("sans abonnement, une formation payante seulement entrevue (aperçu) reste recommandée ; pour un abonné, elle est commencée", async () => {
+    await ouvrir(E8, f.PAY);
+    expect((await recos(E8, 12)).map((r) => r.id)).toContain(f.PAY.id);
+    await ouvrir(E9, f.PAY);
+    expect((await recos(E9, 12)).map((r) => r.id)).not.toContain(f.PAY.id);
+  });
+
+  it("la popularité est celle du dernier calcul (une fois par jour), et personne ne la recalcule depuis l'appli", async () => {
+    // Q4 devient la plus suivie, mais le classement attend le prochain calcul.
+    const [T1, T2, T3] = [randomUUID(), randomUUID(), randomUUID()];
+    for (const qui of [T1, T2, T3]) {
+      await banc.creerCompte(qui);
+      await ouvrir(qui, f.Q4);
+    }
+    expect((await recos(E3)).map((r) => r.titre)).toEqual(["Plan", "Rédaction", "Soutenance"]);
+    await banc.db.query("select public.rafraichir_popularite()");
+    expect((await recos(E3)).map((r) => r.titre)).toEqual(["Soutenance", "Plan", "Rédaction"]);
+    await expect(banc.en({ id: E3 }, "select public.rafraichir_popularite()")).rejects.toThrow(/permission denied/);
   });
 
   it("tout est commencé : aucune recommandation", async () => {

@@ -47,6 +47,22 @@ describe("Migration 0063 : le rappel de série de 18 h", () => {
     for (const qui of [UN, AUJ, COUPE, FORM, SUSP]) expect(await rappels(qui)).toEqual([]);
   });
 
+  it("un index sur le jour : le rappel ne relit pas toute l'activité", async () => {
+    const index = (await banc.db.query<{ d: string }>("select indexdef as d from pg_indexes where tablename = 'activite_jours'")).rows.map((r) => r.d);
+    expect(index.some((d) => /\(jour\)/.test(d))).toBe(true);
+  });
+
+  it("les déclencheurs de l'engagement passent avant ceux du certificat (même ordre de verrous partout)", async () => {
+    for (const table of ["progression_lecons", "tentatives_quiz", "rendus_exercices"]) {
+      const noms = (await banc.db.query<{ n: string }>(
+        "select tgname as n from pg_trigger where tgrelid = $1::regclass and not tgisinternal and tgname ~ '(engagement|activite|certificat)' order by tgname",
+        [`public.${table}`],
+      )).rows.map((r) => r.n);
+      expect(noms.length, table).toBeGreaterThanOrEqual(2);
+      expect(noms[0], table).toMatch(/activite/);
+    }
+  });
+
   it("personne ne peut le déclencher depuis l'appli", async () => {
     await expect(banc.en({ id: DEUX }, "select public.rappeler_series()")).rejects.toThrow(/permission denied/);
   });

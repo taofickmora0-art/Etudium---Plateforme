@@ -22,6 +22,12 @@ const badges = async (qui: string) =>
   (await banc.db.query<{ badge: string }>("select badge from public.badges_obtenus where profil_id = $1 order by badge", [qui])).rows.map((r) => r.badge);
 const aujourdhui = async (qui: string) =>
   (await banc.db.query<{ activites: number; secondes_video: number }>("select activites, secondes_video from public.activite_jours where profil_id = $1 and jour = public.jour_benin(now())", [qui])).rows[0];
+/** Comme le compte lui-même (auth.uid()), en superutilisateur : la table n'est écrite que par les fonctions de l'appli. */
+const commeLui = (qui: string, sql: string, params: unknown[]) =>
+  banc.db.transaction(async (tx) => {
+    await tx.query("select set_config('request.jwt.claim.sub', $1, true)", [qui]);
+    await tx.query(sql, params);
+  });
 const passerQuiz = (qui: string, f: FormationTest, juste: boolean) =>
   banc.en({ id: qui }, "select public.envoyer_quiz($1, $2::jsonb)", [f.quiz, JSON.stringify({ [f.question as string]: [juste ? 0 : 1] })]);
 
@@ -43,9 +49,40 @@ describe("Migration 0063 : l'activité du jour", () => {
   });
 
   it("les secondes de vidéo regardées s'ajoutent au jour", async () => {
-    await banc.db.query("update public.progression_lecons set passages = '{[0,120)}' where profil_id = $1 and lecon_id = $2", [E, A.lecons[0]]);
-    await banc.db.query("update public.progression_lecons set passages = '{[0,180)}' where profil_id = $1 and lecon_id = $2", [E, A.lecons[0]]);
+    await commeLui(E, "update public.progression_lecons set passages = '{[0,120)}' where profil_id = $1 and lecon_id = $2", [E, A.lecons[0]]);
+    await commeLui(E, "update public.progression_lecons set passages = '{[0,180)}' where profil_id = $1 and lecon_id = $2", [E, A.lecons[0]]);
     expect((await aujourdhui(E)).secondes_video).toBe(180);
+  });
+
+  it("une modification faite par quelqu'un d'autre (correction à la main) n'est pas un jour d'apprentissage", async () => {
+    await banc.db.query("insert into public.progression_lecons (profil_id, lecon_id) values ($1, $2)", [E2, A.lecons[1]]);
+    await banc.db.query("update public.progression_lecons set dernier_envoi = now() where profil_id = $1", [E2]);
+    expect(await aujourdhui(E2)).toBeUndefined();
+    expect(await points(E2)).toEqual([]);
+    await banc.db.query("delete from public.progression_lecons where profil_id = $1", [E2]);
+  });
+
+  it("la vraie mesure de la vidéo : un jour, la leçon terminée, puis le certificat de la formation, chacun une fois", async () => {
+    const V = randomUUID();
+    await banc.creerCompte(V);
+    const formation = (await banc.db.query<{ id: string }>("insert into public.formations (titre, slug, gratuite) values ('Vidéo', $1, true) returning id", [randomUUID()])).rows[0].id;
+    const mod = (await banc.db.query<{ id: string }>("insert into public.modules (formation_id, titre) values ($1, 'Module 1') returning id", [formation])).rows[0].id;
+    const lecon = (await banc.db.query<{ id: string }>("insert into public.lecons (module_id, titre, publiee, duree_secondes) values ($1, 'Regarder', true, 120) returning id", [mod])).rows[0].id;
+    await banc.db.query("insert into public.lecons_contenus (lecon_id, video_fournisseur, video_id) values ($1, 'youtube', 'dQw4w9WgXcQ')", [lecon]);
+    await banc.db.query("update public.formations set statut = 'publiee' where id = $1", [formation]);
+    await banc.en({ id: V }, "select public.commencer_visionnage($1)", [lecon]);
+    for (const passages of ["{[0,60)}", "{[0,110)}"]) {
+      // Une minute écoulée depuis l'envoi précédent : 60 s regardées au plus sont plausibles.
+      await banc.db.query("update public.progression_lecons set dernier_envoi = now() - interval '60 seconds' where profil_id = $1", [V]);
+      await banc.en({ id: V }, "select public.enregistrer_visionnage($1, $2::int4multirange, 60)", [lecon, passages]);
+    }
+    expect((await points(V)).map((l) => [l.raison, l.points])).toEqual([
+      ["jour", 5],
+      ["lecon", 10],
+      ["certificat", 100],
+    ]);
+    expect(await badges(V)).toEqual(["premier_certificat", "premier_pas"]);
+    expect((await aujourdhui(V)).secondes_video).toBe(110);
   });
 });
 

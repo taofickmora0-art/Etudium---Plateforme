@@ -28,6 +28,8 @@ create table if not exists public.activite_jours (
   secondes_video integer not null default 0,
   primary key (profil_id, jour)
 );
+-- Le rappel de 18 h cherche les comptes actifs hier.
+create index if not exists activite_jours_jour on public.activite_jours (jour);
 
 create table if not exists public.points_gagnes (
   id bigint generated always as identity primary key,
@@ -188,6 +190,9 @@ end;
 $$;
 
 -- ─── Les déclencheurs, sur les tables de l'étudiant ─────────────────────────────────────────────────
+-- Nommés « …_activite » pour passer avant ceux du certificat (0033, ordre alphabétique) : partout, le jour d'activité
+-- est verrouillé avant les badges, jamais l'inverse. Seule l'action du compte lui-même est un jour d'apprentissage (pas
+-- une correction faite à la main dans Supabase) ; les points, eux, suivent toujours ce qui est terminé.
 -- Leçon ouverte, vidéo regardée ou leçon terminée : une activité ; terminée pour la première fois : +10.
 create or replace function public.engagement_progression()
 returns trigger
@@ -203,7 +208,9 @@ begin
   elsif new.passages is distinct from old.passages then
     v_secondes := public.secondes_couvertes(new.passages) - public.secondes_couvertes(old.passages);
   end if;
-  perform public.noter_activite(new.profil_id, v_secondes);
+  if (select auth.uid()) = new.profil_id then
+    perform public.noter_activite(new.profil_id, v_secondes);
+  end if;
   if new.terminee_le is not null and (tg_op = 'INSERT' or old.terminee_le is null) then
     perform public.gagner_points(new.profil_id, 'lecon', new.lecon_id::text, 10);
   end if;
@@ -211,7 +218,8 @@ begin
 end;
 $$;
 drop trigger if exists progression_engagement on public.progression_lecons;
-create trigger progression_engagement
+drop trigger if exists progression_activite on public.progression_lecons;
+create trigger progression_activite
   after insert or update on public.progression_lecons
   for each row execute function public.engagement_progression();
 
@@ -223,7 +231,9 @@ security definer
 set search_path = ''
 as $$
 begin
-  perform public.noter_activite(new.profil_id, 0);
+  if (select auth.uid()) = new.profil_id then
+    perform public.noter_activite(new.profil_id, 0);
+  end if;
   if new.score >= (
     select f.score_quiz
     from public.lecons l
@@ -237,7 +247,8 @@ begin
 end;
 $$;
 drop trigger if exists tentatives_engagement on public.tentatives_quiz;
-create trigger tentatives_engagement
+drop trigger if exists tentatives_activite on public.tentatives_quiz;
+create trigger tentatives_activite
   after insert on public.tentatives_quiz
   for each row execute function public.engagement_quiz();
 
@@ -249,7 +260,7 @@ security definer
 set search_path = ''
 as $$
 begin
-  if tg_op = 'INSERT' then
+  if tg_op = 'INSERT' and (select auth.uid()) = new.profil_id then
     perform public.noter_activite(new.profil_id, 0);
   end if;
   if new.statut = 'valide' and (tg_op = 'INSERT' or old.statut is distinct from 'valide') then
@@ -259,7 +270,8 @@ begin
 end;
 $$;
 drop trigger if exists rendus_engagement on public.rendus_exercices;
-create trigger rendus_engagement
+drop trigger if exists rendus_activite on public.rendus_exercices;
+create trigger rendus_activite
   after insert or update of statut on public.rendus_exercices
   for each row execute function public.engagement_rendu();
 
@@ -332,6 +344,38 @@ begin
 end;
 $$;
 
+-- ─── La popularité des formations : recalculée une fois par jour (tâche planifiée), pas à chaque lecture ─
+-- Le nombre de comptes étudiants (sans autre rôle) qui ont commencé chaque formation.
+create table if not exists public.popularite_formations (
+  formation_id uuid primary key references public.formations (id) on delete cascade,
+  apprenants integer not null default 0,
+  calcule_le timestamptz not null default now()
+);
+alter table public.popularite_formations enable row level security;
+revoke all on public.popularite_formations from anon, authenticated;
+
+create or replace function public.rafraichir_popularite()
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_nombre integer;
+begin
+  delete from public.popularite_formations where true;
+  insert into public.popularite_formations (formation_id, apprenants, calcule_le)
+  select m.formation_id, count(distinct pl.profil_id), now()
+  from public.progression_lecons pl
+  join public.lecons l on l.id = pl.lecon_id
+  join public.modules m on m.id = l.module_id
+  where not exists (select 1 from public.roles r where r.profil_id = pl.profil_id and r.role <> 'etudiant')
+  group by m.formation_id;
+  get diagnostics v_nombre = row_count;
+  return v_nombre;
+end;
+$$;
+
 -- ─── Les recommandations (Q7) ───────────────────────────────────────────────────────────────────────
 -- Dans cet ordre, chaque formation une seule fois, à son premier rang :
 --   1. « suite » : après une formation terminée (certificat, ou toutes ses leçons ; la plus récente d'abord), la
@@ -342,7 +386,9 @@ $$;
 --   3. « parcours » : les formations des parcours où le compte a commencé quelque chose, populaires (étudiants qui l'ont
 --      commencée) puis nouvelles ;
 --   4. « catalogue » : les autres, dans le même ordre.
--- Seulement des formations publiées que le compte n'a ni commencées ni terminées.
+-- Seulement des formations publiées que le compte n'a ni commencées ni terminées. Une formation payante dont un compte
+-- sans abonnement n'a ouvert que des aperçus reste recommandable : il l'a seulement entrevue. Un parcours désactivé ne
+-- sert ni de suite ni de « ses parcours ».
 create or replace function public.recommandations_pour_moi(p_nombre integer default 3)
 returns jsonb
 language plpgsql
@@ -353,6 +399,8 @@ as $$
 declare
   v_moi uuid := (select auth.uid());
   v_nombre integer := least(greatest(coalesce(p_nombre, 3), 1), 12);
+  v_acces boolean := (select auth.uid()) is not null
+    and (public.abonne((select auth.uid())) or exists (select 1 from public.roles r where r.profil_id = (select auth.uid()) and r.role <> 'etudiant'));
 begin
   if v_moi is null then
     raise exception 'Connectez-vous pour voir vos recommandations.' using errcode = '42501';
@@ -366,22 +414,25 @@ begin
       where pl.profil_id = v_moi
       group by m.formation_id
     ),
+    entrevues as (
+      select m.formation_id as id
+      from public.progression_lecons pl
+      join public.lecons l on l.id = pl.lecon_id
+      join public.modules m on m.id = l.module_id
+      join public.formations f on f.id = m.formation_id
+      where pl.profil_id = v_moi and not v_acces and not f.gratuite
+      group by m.formation_id
+      having bool_and(l.apercu)
+    ),
     commencees as (
-      select formation_id as id from mes_lecons
+      select ml.formation_id as id from mes_lecons ml where not exists (select 1 from entrevues e where e.id = ml.formation_id)
       union
       select c.formation_id from public.certificats c where c.profil_id = v_moi and c.formation_id is not null
     ),
     candidates as (
       select f.id, f.slug, f.titre, f.publiee_le, coalesce(po.apprenants, 0) as apprenants
       from public.formations f
-      left join (
-        select m.formation_id, count(distinct pl.profil_id) as apprenants
-        from public.progression_lecons pl
-        join public.lecons l on l.id = pl.lecon_id
-        join public.modules m on m.id = l.module_id
-        where not exists (select 1 from public.roles r where r.profil_id = pl.profil_id and r.role <> 'etudiant')
-        group by m.formation_id
-      ) po on po.formation_id = f.id
+      left join public.popularite_formations po on po.formation_id = f.id
       where f.statut = 'publiee' and not exists (select 1 from commencees c where c.id = f.id)
     ),
     -- Terminée : son certificat, ou toutes ses leçons publiées terminées (« Terminée » dans « Mes formations », même
@@ -412,7 +463,7 @@ begin
         from terminees t
         join public.formations ft on ft.id = t.id
         join public.formations_parcours fp on fp.formation_id = t.id
-        join public.parcours p on p.id = fp.parcours_id
+        join public.parcours p on p.id = fp.parcours_id and p.actif
         join public.formations_parcours apres on apres.parcours_id = fp.parcours_id
         join candidates ca on ca.id = apres.formation_id
         where (apres.ordre, ca.titre) > (fp.ordre, ft.titre)
@@ -456,7 +507,10 @@ begin
       ) z
     ),
     mes_parcours as (
-      select distinct fp.parcours_id from public.formations_parcours fp join commencees c on c.id = fp.formation_id
+      select distinct fp.parcours_id
+      from public.formations_parcours fp
+      join commencees c on c.id = fp.formation_id
+      join public.parcours p on p.id = fp.parcours_id and p.actif
     ),
     toutes as (
       select s.id, s.message, 1 as regle, s.rang from suites s
@@ -552,7 +606,7 @@ begin
           union all
           select 'certificat', c.formation_titre, null, null, g.gagne_le, 0
           from public.points_gagnes g
-          join public.certificats c on c.id::text = g.reference
+          join public.certificats c on c.profil_id = v_moi and c.id::text = g.reference
           where g.profil_id = v_moi and g.raison = 'certificat'
           union all
           select 'badge', b.badge, null, null, b.obtenu_le, 1
@@ -617,6 +671,9 @@ begin
 end;
 $$;
 
+-- ─── Le premier calcul de la popularité ─────────────────────────────────────────────────────────────
+select public.rafraichir_popularite();
+
 -- ─── Les droits ─────────────────────────────────────────────────────────────────────────────────────
 revoke execute on function public.jour_benin(timestamptz) from public, anon, authenticated;
 revoke execute on function public.serie_de(uuid, date) from public, anon, authenticated;
@@ -627,6 +684,7 @@ revoke execute on function public.engagement_quiz() from public, anon, authentic
 revoke execute on function public.engagement_rendu() from public, anon, authenticated;
 revoke execute on function public.engagement_certificat() from public, anon, authenticated;
 revoke execute on function public.rappeler_series() from public, anon, authenticated;
+revoke execute on function public.rafraichir_popularite() from public, anon, authenticated;
 revoke execute on function public.choisir_objectif(integer) from public, anon;
 grant execute on function public.choisir_objectif(integer) to authenticated;
 revoke execute on function public.ma_progression_jeu() from public, anon;
@@ -638,7 +696,7 @@ grant execute on function public.mon_tableau_de_bord() to authenticated;
 
 commit;
 
--- ─── Le rappel de série, chaque jour à 17 h UTC (18 h au Bénin) ─────────────────────────────────────
+-- ─── Les tâches planifiées : le rappel de série à 17 h UTC (18 h au Bénin), la popularité à 4 h 20 ─────────────────────────────────────
 do $cron$
 begin
   begin
@@ -649,6 +707,7 @@ begin
   end;
   begin
     perform cron.schedule('etudium-rappel-serie', '0 17 * * *', 'select public.rappeler_series()');
+    perform cron.schedule('etudium-popularite', '20 4 * * *', 'select public.rafraichir_popularite()');
   exception when others then
     raise notice 'Tâche planifiée non créée (%) : voir le guide « Ce qui te revient », section 62.', sqlerrm;
   end;

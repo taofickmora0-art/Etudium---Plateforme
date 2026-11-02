@@ -17,6 +17,10 @@ export type OptionsFormation = {
   ordre?: number;
   publieeLe?: string;
   formateur?: string | null;
+  /** Payante (accès par l'abonnement) ; gratuite par défaut. */
+  gratuite?: boolean;
+  /** La première leçon est un aperçu (ouverte à tous). */
+  apercu?: boolean;
 };
 
 const un = async <T>(banc: Banc, sql: string, params: unknown[] = []) => (await banc.db.query<T>(sql, params)).rows[0];
@@ -28,7 +32,7 @@ export async function creerParcours(banc: Banc, nom: string, couleur: "academiqu
 /** Une formation : des leçons « lecon » publiées, un quiz d'une question (bonne réponse : le choix 0), un exercice. */
 export async function creerFormation(banc: Banc, titre: string, o: OptionsFormation = {}): Promise<FormationTest> {
   const slug = `f-${randomUUID().slice(0, 8)}`;
-  const id = (await un<{ id: string }>(banc, "insert into public.formations (titre, slug, gratuite, formateur_id) values ($1, $2, true, $3) returning id", [titre, slug, o.formateur ?? null])).id;
+  const id = (await un<{ id: string }>(banc, "insert into public.formations (titre, slug, gratuite, formateur_id) values ($1, $2, $3, $4) returning id", [titre, slug, o.gratuite ?? true, o.formateur ?? null])).id;
   for (const p of o.parcours ?? []) {
     await banc.db.query("insert into public.formations_parcours (formation_id, parcours_id, ordre) values ($1, $2, $3)", [id, p, o.ordre ?? 0]);
   }
@@ -37,6 +41,7 @@ export async function creerFormation(banc: Banc, titre: string, o: OptionsFormat
     (await un<{ id: string }>(banc, "insert into public.lecons (module_id, titre, type, genre_exercice, publiee, ordre, duree_secondes) values ($1, $2, $3, $4, $5, $6, 600) returning id", [mod, titreLecon, type, genre, publiee, ordre])).id;
   const lecons: string[] = [];
   for (let i = 1; i <= (o.lecons ?? 2); i++) lecons.push(await lecon(`Leçon ${i}`, "lecon", i));
+  if (o.apercu) await banc.db.query("update public.lecons set apercu = true where id = $1", [lecons[0]]);
   let quiz: string | null = null;
   let question: string | null = null;
   if (o.quiz ?? true) {
