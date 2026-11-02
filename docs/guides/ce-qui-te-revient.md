@@ -1173,3 +1173,26 @@ La base le vérifie aussi : un modérateur ne peut rien modifier hors de la comm
 6. **Bon à savoir** :
    - le temps d'apprentissage n'est mesuré que sur les vidéos suivies (YouTube, Vimeo, TikTok, Tella), pas sur le texte, Loom, ScreenPal ni Drive ;
    - le journal ne garde que les actions faites par l'équipe dans le back-office (pas celles faites directement dans le tableau de bord de Supabase).
+
+## 62. Engagement : tableau de bord, série, points, badges, recommandations (lot 6, partie B), 20 minutes
+
+L'étudiant a maintenant un **tableau de bord** (« Mon espace » › « Tableau de bord », en premier) qui répond à ses quatre questions : où il en est, ce qu'il doit continuer, ce qu'il a à faire, ce qu'il peut apprendre ensuite. L'Accueil reste le fil de la communauté.
+
+1. **La migration**, dans l'éditeur SQL de Supabase, après la 0062 : `web/supabase/migrations/0063_engagement.sql`. Elle se termine par la tâche planifiée du rappel de 18 h. Si « Cron » n'est pas activé, un avertissement s'affiche : active-le (Database › Extensions › `pg_cron`), puis relance le dernier bloc (`do $cron$ … $cron$;`). Pour vérifier :
+   ```sql
+   select jobname, schedule from cron.job where jobname = 'etudium-rappel-serie';
+   ```
+   La ligne attendue : `0 17 * * *` (17 h UTC, soit 18 h au Bénin).
+2. **Ce qui part de zéro** : la série et les points commencent à l'application de la migration. Seule exception : les certificats déjà obtenus donnent tout de suite leurs 100 points et leurs badges.
+3. **À vérifier avec un compte étudiant de test** :
+   - ouvre une leçon : la série passe à « 1 jour » dans l'en-tête, et « Points gagnés cette semaine » à 5 ;
+   - termine la leçon : +10 et le badge « Premier pas » (profil › Informations › carte « Gamification ») ;
+   - un quiz réussi donne +20, un exercice validé +30, un certificat +100 ; chaque chose ne compte qu'une fois ;
+   - le tableau de bord montre la formation à reprendre, ce qu'il y a à faire (exercice à corriger, quiz à repasser), la prochaine session (inscription d'un clic), l'objectif de la semaine, l'activité récente et trois recommandations ;
+   - après un certificat, la formation suivante du même parcours est proposée en premier, avec « Vous avez terminé « X ». Découvrez maintenant « Y ». » ;
+   - profil › Notifications › « Objectif de la semaine » : 3, 5 ou 7 jours (5 par défaut).
+4. **Le rappel de 18 h** : à qui a une série d'au moins 2 jours et n'a encore rien fait ce jour-là, « Votre série de N jours s’arrête ce soir ». Il ne part pas si « Rappels d’apprentissage » est coupé dans le profil, ni pour un formateur, ni pour un compte suspendu. Pour l'essayer sans attendre 18 h (dans l'éditeur SQL) : `select public.rappeler_series();` rend le nombre de rappels envoyés.
+5. **Bon à savoir** :
+   - le jour compte à l'heure du Bénin (minuit à Porto-Novo) ; la semaine commence le lundi ;
+   - un niveau tous les 200 points ; pas de classement : chacun ne voit que ses points ;
+   - le formateur n'a rien de tout cela (pas d'espace étudiant).
