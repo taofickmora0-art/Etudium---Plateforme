@@ -11,7 +11,7 @@ import { cn } from "@/lib/cn";
 export const CONTACT = "contact@etudium.online";
 
 /** La date de la dernière mise à jour des deux textes, affichée en haut de chaque page. */
-export const MISE_A_JOUR = "2 novembre 2026";
+export const MISE_A_JOUR = "3 novembre 2026";
 
 /** Corps du texte : 15/24, et 14/22 sur téléphone. */
 const CORPS = "text-[15px] leading-6 text-texte max-sm:text-sm max-sm:leading-[22px]";

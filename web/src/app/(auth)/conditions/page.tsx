@@ -148,8 +148,13 @@ const SECTIONS: SectionJuridique[] = [
     contenu: (
       <>
         <P>
-          Le paiement se fait par Mobile Money (MTN ou Moov), sans quitter Étudium, par l’intermédiaire de notre prestataire de paiement Payiz.
-          Vous saisissez votre numéro, puis vous validez la demande sur votre téléphone.
+          Le paiement se fait par Mobile Money, sans quitter Étudium, avec les opérateurs de Mobile Money proposés par notre prestataire de
+          paiement dans votre pays (par exemple MTN, Moov ou Celtiis au Bénin). Ce prestataire est Payiz. Vous choisissez votre pays et saisissez
+          votre numéro, puis vous validez la demande sur votre téléphone.
+        </P>
+        <P>
+          Les prix sont fixés en francs CFA. Si votre opérateur fonctionne dans une autre monnaie, le montant débité peut être différent :
+          lorsque notre prestataire l’indique, il s’affiche avant le paiement.
         </P>
         <Liste>
           <li>Votre accès s’ouvre dès que le paiement est confirmé. Votre reçu est disponible dans « Mon abonnement ».</li>

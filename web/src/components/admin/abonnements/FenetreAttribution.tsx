@@ -94,7 +94,7 @@ export function FenetreAttribution({ compte, formules, onFermer }: { compte: { i
             <TextInput id="attribution-montant" inputMode="numeric" value={montant} onChange={(e) => setMontant(chiffresSeulement(e.target.value))} />
           </Field>
         )}
-        <Field label="Référence (facultative)" htmlFor="attribution-reference" hint="L’identifiant de la transaction MTN ou Moov, ou une note.">
+        <Field label="Référence (facultative)" htmlFor="attribution-reference" hint="L’identifiant de la transaction Mobile Money, ou une note.">
           <TextInput id="attribution-reference" maxLength={120} value={reference} onChange={(e) => setReference(e.target.value)} />
         </Field>
       </div>

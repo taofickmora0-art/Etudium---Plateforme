@@ -1304,3 +1304,26 @@ Les dix formations d'exemple (Excel, Word, Zotero, PowerPoint, Méthodologie du 
 3. Ce qui est retiré avec elles : leurs modules, leçons, quiz, exercices, progressions, inscriptions, favoris, avis et certificats de test. Les fichiers déjà déposés pour elles (couvertures, vidéos) restent dans Storage : retire-les à la main s'il y en avait.
 4. **Ne relance plus jamais `lot-1.sql`** : il recréerait ces formations.
 5. **Pourquoi tes modifications semblaient ne pas passer** : sur une formation déjà publiée, ce que tu changes au back-office part dans un brouillon. Les étudiants ne le voient qu'après « Publier les modifications », en haut de la fiche de la formation. C'est voulu : on peut préparer des changements sans casser ce que suivent les étudiants.
+
+## 71. Le paiement ouvert à tous les pays et à tous les opérateurs (migration 0072), 15 minutes
+
+Étudium ne propose plus seulement MTN et Moov au Bénin : les pays et les opérateurs viennent de ton compte Payiz.
+- **Ce que voit le payeur** : un champ « Pays » (le Bénin d'abord), l'indicatif du pays devant le numéro (« +229 »), puis les opérateurs que Payiz propose dans ce pays, avec leur logo et leur nom (Celtiis compris, si ton compte l'a). L'opérateur se coche tout seul d'après le numéro quand Payiz donne ses préfixes ; le payeur peut le changer. Si Payiz annonce un autre montant ou une autre monnaie pour cet opérateur, le récapitulatif ajoute « Vous paierez … (frais compris) ».
+- **La liste** est lue chez Payiz et gardée 5 minutes. Si Payiz ne répond pas, l'écran propose le Bénin avec MTN et Moov, et le dit en petit sous les opérateurs.
+- **Le reçu, l'historique et le back-office** affichent le nom de l'opérateur et le pays : « Celtiis Cash (Bénin) ». Les paiements d'avant restent tels quels et prennent le pays « Bénin » : « MTN Mobile Money (Bénin) ».
+- Les **conditions d'utilisation** et la **politique de confidentialité** (mises à jour le 3 novembre 2026) parlent des opérateurs proposés dans le pays du payeur, et la FAQ aussi.
+
+1. **La migration**, dans l'éditeur SQL de Supabase (base de test etudium-dev), après la 0071 : `web/supabase/migrations/0072_paiements_tous_pays.sql`. Elle se relance sans risque. Si la base de production existe déjà, colle aussi ce seul fichier dans son éditeur SQL, **avant** de mettre le code en ligne : l'ancien code marche avec la nouvelle base, pas l'inverse. Une base de production neuve l'a déjà : elle est dans `web/supabase/production/partie-5.sql`.
+2. **Ton compte Payiz** : active les pays et les opérateurs que tu veux proposer (Celtiis, la Côte d'Ivoire, le Togo…). Étudium n'affiche que ce que Payiz renvoie. Vérifie aussi que les frais restent à ta charge : chaque paiement est envoyé avec « frais payés par le marchand ».
+3. **À vérifier**, avec un compte étudiant de test, les paiements activés (section 56) et le serveur de dev redémarré :
+   - « Mon abonnement » (ou « S'abonner ») : « Pays » montre « Bénin », « +229 » est devant le numéro, et tu vois les opérateurs de ton compte Payiz avec leurs logos ;
+   - en tapant un numéro MTN (01 97 00 00 00), MTN se coche tout seul (si Payiz donne les préfixes ; sinon le payeur choisit) ;
+   - un autre pays, s'il y en a : son indicatif et ses opérateurs remplacent ceux du Bénin ;
+   - un paiement de test (numéros du simulateur, section 56) : le reçu dit « Moyen : MTN Mobile Money (Bénin) · +229 •• •• •• •• 00 » ; un ancien reçu garde « +229 01 •• •• •• 00 » et dit « (Bénin) » ;
+   - back-office › Abonnements et paiements : la colonne « Moyen » et le détail d'un paiement montrent l'opérateur et le pays.
+4. **À demander au support Payiz** (la documentation ne le dit pas) ; je l'adapte selon leurs réponses :
+   - un payeur d'un pays qui n'est pas en franc CFA (Ghana, Nigeria…) peut-il payer un paiement créé en XOF ? qui fait la conversion, à quel taux, et qui en paie le coût ?
+   - `amount_to_pay` (dans `GET /v1/payment_methods?amount=…`) tient-il compte de « frais payés par le marchand » (`fees_paid_by: merchant`) envoyé à la création du paiement, ou du réglage par défaut de l'espace ? Sinon, l'écran pourrait annoncer des frais que le payeur ne paiera pas ;
+   - `amount_to_pay`, `min_amount` et `max_amount` sont-ils en unités mineures (321,50 GHS = 32150), comme le dit la documentation pour `min_amount` ?
+   - quelle forme ont les éléments de `details.operators` dans l'erreur `operator_required` : des codes, ou des objets `{ code, name }` ? (Étudium accepte les deux.)
+   - le format des `phone_prefixes` au Bénin depuis le passage à 10 chiffres : « 0197 » ou « 97 » ? (Étudium accepte les deux.)

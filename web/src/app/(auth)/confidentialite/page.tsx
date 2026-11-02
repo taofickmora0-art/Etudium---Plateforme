@@ -62,12 +62,12 @@ const SECTIONS: SectionJuridique[] = [
         <SousTitre>Abonnements et paiements</SousTitre>
         <Liste>
           <li>
-            L’abonnement choisi et ses dates, le code promo utilisé, le montant, l’état du paiement, l’opérateur, la référence de la transaction
-            chez Payiz et le numéro de reçu.
+            L’abonnement choisi et ses dates, le code promo utilisé, le montant, l’état du paiement, le pays et l’opérateur, la référence de la
+            transaction chez Payiz et le numéro de reçu.
           </li>
           <li>
             Votre numéro de téléphone est transmis à Payiz pour la demande de paiement. Étudium ne le garde que masqué (par exemple
-            +229 01 •• •• •• 00).
+            +229 •• •• •• •• 00).
           </li>
           <li>Étudium ne reçoit ni ne conserve votre code secret Mobile Money, et ne traite aucune carte bancaire.</li>
         </Liste>
@@ -154,7 +154,7 @@ const SECTIONS: SectionJuridique[] = [
           <li>Vercel : hébergement du site.</li>
           <li>Resend : envoi des e-mails.</li>
           <li>Google : connexion avec votre compte Google, si vous la choisissez.</li>
-          <li>Payiz : paiements par Mobile Money. Payiz reçoit votre numéro de téléphone, le montant et la référence du paiement.</li>
+          <li>Payiz : paiements par Mobile Money. Payiz reçoit votre numéro de téléphone, votre pays, le montant et la référence du paiement.</li>
           <li>
             Anthropic : analyse automatique des publications de la communauté, pour la modération, lorsqu’elle est activée. Anthropic reçoit le
             titre et le texte de la publication, ses liens, l’adresse de sa vidéo et son fichier joint (image ou PDF).
@@ -233,7 +233,7 @@ const SECTIONS: SectionJuridique[] = [
         <Liste>
           <li>vos certificats déjà délivrés, qui restent vérifiables à votre nom ;</li>
           <li>
-            la trace de vos paiements (date, abonnement, montant, opérateur, numéro masqué, numéro de reçu), détachée de votre compte, pour le suivi
+            la trace de vos paiements (date, abonnement, montant, pays, opérateur, numéro masqué, numéro de reçu), détachée de votre compte, pour le suivi
             comptable ;
           </li>
           <li>si l’équipe supprime le compte, une ligne du journal interne avec votre nom, votre adresse e-mail et le motif.</li>

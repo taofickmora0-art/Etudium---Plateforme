@@ -26,7 +26,7 @@ describe("Politique de confidentialité", () => {
     expect(metadata.title).toBe("Politique de confidentialité · Étudium");
     expect(metadata.description).toMatch(/prestataires/);
     expect(screen.getByRole("heading", { level: 1, name: "Politique de confidentialité" })).toBeInTheDocument();
-    expect(screen.getByText("Dernière mise à jour : 2 novembre 2026")).toBeInTheDocument();
+    expect(screen.getByText("Dernière mise à jour : 3 novembre 2026")).toBeInTheDocument();
   });
 
   it("numérote les sections principales, et le sommaire mène à chacune", () => {
@@ -56,6 +56,15 @@ describe("Politique de confidentialité", () => {
       expect(prestataires.getByText(nom)).toBeInTheDocument();
     }
     expect(texte()).toContain("hébergés dans l’Union européenne (région de Paris)");
+    // Tous les pays depuis le 3 novembre 2026 : le pays du payeur part chez Payiz et reste noté avec le paiement.
+    expect(texte()).toContain("Payiz reçoit votre numéro de téléphone, votre pays, le montant et la référence du paiement.");
+  });
+
+  it("le paiement : le pays et l’opérateur notés, le numéro gardé masqué", () => {
+    render(<Page />);
+    const t = texte();
+    expect(t).toContain("l’état du paiement, le pays et l’opérateur");
+    expect(t).toContain("Étudium ne le garde que masqué (par exemple +229 •• •• •• •• 00).");
   });
 
   it("décrit les cookies réels, sans publicité ni mesure d’audience", () => {

@@ -8,7 +8,8 @@ export const QUESTIONS_FREQUENTES: { question: string; reponse: string }[] = [
   },
   {
     question: "Comment payer mon abonnement ?",
-    reponse: "Par Mobile Money (MTN ou Moov), depuis votre téléphone. Votre accès est activé automatiquement dès que le paiement est confirmé.",
+    reponse:
+      "Par Mobile Money, depuis votre téléphone, avec un opérateur de votre pays (MTN, Moov ou Celtiis au Bénin, par exemple). Votre accès est activé automatiquement dès que le paiement est confirmé.",
   },
   {
     question: "Le renouvellement est-il automatique ?",
@@ -52,6 +53,7 @@ export const QUESTIONS_FORMULES: { question: string; reponse: string }[] = [
   },
   {
     question: "Quels moyens de paiement ?",
-    reponse: "Le Mobile Money, MTN ou Moov. Votre accès est activé automatiquement dès la confirmation du paiement, et vous recevez un reçu.",
+    reponse:
+      "Le Mobile Money, avec les opérateurs proposés dans votre pays (MTN, Moov ou Celtiis au Bénin, par exemple). Votre accès est activé automatiquement dès la confirmation du paiement, et vous recevez un reçu.",
   },
 ];

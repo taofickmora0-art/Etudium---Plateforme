@@ -7,6 +7,7 @@
   - **Paiement direct dans Étudium :** l'étudiant saisit son numéro chez nous, puis valide sur son téléphone.
   - **Les codes promo dès cette livraison.**
 - **Prochaine migration :** 0049.
+- **Mise à jour du 3 novembre 2026 :** le paiement est ouvert à tous les pays et à tous les opérateurs de Payiz (Celtiis compris). Les pays et les opérateurs sont lus chez Payiz (`GET /v1/payment_methods`, gardés 5 minutes ; à défaut, le Bénin avec MTN et Moov), le pays et l'opérateur partent avec chaque paiement, et le pays et le nom de l'opérateur sont gardés (migration 0072, guide « Ce qui te revient », section 71). Ce qui suit parle encore de « MTN ou Moov » : c'est l'état du 1er novembre.
 
 ## 1. Ce que fait ce lot
 
