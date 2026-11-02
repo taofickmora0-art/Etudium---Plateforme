@@ -1268,17 +1268,20 @@ Les deux pages prennent le style de l'espace étudiant :
 
 ## 68. L'inscription aux formations, 10 minutes
 
-Une formation se suit maintenant après un clic sur « S'inscrire à ce cours », en haut de sa fiche. Tant qu'on n'est pas inscrit, ses leçons ont un cadenas, sauf les leçons d'aperçu. On ne peut s'inscrire qu'à une formation gratuite, ou à n'importe quelle formation avec un abonnement en cours ; sans abonnement, le bouton devient « Voir les abonnements ». Le catalogue affiche le nombre d'inscrits de chaque formation (« N apprenants »), et « Mes formations » montre aussi les formations où l'on est inscrit sans avoir commencé.
+Une formation se suit maintenant après un clic sur « S'inscrire à ce cours », en haut de sa fiche. Tant qu'on n'est pas inscrit, ses leçons ont un cadenas, sauf les leçons d'aperçu. On ne peut s'inscrire qu'à une formation gratuite, ou à n'importe quelle formation avec un abonnement en cours ; sans abonnement, le bouton devient « Voir les abonnements ». Le catalogue affiche le nombre d'inscrits de chaque formation (« N apprenants », sans compter l'équipe ni les formateurs). « Mes formations », le tableau de bord et la recherche montrent les formations où l'on est inscrit, même à 0 % ; un simple aperçu ouvert sans inscription n'y met plus la formation. Les inscrits, même à 0 %, sont prévenus des nouvelles leçons et d'une désactivation.
 
-Personne ne perd l'accès : chaque compte qui avait déjà ouvert une leçon d'une formation (ou obtenu son certificat) y est inscrit automatiquement par la migration.
+L'équipe (admins) et le formateur d'une formation n'ont pas à s'inscrire : toutes les leçons leur sont déjà ouvertes. Leur fiche montre « Commencer le cours », sans bouton d'inscription, et la base refuse leur inscription (« L'équipe a déjà accès à toutes les formations. »).
+
+Aucun étudiant ne perd l'accès : chaque compte étudiant qui avait déjà ouvert une leçon d'une formation, passé un de ses quiz, rendu un de ses exercices ou obtenu son certificat y est inscrit automatiquement par la migration. Les comptes de l'équipe (modérateurs, admins, super admins) et les formateurs, qui ouvrent des leçons pour les relire, ne sont pas inscrits. Un modérateur qui suivait une formation comme un étudiant s'y réinscrit d'un clic.
 
 1. **La migration**, dans l'éditeur SQL de Supabase, après la 0068 (section 67) : `web/supabase/migrations/0069_inscriptions_formations.sql`.
 2. **À vérifier** avec un compte étudiant de test :
    - sur une formation gratuite (ou avec un abonnement) : les leçons ont un cadenas, sauf les aperçus ; « S'inscrire à ce cours », puis « Inscription confirmée. » : les cadenas tombent et le bouton devient « Commencer le cours » ;
-   - la formation apparaît dans « Mes formations » à 0 %, et sa carte du catalogue dit « 0 % terminé » ;
+   - la formation apparaît dans « Mes formations » à 0 %, dans « Continuer l'apprentissage » du tableau de bord, et sa carte du catalogue dit « 0 % terminé » ;
    - sans abonnement, sur une formation payante : le bouton dit « Voir les abonnements » ;
    - ouvrir directement l'adresse d'une leçon sans être inscrit : la page propose « S'inscrire à ce cours ».
-3. **La messagerie suit l'inscription** : dans « Nouveau message », un étudiant ne voit que les formateurs des formations où il est inscrit (et l'Équipe Étudium).
+3. **À vérifier** avec un compte admin : sur la fiche d'une formation, pas de « S'inscrire à ce cours », mais « Commencer le cours ».
+4. **La messagerie suit l'inscription** : dans « Nouveau message », un étudiant ne voit que les formateurs des formations où il est inscrit (et l'Équipe Étudium).
 
 ## 69. Le profil public des formateurs et leurs réseaux, 10 minutes
 
