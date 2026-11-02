@@ -10,7 +10,7 @@ import { Heading } from "@/components/ui/Text";
 import { activerPaiements, desactiverPaiements } from "@/lib/admin/paiements/actions";
 import type { EtatReglage } from "@/lib/admin/paiements/types";
 
-const GUIDE = "Ajoutez PAYIZ_CLE_SECRETE et PAIEMENT_JETON dans web/.env.local (guide « Ce qui te revient », section 56), puis relancez le serveur.";
+const GUIDE = "Ajoutez PAYIZ_CLE_SECRETE dans web/.env.local (guide « Ce qui te revient », section 56), puis relancez le serveur.";
 const NOTE = "m-0 text-sm leading-[22px] text-discret";
 
 /**
@@ -63,7 +63,7 @@ export function ReglagePaiements({ etat, ecriture }: { etat: EtatReglage; ecritu
       {etat.ouverts && !reconnu && (
         <Banner
           tone="attention"
-          title="Le jeton du serveur ne correspond plus à celui enregistré : les paiements ne peuvent pas être confirmés."
+          title="La clé Payiz a changé : cliquez sur « Réactiver » pour que les paiements soient de nouveau confirmés."
           action={
             ecriture && pret ? (
               <Button size="sm" variant="contour" onClick={() => void activer()} loading={occupe}>

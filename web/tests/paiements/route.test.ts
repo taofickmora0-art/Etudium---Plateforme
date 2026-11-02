@@ -2,6 +2,10 @@ import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fauxSupabase } from "../admin/faux-supabase";
 import { carteSql, PAIEMENT_ID, payizSql } from "../abonnement/fixtures";
+import { jetonServeur } from "@/lib/paiements/config";
+
+// Le jeton du serveur, tiré de la clé Payiz de test.
+const JETON = jetonServeur("sk_test_x");
 
 // Les notifications de Payiz (lot 2, spec §3) : signature vérifiée avant toute lecture, dédoublonnage, puis l'état relu
 // chez Payiz et appliqué en base. Payiz relance tant qu'il ne reçoit pas de 2xx.
@@ -33,7 +37,6 @@ beforeEach(() => {
   fetchPayiz.mockReset();
   vi.stubGlobal("fetch", fetchPayiz);
   vi.stubEnv("PAYIZ_CLE_SECRETE", "sk_test_x");
-  vi.stubEnv("PAIEMENT_JETON", "J");
   vi.stubEnv("PAYIZ_SECRET_WEBHOOK", SECRET);
   faux.repondre("rpc.evenement_payiz_traite", { data: false });
   faux.repondre("rpc.evenement_payiz", { data: true });
@@ -64,10 +67,10 @@ describe("Route des notifications Payiz", () => {
     const reponse = await POST(requete(evenement()));
     expect(reponse.status).toBe(200);
     expect(await reponse.json()).toEqual({ recu: true });
-    expect(faux.de("rpc", "evenement_payiz_traite")[0].valeurs).toEqual({ p_id: "evt_1", p_jeton: "J" });
+    expect(faux.de("rpc", "evenement_payiz_traite")[0].valeurs).toEqual({ p_id: "evt_1", p_jeton: JETON });
     expect(fetchPayiz.mock.calls[0][0]).toBe("https://api.payiz.app/v1/payments/pay_1");
-    expect(faux.de("rpc", "confirmer_paiement")[0].valeurs).toEqual({ p_paiement: PAIEMENT_ID, p_payiz: "pay_1", p_montant: 12000, p_jeton: "J" });
-    expect(faux.de("rpc", "evenement_payiz")[0].valeurs).toEqual({ p_id: "evt_1", p_jeton: "J" });
+    expect(faux.de("rpc", "confirmer_paiement")[0].valeurs).toEqual({ p_paiement: PAIEMENT_ID, p_payiz: "pay_1", p_montant: 12000, p_jeton: JETON });
+    expect(faux.de("rpc", "evenement_payiz")[0].valeurs).toEqual({ p_id: "evt_1", p_jeton: JETON });
     expect(faux.appels.map((a) => a.op)).toEqual(["evenement_payiz_traite", "confirmer_paiement", "evenement_payiz"]);
     expect(viderFileApres).toHaveBeenCalledTimes(1);
   });

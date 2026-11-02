@@ -1,5 +1,6 @@
 import { versCartePaiement, versEtatAbonnement, versMoyenManuel } from "@/lib/abonnement/conversion";
 import { estFonctionAbsente, liste } from "@/lib/contenus/lecture";
+import { configurationPaiement } from "@/lib/paiements/config";
 import { createClient } from "@/lib/supabase/server";
 import type { AbonnementsCompte, CodePromo, ComptePaiement, DetailPaiement, EtatReglage, PagePaiements, ResumePaiements } from "./types";
 
@@ -99,7 +100,7 @@ export async function lirePaiementsEquipe(f: { statut: string | null; recherche:
 /** L'état du réglage, sans jamais renvoyer la clé ni le jeton. */
 export async function lireEtatPaiements(): Promise<EtatReglage> {
   const cle = process.env.PAYIZ_CLE_SECRETE?.trim();
-  const jeton = process.env.PAIEMENT_JETON?.trim();
+  const jeton = configurationPaiement()?.jeton;
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("etat_paiements", { p_jeton: jeton ?? "" });
   const d = error ? {} : objet(data);

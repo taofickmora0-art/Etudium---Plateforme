@@ -70,12 +70,12 @@ describe("Le réglage « Paiements activés »", () => {
     afficher({ etat: { ouverts: false, jeton: "absent", cle: "absente", webhook: false } });
     expect(screen.getByText("Paiements désactivés")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Activer les paiements" })).toBeDisabled();
-    expect(screen.getByText(/Ajoutez PAYIZ_CLE_SECRETE et PAIEMENT_JETON dans web\/\.env\.local/)).toBeInTheDocument();
+    expect(screen.getByText(/Ajoutez PAYIZ_CLE_SECRETE dans web\/\.env\.local/)).toBeInTheDocument();
   });
 
-  it("jeton qui ne correspond plus : l'alerte et « Réactiver »", async () => {
+  it("la clé Payiz a changé (jeton plus reconnu) : l'alerte et « Réactiver »", async () => {
     afficher({ etat: { ...ACTIF, jeton: "non_reconnu" } });
-    expect(screen.getByText(/Le jeton du serveur ne correspond plus à celui enregistré/)).toBeInTheDocument();
+    expect(screen.getByText(/La clé Payiz a changé : cliquez sur « Réactiver »/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Réactiver" }));
     expect(actions.activerPaiements).toHaveBeenCalled();
   });

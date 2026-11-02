@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { ACCES_EQUIPE, exigerDomaine } from "@/lib/admin/garde";
 import { estFonctionAbsente } from "@/lib/contenus/lecture";
+import { configurationPaiement } from "@/lib/paiements/config";
 import { versDetailPaiement, versPagePaiements, type DetailPaiement, type PagePaiements } from "./data";
 
 // Les actions du back-office « Abonnements et paiements » (0051). Chacune vérifie l'équipe ; la base revérifie tout,
@@ -13,10 +14,8 @@ type Resultat = { ok: true } | { ok: false; message: string };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 const MIGRATION = "Appliquez les migrations 0049 à 0052 (guide « Ce qui te revient », section 56).";
-const GUIDE = "Ajoutez PAYIZ_CLE_SECRETE et PAIEMENT_JETON dans web/.env.local (guide « Ce qui te revient », section 56), puis relancez le serveur.";
+const GUIDE = "Ajoutez PAYIZ_CLE_SECRETE dans web/.env.local (guide « Ce qui te revient », section 56), puis relancez le serveur.";
 const STATUTS = ["reussi", "en_attente", "echoue", "expire"];
-const JETON_COURT =
-  "PAIEMENT_JETON est trop court (32 caractères au moins). Génère-le avec la commande du guide « Ce qui te revient », section 56, colle-le dans web/.env.local, puis relance le serveur.";
 
 function message(error: { code?: string; message?: string }): string {
   if (estFonctionAbsente(error)) return MIGRATION;
@@ -33,14 +32,13 @@ async function appeler(fonction: string, args?: Record<string, unknown>): Promis
   return { ok: true };
 }
 
-/** « Activer les paiements » : la base garde l'empreinte du jeton du serveur. */
+/** « Activer les paiements » : la base garde l'empreinte du jeton du serveur, tiré de la clé Payiz. */
 export async function activerPaiements(): Promise<Resultat> {
   const garde = await exigerDomaine("paiements");
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
-  const jeton = process.env.PAIEMENT_JETON?.trim();
-  if (!jeton || !process.env.PAYIZ_CLE_SECRETE?.trim()) return { ok: false, message: GUIDE };
-  if (jeton.length < 32) return { ok: false, message: JETON_COURT };
-  return appeler("activer_paiements", { p_jeton: jeton });
+  const config = configurationPaiement();
+  if (!config) return { ok: false, message: GUIDE };
+  return appeler("activer_paiements", { p_jeton: config.jeton });
 }
 
 export async function desactiverPaiements(): Promise<Resultat> {

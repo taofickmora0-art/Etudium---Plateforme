@@ -1005,15 +1005,7 @@ Tout se passe en **mode test** : le simulateur de Payiz ne prend aucun argent. L
      ```
      PAYIZ_CLE_SECRETE=sk_test_…
      ```
-2. **Le jeton du serveur.** Dans un terminal, génère une longue chaîne au hasard :
-   ```bash
-   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-   ```
-   Colle-la dans `web/.env.local` :
-   ```
-   PAIEMENT_JETON=la-chaîne-obtenue
-   ```
-   Puis arrête et relance `npm run dev` (les variables ne sont lues qu'au démarrage).
+2. **Relance le serveur.** Arrête puis relance `npm run dev` (les variables ne sont lues qu'au démarrage). Il n'y a plus de jeton à fabriquer : depuis le 2 novembre 2026, l'appli tire le jeton du serveur de ta clé Payiz. Si ton `web/.env.local` contient encore une ligne `PAIEMENT_JETON=…`, tu peux la supprimer : elle n'est plus lue.
 3. **Les migrations.** Dans l'éditeur SQL de Supabase, applique dans l'ordre, après la 0048 :
    - `web/supabase/migrations/0049_abonnements_paiements.sql` (formules, codes promo, paiements, abonnements) ;
    - `web/supabase/migrations/0050_acces_abonnes.sql` (ce qu'ouvre un abonnement) ;
@@ -1022,7 +1014,7 @@ Tout se passe en **mode test** : le simulateur de Payiz ne prend aucun argent. L
    - `web/supabase/migrations/0053_finitions_paiement.sql` (finitions : un double « Payer » ne crée pas deux demandes, limite d'essais des codes promo, annulation sans trou d'accès).
 4. **Au back-office, avec ton compte administrateur** (menu « Abonnements et paiements ») :
    - onglet « Abonnements » : fixe les prix (par exemple Basique 9 000, Standard 15 000, Premium 25 000), puis « Enregistrer » sur chaque ligne ;
-   - en haut, « Activer les paiements » : la base garde l'empreinte de ton jeton (jamais le jeton lui-même) ;
+   - en haut, « Activer les paiements » : un clic suffit. La base garde l'empreinte du jeton du serveur (jamais la clé Payiz). Quand tu changes de clé (passage à `sk_live_…`), un bandeau te propose « Réactiver » : un clic, et c'est reparti ;
    - onglet « Codes promo » : crée par exemple `PROMO20` (pourcentage, 20).
 5. **La page d'accueil** (déconnecté) : les cartes Formules affichent tes prix, et « Choisir Standard » mène à la création de compte, puis à la souscription.
 6. **Un paiement de test**, avec un compte étudiant (menu « Mon abonnement », puis « S'abonner ») :
@@ -1056,7 +1048,8 @@ Tout se passe en **mode test** : le simulateur de Payiz ne prend aucun argent. L
 12. **Plus tard, une fois le site en ligne :**
     - dans Payiz (Développeurs › Webhooks), déclare l'adresse `https://<ton-domaine>/api/paiements/payiz` avec les événements `payment.succeeded`, `payment.attempt_failed`, `payment.expired` et `payment.canceled` ;
     - copie le secret de cette adresse dans `PAYIZ_SECRET_WEBHOOK` ;
-    - après la vérification de ton compte par Payiz, remplace la clé par `sk_live_…`.
+    - après la vérification de ton compte par Payiz, remplace la clé par `sk_live_…`, puis clique sur « Réactiver » au back-office ;
+    - les clés vont dans les réglages de l'hébergeur (variables d'environnement), pas sur ton ordinateur : ton PC n'intervient jamais dans un paiement.
     En local, pas besoin de notifications : l'écran d'attente et « Mon abonnement » relisent chaque paiement chez Payiz.
 
 ## 57. Donner ou retirer un abonnement à la main, 10 minutes

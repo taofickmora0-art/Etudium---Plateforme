@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fauxSupabase } from "../admin/faux-supabase";
 import { carteSql, FORMULE_ID, PAIEMENT_ID, payizSql } from "./fixtures";
+import { jetonServeur } from "@/lib/paiements/config";
+
+// Le jeton du serveur, tiré de la clé Payiz de test.
+const JETON = jetonServeur("sk_test_x");
 
 // Les actions de la souscription (lot 2) : préparer en base, lancer chez Payiz, suivre, réessayer ; et la
 // resynchronisation des paiements restés en attente (onglet fermé, pas de notification en local).
@@ -25,7 +29,6 @@ beforeEach(() => {
   fetchPayiz.mockReset();
   vi.stubGlobal("fetch", fetchPayiz);
   vi.stubEnv("PAYIZ_CLE_SECRETE", "sk_test_x");
-  vi.stubEnv("PAIEMENT_JETON", "J");
   faux.repondre("rpc.paiements_prets", { data: true });
 });
 afterEach(() => {
@@ -82,7 +85,7 @@ describe("Payer", () => {
       p_payiz: "pay_1",
       p_operateur: "mtn",
       p_telephone_masque: "+229 01 •• •• •• 00",
-      p_jeton: "J",
+      p_jeton: JETON,
     });
     expect(etape).toMatchObject({ etat: "attente", finAttente: "2026-11-01T10:03:00.000Z", paiement: { telephoneMasque: "+229 01 •• •• •• 00" } });
   });
@@ -100,7 +103,7 @@ describe("Payer", () => {
     faux.repondre("rpc.preparer_paiement", { data: carteSql({ repris: false }) });
     faux.repondre("rpc.paiements_prets", { data: false });
     expect(await payer(ENTREE)).toEqual({ etat: "erreur", message: "Les paiements ouvrent bientôt." });
-    expect(faux.de("rpc", "paiements_prets")[0].valeurs).toEqual({ p_jeton: "J" });
+    expect(faux.de("rpc", "paiements_prets")[0].valeurs).toEqual({ p_jeton: JETON });
     expect(fetchPayiz).not.toHaveBeenCalled();
   });
 
@@ -167,7 +170,7 @@ describe("Suivre et réessayer", () => {
     faux.repondre("rpc.confirmer_paiement", { data: carteSql({ statut: "reussi", payiz_id: "pay_1", numero_recu: "ET-R-2026-000001" }) });
     expect(await suivrePaiement(PAIEMENT_ID)).toMatchObject({ etat: "reussi", paiement: { numeroRecu: "ET-R-2026-000001" } });
     expect(fetchPayiz.mock.calls[0][0]).toBe("https://api.payiz.app/v1/payments/pay_1");
-    expect(faux.de("rpc", "confirmer_paiement")[0].valeurs).toEqual({ p_paiement: PAIEMENT_ID, p_payiz: "pay_1", p_montant: 12000, p_jeton: "J" });
+    expect(faux.de("rpc", "confirmer_paiement")[0].valeurs).toEqual({ p_paiement: PAIEMENT_ID, p_payiz: "pay_1", p_montant: 12000, p_jeton: JETON });
     // Le reçu par e-mail part tout de suite (lot 5, étape B).
     expect(viderFileApres).toHaveBeenCalledTimes(1);
   });
@@ -198,7 +201,7 @@ describe("Suivre et réessayer", () => {
     fetchPayiz.mockResolvedValueOnce(reponse(409, { error: { code: "payment_closed", message: "…" } }));
     faux.repondre("rpc.noter_echec", { data: carteSql({ statut: "expire", payiz_id: "pay_1" }) });
     expect(await reessayer({ paiementId: PAIEMENT_ID, telephone: "01 42 00 00 00", operateur: "mtn" })).toMatchObject({ etat: "expire" });
-    expect(faux.de("rpc", "noter_echec")[0].valeurs).toEqual({ p_paiement: PAIEMENT_ID, p_statut: "expire", p_motif: null, p_jeton: "J" });
+    expect(faux.de("rpc", "noter_echec")[0].valeurs).toEqual({ p_paiement: PAIEMENT_ID, p_statut: "expire", p_motif: null, p_jeton: JETON });
   });
 });
 
@@ -235,8 +238,8 @@ describe("Resynchroniser", () => {
     await fin;
   });
 
-  it("sans configuration : rien", async () => {
-    vi.stubEnv("PAIEMENT_JETON", "");
+  it("sans configuration (pas de clé Payiz) : rien", async () => {
+    vi.stubEnv("PAYIZ_CLE_SECRETE", "");
     await resynchroniserEnAttente();
     expect(faux.appels).toEqual([]);
   });

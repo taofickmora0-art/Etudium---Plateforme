@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ACCES_EQUIPE } from "@/lib/admin/garde";
 import { fauxSupabase } from "./faux-supabase";
+import { jetonServeur } from "@/lib/paiements/config";
 
 // Les actions du back-office « Abonnements et paiements » (lot 2, 0051). Le jeton et la clé ne quittent jamais le
 // serveur : l'écran ne reçoit que leur état.
@@ -14,15 +15,15 @@ vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 const actions = await import("@/lib/admin/paiements/actions");
 const { lireEtatPaiements } = await import("@/lib/admin/paiements/data");
 
-const JETON = "jeton-secret-0123456789-abcdefghij";
-const GUIDE = "Ajoutez PAYIZ_CLE_SECRETE et PAIEMENT_JETON dans web/.env.local (guide « Ce qui te revient », section 56), puis relancez le serveur.";
+// Le jeton du serveur, tiré de la clé Payiz de test.
+const JETON = jetonServeur("sk_test_cle");
+const GUIDE = "Ajoutez PAYIZ_CLE_SECRETE dans web/.env.local (guide « Ce qui te revient », section 56), puis relancez le serveur.";
 const ID = "11111111-1111-4111-8111-111111111111";
 
 beforeEach(() => {
   faux.vider();
   getShellUser.mockResolvedValue({ prenom: "Awa", nom: "K", roles: ["etudiant", "admin"] });
   vi.stubEnv("PAYIZ_CLE_SECRETE", "sk_test_cle");
-  vi.stubEnv("PAIEMENT_JETON", JETON);
   vi.stubEnv("PAYIZ_SECRET_WEBHOOK", "");
 });
 afterEach(() => vi.unstubAllEnvs());
@@ -34,22 +35,9 @@ describe("Le réglage « Paiements activés »", () => {
     expect(faux.appels).toEqual([]);
   });
 
-  it("sans le jeton ou la clé : le guide, sans appel", async () => {
-    vi.stubEnv("PAIEMENT_JETON", "");
-    expect(await actions.activerPaiements()).toEqual({ ok: false, message: GUIDE });
-    vi.stubEnv("PAIEMENT_JETON", JETON);
+  it("sans la clé Payiz : le guide, sans appel", async () => {
     vi.stubEnv("PAYIZ_CLE_SECRETE", "");
     expect(await actions.activerPaiements()).toEqual({ ok: false, message: GUIDE });
-    expect(faux.appels).toEqual([]);
-  });
-
-  it("un jeton trop court : ce qu'il faut faire, sans appel", async () => {
-    vi.stubEnv("PAIEMENT_JETON", "trop-court");
-    expect(await actions.activerPaiements()).toEqual({
-      ok: false,
-      message:
-        "PAIEMENT_JETON est trop court (32 caractères au moins). Génère-le avec la commande du guide « Ce qui te revient », section 56, colle-le dans web/.env.local, puis relance le serveur.",
-    });
     expect(faux.appels).toEqual([]);
   });
 
@@ -68,10 +56,9 @@ describe("Le réglage « Paiements activés »", () => {
     expect(JSON.stringify(etat)).not.toContain(JETON);
     faux.repondre("rpc.etat_paiements", { data: { ouverts: true, jeton_reconnu: false } });
     expect((await lireEtatPaiements()).jeton).toBe("non_reconnu");
-    vi.stubEnv("PAIEMENT_JETON", "");
-    vi.stubEnv("PAYIZ_CLE_SECRETE", "sk_live_x");
+    vi.stubEnv("PAYIZ_CLE_SECRETE", "");
     faux.repondre("rpc.etat_paiements", { data: { ouverts: false, jeton_reconnu: null } });
-    expect(await lireEtatPaiements()).toEqual({ ouverts: false, jeton: "absent", cle: "reel", webhook: false });
+    expect(await lireEtatPaiements()).toEqual({ ouverts: false, jeton: "absent", cle: "absente", webhook: false });
   });
 });
 
