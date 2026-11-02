@@ -51,6 +51,8 @@ describe("Migration 0059 : désactiver une formation", () => {
     expect((await banc.en<{ n: number }>({ id: S }, "select public.nombre_suiveurs_formation($1) as n", [FORMATION]))[0].n).toBe(1);
     await expect(banc.en({ id: F }, "select public.nombre_suiveurs_formation($1)", [FORMATION])).rejects.toThrow();
     await expect(banc.en({ id: E }, "select public.nombre_suiveurs_formation($1)", [FORMATION])).rejects.toThrow();
+    // Point reporté : un visiteur sans compte n'a même pas le droit d'appeler la fonction.
+    await expect(banc.en("anon", "select public.nombre_suiveurs_formation($1)", [FORMATION])).rejects.toThrow(/permission denied/);
   });
 
   it("Review Focus 2 et 3 : le formateur ne change pas l'état ; un brouillon ne se désactive pas", async () => {

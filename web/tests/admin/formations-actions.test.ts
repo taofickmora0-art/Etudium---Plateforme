@@ -204,6 +204,11 @@ describe("Back-office : formations", () => {
     expect(viderFileApres).toHaveBeenCalledTimes(1);
   });
 
+  it("lot 5 C (point reporté) : avant la migration 0059, « Désactiver » dit quelle migration appliquer", async () => {
+    faux.repondre("formations.update", { error: { code: "22P02", message: 'invalid input value for enum statut_formation: "desactivee"' } });
+    expect(await setStatutFormation(F, "desactivee")).toEqual({ ok: false, message: "Appliquez la migration 0059 (guide « Ce qui te revient », section 60)." });
+  });
+
   it("seul un brouillon s'efface, avec ses fichiers", async () => {
     faux.repondre("formations.select", { data: { statut: "archivee", publiee_le: "2026-10-01T00:00:00Z" } });
     expect(await deleteFormation(F)).toEqual({ ok: false, message: "Une formation publiée s’archive, elle ne s’efface pas." });

@@ -133,7 +133,8 @@ $$;
 
 -- ─── Droits ─────────────────────────────────────────────────────────────────────────────────────────
 revoke execute on function public.suiveurs_actifs_formation(uuid) from public, anon, authenticated;
-revoke execute on function public.nombre_suiveurs_formation(uuid) from public;
+-- anon a sa propre autorisation par défaut chez Supabase : retirée aussi (point reporté du lot 5 C).
+revoke execute on function public.nombre_suiveurs_formation(uuid) from public, anon;
 revoke execute on function public.desactivation_regle() from public, anon, authenticated;
 revoke execute on function public.notifier_desactivation() from public, anon, authenticated;
 grant execute on function public.nombre_suiveurs_formation(uuid) to authenticated;

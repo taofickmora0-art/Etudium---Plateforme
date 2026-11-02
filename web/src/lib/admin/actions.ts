@@ -371,6 +371,8 @@ export async function setStatutFormation(id: string, statut: "publiee" | "archiv
       if (lecons === 0) return { ok: false, message: FORMATION_VIDE };
     }
     const { error } = await supabase.from("formations").update({ statut }).eq("id", id);
+    // Avant la 0059, l'état « desactivee » n'existe pas (valeur d'énumération refusée, 22P02).
+    if (error?.code === "22P02" && statut === "desactivee") return { ok: false, message: "Appliquez la migration 0059 (guide « Ce qui te revient », section 60)." };
     if (error) return { ok: false, message: error.code === "P0001" && error.message ? typographie(error.message) : ECHEC };
   } catch {
     return { ok: false, message: ECHEC };

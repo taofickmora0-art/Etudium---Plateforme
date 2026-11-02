@@ -53,7 +53,7 @@ async function ListeFormations({ searchParams }: Recherche) {
   }
   const affichees = filtre ? formations.filter((f) => correspondAuFiltre(f.etat, filtre)) : formations;
   return (
-    <PageAdmin titre="Formations" description="Brouillons, formations publiées et archivées." fil={[{ label: "Formations" }]} action={NOUVELLE}>
+    <PageAdmin titre="Formations" description="Brouillons, formations publiées, désactivées et archivées." fil={[{ label: "Formations" }]} action={NOUVELLE}>
       <div className="flex max-w-[680px] flex-col gap-4">
         <FiltreStatut valeur={filtre ?? "toutes"} />
         {affichees.length === 0 ? (
