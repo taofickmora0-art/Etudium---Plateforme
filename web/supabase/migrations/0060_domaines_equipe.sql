@@ -1136,4 +1136,97 @@ create policy "communaute : supprimer" on storage.objects
     )
   );
 
+-- ─── Les notifications de l'équipe des contenus ─────────────────────────────────────────────────────
+-- Les membres actifs de l'équipe qui ont un domaine (comme membres_equipe(), 0016, pour un domaine).
+create or replace function public.membres_domaine(p_domaine text)
+returns uuid[]
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(array_agg(distinct r.profil_id), '{}')
+  from public.roles r
+  where p_domaine = any (public.domaines_role(r.role::text))
+    and not exists (select 1 from public.suspensions s where s.profil_id = r.profil_id);
+$$;
+revoke execute on function public.membres_domaine(text) from public, anon, authenticated;
+
+-- « Formation à valider » : aux admins (domaine des contenus), plus au modérateur. Dernière définition en 0016_notifications.sql,
+-- recopiée à l'identique sauf ses destinataires.
+create or replace function public.notifications_formations()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_formateur uuid;
+  v_deja uuid[] := '{}';
+  v_parcours record;
+  v_suiveurs uuid[];
+  v_remarque text;
+begin
+  select compte_id into v_formateur from public.formateurs where id = new.formateur_id;
+
+  -- Première publication (republier une formation archivée ne compte pas) : les étudiants de ses parcours, une
+  -- seule fois chacun, avec le premier parcours qu'ils suivent ; puis son formateur.
+  if new.publiee_le is not null and (tg_op = 'INSERT' or old.publiee_le is null) then
+    for v_parcours in
+      select pa.id, pa.nom_court
+      from public.formations_parcours fp
+      join public.parcours pa on pa.id = fp.parcours_id
+      where fp.formation_id = new.id
+      order by pa.ordre, pa.nom_court
+    loop
+      select coalesce(array_agg(distinct p.profil_id), '{}') into v_suiveurs
+      from public.progression_lecons p
+      join public.lecons l on l.id = p.lecon_id
+      join public.modules m on m.id = l.module_id
+      join public.formations_parcours fp on fp.formation_id = m.formation_id
+      where fp.parcours_id = v_parcours.id
+        and not (p.profil_id = any (v_deja))
+        and p.profil_id is distinct from v_formateur;
+      perform public.notifier(
+        v_suiveurs, 'nouveaux_contenus', 'Nouvelle formation : ' || new.titre,
+        'Dans le parcours ' || v_parcours.nom_court || '.', '/formations/' || new.slug
+      );
+      v_deja := v_deja || v_suiveurs;
+    end loop;
+    if v_formateur is not null then
+      perform public.notifier(array[v_formateur], 'service', 'Votre formation est en ligne', new.titre, '/formateur/formations/' || new.id);
+    end if;
+  end if;
+
+  if tg_op = 'UPDATE' then
+    if new.statut = 'archivee' and old.statut <> 'archivee' then
+      perform public.notifier(
+        public.suiveurs_formation(new.id), 'service', 'Formation archivée',
+        new.titre || ' n’est plus disponible. Votre progression est conservée.', '/mes-formations'
+      );
+    end if;
+
+    if new.envoyee_le is not null and old.envoyee_le is null then
+      perform public.notifier(
+        public.membres_domaine('contenus'), 'service', 'Formation à valider',
+        new.titre || ', par ' || coalesce((select nom from public.formateurs where id = new.formateur_id), 'un formateur'),
+        '/admin/formations/' || new.id || '?onglet=publication'
+      );
+    end if;
+
+    if new.renvoyee_le is not null and new.renvoyee_le is distinct from old.renvoyee_le and v_formateur is not null then
+      v_remarque := coalesce(new.remarque_relecture, '');
+      if char_length(v_remarque) > 120 then
+        v_remarque := left(v_remarque, 119) || '…';
+      end if;
+      perform public.notifier(
+        array[v_formateur], 'service', 'Votre formation est à corriger', v_remarque,
+        '/formateur/formations/' || new.id || '?onglet=publication'
+      );
+    end if;
+  end if;
+  return null;
+end;
+$$;
+
 commit;

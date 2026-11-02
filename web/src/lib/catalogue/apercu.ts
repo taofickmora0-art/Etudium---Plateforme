@@ -1,4 +1,5 @@
 import { getShellUser } from "@/lib/auth/current-user";
+import { aDomaine } from "@/lib/auth/domaines";
 import { canAccess } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { lireFicheParAdresse } from "./data";
@@ -15,7 +16,8 @@ export async function ficheApercu(slug: string): Promise<FicheFormation | null> 
   const lue = await lireFicheParAdresse(slug);
   if (!lue || lue.statut === "publiee") return null;
   const fiche: FicheFormation = lue;
-  if (canAccess("admin", compte.roles)) return fiche;
+  // L'équipe des contenus (lot 6 A : pas le modérateur).
+  if (aDomaine(compte.roles, "contenus")) return fiche;
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("formateur_de", { p_formation: fiche.id });
   return !error && data === true ? fiche : null;
@@ -28,7 +30,7 @@ export async function ficheApercu(slug: string): Promise<FicheFormation | null> 
 export async function editeurFormation(formationId: string): Promise<string | null> {
   const compte = await getShellUser();
   if (!compte) return null;
-  if (canAccess("admin", compte.roles)) return `/admin/formations/${formationId}`;
+  if (aDomaine(compte.roles, "contenus")) return `/admin/formations/${formationId}`;
   if (!canAccess("formateur", compte.roles)) return null;
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("formateur_de", { p_formation: formationId });

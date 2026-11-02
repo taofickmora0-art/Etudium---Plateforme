@@ -88,6 +88,15 @@ describe("Programmer, modifier, annuler", () => {
     expect(faux.de("rpc", "creer_session")[1].valeurs).toMatchObject({ p_formateur: FICHE });
   });
 
+  it("relecture du lot 6 A (critique) : le modérateur programme, modifie et annule une session (domaine de la communauté)", async () => {
+    getShellUser.mockResolvedValue({ roles: ["etudiant", "moderateur"] });
+    faux.repondre("rpc.creer_session", { data: ID });
+    expect(await creerSession(D)).toEqual({ ok: true, id: ID });
+    expect(faux.de("rpc", "creer_session")[0].valeurs).toMatchObject({ p_formateur: FICHE });
+    expect(await modifierSession(ID, D)).toEqual({ ok: true });
+    expect(await annulerSession(ID)).toEqual({ ok: true });
+  });
+
   it("le début se lit dans le fuseau du formateur (son appareil) ; un fuseau inconnu : le Bénin", async () => {
     getShellUser.mockResolvedValue({ roles: ["etudiant", "formateur"] });
     faux.repondre("rpc.creer_session", { data: ID });

@@ -2,7 +2,7 @@
 
 import { FUSEAU_BENIN, fuseauValide } from "@/lib/dates/fuseau";
 import { refresh } from "next/cache";
-import { exigerEditeur, SESSION_EXPIREE } from "@/lib/admin/garde";
+import { exigerAnimateur, SESSION_EXPIREE } from "@/lib/admin/garde";
 import { getShellUser } from "@/lib/auth/current-user";
 import { reconnaitreVideo } from "@/lib/communaute/video";
 import { estFonctionAbsente, liste, un } from "@/lib/contenus/lecture";
@@ -95,7 +95,7 @@ function parametres(d: DonneesSession, equipe: boolean) {
 
 /** Programmer une session (formateur ou équipe). */
 export async function creerSession(d: DonneesSession): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
-  const garde = await exigerEditeur();
+  const garde = await exigerAnimateur();
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   const refus = refusSession(d, new Date());
   if (refus) return { ok: false, message: refus };
@@ -113,7 +113,7 @@ export async function creerSession(d: DonneesSession): Promise<{ ok: true; id: s
 
 /** Modifier une session : la base revérifie le début seulement s'il change. */
 export async function modifierSession(id: string, d: DonneesSession): Promise<Resultat> {
-  const garde = await exigerEditeur();
+  const garde = await exigerAnimateur();
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   if (!UUID.test(id)) return { ok: false, message: ECHEC };
   const refus = refusSession(d, new Date(), { verifierDebut: false });
@@ -145,7 +145,7 @@ async function affichePrecedente(supabase: Awaited<ReturnType<typeof createClien
 
 /** Annuler une session : ses inscrits sont prévenus. */
 export async function annulerSession(id: string): Promise<Resultat> {
-  const garde = await exigerEditeur();
+  const garde = await exigerAnimateur();
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   if (!UUID.test(id)) return { ok: false, message: ECHEC };
   const { error } = await garde.supabase.rpc("annuler_session", { p_session: id });

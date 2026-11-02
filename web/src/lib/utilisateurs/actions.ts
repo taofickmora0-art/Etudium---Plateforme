@@ -91,9 +91,9 @@ export async function renommerCompte(compteId: string, prenom: string, nom: stri
 }
 
 /**
- * Supprime un compte (le super admin, lot 6 A). Comme « Supprimer mon compte » : ses photos et ses travaux rendus
- * d'abord (s'ils ne partent pas, on s'arrête : ils resteraient en ligne sans propriétaire), puis le compte, puis les
- * pièces jointes de ses conversations (la base garde leurs chemins si cet effacement échoue).
+ * Supprime un compte (le super admin, lot 6 A). Ses photos, ses travaux rendus et les pièces jointes de ses
+ * conversations d'abord : la base les ouvre au super admin le temps de la suppression (0061). Si l'un d'eux ne part
+ * pas, on s'arrête : il resterait en ligne sans propriétaire. Puis le compte.
  */
 export async function supprimerCompte(compteId: string, motif: string): Promise<Resultat> {
   const garde = await exigerDomaine("roles");
@@ -103,14 +103,17 @@ export async function supprimerCompte(compteId: string, motif: string): Promise<
   const lecture = await supabase.rpc("fichiers_du_compte", { p_compte: compteId });
   if (lecture.error) return { ok: false, message: estFonctionAbsente(lecture.error) ? MIGRATION_0061 : message(lecture.error) };
   const fichiers = (lecture.data ?? {}) as { photos?: string[]; rendus?: string[]; messages?: string[] };
-  for (const [espace, chemins] of [["photos-profil", fichiers.photos ?? []], ["rendus", fichiers.rendus ?? []]] as const) {
+  const espaces = [["photos-profil", fichiers.photos ?? []], ["rendus", fichiers.rendus ?? []], ["messages", fichiers.messages ?? []]] as const;
+  for (const [espace, chemins] of espaces) {
     if (chemins.length === 0) continue;
     const effacement = await supabase.storage.from(espace).remove([...chemins]);
-    if (effacement.error) return { ok: false, message: "Les fichiers du compte n’ont pas pu être effacés. Réessayez." };
+    // L'API ne dit pas d'erreur pour un fichier qu'elle n'a pas pu effacer : on compte ce qu'elle a vraiment retiré.
+    if (effacement.error || (effacement.data ?? []).length !== chemins.length) {
+      return { ok: false, message: "Les fichiers du compte n’ont pas pu être effacés. Réessayez." };
+    }
   }
   const { error } = await supabase.rpc("supprimer_compte", { p_compte: compteId, p_motif: (motif ?? "").trim().slice(0, MOTIF_MAX) });
   if (error) return { ok: false, message: message(error) };
-  if ((fichiers.messages ?? []).length > 0) await supabase.storage.from("messages").remove(fichiers.messages ?? []).catch(() => undefined);
   refresh();
   return { ok: true };
 }

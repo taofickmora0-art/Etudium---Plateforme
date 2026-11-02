@@ -74,6 +74,8 @@ beforeAll(async () => {
   );
   await banc.db.query("insert into public.tentatives_quiz (profil_id, lecon_id, numero, bonnes, total, score, cree_le) values ($1, $3, 1, 4, 5, 80, '2026-11-08T10:00:00+01:00'), ($2, $3, 1, 2, 4, 50, '2026-11-12T10:00:00+01:00')", [E1, E2, Q]);
   await banc.db.query("insert into public.avis (profil_id, formation_id, note, masque) values ($1, $3, 4, false), ($2, $3, 2, true)", [E1, E2, f]);
+  // Relecture : le certificat d'un compte supprimé ne compte pas dans l'achèvement (qui ne dépasse jamais 100 %).
+  await banc.db.query("insert into public.certificats (identifiant, profil_id, formation_id, titulaire, formation_titre, delivre_le) values ('ET-2', null, $1, 'Ancien', 'Excel', '2026-09-01')", [f]);
 });
 
 describe("Migration 0062 : la vue d'ensemble", () => {
@@ -84,7 +86,8 @@ describe("Migration 0062 : la vue d'ensemble", () => {
       abonnes: { actifs: 3, mois_precedent: 2 },
       revenus_mois: 24000,
       formations: { total: 2, brouillons: 1 },
-      certificats: 1,
+      // Tous les certificats délivrés, ceux des comptes supprimés compris (ils restent vérifiables).
+      certificats: 2,
       taux_completion: 50,
     });
     expect(v.abonnements_par_mois).toEqual([
@@ -124,6 +127,18 @@ describe("Migration 0062 : la vue d'ensemble", () => {
   it("le modérateur n'a pas les statistiques", async () => {
     await expect(banc.en({ id: M }, "select public.vue_ensemble_back_office()")).rejects.toThrow();
     await expect(banc.en({ id: M }, "select public.statistiques_periode(30)")).rejects.toThrow();
+  });
+});
+
+describe("Relecture : un compte supprimé", () => {
+  it("ses paiements s'affichent « Compte supprimé »", async () => {
+    await vide.db.query(
+      `insert into public.paiements (profil_id, formule_id, prix_initial, montant, statut, operateur, essai_le, cree_le)
+       select null, f.id, 15000, 15000, 'echoue', 'mtn', '2026-11-15T09:00:00+01:00', '2026-11-15T09:00:00+01:00' from public.formules f where f.code = 'standard'`,
+    );
+    const v = await en<{ derniers_paiements: { nom: string }[]; a_traiter: { paiements_echoues: { nom: string }[] } }>(vide, S, "select public.vue_ensemble_back_office($1) as r", [MAINTENANT]);
+    expect(v.derniers_paiements[0].nom).toBe("Compte supprimé");
+    expect(v.a_traiter.paiements_echoues[0].nom).toBe("Compte supprimé");
   });
 });
 

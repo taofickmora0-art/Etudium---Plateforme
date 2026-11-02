@@ -123,7 +123,7 @@ begin
       'a_examiner', coalesce(public.nombre_a_examiner(), 0),
       'paiements_echoues', (
         select coalesce(jsonb_agg(x.e order by x.d desc), '[]'::jsonb) from (
-          select jsonb_build_object('id', p.id, 'nom', public.nom_du_profil(p.profil_id), 'formule', f.nom,
+          select jsonb_build_object('id', p.id, 'nom', coalesce(public.nom_du_profil(p.profil_id), 'Compte supprimé'), 'formule', f.nom,
                    'operateur', p.operateur, 'moyen_manuel', p.moyen_manuel, 'date', coalesce(p.essai_le, p.cree_le)) as e,
                  coalesce(p.essai_le, p.cree_le) as d
           from public.paiements p join public.formules f on f.id = p.formule_id
@@ -133,7 +133,7 @@ begin
       ),
       'paiements_en_attente', (
         select coalesce(jsonb_agg(x.e order by x.d desc), '[]'::jsonb) from (
-          select jsonb_build_object('id', p.id, 'nom', public.nom_du_profil(p.profil_id), 'formule', f.nom,
+          select jsonb_build_object('id', p.id, 'nom', coalesce(public.nom_du_profil(p.profil_id), 'Compte supprimé'), 'formule', f.nom,
                    'operateur', p.operateur, 'moyen_manuel', p.moyen_manuel, 'date', p.essai_le) as e, p.essai_le as d
           from public.paiements p join public.formules f on f.id = p.formule_id
           where p.statut = 'en_attente' and p.essai_le between p_maintenant - interval '24 hours' and p_maintenant - interval '15 minutes'
@@ -164,7 +164,7 @@ begin
     -- Les paiements jamais envoyés à Payiz n'y sont pas (comme la liste des paiements, 0051).
     'derniers_paiements', (
       select coalesce(jsonb_agg(x.e order by x.d desc), '[]'::jsonb) from (
-        select jsonb_build_object('id', p.id, 'nom', public.nom_du_profil(p.profil_id), 'formule', f.nom, 'duree_mois', f.duree_mois,
+        select jsonb_build_object('id', p.id, 'nom', coalesce(public.nom_du_profil(p.profil_id), 'Compte supprimé'), 'formule', f.nom, 'duree_mois', f.duree_mois,
                  'operateur', p.operateur, 'moyen_manuel', p.moyen_manuel, 'montant', p.montant, 'statut', p.statut,
                  'date', coalesce(p.confirme_le, p.essai_le, p.cree_le)) as e,
                coalesce(p.confirme_le, p.essai_le, p.cree_le) as d
@@ -242,7 +242,13 @@ begin
               where m.formation_id = f.id group by p.profil_id
             ) n where n.premiere between v_debut and p_maintenant),
           'progression', case when s.suiveurs > 0 and s.publiees > 0 then round(100.0 * s.terminees / (s.suiveurs * s.publiees))::integer else 0 end,
-          'achevement', case when s.suiveurs > 0 then round(100.0 * (select count(*) from public.certificats c where c.formation_id = f.id) / s.suiveurs)::integer else 0 end,
+          -- Les étudiants qui la suivent et ont leur certificat (jamais plus de 100 %, même avec des comptes supprimés).
+          'achevement', case when s.suiveurs > 0 then round(100.0 * (
+            select count(*) from public.certificats c
+            where c.formation_id = f.id and exists (
+              select 1 from public.progression_lecons p join public.lecons l on l.id = p.lecon_id join public.modules m on m.id = l.module_id
+              where m.formation_id = f.id and p.profil_id = c.profil_id)
+          ) / s.suiveurs)::integer else 0 end,
           'secondes_video', (select coalesce(sum(public.secondes_couvertes(p.passages)), 0)::integer
                              from public.progression_lecons p join public.lecons l on l.id = p.lecon_id join public.modules m on m.id = l.module_id
                              where m.formation_id = f.id and p.vue_le between v_debut and p_maintenant),

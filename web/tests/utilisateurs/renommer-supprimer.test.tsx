@@ -49,10 +49,11 @@ describe("Les actions du serveur", () => {
     expect(await renommerCompte(ID, "A", "B")).toEqual({ ok: false, message: "Seul le super admin renomme un membre de l’équipe." });
   });
 
-  it("supprimer : les fichiers du compte d'abord, puis le compte, puis les pièces jointes ; un refus s'affiche", async () => {
+  it("supprimer : tous les fichiers du compte d'abord (photos, rendus, pièces jointes), puis le compte ; un refus s'affiche", async () => {
     faux.repondre("rpc.fichiers_du_compte", { data: { photos: [`${ID}/a.jpg`], rendus: ["r/1.pdf"], messages: ["m/1.png"] } });
+    for (const espace of ["photos-profil", "rendus", "messages"]) faux.repondre(`storage.${espace}.remove`, { data: [{ name: "x" }] });
     expect(await supprimerCompte(ID, "Demande de la personne")).toEqual({ ok: true });
-    expect(faux.appels.map((a) => a.op)).toEqual(["fichiers_du_compte", "remove", "remove", "supprimer_compte", "remove"]);
+    expect(faux.appels.map((a) => a.op)).toEqual(["fichiers_du_compte", "remove", "remove", "remove", "supprimer_compte"]);
     expect(faux.de("rpc", "supprimer_compte")[0].valeurs).toEqual({ p_compte: ID, p_motif: "Demande de la personne" });
     expect(faux.de("storage.photos-profil", "remove")[0].valeurs).toEqual([[`${ID}/a.jpg`]]);
     faux.vider();
@@ -61,6 +62,13 @@ describe("Les actions du serveur", () => {
     expect(await supprimerCompte(ID, "x")).toEqual({ ok: false, message: "Un compte super admin ne se supprime pas." });
     getShellUser.mockResolvedValue({ roles: ["etudiant", "admin"] });
     expect(await supprimerCompte(ID, "x")).toEqual({ ok: false, message: "Vous n’avez pas accès à cette partie du back-office." });
+  });
+
+  it("relecture (2) : un fichier que l'API n'a pas effacé arrête la suppression (il resterait en ligne)", async () => {
+    faux.repondre("rpc.fichiers_du_compte", { data: { photos: [`${ID}/a.jpg`], rendus: [], messages: [] } });
+    faux.repondre("storage.photos-profil.remove", { data: [] });
+    expect(await supprimerCompte(ID, "Faux compte")).toEqual({ ok: false, message: "Les fichiers du compte n’ont pas pu être effacés. Réessayez." });
+    expect(faux.de("rpc", "supprimer_compte")).toEqual([]);
   });
 });
 

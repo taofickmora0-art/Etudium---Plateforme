@@ -68,6 +68,20 @@ describe("Migration 0060 : les domaines du back-office", () => {
     await appel(S, "select public.statistiques_back_office()");
   });
 
+  it("relecture (3) : « Formation à valider » va aux admins, pas au modérateur", async () => {
+    const F = randomUUID();
+    await banc.creerCompte(F);
+    await banc.en({ id: S }, "select public.changer_role($1, 'formateur')", [F]);
+    const fiche = (await banc.db.query<{ id: string }>("select id from public.formateurs where compte_id = $1", [F])).rows[0].id;
+    const formation = (await banc.db.query<{ id: string }>("insert into public.formations (titre, slug, formateur_id) values ('À relire', $1, $2) returning id", [randomUUID(), fiche])).rows[0].id;
+    await banc.db.query("delete from public.notifications");
+    await banc.db.query("update public.formations set envoyee_le = now() where id = $1", [formation]);
+    const destinataires = (await banc.db.query<{ destinataire: string }>("select destinataire from public.notifications where titre = 'Formation à valider'")).rows.map((r) => r.destinataire);
+    expect(destinataires).toContain(A);
+    expect(destinataires).toContain(S);
+    expect(destinataires).not.toContain(M);
+  });
+
   it("Review Focus 5 : un admin suspendu n'a plus aucun domaine ; un étudiant non plus", async () => {
     await refuse(AS, "select public.nombre_a_examiner()");
     await refuse(AS, "select public.paiements_equipe('tous', '', 1)");

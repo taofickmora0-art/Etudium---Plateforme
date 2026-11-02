@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Icon } from "@/components/ui/Icon";
 import { Tag } from "@/components/ui/Tag";
+import { useDomaines } from "@/lib/auth/domaines-du-compte";
 import { moment, nomEspace } from "@/lib/communaute/regles";
 import { LIBELLES_MOTIFS, libelleCategorie } from "@/lib/moderation/regles";
 import type { ElementFile, OngletFile } from "@/lib/moderation/types";
@@ -49,6 +50,8 @@ export function ElementModeration({
   /** Rend le message d'erreur, ou null quand l'action a réussi. */
   onAgir: (action: "garder" | "supprimer" | "retablir") => Promise<string | null>;
 }) {
+  // La fiche du compte (pour le suspendre) : seulement pour qui gère les comptes (lot 6 A : pas le modérateur).
+  const versFiche = (useDomaines() ?? []).includes("utilisateurs");
   const [occupe, setOccupe] = useState(false);
   const [suppression, setSuppression] = useState(false);
   const [erreurSuppression, setErreurSuppression] = useState<string>();
@@ -74,9 +77,13 @@ export function ElementModeration({
     <article aria-label={`${genre} de ${nom}`} className="box-border flex min-w-0 flex-col gap-3 rounded-2xl border border-bordure-carte bg-panneau px-5 py-[18px]">
       <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
         <Tag tone="enAttente">{genre}</Tag>
-        <Link href={`/admin/utilisateurs/${e.auteur.id}`} className="focus-etudium min-w-0 text-[15px] leading-[22px] font-semibold wrap-anywhere text-encre no-underline hover:underline">
-          {nom}
-        </Link>
+        {versFiche ? (
+          <Link href={`/admin/utilisateurs/${e.auteur.id}`} className="focus-etudium min-w-0 text-[15px] leading-[22px] font-semibold wrap-anywhere text-encre no-underline hover:underline">
+            {nom}
+          </Link>
+        ) : (
+          <span className="min-w-0 text-[15px] leading-[22px] font-semibold wrap-anywhere text-encre">{nom}</span>
+        )}
         <span className="text-[13px] leading-5 text-discret">{`${nomEspace(e.espace)} · ${moment(e.creeLe, maintenant)}`}</span>
       </div>
       {e.extrait && <p className="m-0 text-[13px] leading-5 wrap-anywhere text-discret">{e.type === "commentaire_lecon" ? `Sous la leçon « ${e.extrait} »` : `En réponse à « ${e.extrait} »`}</p>}

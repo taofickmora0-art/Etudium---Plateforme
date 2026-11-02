@@ -60,3 +60,15 @@ export async function exigerEditeur(): Promise<{ supabase: Supabase; equipe: boo
   if (!equipe && !user.roles.includes("formateur")) return { erreur: canAccess("admin", user.roles) ? ACCES_DOMAINE : ACCES_EDITEUR };
   return { supabase: await createClient(), equipe };
 }
+
+/**
+ * Les sessions live (lot 6 A) : elles relèvent de la communauté. Le modérateur, l'admin et le super admin les gèrent
+ * toutes (et choisissent l'animateur) ; un formateur, les siennes (la base le vérifie, 0018 et 0036).
+ */
+export async function exigerAnimateur(): Promise<{ supabase: Supabase; equipe: boolean } | { erreur: string }> {
+  const user = await getShellUser();
+  if (!user) return { erreur: SESSION_EXPIREE };
+  const equipe = aDomaine(user.roles, "communaute");
+  if (!equipe && !user.roles.includes("formateur")) return { erreur: ACCES_EDITEUR };
+  return { supabase: await createClient(), equipe };
+}

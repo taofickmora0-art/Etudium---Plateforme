@@ -161,9 +161,13 @@ describe("Lire une formation en aperçu", () => {
   });
 
   it("« Modifier la leçon » (étape B) : l'éditeur du back-office pour l'équipe, celui de l'espace formateur pour le formateur de la formation ; rien pour les autres", async () => {
-    getShellUser.mockResolvedValue({ roles: ["etudiant", "moderateur"] });
+    // Lot 6 A : l'équipe des contenus, ce sont les admins ; le modérateur n'a pas ce lien.
+    getShellUser.mockResolvedValue({ roles: ["etudiant", "admin"] });
     expect(await lienModifierLecon("f1", id(2))).toBe(`/admin/formations/f1/lecons/${id(2)}`);
     expect(faux.appels).toEqual([]);
+    getShellUser.mockResolvedValue({ roles: ["etudiant", "moderateur"] });
+    expect(await lienModifierLecon("f1", id(2))).toBeNull();
+    faux.vider();
     getShellUser.mockResolvedValue({ roles: ["etudiant", "formateur"] });
     faux.repondre("rpc.formateur_de", { data: true });
     expect(await lienModifierLecon("f1", id(2))).toBe(`/formateur/formations/f1/lecons/${id(2)}`);

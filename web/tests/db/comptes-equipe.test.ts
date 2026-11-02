@@ -46,6 +46,26 @@ describe("Renommer un compte", () => {
 });
 
 describe("Supprimer un compte", () => {
+  it("relecture (2) : le super admin ne lit et n'efface que les fichiers listés pour la suppression en cours", async () => {
+    const X = randomUUID();
+    const AUTRE = randomUUID();
+    await banc.creerCompte(X);
+    for (const nom of [`${X}/photo.jpg`, `${AUTRE}/photo.jpg`]) {
+      await banc.db.query("insert into storage.objects (bucket_id, name, owner) values ('photos-profil', $1, null)", [nom]);
+    }
+    const visibles = async () => (await en(S, "select name from storage.objects where bucket_id = 'photos-profil' order by name")) as { name: string }[];
+    expect(await visibles()).toEqual([]);
+    await expect(en(S, "select public.fichiers_du_compte($1)", [S])).rejects.toThrow("Vous ne pouvez pas supprimer votre propre compte d’ici : passez par votre profil.");
+    await expect(en(S, "select public.fichiers_du_compte($1)", [S2])).rejects.toThrow("Un compte super admin ne se supprime pas.");
+    const fichiers = ((await en(S, "select public.fichiers_du_compte($1) as f", [X])) as { f: { photos: string[] } }[])[0].f;
+    expect(fichiers.photos).toEqual([`${X}/photo.jpg`]);
+    expect(await visibles()).toEqual([{ name: `${X}/photo.jpg` }]);
+    await en(S, "delete from storage.objects where bucket_id = 'photos-profil'");
+    expect((await banc.db.query("select name from storage.objects where bucket_id = 'photos-profil'")).rows).toEqual([{ name: `${AUTRE}/photo.jpg` }]);
+    await en(S, "select public.supprimer_compte($1, 'Faux compte')", [X]);
+    expect((await banc.db.query("select 1 from public.suppressions_en_cours where profil_id = $1", [X])).rows).toHaveLength(0);
+  });
+
   it("Review Focus 2 : jamais soi-même, jamais un autre super admin ; l'admin ne supprime pas ; le motif est demandé", async () => {
     await expect(en(S, "select public.supprimer_compte($1, 'Test')", [S])).rejects.toThrow("Vous ne pouvez pas supprimer votre propre compte d’ici : passez par votre profil.");
     await expect(en(S, "select public.supprimer_compte($1, 'Test')", [S2])).rejects.toThrow("Un compte super admin ne se supprime pas.");
@@ -72,7 +92,8 @@ describe("Supprimer un compte", () => {
     const verifie = ((await banc.en<{ c: { identifiant: string } | null }>("anon", "select public.verifier_certificat('ET-2026-AB12-CD34') as c")))[0].c;
     expect(verifie?.identifiant).toBe("ET-2026-AB12-CD34");
     const ligne = await un<{ resume: string; auteur: string; details: { motif: string } }>(
-      "select resume, auteur, details from public.journal_actions where action = 'compte_supprime'",
+      "select resume, auteur, details from public.journal_actions where action = 'compte_supprime' and cible_id = $1",
+      [E],
     );
     expect(ligne).toMatchObject({ resume: `Compte de Fifamè Houéto (${email}) supprimé`, auteur: S, details: { motif: "Demande de la personne" } });
   });

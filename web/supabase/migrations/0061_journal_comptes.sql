@@ -539,9 +539,23 @@ end;
 $$;
 
 -- ─── Les fichiers d'un compte, à retirer avant sa suppression (le super admin) ──────────────────────
--- Photos de profil, travaux rendus, pièces jointes de ses conversations (comme « Supprimer mon compte »).
-create or replace function public.fichiers_du_compte(p_compte uuid)
-returns jsonb
+-- Photos de profil, travaux rendus, pièces jointes de ses conversations (comme « Supprimer mon compte »). L'API de
+-- stockage n'efface que ce que l'appelant peut lire : la liste est notée dans suppressions_en_cours, et deux règles de
+-- stockage ouvrent au super admin ces fichiers-là seulement, le temps de la suppression (rien d'autre : ni les autres
+-- photos, ni les conversations des autres).
+create table if not exists public.suppressions_en_cours (
+  profil_id uuid primary key references public.profils (id) on delete cascade,
+  par uuid not null references public.profils (id) on delete cascade,
+  -- « espace/chemin » de chaque fichier.
+  fichiers text[] not null default '{}',
+  cree_le timestamptz not null default now()
+);
+alter table public.suppressions_en_cours enable row level security;
+revoke all on public.suppressions_en_cours from public, anon, authenticated;
+
+-- Les refus de la suppression, partagés par la liste des fichiers et la suppression elle-même.
+create or replace function public.exiger_suppression_possible(p_compte uuid)
+returns void
 language plpgsql
 stable
 security definer
@@ -551,18 +565,75 @@ begin
   if not public.a_domaine('roles') then
     raise exception 'Réservé au super admin.' using errcode = '42501';
   end if;
-  return jsonb_build_object(
-    'photos', (select coalesce(jsonb_agg(o.name order by o.name), '[]'::jsonb) from storage.objects o
-               where o.bucket_id = 'photos-profil' and o.name like p_compte::text || '/%'),
-    'rendus', (select coalesce(jsonb_agg(r.fichier order by r.fichier), '[]'::jsonb) from public.rendus_exercices r
-               where r.profil_id = p_compte and r.fichier is not null),
-    'messages', (select coalesce(jsonb_agg(m.fichier order by m.fichier), '[]'::jsonb)
-                 from public.messages m join public.conversations c on c.id = m.conversation_id
-                 where m.fichier is not null
-                   and (c.etudiant_id = p_compte or c.formateur_id = p_compte or (storage.foldername(m.fichier))[1] = p_compte::text))
-  );
+  if p_compte = (select auth.uid()) then
+    raise exception 'Vous ne pouvez pas supprimer votre propre compte d’ici : passez par votre profil.' using errcode = 'P0001';
+  end if;
+  if exists (select 1 from public.roles where profil_id = p_compte and role = 'super_admin') then
+    raise exception 'Un compte super admin ne se supprime pas.' using errcode = 'P0001';
+  end if;
+  if not exists (select 1 from public.profils where id = p_compte) then
+    raise exception 'Compte introuvable.' using errcode = 'P0001';
+  end if;
 end;
 $$;
+
+create or replace function public.fichiers_du_compte(p_compte uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_photos text[];
+  v_rendus text[];
+  v_messages text[];
+begin
+  perform public.exiger_suppression_possible(p_compte);
+  select coalesce(array_agg(o.name order by o.name), '{}') into v_photos from storage.objects o
+  where o.bucket_id = 'photos-profil' and o.name like p_compte::text || '/%';
+  select coalesce(array_agg(r.fichier order by r.fichier), '{}') into v_rendus from public.rendus_exercices r
+  where r.profil_id = p_compte and r.fichier is not null
+    and exists (select 1 from storage.objects o where o.bucket_id = 'rendus' and o.name = r.fichier);
+  select coalesce(array_agg(m.fichier order by m.fichier), '{}') into v_messages
+  from public.messages m join public.conversations c on c.id = m.conversation_id
+  where m.fichier is not null
+    and (c.etudiant_id = p_compte or c.formateur_id = p_compte or (storage.foldername(m.fichier))[1] = p_compte::text)
+    and exists (select 1 from storage.objects o where o.bucket_id = 'messages' and o.name = m.fichier);
+  insert into public.suppressions_en_cours (profil_id, par, fichiers)
+  values (
+    p_compte, (select auth.uid()),
+    array(select 'photos-profil/' || x from unnest(v_photos) x)
+      || array(select 'rendus/' || x from unnest(v_rendus) x)
+      || array(select 'messages/' || x from unnest(v_messages) x)
+  )
+  on conflict (profil_id) do update set par = excluded.par, fichiers = excluded.fichiers, cree_le = now();
+  return jsonb_build_object('photos', to_jsonb(v_photos), 'rendus', to_jsonb(v_rendus), 'messages', to_jsonb(v_messages));
+end;
+$$;
+
+-- Ce fichier est-il listé pour une suppression préparée par le super admin connecté ?
+create or replace function public.fichier_a_supprimer(p_espace text, p_nom text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select public.a_domaine('roles') and exists (
+    select 1 from public.suppressions_en_cours s
+    where s.par = (select auth.uid()) and (p_espace || '/' || p_nom) = any (s.fichiers)
+  );
+$$;
+
+drop policy if exists "super admin : supprimer les fichiers d'un compte" on storage.objects;
+drop policy if exists "super admin : lire les fichiers d'un compte supprimé" on storage.objects;
+create policy "super admin : lire les fichiers d'un compte supprimé" on storage.objects
+  for select to authenticated
+  using (bucket_id in ('photos-profil', 'rendus', 'messages') and (select public.fichier_a_supprimer(bucket_id, name)));
+drop policy if exists "super admin : effacer les fichiers d'un compte supprimé" on storage.objects;
+create policy "super admin : effacer les fichiers d'un compte supprimé" on storage.objects
+  for delete to authenticated
+  using (bucket_id in ('photos-profil', 'rendus', 'messages') and (select public.fichier_a_supprimer(bucket_id, name)));
 
 -- ─── Supprimer un compte (le super admin ; jamais soi-même ni un autre super admin) ─────────────────
 -- Le compte part avec tout ce que la base efface en cascade ; les paiements restent sans propriétaire et les
@@ -578,15 +649,7 @@ declare
   v_nom text;
   v_email text;
 begin
-  if not public.a_domaine('roles') then
-    raise exception 'Réservé au super admin.' using errcode = '42501';
-  end if;
-  if p_compte = (select auth.uid()) then
-    raise exception 'Vous ne pouvez pas supprimer votre propre compte d’ici : passez par votre profil.' using errcode = 'P0001';
-  end if;
-  if exists (select 1 from public.roles where profil_id = p_compte and role = 'super_admin') then
-    raise exception 'Un compte super admin ne se supprime pas.' using errcode = 'P0001';
-  end if;
+  perform public.exiger_suppression_possible(p_compte);
   if char_length(v_motif) = 0 then
     raise exception 'Indiquez le motif de la suppression.' using errcode = 'P0001';
   end if;
@@ -600,12 +663,6 @@ begin
   delete from auth.users where id = p_compte;
 end;
 $$;
-
--- Les fichiers d'un compte supprimé : le super admin les retire avec l'API de stockage, avant la suppression.
-drop policy if exists "super admin : supprimer les fichiers d'un compte" on storage.objects;
-create policy "super admin : supprimer les fichiers d'un compte" on storage.objects
-  for delete to authenticated
-  using (bucket_id in ('photos-profil', 'rendus', 'messages') and (select public.a_domaine('roles')));
 
 -- ─── Droits ─────────────────────────────────────────────────────────────────────────────────────────
 revoke execute on function public.journaliser(text, text, text, text, text, text, jsonb) from public, anon, authenticated;
@@ -635,6 +692,9 @@ grant execute on function public.lire_journal(text, uuid, integer, bigint, integ
 grant execute on function public.auteurs_journal() to authenticated;
 revoke execute on function public.renommer_compte(uuid, text, text) from public, anon;
 revoke execute on function public.fichiers_du_compte(uuid) from public, anon;
+revoke execute on function public.exiger_suppression_possible(uuid) from public, anon, authenticated;
+revoke execute on function public.fichier_a_supprimer(text, text) from public, anon;
+grant execute on function public.fichier_a_supprimer(text, text) to authenticated;
 revoke execute on function public.supprimer_compte(uuid, text) from public, anon;
 grant execute on function public.renommer_compte(uuid, text, text) to authenticated;
 grant execute on function public.fichiers_du_compte(uuid) to authenticated;
