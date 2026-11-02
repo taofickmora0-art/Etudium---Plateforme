@@ -13,7 +13,7 @@ Une capture aide beaucoup. Note aussi l'appareil (ordinateur ou téléphone) qua
 ## 0. Avant de commencer (15 minutes)
 
 - [ ] Les migrations 0063 puis 0064 appliquées (sections 62 et 63).
-- [ ] Le jeton d'envoi régénéré et recopié dans `web/.env.local` (`ENVOIS_JETON`), le serveur de dev redémarré (section 59).
+- [ ] Les envois activés : la clé Resend ou les clés VAPID dans `web/.env.local`, le serveur de dev redémarré, puis back-office › Abonnements et paiements › « Activer les envois » (migration 0071, section 59).
 - [ ] Des comptes de test, un par rôle (tu restes super admin) : un **admin**, un **modérateur**, un **formateur**, une **étudiante abonnée**, un **étudiant sans abonnement**. Les rôles se donnent dans back-office › Utilisateurs › ⋮ › « Changer le rôle ».
 - [ ] Au moins deux formations publiées dans un même parcours, avec des leçons, un quiz et un exercice ; une formation gratuite.
 - [ ] Un ordinateur **et** un téléphone (le téléphone en mode « appli installée » si possible, pour le push).
