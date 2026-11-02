@@ -8,7 +8,8 @@ import { useFavori } from "./useFavori";
 
 /**
  * Le cœur favori d'une carte du catalogue (spec du 2 novembre 2026, §4) : contour gris, ou plein et rouge comme les
- * « J'aime » de la communauté. Un vrai bouton, hors du lien de la carte : le clic n'ouvre pas la fiche.
+ * « J'aime » de la communauté. Un vrai bouton, hors du lien de la carte : le clic n'ouvre pas la fiche. Un bouton à
+ * bascule : son nom ne change pas (« Ajouter « Titre » aux favoris »), son état est dans aria-pressed.
  */
 export function CoeurFavori({ formationId, titre, favoriInitial, className }: { formationId: string; titre: string; favoriInitial: boolean; className?: string }) {
   const { favori, basculer } = useFavori(formationId, favoriInitial);
@@ -16,7 +17,7 @@ export function CoeurFavori({ formationId, titre, favoriInitial, className }: { 
     <button
       type="button"
       aria-pressed={favori}
-      aria-label={favori ? `Retirer ${titre} des favoris` : `Ajouter ${titre} aux favoris`}
+      aria-label={`Ajouter « ${titre} » aux favoris`}
       onClick={basculer}
       className={cn(
         iconButtonVariants({ variant: "contour" }),

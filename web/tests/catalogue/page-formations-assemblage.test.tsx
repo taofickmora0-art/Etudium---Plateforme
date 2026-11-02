@@ -71,7 +71,7 @@ describe("Page Formations assemblée", () => {
     const excel = screen.getByRole("link", { name: /Maîtriser Microsoft Excel/ });
     expect(within(excel).getByText("0 % terminé")).toBeInTheDocument();
     expect(within(excel).getByText("34 apprenants")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Retirer Maîtriser Microsoft Excel des favoris" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Ajouter « Maîtriser Microsoft Excel » aux favoris" })).toHaveAttribute("aria-pressed", "true");
     expect(lireSuiviDuCompte).toHaveBeenCalledTimes(1);
     expect(lireApprenants).toHaveBeenCalledTimes(1);
   });

@@ -134,9 +134,9 @@ describe("Cartes du catalogue : apprenants, inscription et favoris (spec du 2 no
     expect(within(carte(/Zotero/)).getByText("1 apprenant")).toBeInTheDocument();
     expect(within(carte(/Maîtriser Microsoft Excel/)).getByText("Voir le cours")).toBeInTheDocument();
     expect(within(carte(/Maîtriser Microsoft Excel/)).getByText("34 apprenants")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /aux favoris$|des favoris$/ })).toHaveLength(10);
-    expect(screen.getByRole("button", { name: "Retirer Maîtriser Microsoft Excel des favoris" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Ajouter Zotero : gérer ses références aux favoris" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getAllByRole("button", { name: /aux favoris$/ })).toHaveLength(10);
+    expect(screen.getByRole("button", { name: "Ajouter « Maîtriser Microsoft Excel » aux favoris" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Ajouter « Zotero : gérer ses références » aux favoris" })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("le visiteur : la même carte, « Voir le cours », sans cœur", () => {

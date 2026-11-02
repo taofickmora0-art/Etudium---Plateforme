@@ -121,8 +121,8 @@ describe("Le profil d'un formateur : ses formations", () => {
     const word = within(section).getByRole("link", { name: /Microsoft Word pour vos travaux universitaires/ });
     expect(within(word).getByText("1 module • 6 leçons")).toBeInTheDocument();
     expect(within(word).getByText("Voir le cours")).toBeInTheDocument();
-    expect(within(section).getByRole("button", { name: "Retirer Microsoft Word pour vos travaux universitaires des favoris" })).toHaveAttribute("aria-pressed", "true");
-    expect(within(section).getByRole("button", { name: "Ajouter Maîtriser Microsoft Excel aux favoris" })).toHaveAttribute("aria-pressed", "false");
+    expect(within(section).getByRole("button", { name: "Ajouter « Microsoft Word pour vos travaux universitaires » aux favoris" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(section).getByRole("button", { name: "Ajouter « Maîtriser Microsoft Excel » aux favoris" })).toHaveAttribute("aria-pressed", "false");
     // Les titres des cartes sont sous « Ses formations » ; les colonnes du catalogue connecté.
     expect(within(section).getAllByRole("heading", { level: 3 })).toHaveLength(2);
     expect(section.querySelector(".grid")?.className).toContain("(100%-80px)/5");
