@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
@@ -44,6 +45,7 @@ function Carte({ formationId, edition, surEnregistre }: { formationId: string; e
     () => ({ titre, resume, description, objectifs: objectifs.split("\n"), competences: competences.split("\n"), niveau }),
     [titre, resume, description, objectifs, competences, niveau],
   );
+  const router = useRouter();
   const sauvegarde = useSauvegardeAuto({
     cle: `formation:${formationId}`,
     valeur: saisie,
@@ -76,8 +78,16 @@ function Carte({ formationId, edition, surEnregistre }: { formationId: string; e
         <IndicateurSauvegarde etat={etat} className="ml-auto" />
       </div>
       {etat.type === "conflit" && (
-        <Banner tone="erreur" title={`Ces informations viennent d’être modifiées par ${etat.par ?? "quelqu’un d’autre"}.`}>
-          Rechargez la page pour voir sa version.
+        <Banner
+          tone="erreur"
+          title={`Ces informations viennent d’être modifiées par ${etat.par ?? "quelqu’un d’autre"}.`}
+          action={
+            <Button size="sm" variant="contour" onClick={() => router.refresh()}>
+              Recharger
+            </Button>
+          }
+        >
+          Rechargez pour voir sa version. Ce que vous venez d’écrire reste gardé sur cet appareil.
         </Banner>
       )}
       {sauvegarde.recuperation && (

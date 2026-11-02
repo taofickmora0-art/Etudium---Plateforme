@@ -13,6 +13,8 @@ vi.mock("@/lib/editeur/actions", () => ({
   publierModifications: vi.fn(),
   lireModificationsEnAttente: vi.fn(async () => ({ migrationAbsente: false, donnees: [] })),
 }));
+const { refresh } = vi.hoisted(() => ({ refresh: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
 const { enregistrerInfosFormation } = await import("@/lib/editeur/actions");
 const { InfosGenerales } = await import("@/components/editeur/InfosGenerales");
 
@@ -39,6 +41,17 @@ beforeEach(() => {
 });
 
 describe("Informations générales", () => {
+  it("point reporté du lot 4 : un conflit propose « Recharger », comme une leçon", async () => {
+    const user = userEvent.setup();
+    vi.mocked(enregistrerInfosFormation).mockResolvedValue({ ok: false, code: "conflit", par: "Aïcha Kpadé" });
+    afficher();
+    await user.type(screen.getByRole("textbox", { name: "Titre" }), " avancé");
+    await user.tab();
+    expect(await screen.findByText("Ces informations viennent d’être modifiées par Aïcha Kpadé.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Recharger" }));
+    expect(refresh).toHaveBeenCalled();
+  });
+
   it("les champs, l'indicateur ; pas de bouton Enregistrer", () => {
     afficher();
     const carte = screen.getByRole("region", { name: "Informations générales" });
