@@ -34,8 +34,10 @@ async function rpc(nom: string, args?: Record<string, unknown>): Promise<Brut | 
 }
 
 export async function lireVueEnsemble(): Promise<VueEnsemble | null> {
-  const d = await rpc("vue_ensemble_back_office");
+  const [d, c] = await Promise.all([rpc("vue_ensemble_back_office"), rpc("vue_ensemble_complements")]);
   if (!d) return null;
+  const conversion = objet(c?.conversion);
+  const renouveler = objet(c?.a_renouveler);
   const u = objet(d.utilisateurs);
   const a = objet(d.abonnes);
   const f = objet(d.formations);
@@ -62,6 +64,12 @@ export async function lireVueEnsemble(): Promise<VueEnsemble | null> {
       montant: nb(x.montant),
       statut: txt(x.statut) as StatutPaiement,
     })),
+    complements: c
+      ? {
+          conversion: { abonnes: nb(conversion.abonnes), inscrits: nb(conversion.inscrits), taux: nbOuNull(conversion.taux) },
+          aRenouveler: { total: nb(renouveler.total), renouveles: nb(renouveler.renouveles) },
+        }
+      : null,
   };
 }
 

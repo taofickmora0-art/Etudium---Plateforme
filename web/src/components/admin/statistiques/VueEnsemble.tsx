@@ -2,10 +2,12 @@ import Link from "next/link";
 import {
   Alert02Icon,
   BookOpen01Icon,
+  ChartIncreaseIcon,
   Certificate01Icon,
   Clock01Icon,
   CreditCardIcon,
   CrownIcon,
+  RepeatIcon,
   Shield01Icon,
   Target02Icon,
   UserMultipleIcon,
@@ -91,6 +93,28 @@ export function VueEnsemble({ donnees: d }: { donnees: Donnees }) {
         <Tuile icon={BookOpen01Icon} label="Formations" value={chiffre(d.formations.total)} hint={`${chiffre(d.formations.brouillons)} en brouillon`} />
         <Tuile icon={Certificate01Icon} label="Certificats" value={chiffre(d.certificats)} hint="Depuis le lancement" />
         <Tuile icon={Target02Icon} label="Taux de complétion" value={d.tauxCompletion === null ? "—" : `${d.tauxCompletion} %`} hint="Moyenne" />
+        {d.complements && (
+          <>
+            <Tuile
+              icon={ChartIncreaseIcon}
+              tone="information"
+              label="Taux de conversion"
+              value={d.complements.conversion.taux === null ? "—" : `${d.complements.conversion.taux} %`}
+              hint={`${chiffre(d.complements.conversion.abonnes)} abonné${d.complements.conversion.abonnes > 1 ? "s" : ""} sur ${chiffre(d.complements.conversion.inscrits)} inscrit${d.complements.conversion.inscrits > 1 ? "s" : ""}`}
+            />
+            <Tuile
+              icon={RepeatIcon}
+              tone="attention"
+              label="Abonnements à renouveler"
+              value={chiffre(d.complements.aRenouveler.total)}
+              hint={
+                d.complements.aRenouveler.renouveles > 0
+                  ? `Dans les 7 jours, dont ${chiffre(d.complements.aRenouveler.renouveles)} déjà renouvelé${d.complements.aRenouveler.renouveles > 1 ? "s" : ""}`
+                  : "Dans les 7 prochains jours"
+              }
+            />
+          </>
+        )}
       </div>
 
       <div className={RANGEE}>

@@ -1240,3 +1240,14 @@ Un clic sur un parcours (back-office › Parcours) ouvre sa fiche, en quatre ong
    - **Réglages** : le nom, la couleur, la description, et l'activation du parcours.
 3. **Bon à savoir** : une formation liée à la monétisation (une compétence et sa formation Business) ne change pas de parcours si ce lien n'est plus valable après. La fenêtre le dit : retire d'abord le lien dans la fiche de la formation.
 
+## 66. Deux indicateurs de plus sur le tableau de bord du back-office, 5 minutes
+
+Les deux que tu as choisis complètent la deuxième ligne, ce qui fait 8 indicateurs en tout :
+- **Taux de conversion** : la part des étudiants inscrits qui ont un abonnement en cours (« 27 abonnés sur 150 inscrits ») ;
+- **Abonnements à renouveler** : ceux qui se terminent dans les 7 prochains jours, avec combien sont déjà renouvelés.
+
+Les deux ne comptent que les comptes étudiants : l'équipe et les formateurs n'y entrent pas.
+
+1. **La migration**, dans l'éditeur SQL de Supabase, après la 0066 : `web/supabase/migrations/0067_vue_ensemble_complements.sql`.
+2. **À vérifier** : le tableau de bord du back-office montre les 8 indicateurs. Avec un compte de test abonné dont l'abonnement finit bientôt (section 56, étape 10, en reculant moins loin), « Abonnements à renouveler » le compte.
+

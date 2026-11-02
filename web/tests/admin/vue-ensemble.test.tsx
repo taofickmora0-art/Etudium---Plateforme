@@ -41,6 +41,7 @@ const VUE: Donnees = {
   },
   dernieresInscriptions: [{ id: "e1", nom: "Aïcha Kpadé", creeLe: "2026-09-12T10:00:00Z", formule: "Standard" }, { id: "e2", nom: "Sènami Dossou", creeLe: "2026-08-21T10:00:00Z", formule: null }],
   derniersPaiements: [{ id: "p2", nom: "Aïcha Kpadé", formule: "Standard", dureeMois: 3, operateur: "mtn", moyenManuel: null, montant: 15000, statut: "reussi", date: "2026-11-15T08:42:00Z" }],
+  complements: { conversion: { abonnes: 27, inscrits: 150, taux: 18 }, aRenouveler: { total: 5, renouveles: 2 } },
 };
 
 const VIDE: Donnees = {
@@ -56,6 +57,7 @@ const VIDE: Donnees = {
   aTraiter: { aExaminer: 0, paiementsEchoues: [], paiementsEnAttente: [], finsProches: [] },
   dernieresInscriptions: [],
   derniersPaiements: [],
+  complements: { conversion: { abonnes: 0, inscrits: 1, taux: 0 }, aRenouveler: { total: 0, renouveles: 0 } },
 };
 
 const PERIODE: StatistiquesPeriode = {
@@ -104,6 +106,28 @@ describe("La vue d'ensemble", () => {
     expect(within(tuile("Taux de complétion")).getByText("34 %")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /Abonnements actifs par mois/ })).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Part de la formule Standard" })).toHaveAttribute("aria-valuenow", "52");
+  });
+
+  it("les deux indicateurs de plus (0067) : le taux de conversion et les abonnements à renouveler ; sans la 0067, les six seulement", async () => {
+    const tuile = (nom: string) => screen.getByText(nom).closest("[data-tuile]") as HTMLElement;
+    const { unmount } = render(<VueEnsemble donnees={VUE} />);
+    expect(within(tuile("Taux de conversion")).getByText("18 %")).toBeInTheDocument();
+    expect(within(tuile("Taux de conversion")).getByText("27 abonnés sur 150 inscrits")).toBeInTheDocument();
+    expect(within(tuile("Abonnements à renouveler")).getByText("5")).toBeInTheDocument();
+    expect(within(tuile("Abonnements à renouveler")).getByText("Dans les 7 jours, dont 2 déjà renouvelés")).toBeInTheDocument();
+    unmount();
+    const aucun = render(<VueEnsemble donnees={{ ...VUE, complements: { conversion: { abonnes: 1, inscrits: 1, taux: 100 }, aRenouveler: { total: 3, renouveles: 0 } } }} />);
+    expect(within(tuile("Abonnements à renouveler")).getByText("Dans les 7 prochains jours")).toBeInTheDocument();
+    expect(within(tuile("Taux de conversion")).getByText("1 abonné sur 1 inscrit")).toBeInTheDocument();
+    aucun.unmount();
+    render(<VueEnsemble donnees={{ ...VUE, complements: null }} />);
+    expect(screen.queryByText("Taux de conversion")).toBeNull();
+    // La lecture : null sans la 0067.
+    faux.repondre("rpc.vue_ensemble_back_office", { data: {} });
+    faux.repondre("rpc.vue_ensemble_complements", { data: { conversion: { abonnes: 3, inscrits: 4, taux: 75 }, a_renouveler: { total: 2, renouveles: 1 } } });
+    expect((await lireVueEnsemble())?.complements).toEqual({ conversion: { abonnes: 3, inscrits: 4, taux: 75 }, aRenouveler: { total: 2, renouveles: 1 } });
+    faux.repondre("rpc.vue_ensemble_complements", { error: { code: "PGRST202" } });
+    expect((await lireVueEnsemble())?.complements).toBeNull();
   });
 
   it("à traiter, dernières inscriptions et derniers paiements, avec « Tout voir »", () => {

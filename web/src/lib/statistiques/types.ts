@@ -5,6 +5,12 @@ import type { Operateur, MoyenManuel, StatutPaiement } from "@/lib/abonnement/ty
 export type ElementPaiement = { id: string; nom: string; formule: string; operateur: Operateur | null; moyenManuel: MoyenManuel | null; date: string };
 export type FinProche = { profilId: string; nom: string; formule: string; fin: string; jours: number };
 
+/** Les deux indicateurs de plus (0067) : la conversion et les abonnements à renouveler (étudiants seulement). */
+export type ComplementsVueEnsemble = {
+  conversion: { abonnes: number; inscrits: number; taux: number | null };
+  aRenouveler: { total: number; renouveles: number };
+};
+
 export type VueEnsemble = {
   utilisateurs: { total: number; ceMois: number };
   abonnes: { actifs: number; moisPrecedent: number };
@@ -18,6 +24,8 @@ export type VueEnsemble = {
   aTraiter: { aExaminer: number; paiementsEchoues: ElementPaiement[]; paiementsEnAttente: ElementPaiement[]; finsProches: FinProche[] };
   dernieresInscriptions: { id: string; nom: string; creeLe: string; formule: string | null }[];
   derniersPaiements: (ElementPaiement & { dureeMois: number; montant: number; statut: StatutPaiement })[];
+  /** null sans la migration 0067 : les six indicateurs du design seulement. */
+  complements: ComplementsVueEnsemble | null;
 };
 
 export type JoursPeriode = 30 | 90 | 365;
