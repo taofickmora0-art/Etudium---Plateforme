@@ -113,7 +113,7 @@ describe("Migration 0057 : l'historique des versions", () => {
 
   it("restaurer : les brouillons se remplissent, l'étudiant ne voit rien changer, puis publier remet l'ancienne version", async () => {
     const v1 = (await versions()).find((v) => v.numero === 1)!;
-    expect(await restaurer(F, v1.id)).toEqual({ numero: 1, infos: true, lecons_modifiees: 2, lecons_recreees: 0 });
+    expect(await restaurer(F, v1.id)).toEqual({ numero: 1, infos: true, lecons_modifiees: 2, lecons_recreees: 0, en_ligne: true });
     expect(await vu(L1)).toEqual({ titre: "Les tableaux croisés", texte: "Version 2" });
     expect(await edition(F, L1)).toMatchObject({ brouillon: true, donnees: { titre: "Les tableaux", texte: "Texte de Les tableaux" } });
     expect(await rpc({ id: F }, "select public.edition_formation($1) as r", [FORMATION])).toMatchObject({ brouillon: true, donnees: { titre: "Excel" } });
@@ -126,7 +126,7 @@ describe("Migration 0057 : l'historique des versions", () => {
     const v6 = (await versions()).find((v) => v.numero === 6)!;
     await banc.en({ id: F }, "delete from public.lecons where id = any($1::uuid[])", [[L2, QUIZ]]);
     await banc.en({ id: F }, "delete from public.modules where id = $1", [MODULE2]);
-    expect(await restaurer(F, v6.id)).toEqual({ numero: 6, infos: false, lecons_modifiees: 0, lecons_recreees: 3 });
+    expect(await restaurer(F, v6.id)).toEqual({ numero: 6, infos: false, lecons_modifiees: 0, lecons_recreees: 3, en_ligne: true });
     const recreees = (await banc.db.query<{ titre: string; type: string; publiee: boolean; module: string; texte: string }>(
       `select l.titre, l.type, l.publiee, m.titre as module, c.texte
        from public.lecons l join public.modules m on m.id = l.module_id left join public.lecons_contenus c on c.lecon_id = l.id

@@ -23,12 +23,14 @@ export function dateHeureVersion(iso: string): string {
 const nombre = (n: number, singulier: string, pluriel: string) => `${n} ${n > 1 ? pluriel : singulier}`;
 
 /** Le message après une restauration : ce qui revient dans le brouillon. */
-export function messageRestauration(r: { numero: number; infos: boolean; leconsModifiees: number; leconsRecreees: number }): string {
+/** `enLigne` faux : une formation pas encore en ligne n'a pas de brouillon, la restauration s'est écrite directement. */
+export function messageRestauration(r: { numero: number; infos: boolean; leconsModifiees: number; leconsRecreees: number; enLigne?: boolean }): string {
   const parties = [
     r.infos && "informations générales",
     r.leconsModifiees > 0 && nombre(r.leconsModifiees, "leçon modifiée", "leçons modifiées"),
     r.leconsRecreees > 0 && nombre(r.leconsRecreees, "leçon recréée (non publiée)", "leçons recréées (non publiées)"),
   ].filter(Boolean);
   if (parties.length === 0) return `La version ${r.numero} est déjà le contenu actuel : rien à restaurer.`;
+  if (r.enLigne === false) return `Version ${r.numero} restaurée : ${parties.join(", ")}.`;
   return `Version ${r.numero} restaurée dans le brouillon : ${parties.join(", ")}. Relisez, puis publiez.`;
 }

@@ -83,6 +83,10 @@ describe("Les libellés", () => {
     expect(messageRestauration({ numero: 2, infos: true, leconsModifiees: 1, leconsRecreees: 0 })).toBe(
       "Version 2 restaurée dans le brouillon : informations générales, 1 leçon modifiée. Relisez, puis publiez.",
     );
+    // Point reporté du lot 4 : une formation pas encore en ligne n'a pas de brouillon, la restauration s'écrit directement.
+    expect(messageRestauration({ numero: 2, infos: true, leconsModifiees: 1, leconsRecreees: 0, enLigne: false })).toBe(
+      "Version 2 restaurée : informations générales, 1 leçon modifiée.",
+    );
     expect(messageRestauration({ numero: 3, infos: false, leconsModifiees: 0, leconsRecreees: 2 })).toBe(
       "Version 3 restaurée dans le brouillon : 2 leçons recréées (non publiées). Relisez, puis publiez.",
     );

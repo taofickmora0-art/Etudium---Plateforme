@@ -341,7 +341,9 @@ begin
     end loop;
   end loop;
 
-  return jsonb_build_object('numero', v.numero, 'infos', v_infos, 'lecons_modifiees', v_modifiees, 'lecons_recreees', v_recreees);
+  return jsonb_build_object('numero', v.numero, 'infos', v_infos, 'lecons_modifiees', v_modifiees, 'lecons_recreees', v_recreees,
+    -- En ligne : ce qui est visible est passé par le brouillon (à publier) ; sinon, tout s'est écrit directement.
+    'en_ligne', exists (select 1 from public.formations f where f.id = v.formation_id and f.statut <> 'brouillon'));
 end;
 $$;
 

@@ -162,6 +162,7 @@ export async function restaurerVersion(versionId: string): Promise<Resultat> {
         infos: r.infos === true,
         leconsModifiees: Number(r.lecons_modifiees ?? 0),
         leconsRecreees: Number(r.lecons_recreees ?? 0),
+        enLigne: r.en_ligne !== false,
       }),
     };
   } catch {

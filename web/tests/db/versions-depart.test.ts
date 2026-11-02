@@ -17,4 +17,15 @@ describe("Migration 0057 : la version de départ", () => {
     await banc.appliquer("supabase/migrations/0057_versions_formations.sql");
     expect(await versions()).toHaveLength(1);
   });
+
+  it("restaurer dit si la formation est en ligne (la restauration passe alors par le brouillon)", async () => {
+    const banc = await creerBanc(migrationsJusqua("0057"));
+    const S = randomUUID();
+    await banc.creerCompte(S, ["super_admin"]);
+    const formation = (await banc.db.query<{ id: string }>("insert into public.formations (titre, slug) values ('Excel', $1) returning id", [randomUUID()])).rows[0].id;
+    await banc.en({ id: S }, "update public.formations set statut = 'publiee' where id = $1", [formation]);
+    const version = (await banc.db.query<{ id: string }>("select id from public.versions_formations where formation_id = $1", [formation])).rows[0].id;
+    const r = (await banc.en<{ r: { en_ligne: boolean } }>({ id: S }, "select public.restaurer_version($1) as r", [version]))[0].r;
+    expect(r.en_ligne).toBe(true);
+  });
 });
