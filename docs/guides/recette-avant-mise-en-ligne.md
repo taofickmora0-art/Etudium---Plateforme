@@ -105,6 +105,21 @@ Une capture aide beaucoup. Note aussi l'appareil (ordinateur ou téléphone) qua
 - [ ] Publier dans la communauté depuis le téléphone (photo).
 - [ ] Le push : l'allumer, recevoir une notification, toucher la notification ouvre la bonne page.
 
+## 7 bis. Inscription, catalogue et formateurs (ajouts du 2 novembre 2026), 20 minutes
+
+À faire après avoir appliqué les migrations 0068, 0069 et 0070, puis lancé `retirer-lot-1.sql` (guide « Ce qui te revient », sections 67 à 70).
+
+- [ ] Catalogue : chaque carte montre « N modules • N leçons », « N apprenants », le résumé, puis « Voir le cours » (ou « N % terminé » si tu es inscrit) ; le titre tient sur deux lignes.
+- [ ] Cœur d'une carte : il devient rouge et plein ; la formation apparaît dans Favoris ; un second clic la retire.
+- [ ] Fiche d'une formation : les leçons ont un cadenas (sauf les aperçus) ; « S'inscrire à ce cours », puis « Inscription confirmée. » : les cadenas tombent, le bouton devient « Commencer le cours », la formation apparaît dans « Mes formations » et dans « Continuer l'apprentissage ».
+- [ ] Sans abonnement, sur une formation payante : le bouton dit « Voir les abonnements ».
+- [ ] « Formateur du cours » : photo ou initiales, « N formations », présentation, réseaux ; au survol du nom : « Voir le profil » et « Message » (si tu es inscrit à une de ses formations).
+- [ ] « Message » ouvre la conversation dans Messages ; dans « Nouveau message », « Rechercher un formateur » ne propose que les formateurs de tes formations.
+- [ ] Page d'un formateur (`/formateurs/…`) : son profil et ses formations.
+- [ ] Ouvrir une leçon : la page est comme avant, sans bloc formateur.
+- [ ] Avec ton compte admin : pas de bouton « S'inscrire » (tout t'est ouvert).
+- [ ] Les formations d'exemple ont disparu du catalogue ; les trois parcours sont toujours là.
+
 ## 8. Après la recette
 
 Envoie-moi tes remarques au fil de l'eau ou d'un coup. Je les corrige une par une, et chaque correction te dit quoi revérifier. Ensuite : la mise en ligne.
