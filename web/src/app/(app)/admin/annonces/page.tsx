@@ -14,7 +14,7 @@ async function Annonces() {
 /** Annonces (spec des notifications, §3) : réservée à l'équipe, rien n'est rendu avant la vérification du rôle. */
 export default function Page() {
   return (
-    <Suspense fallback={<Skeleton className="h-60 max-w-[960px] rounded-carte" />}>
+    <Suspense fallback={<Skeleton className="h-60 rounded-carte" />}>
       <Annonces />
     </Suspense>
   );

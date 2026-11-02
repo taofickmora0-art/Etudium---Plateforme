@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { connection } from "next/server";
+import { AlarmClockIcon, ArrowRight01Icon, AssignmentsIcon, BookOpen01Icon, HourglassIcon } from "@hugeicons/core-free-icons";
 import { PageAdmin } from "@/components/admin/PageAdmin";
 import { RACINE_FORMATEUR } from "@/components/formateur/cadre";
+import { GRILLE_CHIFFRES, Tuile } from "@/components/tableau/Blocs";
 import { Banner } from "@/components/ui/Banner";
 import { buttonVariants } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
+import { chiffresCorrections } from "@/lib/admin/chiffres-pages";
 import { lireCorrections, lireRenduACorriger, MIGRATION_EXERCICES } from "@/lib/exercices/data";
+import type { CorrectionAFaire } from "@/lib/exercices/types";
 import { CorrectionRendu } from "./CorrectionRendu";
 import { ListeCorrections } from "./ListeCorrections";
 
@@ -14,6 +18,22 @@ type Espace = "formateur" | "admin";
 
 const BASES = { formateur: "/formateur/corrections", admin: "/admin/corrections" } as const;
 const RACINES = { formateur: RACINE_FORMATEUR, admin: { label: "Back-office", href: "/admin" } };
+
+const jours = (n: number) => `${n} ${n > 1 ? "jours" : "jour"}`;
+
+/** Les chiffres clés de l'équipe (demande du 2 novembre 2026 : le style de l'espace étudiant) ; l'espace formateur garde sa planche. */
+async function ChiffresCorrections({ corrections }: { corrections: CorrectionAFaire[] }) {
+  await connection(); // la date du jour, à chaque visite
+  const c = chiffresCorrections(corrections, new Date());
+  return (
+    <div className={GRILLE_CHIFFRES}>
+      <Tuile icon={AssignmentsIcon} tone="information" label="À corriger" value={c.aCorriger.toLocaleString("fr-FR")} />
+      <Tuile icon={AlarmClockIcon} tone="attention" label="En attente depuis plus de 7 jours" value={c.enRetard.toLocaleString("fr-FR")} />
+      <Tuile icon={BookOpen01Icon} label="Formations concernées" value={c.formations.toLocaleString("fr-FR")} />
+      <Tuile icon={HourglassIcon} label="Plus ancien dépôt" value={c.plusAncienJours === null ? "—" : jours(c.plusAncienJours)} />
+    </div>
+  );
+}
 
 /**
  * La page « Corrections » (lot 3, spec §3) : les travaux en attente des formations du formateur, ou de toutes les
@@ -33,7 +53,10 @@ export async function PageCorrections({ espace }: { espace: Espace }) {
           {MIGRATION_EXERCICES}
         </Banner>
       ) : (
-        <ListeCorrections corrections={lecture.donnees} base={BASES[espace]} />
+        <div className="flex min-w-0 flex-col gap-6">
+          {espace === "admin" && <ChiffresCorrections corrections={lecture.donnees} />}
+          <ListeCorrections corrections={lecture.donnees} base={BASES[espace]} />
+        </div>
       )}
     </PageAdmin>
   );

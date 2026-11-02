@@ -14,7 +14,7 @@ async function Contenu() {
 /** Les travaux à corriger (lot 3, étape B) : réservée à l'espace, rien n'est rendu avant la vérification. */
 export default function Page() {
   return (
-    <Suspense fallback={<Skeleton className="h-60 max-w-[960px] rounded-carte" />}>
+    <Suspense fallback={<Skeleton className="h-60 rounded-carte" />}>
       <Contenu />
     </Suspense>
   );

@@ -1261,3 +1261,7 @@ Les deux pages prennent le style de l'espace étudiant :
 2. **À vérifier** :
    - back-office › Formations : les chiffres du haut et ceux des cartes correspondent à tes formations de test ; le filtre par statut garde les chiffres du haut ;
    - back-office › Formateurs : un formateur dont la fiche est reliée à un compte affiche « Compte relié » ; la note moyenne tient compte du nombre d'avis de chaque formation.
+3. **Sans migration**, trois autres pages ont aussi leurs chiffres en haut :
+   - **Avis** : la note moyenne et le nombre des avis visibles, les nouveaux sur 30 jours, les masqués ; puis un filtre (tous, visibles, masqués, notes basses) et les avis sur deux colonnes. Masquer un avis met les chiffres à jour tout de suite ;
+   - **Corrections** : les travaux à corriger, ceux qui attendent depuis plus de 7 jours, les formations concernées et le plus ancien dépôt (l'espace formateur, lui, garde sa planche du design) ;
+   - **Annonces** : les annonces envoyées, celles des 30 derniers jours, la date de la dernière et le nombre de comptes qu'elle a touchés.

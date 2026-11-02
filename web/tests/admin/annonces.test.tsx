@@ -11,6 +11,7 @@ import { lireAnnonces } from "@/lib/notifications/data";
 
 vi.mock("@/lib/notifications/actions", () => ({ publierAnnonce: vi.fn() }));
 vi.mock("@/lib/notifications/data", () => ({ lireAnnonces: vi.fn() }));
+vi.mock("next/server", () => ({ connection: async () => {} }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }), usePathname: () => "/admin/annonces" }));
 
 const LIEN_REFUSE = "Le lien doit être une adresse du site, commençant par « / ».";
@@ -93,11 +94,17 @@ describe("La rubrique", () => {
     expect(screen.getByText("Envoyez une notification à tous les comptes d’Étudium.")).toBeInTheDocument();
     const ligne = within(screen.getByRole("table", { name: "Annonces envoyées" })).getAllByRole("row")[1];
     expect(within(ligne).getAllByRole("cell").map((c) => c.textContent)).toEqual(["14 oct. 2026 à 14 h 05", "Nouveautés d’octobre", "Aïcha Kpadé", "12"]);
+    // Les chiffres du haut (demande du 2 novembre 2026).
+    const tuile = (nom: string) => screen.getByText(nom).closest("[data-tuile]")?.textContent;
+    expect(tuile("Annonces au total")).toBe("Annonces au total1");
+    expect(tuile("Dernière annonce")).toBe("Dernière annonce14 oct. 2026Nouveautés d’octobre");
+    expect(tuile("Comptes touchés")).toBe("Comptes touchés12par la dernière annonce");
     unmount();
 
     vi.mocked(lireAnnonces).mockResolvedValue({ migrationAbsente: false, donnees: [] });
     render(await PageAnnonces());
     expect(screen.getByText("Aucune annonce envoyée.")).toBeInTheDocument();
+    expect(screen.getByText("Dernière annonce").closest("[data-tuile]")?.textContent).toBe("Dernière annonce—");
   });
 
   it("avant la 0016 : le bandeau, sans formulaire", async () => {
