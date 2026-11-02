@@ -15,6 +15,7 @@ vi.mock("@/lib/sessions/actions", () => ({ sinscrire }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 
 const { TableauDeBord } = await import("@/components/tableau-de-bord/TableauDeBord");
+const { LIEN } = await import("@/components/tableau-de-bord/Blocs");
 
 const MAINTENANT = "2026-11-04T15:00:00Z";
 const carte = (id: string, titre: string): CarteCatalogue => ({
@@ -140,6 +141,16 @@ describe("Le tableau de bord", () => {
     await userEvent.click(within(session).getByRole("button", { name: "Je m’inscris à la session" }));
     expect(sinscrire).toHaveBeenCalledWith("s1");
     expect(await within(session).findByText("Inscription confirmée")).toBeInTheDocument();
+  });
+
+  it("une session programmée : « Voir les événements » sous la session, le même lien simple que sans session", () => {
+    render(<TableauDeBord donnees={PLEIN} />);
+    const lien = within(section("Prochaine session")).getByRole("link", { name: "Voir les événements" });
+    expect(lien).toHaveAttribute("href", "/evenements");
+    expect(lien.className).toBe(LIEN);
+    // Sous la session : après son bouton d'inscription.
+    const bouton = within(section("Prochaine session")).getByRole("button", { name: "Je m’inscris à la session" });
+    expect(bouton.compareDocumentPosition(lien) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("l'inscription refusée : le message de la base s'affiche", async () => {

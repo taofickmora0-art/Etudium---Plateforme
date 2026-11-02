@@ -48,7 +48,12 @@ export function TableauDeBord({ donnees: d, bandeau }: { donnees: DonneesTableau
               <Section titre="Prochaine session">
                 <div className="box-border flex min-w-0 flex-col rounded-carte border border-bordure-carte bg-panneau px-[19px] pt-[22px] pb-[17px] max-sm:px-4 max-sm:pt-[18px]">
                   {d.session ? (
-                    <ProchaineSessionBloc session={d.session} />
+                    <div className="flex flex-col gap-4">
+                      <ProchaineSessionBloc session={d.session} />
+                      <Link href="/evenements" className={LIEN}>
+                        Voir les événements
+                      </Link>
+                    </div>
                   ) : (
                     <div className="flex flex-col gap-2">
                       <p className="m-0 text-sm leading-[22px] text-discret">Aucune session programmée pour l’instant.</p>
