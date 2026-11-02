@@ -14,7 +14,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-const { saveParcours, saveFormateur, deplacer, rangerParcours } = await import("@/lib/admin/actions");
+const { saveParcours, saveFormateur, deplacer, rangerParcours, rangerFormationParcours, changerParcoursFormation, ajouterFormationParcours } = await import("@/lib/admin/actions");
 const { IDLE } = await import("@/lib/auth/schemas");
 
 const form = (valeurs: Record<string, string>) => {
@@ -105,6 +105,25 @@ describe("Back-office : garde de l'équipe, parcours et formateurs", () => {
     getShellUser.mockResolvedValue(compte(["etudiant", "formateur"]));
     expect((await rangerParcours(P1, 2)).ok).toBe(false);
     expect((await rangerParcours("pas-un-uuid", 1)).ok).toBe(false);
+  });
+
+  it("la fiche d'un parcours : ranger, changer de parcours, ajouter une formation (0066)", async () => {
+    const [P1, P2, F] = ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222", "33333333-3333-4333-8333-333333333333"];
+    expect(await rangerFormationParcours(P1, F, 2)).toEqual({ ok: true });
+    expect(faux.de("rpc", "ranger_formation_parcours")[0].valeurs).toEqual({ p_parcours: P1, p_formation: F, p_position: 2 });
+    expect(await changerParcoursFormation(F, P1, P2)).toEqual({ ok: true });
+    expect(faux.de("rpc", "changer_parcours_formation")[0].valeurs).toEqual({ p_formation: F, p_depuis: P1, p_vers: P2 });
+    expect(await ajouterFormationParcours(P2, F)).toEqual({ ok: true });
+    expect(faux.de("rpc", "ajouter_formation_parcours")[0].valeurs).toEqual({ p_parcours: P2, p_formation: F });
+    expect(refresh).toHaveBeenCalled();
+    // Le refus de la base est rendu tel quel ; sans la 0066, on le dit.
+    faux.repondre("rpc.changer_parcours_formation", { error: { code: "P0001", message: "Cette formation est liée à la monétisation : retirez d'abord ce lien dans sa fiche." } });
+    expect(await changerParcoursFormation(F, P1, P2)).toEqual({ ok: false, message: "Cette formation est liée à la monétisation : retirez d’abord ce lien dans sa fiche." });
+    faux.repondre("rpc.ajouter_formation_parcours", { error: { code: "PGRST202" } });
+    expect(await ajouterFormationParcours(P2, F)).toEqual({ ok: false, message: "Appliquez la migration 0066 (guide « Ce qui te revient », section 65)." });
+    expect((await rangerFormationParcours("x", F, 1)).ok).toBe(false);
+    getShellUser.mockResolvedValue(compte(["etudiant", "formateur"]));
+    expect((await ajouterFormationParcours(P2, F)).ok).toBe(false);
   });
 
   it("déplacer appelle la fonction de la base", async () => {

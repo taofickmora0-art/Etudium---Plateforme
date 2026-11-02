@@ -173,6 +173,44 @@ export async function rangerParcours(id: string, position: number): Promise<{ ok
   return { ok: true };
 }
 
+const MIGRATION_FICHE_PARCOURS = "Appliquez la migration 0066 (guide « Ce qui te revient », section 65).";
+
+/** Une action de la fiche d'un parcours (0066) : l'équipe seulement ; le refus de la base est rendu tel quel. */
+async function actionFicheParcours(fonction: string, args: Record<string, unknown>): Promise<{ ok: boolean; message?: string }> {
+  try {
+    const garde = await exigerEditeur();
+    if ("erreur" in garde) return { ok: false, message: garde.erreur };
+    if (!garde.equipe) return { ok: false, message: ACCES_EQUIPE };
+    const { error } = await garde.supabase.rpc(fonction, args);
+    if (error) {
+      if (estFonctionAbsente(error)) return { ok: false, message: MIGRATION_FICHE_PARCOURS };
+      return { ok: false, message: error.code === "P0001" && error.message ? typographie(error.message) : DEPLACEMENT_ECHOUE };
+    }
+  } catch {
+    return { ok: false, message: DEPLACEMENT_ECHOUE };
+  }
+  refresh();
+  return { ok: true };
+}
+
+/** Range une formation à un rang de son parcours (glisser-déposer de la fiche du parcours). */
+export async function rangerFormationParcours(parcours: string, formation: string, position: number): Promise<{ ok: boolean; message?: string }> {
+  if (!estUuid(parcours) || !estUuid(formation) || !Number.isInteger(position) || position < 1) return { ok: false, message: DEPLACEMENT_ECHOUE };
+  return actionFicheParcours("ranger_formation_parcours", { p_parcours: parcours, p_formation: formation, p_position: position });
+}
+
+/** Fait passer une formation d'un parcours à un autre (en fin du parcours d'arrivée). */
+export async function changerParcoursFormation(formation: string, depuis: string, vers: string): Promise<{ ok: boolean; message?: string }> {
+  if (![formation, depuis, vers].every(estUuid)) return { ok: false, message: DEPLACEMENT_ECHOUE };
+  return actionFicheParcours("changer_parcours_formation", { p_formation: formation, p_depuis: depuis, p_vers: vers });
+}
+
+/** Ajoute une formation existante au parcours, en fin. */
+export async function ajouterFormationParcours(parcours: string, formation: string): Promise<{ ok: boolean; message?: string }> {
+  if (!estUuid(parcours) || !estUuid(formation)) return { ok: false, message: DEPLACEMENT_ECHOUE };
+  return actionFicheParcours("ajouter_formation_parcours", { p_parcours: parcours, p_formation: formation });
+}
+
 /**
  * Range une section ou une leçon à un rang (1 = en tête), une leçon pouvant changer de section dans sa formation
  * (fonction ranger de la migration 0027 : glisser-déposer et « Déplacer vers… » de l'onglet Leçons).

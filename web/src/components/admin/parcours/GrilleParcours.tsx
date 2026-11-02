@@ -35,11 +35,22 @@ const COULEURS: Record<CouleurParcours, { fond: string; texte: string; barre: st
   business: { fond: "bg-business-fond", texte: "text-business-texte", barre: "bg-business-vif", icone: Briefcase01Icon },
 };
 
-function Chiffre({ valeur, mot }: { valeur: number; mot: string }) {
+/** Un chiffre de la carte ; avec une adresse, un lien vers l'onglet de la fiche du parcours. */
+function Chiffre({ valeur, mot, href }: { valeur: number; mot: string; href?: string }) {
   const [nombre, ...reste] = compter(valeur, mot).split(" ");
-  return (
-    <span data-testid="chiffre-parcours" className="flex min-w-0 items-baseline gap-1 text-[13px] leading-5 text-discret">
+  const contenu = (
+    <>
       <span className="text-base leading-6 font-semibold text-encre">{nombre}</span> {reste.join(" ")}
+    </>
+  );
+  const classes = "flex min-w-0 items-baseline gap-1 text-[13px] leading-5 text-discret";
+  return href ? (
+    <Link data-testid="chiffre-parcours" href={href} className={`focus-etudium ${classes} no-underline hover:underline`}>
+      {contenu}
+    </Link>
+  ) : (
+    <span data-testid="chiffre-parcours" className={classes}>
+      {contenu}
     </span>
   );
 }
@@ -86,8 +97,8 @@ function CarteParcours({ parcours: p, rang, chiffres, totalApprenants }: { parco
       {chiffres && (
         <>
           <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-            <Chiffre valeur={chiffres.formationsPubliees} mot="formation" />
-            <Chiffre valeur={chiffres.apprenants} mot="apprenant" />
+            <Chiffre valeur={chiffres.formationsPubliees} mot="formation" href={`/admin/parcours/${p.id}?onglet=formations`} />
+            <Chiffre valeur={chiffres.apprenants} mot="apprenant" href={`/admin/parcours/${p.id}?onglet=apprenants`} />
             <Chiffre valeur={chiffres.certificats} mot="certificat" />
             <Chiffre valeur={chiffres.formationsBrouillons} mot="brouillon" />
           </div>

@@ -10,7 +10,7 @@ import { signerImages } from "@/lib/lecon/images";
 import { versEtatEdition, versSaisieInfos, versSaisieLecon } from "@/lib/editeur/saisie";
 import { estFonctionAbsente, estTablesAbsentes, lireAvecRepli, liste, parOrdre, TablesAbsentesError, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
-import { versStatistiquesParcours, type StatistiquesParcours } from "./parcours-chiffres";
+import { versFicheParcours, versStatistiquesParcours, type FicheParcoursDonnees, type StatistiquesParcours } from "./parcours-chiffres";
 import type {
   FormateurAdmin,
   FormationAdmin,
@@ -107,6 +107,17 @@ export async function lireStatistiquesParcours(): Promise<StatistiquesParcours |
     throw new Error(`Lecture des chiffres des parcours impossible (${error.code ?? "?"}).`);
   }
   return versStatistiquesParcours(data);
+}
+
+/** La fiche d'un parcours (0066) ; null en démonstration ou sans la migration (la page le dit). */
+export async function lireFicheParcours(id: string): Promise<FicheParcoursDonnees | null> {
+  if (demoModeActive() || !estUuid(id)) return null;
+  const { data, error } = await (await createClient()).rpc("parcours_detail_back_office", { p_parcours: id });
+  if (error) {
+    if (estFonctionAbsente(error)) return null;
+    throw new Error(`Lecture de la fiche du parcours impossible (${error.code ?? "?"}).`);
+  }
+  return data ? versFicheParcours(data) : null;
 }
 
 export async function getParcours(id: string): Promise<ParcoursAdmin | null> {

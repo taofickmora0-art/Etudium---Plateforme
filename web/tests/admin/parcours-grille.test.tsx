@@ -58,6 +58,9 @@ describe("La grille des parcours", () => {
     expect(premiere.getAllByTestId("chiffre-parcours").map((c) => c.textContent)).toEqual(["8 formations", "200 apprenants", "54 certificats", "2 brouillons"]);
     expect(premiere.getByRole("progressbar", { name: "Part des apprenants de Réussite académique" })).toHaveAttribute("aria-valuenow", "50");
     expect(premiere.getByText("50 % des apprenants")).toBeInTheDocument();
+    // Les formations et les apprenants mènent à leur onglet de la fiche du parcours.
+    expect(premiere.getByRole("link", { name: "8 formations" })).toHaveAttribute("href", "/admin/parcours/p1?onglet=formations");
+    expect(premiere.getByRole("link", { name: "200 apprenants" })).toHaveAttribute("href", "/admin/parcours/p1?onglet=apprenants");
     expect(within(cartes[1]).getAllByTestId("chiffre-parcours").map((c) => c.textContent)).toEqual(["1 formation", "1 apprenant", "0 certificat", "0 brouillon"]);
   });
 

@@ -1232,3 +1232,18 @@ La page Parcours a maintenant ses chiffres (l'option A que tu as choisie) : en h
    - fais glisser une carte (poignée en haut à droite, ou au clavier : Tab jusqu'à la poignée, Espace, flèches, Espace) : l'ordre change, et le catalogue suit ;
    - un clic sur le nom ouvre la modification du parcours.
 
+## 65. La fiche d'un parcours : ses formations et ses apprenants, 10 minutes
+
+Un clic sur un parcours (back-office › Parcours) ouvre sa fiche, en quatre onglets. Sur chaque carte, « N formations » et « N apprenants » mènent directement au bon onglet.
+
+1. **La migration**, dans l'éditeur SQL de Supabase, après la 0065 : `web/supabase/migrations/0066_parcours_fiche.sql`.
+2. **À vérifier :**
+   - **Vue d'ensemble** : les formations publiées et en brouillon, les apprenants, les certificats, les sessions live à venir, les publications des 30 derniers jours, et les prochaines sessions du parcours ;
+   - **Formations** :
+     - elles s'affichent dans l'ordre du parcours ; fais-en glisser une pour changer cet ordre (le catalogue suit) ;
+     - le menu ⋮ › « Changer de parcours… » : choisis l'autre parcours, puis confirme. La formation quitte celui-ci et se range à la fin de l'autre ;
+     - « Ajouter une formation » : une formation existante entre aussi dans ce parcours, à la fin ;
+   - **Apprenants** : les étudiants qui ont commencé une formation du parcours, le plus récemment actif d'abord ; un clic ouvre leur fiche ;
+   - **Réglages** : le nom, la couleur, la description, et l'activation du parcours.
+3. **Bon à savoir** : une formation liée à la monétisation (une compétence et sa formation Business) ne change pas de parcours si ce lien n'est plus valable après. La fenêtre le dit : retire d'abord le lien dans la fiche de la formation.
+
