@@ -57,5 +57,7 @@ export type DonneesTableau = {
   recommandees: CarteCatalogue[];
   /** « Vous avez terminé « X ». Découvrez maintenant « Y ». », s'il y en a un. */
   messageSuite: string | null;
+  /** Le catalogue est vide : « rien de publié », pas « tout commencé ». */
+  aucunePubliee: boolean;
   maintenant: string;
 };

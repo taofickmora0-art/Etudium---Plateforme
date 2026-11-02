@@ -43,7 +43,7 @@ export function CarteGamification({ jeu }: { jeu: ProgressionJeu }) {
           ))}
         </ul>
       ) : (
-        <p className="m-0 mt-3 text-[13px] leading-5 text-pretty text-texte">Terminez une première leçon pour obtenir « Premier pas ».</p>
+        <p className="m-0 mt-3 text-[13px] leading-5 text-pretty text-texte">Terminez une leçon pour obtenir « Premier pas ».</p>
       )}
     </section>
   );

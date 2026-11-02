@@ -69,7 +69,9 @@ export function TableauDeBord({ donnees: d, bandeau }: { donnees: DonneesTableau
             </div>
           ) : (
             <div className="box-border flex min-w-0 flex-col items-start gap-3 rounded-carte border border-bordure-carte bg-panneau px-[19px] py-5">
-              <p className="m-0 text-sm leading-[22px] text-texte">Vous avez déjà commencé toutes les formations disponibles.</p>
+              <p className="m-0 text-sm leading-[22px] text-texte">
+                {d.aucunePubliee ? "Aucune formation n’est encore publiée." : "Vous avez déjà commencé toutes les formations disponibles."}
+              </p>
               <Button variant="contour" asChild>
                 <Link href="/formations">Voir le catalogue</Link>
               </Button>

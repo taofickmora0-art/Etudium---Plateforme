@@ -39,6 +39,9 @@ export async function lireTableauDeBord(): Promise<DonneesTableau> {
   const recommandees = base
     ? base.recommandations.flatMap((r) => parId.get(r.id) ?? [])
     : cartes.filter((c) => !commencees.includes(c.id)).slice(0, 3);
+  const affichees = recommandees.slice(0, 3);
+  // Le message de suite ne parle que d'une formation dont la carte est affichée.
+  const suite = base?.recommandations.find((r) => r.message && affichees.some((c) => c.id === r.id));
   return {
     prenom: user?.prenom ?? "",
     indicateurs: indicateurs(suivies, lignes ?? [], maintenant),
@@ -46,8 +49,9 @@ export async function lireTableauDeBord(): Promise<DonneesTableau> {
     aFaire: aFaire(base?.aFaire ?? [], suivies),
     base,
     session: session.migrationAbsente ? undefined : session.donnees,
-    recommandees: recommandees.slice(0, 3),
-    messageSuite: base?.recommandations.find((r) => r.message)?.message ?? null,
+    recommandees: affichees,
+    messageSuite: suite?.message ?? null,
+    aucunePubliee: cartes.length === 0,
     maintenant: maintenant.toISOString(),
   };
 }

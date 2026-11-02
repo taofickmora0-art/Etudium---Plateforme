@@ -80,6 +80,7 @@ const PLEIN: DonneesTableau = {
   session: SESSION,
   recommandees: [carte("r1", "Méthodologie du mémoire"), carte("r2", "L’intelligence artificielle au service de vos études"), carte("r3", "Lancer son activité de freelance")],
   messageSuite: "Vous avez terminé « Zotero ». Découvrez maintenant « Méthodologie du mémoire ».",
+  aucunePubliee: false,
   maintenant: MAINTENANT,
 };
 const VIDE: DonneesTableau = {
@@ -205,6 +206,13 @@ describe("Le tableau de bord", () => {
     const recos = section("Recommandé pour vous");
     expect(within(recos).getByText("Vous avez déjà commencé toutes les formations disponibles.")).toBeInTheDocument();
     expect(within(recos).getByRole("link", { name: "Voir le catalogue" })).toHaveAttribute("href", "/formations");
+  });
+
+  it("aucune formation publiée : on le dit, sans prétendre qu'il a tout commencé", () => {
+    render(<TableauDeBord donnees={{ ...VIDE, recommandees: [], aucunePubliee: true }} />);
+    const recos = section("Recommandé pour vous");
+    expect(within(recos).getByText("Aucune formation n’est encore publiée.")).toBeInTheDocument();
+    expect(within(recos).queryByText("Vous avez déjà commencé toutes les formations disponibles.")).toBeNull();
   });
 
   it("migration 0063 absente : le bandeau, et la page tient (sans objectif ni activité)", () => {

@@ -5,6 +5,8 @@ import { versEtatAbonnement } from "@/lib/abonnement/conversion";
 import { formuleDuCompte } from "@/lib/abonnement/regles";
 import type { Role } from "@/lib/auth/permissions";
 import { DEMO_USER } from "@/lib/demo-user";
+import { estFonctionAbsente } from "@/lib/contenus/lecture";
+import { lireJeuBrut } from "@/lib/engagement/lecture";
 import { versProgressionJeu } from "@/lib/engagement/regles";
 import { getPublicEnv } from "@/lib/env";
 import { photoPublicUrl } from "@/lib/profile/photo-url";
@@ -93,7 +95,7 @@ export const getShellUser = cache(async (): Promise<ShellUser | null> => {
     estSuspendu(supabase),
     // La formule de l'abonnement en cours (0049) ; sans la migration, « Gratuite ».
     supabase.rpc("mon_abonnement"),
-    supabase.rpc("ma_progression_jeu"),
+    lireJeuBrut(),
   ]);
   // Compte suspendu : déconnecté par la route dédiée (une page n'écrit pas de cookies), message sur la connexion.
   if (suspendu) redirect(ADRESSE_SUSPENDU);
@@ -104,6 +106,8 @@ export const getShellUser = cache(async (): Promise<ShellUser | null> => {
   const email = chaine(user.email);
   const lus = new Set(((roles.data as { role: Role }[] | null) ?? []).map((r) => r.role));
   const tries = ORDRE_DES_ROLES.filter((r) => lus.has(r));
+  // L'en-tête ne casse jamais une page : 0 si la lecture échoue ; une panne (pas une migration absente) laisse une trace.
+  if (progression.error && !estFonctionAbsente(progression.error)) console.error("Lecture de ma_progression_jeu impossible pour l'en-tête :", progression.error);
   const jeu = versProgressionJeu(progression.error ? null : progression.data);
 
   return {

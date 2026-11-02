@@ -53,6 +53,16 @@ describe("La lecture du tableau de bord", () => {
     expect((await lireTableauDeBord()).maintenant).toBe("2026-11-05T10:00:00.000Z");
   });
 
+  it("le message de suite seulement avec la carte qu'il annonce ; « rien de publié » distinct de « tout commencé »", async () => {
+    faux.repondre("rpc.mon_tableau_de_bord", {
+      data: { recommandations: [{ id: "absente", slug: "s-x", titre: "x", motif: "suite", message: "Vous avez terminé « Word ». Découvrez maintenant « x »." }] },
+    });
+    const d = await lireTableauDeBord();
+    expect(d.recommandees).toEqual([]);
+    expect(d.messageSuite).toBeNull();
+    expect(d.aucunePubliee).toBe(false);
+  });
+
   it("sans la 0063 : pas de base, et les premières formations pas encore commencées", async () => {
     faux.repondre("rpc.mon_tableau_de_bord", { error: { code: "PGRST202" } });
     const d = await lireTableauDeBord();

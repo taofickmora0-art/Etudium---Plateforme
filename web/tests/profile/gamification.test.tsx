@@ -30,7 +30,7 @@ describe("La carte « Gamification »", () => {
     render(<CarteGamification jeu={{ ...DEMO_JEU, serie: 0, niveau: 1, pointsAvantNiveau: 200, badges: [] }} />);
     const carte = screen.getByRole("region", { name: "Gamification" });
     expect(within(carte).getAllByRole("listitem").map((l) => l.textContent)).toEqual(["Niveau 1", "0 jour", "0 badge"]);
-    expect(within(carte).getByText("Terminez une première leçon pour obtenir « Premier pas ».")).toBeInTheDocument();
+    expect(within(carte).getByText("Terminez une leçon pour obtenir « Premier pas ».")).toBeInTheDocument();
   });
 });
 

@@ -117,10 +117,15 @@ describe("Compte affiché par la coque", () => {
       error: null,
     }));
     expect(await getShellUser()).toMatchObject({ serie: 8, points: 40 });
+    const journal = vi.spyOn(console, "error").mockImplementation(() => {});
     for (const erreur of [{ code: "PGRST202" }, { code: "500", message: "panne" }]) {
       rpc.mockImplementation(async (nom?: string) => (nom === "ma_progression_jeu" ? { data: null, error: erreur } : { data: { etat: "gratuit" }, error: null }));
       expect(await getShellUser()).toMatchObject({ serie: 0, points: 0, formule: "Gratuite" });
     }
+    // Une migration absente est normale ; une panne laisse une trace dans les journaux du serveur.
+    expect(journal).toHaveBeenCalledTimes(1);
+    expect(String(journal.mock.calls[0][0])).toContain("ma_progression_jeu");
+    journal.mockRestore();
     rpc.mockReset().mockImplementation(async (nom?: string) => ({ data: nom === "mon_abonnement" ? { etat: "gratuit" } : false, error: null }));
   });
 

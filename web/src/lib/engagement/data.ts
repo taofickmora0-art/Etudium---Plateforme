@@ -1,7 +1,7 @@
 import { demoModeActive } from "@/lib/auth/current-user";
 import { estFonctionAbsente } from "@/lib/contenus/lecture";
 import { DEMO_JEU } from "@/lib/demo-user";
-import { createClient } from "@/lib/supabase/server";
+import { lireJeuBrut } from "./lecture";
 import { versProgressionJeu } from "./regles";
 import type { ProgressionJeu } from "./types";
 
@@ -11,7 +11,7 @@ import type { ProgressionJeu } from "./types";
  */
 export async function lireProgressionJeu(): Promise<ProgressionJeu | null> {
   if (demoModeActive()) return DEMO_JEU;
-  const { data, error } = await (await createClient()).rpc("ma_progression_jeu");
+  const { data, error } = await lireJeuBrut();
   if (error) {
     if (estFonctionAbsente(error)) return null;
     throw new Error(`Lecture de la progression impossible (${error.code ?? "?"}).`);
