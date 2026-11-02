@@ -10,9 +10,12 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-/** Un lien interne (« /… ») ; tout autre lien mène à l'accueil. */
+/**
+ * Un lien interne (« /… », comme les liens enregistrés par la base) ; tout autre lien mène à l'accueil. Ni espace, ni
+ * tabulation, ni barre oblique inversée : new URL les retire ou les change, et « /<tabulation>/site » sortirait du site.
+ */
 function lienInterne(lien) {
-  return typeof lien === "string" && lien.startsWith("/") && !lien.startsWith("//") && !lien.startsWith("/\\") ? lien : "/accueil";
+  return typeof lien === "string" && /^\/(?!\/)[^\s\\]*$/.test(lien) ? lien : "/accueil";
 }
 
 self.addEventListener("push", (event) => {
@@ -29,6 +32,9 @@ self.addEventListener("push", (event) => {
       body: texte,
       icon: "/icons/icone-192.png",
       lang: "fr",
+      // Une notification par page (une conversation, une annonce…) : la nouvelle remplace la précédente et sonne encore.
+      tag: lienInterne(contenu.lien),
+      renotify: true,
       data: { lien: lienInterne(contenu.lien) },
     }),
   );

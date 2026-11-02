@@ -37,6 +37,9 @@ describe("Le service worker", () => {
       body: "Aïcha vous a écrit",
       icon: "/icons/icone-192.png",
       lang: "fr",
+      // Une notification par page : un nouveau message remplace le précédent au lieu de s'empiler, et sonne encore.
+      tag: "/messages",
+      renotify: true,
       data: { lien: "/messages" },
     });
   });
@@ -45,9 +48,14 @@ describe("Le service worker", () => {
     const { self, declencher } = charger();
     await declencher("push", { data: { json: () => JSON.parse("{"), text: () => "{" } });
     await declencher("push", pousser({ titre: "T", texte: "X", lien: "https://ailleurs.exemple" }));
+    // Un lien avec une tabulation, une espace ou une barre oblique inversée ne sort pas du site (new URL les retire).
+    await declencher("push", pousser({ titre: "U", texte: "X", lien: "/	/ailleurs.exemple/x" }));
+    await declencher("push", pousser({ titre: "V", texte: "X", lien: "/ /ailleurs.exemple" }));
     expect(self.registration.showNotification.mock.calls.map((c) => [c[0], c[1].data])).toEqual([
       ["Étudium", { lien: "/accueil" }],
       ["T", { lien: "/accueil" }],
+      ["U", { lien: "/accueil" }],
+      ["V", { lien: "/accueil" }],
     ]);
   });
 
