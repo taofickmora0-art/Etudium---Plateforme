@@ -63,6 +63,17 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
   // La copie de l'appareil : au plus une écriture par seconde pendant la frappe (gros documents), la dernière gardée.
   const copieEnAttente = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const derniereCopie = useRef(0);
+  const annulerCopie = () => {
+    clearTimeout(copieEnAttente.current);
+    copieEnAttente.current = undefined;
+  };
+  /** La copie en attente part tout de suite, si ce qui est écrit n'est pas déjà enregistré (onglet caché ou quitté). */
+  const viderCopie = useCallback(() => {
+    if (copieEnAttente.current === undefined) return;
+    clearTimeout(copieEnAttente.current);
+    copieEnAttente.current = undefined;
+    if (JSON.stringify(valeurActuelle.current) !== confirmeActuel.current) ecrireCopie(cle, valeurActuelle.current, revision.current);
+  }, [cle]);
   const envoyerActuel = useRef<() => Promise<void>>(async () => {});
 
   useEffect(() => {
@@ -111,7 +122,7 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
       setConfirme(envoye);
       setDernier({ le: r.enregistreLe, brouillon: r.brouillon });
       setPhase({ type: "repos" });
-      clearTimeout(copieEnAttente.current);
+      annulerCopie();
       if (JSON.stringify(valeurActuelle.current) === envoye) effacerCopie(cle);
       else ecrireCopie(cle, valeurActuelle.current, revision.current);
       if (relancer.current || JSON.stringify(valeurActuelle.current) !== envoye) {
@@ -145,11 +156,11 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
     if (json === confirmeActuel.current && !enCours.current) {
       // Revenu à la valeur enregistrée : plus rien à garder sur l'appareil, ni à réessayer.
       clearTimeout(minuteur.current);
-      clearTimeout(copieEnAttente.current);
+      annulerCopie();
       effacerCopie(cle);
       return;
     }
-    clearTimeout(copieEnAttente.current);
+    annulerCopie();
     const copier = () => {
       copieEnAttente.current = undefined;
       ecrireCopie(cle, valeurActuelle.current, revision.current);
@@ -163,6 +174,17 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
     minuteur.current = setTimeout(() => void envoyerActuel.current(), delaiMs);
   }, [json, cle, delaiMs]);
 
+  // L'onglet caché ou fermé (le téléphone peut le tuer sans prévenir) : la copie en attente part tout de suite.
+  useEffect(() => {
+    const cache = () => document.visibilityState === "hidden" && viderCopie();
+    window.addEventListener("pagehide", viderCopie);
+    document.addEventListener("visibilitychange", cache);
+    return () => {
+      window.removeEventListener("pagehide", viderCopie);
+      document.removeEventListener("visibilitychange", cache);
+    };
+  }, [viderCopie]);
+
   // Le réseau revient : ce qui attendait part. On quitte l'éditeur (lien de l'appli) avant l'envoi : il part quand même.
   useEffect(() => {
     const reprendre = () => void envoyerActuel.current();
@@ -171,10 +193,7 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
       window.removeEventListener("online", reprendre);
       clearTimeout(minuteur.current);
       // Une copie encore en attente part tout de suite : on quitte l'éditeur.
-      if (copieEnAttente.current !== undefined) {
-        clearTimeout(copieEnAttente.current);
-        ecrireCopie(cle, valeurActuelle.current, revision.current);
-      }
+      viderCopie();
       const reste = valeurActuelle.current;
       if (!arrete.current && !enCours.current && JSON.stringify(reste) !== confirmeActuel.current && !horsLigne()) {
         void enregistrerActuel.current(reste, revision.current).then(
@@ -183,7 +202,7 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
         );
       }
     };
-  }, [cle]);
+  }, [cle, viderCopie]);
 
   // Revenu à la valeur enregistrée après un échec, hors ligne ou un refus : à jour (le conflit et l'envoi en cours restent).
   const revenu = json === confirme && (phase.type === "echec" || phase.type === "hors_ligne" || phase.type === "invalide");
@@ -229,7 +248,7 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
   }, [copie]);
   const ignorer = useCallback(() => {
     setDecide(true);
-    clearTimeout(copieEnAttente.current);
+    annulerCopie();
     effacerCopie(cle);
   }, [cle]);
   const enregistrerMaintenant = useCallback(() => envoyerActuel.current(), []);

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { EditorContent, ReactNodeViewRenderer, useEditor } from "@tiptap/react";
 import { cn } from "@/lib/cn";
 import { imagesAColler } from "@/lib/editeur/collage";
-import { envoyerImage } from "@/lib/editeur/envoi-image";
+import { envoyerImage, liensImages } from "@/lib/editeur/envoi-image";
 import { extensionsLecon } from "@/lib/editeur/extensions";
 import type { DocumentLecon } from "@/lib/lecon/document";
 import { BarreOutils } from "./BarreOutils";
@@ -42,9 +42,9 @@ type Props = {
 };
 
 export function EditeurRiche({ formationId, valeur, images, onChange, onBlur, etiquette, placeholder }: Props) {
-  // Les images envoyées depuis l'ouverture, ajoutées à celles du document.
+  // Les images envoyées depuis l'ouverture, ajoutées à celles du document ; les liens de la page (re-signés) d'abord.
   const [envoyees, setEnvoyees] = useState<Record<string, string>>({});
-  const liens = useMemo(() => ({ ...images, ...envoyees }), [images, envoyees]);
+  const liens = useMemo(() => liensImages(images, envoyees), [images, envoyees]);
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   // Le dernier document émis : une valeur égale vient de l'éditeur lui-même et ne le recharge pas.

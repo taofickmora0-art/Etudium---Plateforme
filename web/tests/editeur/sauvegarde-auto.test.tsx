@@ -195,6 +195,48 @@ describe("La sauvegarde automatique", () => {
     ecrire.mockRestore();
   });
 
+  it("relecture : revenu à la valeur enregistrée en moins d'une seconde, puis l'éditeur quitté : aucune copie ne reste", async () => {
+    const enregistrer = vi.fn(async () => OK(4));
+    const { rerender, unmount } = monter(enregistrer);
+    rerender({ valeur: { titre: "AB" } });
+    await avancer(200);
+    rerender({ valeur: { titre: "ABC" } });
+    await avancer(200);
+    rerender({ valeur: { titre: "A" } });
+    await avancer(200);
+    unmount();
+    expect(lireCopie("lecon:l1")).toBeNull();
+  });
+
+  it("relecture : une frappe pendant l'envoi, tout finit enregistré, l'éditeur quitté : aucune copie ne reste", async () => {
+    let finir: (r: ResultatSauvegarde) => void = () => {};
+    const enregistrer = vi.fn(() => new Promise<ResultatSauvegarde>((r) => (finir = r)));
+    const { rerender, unmount } = monter(enregistrer);
+    rerender({ valeur: { titre: "AB" } });
+    await avancer(1600);
+    expect(enregistrer).toHaveBeenCalledTimes(1);
+    rerender({ valeur: { titre: "ABC" } });
+    await avancer(100);
+    await act(async () => finir(OK(4)));
+    await avancer(1600);
+    await act(async () => finir(OK(5)));
+    expect(enregistrer).toHaveBeenCalledTimes(2);
+    unmount();
+    expect(lireCopie("lecon:l1")).toBeNull();
+  });
+
+  it("relecture : l'onglet caché ou fermé, la copie en attente s'écrit tout de suite", async () => {
+    const enregistrer = vi.fn(async () => OK(4));
+    const { rerender } = monter(enregistrer);
+    rerender({ valeur: { titre: "AB" } });
+    await avancer(100);
+    rerender({ valeur: { titre: "ABC" } });
+    await avancer(100);
+    expect(lireCopie<V>("lecon:l1")?.valeur).toEqual({ titre: "AB" });
+    await act(async () => void window.dispatchEvent(new Event("pagehide")));
+    expect(lireCopie<V>("lecon:l1")?.valeur).toEqual({ titre: "ABC" });
+  });
+
   it("point reporté du lot 4 : revenir à la valeur enregistrée efface l'échec et la copie de l'appareil", async () => {
     const enregistrer = vi.fn(async (): Promise<ResultatSauvegarde> => ({ ok: false, code: "echec", message: "Panne" }));
     const { result, rerender } = monter(enregistrer);

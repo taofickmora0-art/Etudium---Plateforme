@@ -25,7 +25,7 @@ export async function CompteDeLEntete() {
       {/* Le menu du back-office n'affiche que les domaines du compte (lot 6 A). */}
       <DomainesDuCompte domaines={domainesDe(user.roles)} />
       {/* L'abonnement push de cet appareil, rattaché au compte une fois par session (point reporté du lot 5). */}
-      <RattacherPush />
+      <RattacherPush compte={user.email} />
     </>
   );
 }

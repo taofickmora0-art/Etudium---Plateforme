@@ -31,26 +31,33 @@ afterEach(() => {
 
 describe("Le rattachement du push de cet appareil", () => {
   it("l'abonnement du navigateur est enregistré pour le compte, une seule fois par session", async () => {
-    const { unmount } = render(<RattacherPush />);
+    const { unmount } = render(<RattacherPush compte="aicha@exemple.com" />);
     await waitFor(() => expect(enregistrerAppareil).toHaveBeenCalledWith(APPAREIL));
     unmount();
-    render(<RattacherPush />);
+    render(<RattacherPush compte="aicha@exemple.com" />);
     await new Promise((r) => setTimeout(r, 20));
     expect(enregistrerAppareil).toHaveBeenCalledTimes(1);
   });
 
+  it("un autre compte dans le même onglet (session fermée sans déconnexion) : l'appareil est rattaché à lui aussi", async () => {
+    render(<RattacherPush compte="aicha@exemple.com" />);
+    await waitFor(() => expect(enregistrerAppareil).toHaveBeenCalledTimes(1));
+    render(<RattacherPush compte="jules@exemple.com" />);
+    await waitFor(() => expect(enregistrerAppareil).toHaveBeenCalledTimes(2));
+  });
+
   it("rien sans abonnement, sans autorisation, ou si le push n'est pas possible ici", async () => {
     abonnementCourant.mockResolvedValue(null);
-    render(<RattacherPush />);
+    render(<RattacherPush compte="aicha@exemple.com" />);
     await new Promise((r) => setTimeout(r, 20));
     window.sessionStorage.clear();
     abonnementCourant.mockResolvedValue(APPAREIL);
     vi.stubGlobal("Notification", { permission: "default" });
-    render(<RattacherPush />);
+    render(<RattacherPush compte="aicha@exemple.com" />);
     window.sessionStorage.clear();
     vi.stubGlobal("Notification", { permission: "granted" });
     etatDuPush.mockReturnValue("sans_cle");
-    render(<RattacherPush />);
+    render(<RattacherPush compte="aicha@exemple.com" />);
     await new Promise((r) => setTimeout(r, 20));
     expect(enregistrerAppareil).not.toHaveBeenCalled();
   });

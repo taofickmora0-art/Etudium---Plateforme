@@ -13,7 +13,7 @@ import { extensionsLecon } from "@/lib/editeur/extensions";
 const F = "11111111-1111-4111-8111-111111111111";
 const IMG = `${F}/22222222-2222-4222-8222-222222222222.webp`;
 
-vi.mock("@/lib/editeur/envoi-image", () => ({ envoyerImage: vi.fn() }));
+vi.mock("@/lib/editeur/envoi-image", async (original) => ({ ...(await original<typeof import("@/lib/editeur/envoi-image")>()), envoyerImage: vi.fn() }));
 const { envoyerImage } = await import("@/lib/editeur/envoi-image");
 const { EditeurRiche } = await import("@/components/editeur/EditeurRiche");
 

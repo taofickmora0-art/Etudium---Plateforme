@@ -32,3 +32,11 @@ export async function envoyerImage(formationId: string, fichier: File, client?: 
     return { ok: false, message: "L’image n’a pas pu être envoyée. Réessayez." };
   }
 }
+
+/**
+ * Les liens des images de l'éditeur : ceux de la page (re-signés à chaque relecture) passent devant ceux des images
+ * envoyées pendant la séance, qui ne servent qu'aux images que la page ne connaît pas encore.
+ */
+export function liensImages(page: Record<string, string>, envoyees: Record<string, string>): Record<string, string> {
+  return { ...envoyees, ...page };
+}

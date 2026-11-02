@@ -93,6 +93,16 @@ describe("Migration 0064 : la désactivation et les versions", () => {
     expect(await versions(f.id)).toBe(avant);
   });
 
+  it("publier des brouillons identiques à ce qui est en ligne : pas de « version N » déjà existante annoncée", async () => {
+    const f = await creerFormation(banc, "Zotero", { quiz: false, exercice: null });
+    await banc.db.query(
+      "insert into public.brouillons_lecons (lecon_id, donnees, revision, modifie_par) select l.id, public.donnees_lecon(l.id), 1, $2 from public.lecons l where l.id = $1",
+      [f.lecons[0], A],
+    );
+    const r = (await banc.en<{ r: { publiees: number; version: number | null } }>({ id: A }, "select public.publier_modifications($1) as r", [f.id]))[0].r;
+    expect(r).toEqual({ publiees: 1, version: null });
+  });
+
   it("« En ligne » : faux pour toutes les versions d'une formation repassée en brouillon", async () => {
     const f = await creerFormation(banc, "Word", { quiz: false, exercice: null });
     const enLigne = async () => (await banc.en<{ v: { en_ligne: boolean }[] }>({ id: A }, "select public.versions_formation($1) as v", [f.id]))[0].v.map((v) => v.en_ligne);

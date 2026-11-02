@@ -6,8 +6,9 @@
 --   - Vue d'ensemble : des index pour ses comptages par date et par statut.
 --   - Désactivation : une formation ne se crée pas « désactivée » ; créée « publiée », elle a sa version.
 --   - Versions : une version identique à la précédente n'est pas recréée ; « En ligne » suit le statut.
---   - Enregistrer une leçon : la formation est verrouillée d'abord (même ordre que la publication) ; une vidéo
---     intégrée au contenu doit avoir l'identifiant de sa plateforme.
+--   - Enregistrer une leçon : une vidéo intégrée au contenu doit avoir l'identifiant de sa plateforme. Publier
+--     verrouille les leçons avant leurs brouillons (l'ordre de l'enregistrement), et ne dit plus « version N » quand
+--     rien n'a changé.
 -- À appliquer après la 0063. Rejouable.
 
 begin;
@@ -258,9 +259,7 @@ as $$
   );
 $$;
 
--- La même que la 0056, avec la formation verrouillée avant la leçon (publier_modifications prend la formation, puis
--- les brouillons, puis les leçons : sans cet ordre commun, une sauvegarde et une publication simultanées pouvaient
--- s'attendre l'une l'autre) et le contrôle des vidéos du contenu.
+-- La même que la 0056, plus le contrôle des vidéos du contenu.
 create or replace function public.enregistrer_lecon(p_lecon uuid, p_donnees jsonb, p_revision integer)
 returns jsonb
 language plpgsql
@@ -288,9 +287,8 @@ begin
   ) then
     raise exception 'Une vidéo du contenu n’a pas un identifiant valide : ajoutez-la de nouveau.';
   end if;
-  v_formation := public.formation_de_la_lecon(p_lecon);
-  perform 1 from public.formations f where f.id = v_formation for update;
   select * into v_l from public.lecons l where l.id = p_lecon for update;
+  v_formation := public.formation_de_la_lecon(p_lecon);
   if exists (
     select 1 from jsonb_path_query(coalesce(v_d -> 'document', 'null'::jsonb), 'lax $.**.chemin') c
     where jsonb_typeof(c) = 'string' and split_part(c #>> '{}', '/', 1) <> v_formation::text
@@ -322,6 +320,88 @@ begin
     perform public.marquer_modifiee_par_formateur(v_formation);
   end if;
   return jsonb_build_object('etat', 'enregistre', 'revision', v_l.revision + 1, 'brouillon', false, 'enregistre_le', now());
+end;
+$$;
+
+-- ─── Publier les modifications ──────────────────────────────────────────────────────────────────────
+-- La même que la 0057, avec deux changements :
+--   - les leçons qui ont un brouillon sont verrouillées avant leurs brouillons, dans l'ordre de l'enregistrement
+--     (leçon, puis brouillon) : une sauvegarde et une publication simultanées ne s'attendent plus l'une l'autre ;
+--   - des brouillons identiques à ce qui est en ligne ne créent pas de version : « version » vaut null.
+create or replace function public.publier_modifications(p_formation uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_moi uuid := (select auth.uid());
+  v_n integer := 0;
+  v_infos boolean := false;
+  v_lecons integer := 0;
+  v_titre text;
+  v_resume text;
+  v_version integer;
+  v_avant integer;
+  v_bf public.brouillons_formations;
+  v_bl public.brouillons_lecons;
+begin
+  if not public.editeur_de_formation(p_formation) then
+    raise exception 'Vous ne pouvez pas modifier cette formation.' using errcode = '42501';
+  end if;
+  if not public.equipe_contenus() and not public.formation_visible(p_formation) then
+    raise exception 'Cette formation n’est pas encore en ligne : envoyez-la en relecture.';
+  end if;
+  perform 1 from public.formations f where f.id = p_formation for update;
+
+  select * into v_bf from public.brouillons_formations b where b.formation_id = p_formation for update;
+  if found then
+    perform public.appliquer_donnees_formation(p_formation, v_bf.donnees);
+    update public.formations set revision = greatest(revision, v_bf.revision) + 1, revise_par = v_moi where id = p_formation;
+    delete from public.brouillons_formations where formation_id = p_formation;
+    v_n := v_n + 1;
+    v_infos := true;
+  end if;
+
+  perform 1 from public.lecons l
+  join public.modules m on m.id = l.module_id
+  where m.formation_id = p_formation and exists (select 1 from public.brouillons_lecons b where b.lecon_id = l.id)
+  order by l.id
+  for update of l;
+
+  for v_bl in
+    select b.* from public.brouillons_lecons b
+    join public.lecons l on l.id = b.lecon_id
+    join public.modules m on m.id = l.module_id
+    where m.formation_id = p_formation
+    for update of b
+  loop
+    perform public.appliquer_donnees_lecon(v_bl.lecon_id, v_bl.donnees);
+    update public.lecons set revision = greatest(revision, v_bl.revision) + 1, revise_par = v_moi where id = v_bl.lecon_id;
+    delete from public.brouillons_lecons where lecon_id = v_bl.lecon_id;
+    v_n := v_n + 1;
+    v_lecons := v_lecons + 1;
+    v_titre := v_bl.donnees ->> 'titre';
+  end loop;
+
+  if v_n = 0 then
+    return jsonb_build_object('publiees', 0, 'version', null);
+  end if;
+  if not public.equipe_contenus() then
+    perform public.marquer_modifiee_par_formateur(p_formation);
+  end if;
+  v_resume := case
+    when v_infos and v_lecons = 0 then 'Informations générales modifiées'
+    when v_infos then format('Informations générales et %s %s modifiées', v_lecons, case when v_lecons > 1 then 'leçons' else 'leçon' end)
+    when v_lecons = 1 then format('Leçon « %s » modifiée', v_titre)
+    else format('%s leçons modifiées', v_lecons)
+  end;
+  select max(v.numero) into v_avant from public.versions_formations v where v.formation_id = p_formation;
+  v_version := public.noter_version(p_formation, v_resume);
+  if v_avant is not null and v_version <= v_avant then
+    v_version := null;
+  end if;
+  return jsonb_build_object('publiees', v_n, 'version', v_version);
 end;
 $$;
 

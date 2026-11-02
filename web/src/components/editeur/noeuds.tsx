@@ -2,6 +2,7 @@
 
 import { createContext, useContext } from "react";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
+import { ImageSignee } from "@/components/lecon/ImageSignee";
 import { LecteurVideo } from "@/components/lecon/LecteurVideo";
 import { Button } from "@/components/ui/Button";
 import { TextInput } from "@/components/ui/TextInput";
@@ -25,8 +26,8 @@ export function VueImage({ node, updateAttributes, deleteNode, selected }: NodeV
       className={`m-0 flex flex-col gap-2 rounded-carte border p-2.5 ${selected ? "border-bleu shadow-focus" : "border-bordure-carte"}`}
     >
       {url ? (
-        // eslint-disable-next-line @next/next/no-img-element -- image privée, servie par un lien signé d'une heure
-        <img src={url} alt={String(node.attrs.alt ?? "")} className="block h-auto max-h-[420px] max-w-full self-start rounded-champ" />
+        // Un lien expiré (éditeur ouvert plus d'une heure) : la page est relue pour de nouveaux liens.
+        <ImageSignee src={url} alt={String(node.attrs.alt ?? "")} className="block h-auto max-h-[420px] max-w-full self-start rounded-champ" />
       ) : (
         <div className="flex h-28 items-center justify-center rounded-champ border border-dashed border-bordure-champ bg-page text-sm text-discret">Image indisponible</div>
       )}
