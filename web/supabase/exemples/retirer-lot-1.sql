@@ -1,6 +1,8 @@
 -- Étudium · retrait des formations d'exemple du lot 1 (spec du 2 novembre 2026, §8).
 -- À quoi il sert : retirer de la base de test les dix formations d'exemple posées par lot-1.sql, avec tout ce qui en
 -- dépend, puis la fiche de leur formatrice d'exemple, « Dr Mireille Adjovi ». Demandé par l'utilisateur le 2026-11-02.
+-- À lancer après la migration 0069. Lancé avant (mais après la 0068), il marche aussi : la table des inscriptions, qui
+-- n'existe pas encore, est simplement passée (« Inscriptions retirées : 0 »).
 -- Quand le lancer : une fois, sur la base de test etudium-dev, avec le rôle par défaut (postgres) :
 -- SQL Editor → New query → coller tout le fichier → Run. Le tableau affiché à la fin dit ce que ce lancement a retiré
 -- et ce qui reste. Rejouable : relancé, il ne retire plus rien. Tout se fait dans une seule transaction : en cas
@@ -10,7 +12,8 @@
 -- quiz et tentatives, exercices et rendus, notes, commentaires, progression, inscriptions, favoris, avis, brouillons,
 -- versions, liens aux parcours et de monétisation, popularité. Et ce qu'aucune clé étrangère n'efface seule : les
 -- certificats (sinon gardés, sans formation), les points gagnés sur ces leçons et ces certificats, les notifications qui y
--- mènent et les e-mails pas encore envoyés qui y mènent.
+-- mènent (fiche et leçons « /formations/<adresse> », back-office « /admin/formations/<id> », espace formateur
+-- « /formateur/formations/<id> ») et les e-mails pas encore envoyés qui y mènent.
 -- La fiche « Dr Mireille Adjovi » n'est retirée que si aucun compte n'y est relié et qu'aucune formation ni session live
 -- ne la cite plus.
 --
@@ -54,12 +57,21 @@ from public.lecons l
 join public.modules m on m.id = l.module_id
 where m.formation_id in (select id from retrait_formations);
 
--- Les notifications qui mènent à ces formations ou à leurs leçons (« /formations/<adresse> », suivi ou non de « / »,
--- « ? » ou « # »).
+-- Les liens qui mènent à ces formations, suivis ou non de « / », « ? » ou « # » : leur fiche et leurs leçons
+-- (« /formations/<adresse> »), leur fiche au back-office (« /admin/formations/<id> ») et dans l'espace formateur
+-- (« /formateur/formations/<id> »).
+create temporary table retrait_liens on commit drop as
+select '^/formations/' || f.slug || '([/?#]|$)' as motif
+from retrait_formations f
+union all
+select '^/(admin|formateur)/formations/' || f.id::text || '([/?#]|$)'
+from retrait_formations f;
+
+-- Les notifications qui y mènent.
 create temporary table retrait_notifications on commit drop as
 select n.id
 from public.notifications n
-where exists (select 1 from retrait_formations f where n.lien ~ ('^/formations/' || f.slug || '([/?#]|$)'));
+where exists (select 1 from retrait_liens r where n.lien ~ r.motif);
 
 -- ─── Le bilan, compté avant de supprimer (ce qui part en cascade ne se compte plus après) ───────────
 create temporary table retrait_bilan (ordre integer, bilan text, nombre integer) on commit drop;
@@ -68,8 +80,6 @@ insert into retrait_bilan (ordre, bilan, nombre) values
   (1, 'Formations d’exemple retirées', (select count(*) from retrait_formations)),
   (2, 'Modules retirés', (select count(*) from public.modules where formation_id in (select id from retrait_formations))),
   (3, 'Leçons retirées', (select count(*) from retrait_lecons)),
-  (4, 'Inscriptions retirées',
-    (select count(*) from public.inscriptions_formations where formation_id in (select id from retrait_formations))),
   (5, 'Leçons suivies retirées', (select count(*) from public.progression_lecons where lecon_id in (select id from retrait_lecons))),
   (6, 'Favoris retirés', (select count(*) from public.favoris where formation_id in (select id from retrait_formations))),
   (7, 'Avis retirés', (select count(*) from public.avis where formation_id in (select id from retrait_formations))),
@@ -80,6 +90,19 @@ insert into retrait_bilan (ordre, bilan, nombre) values
   (10, 'Versions retirées',
     (select count(*) from public.versions_formations where formation_id in (select id from retrait_formations))),
   (11, 'Notifications retirées', (select count(*) from retrait_notifications));
+
+-- Les inscriptions (0069) : lues seulement si leur table existe (sinon, 0).
+do $$
+declare
+  v_nombre integer := 0;
+begin
+  if to_regclass('public.inscriptions_formations') is not null then
+    execute 'select count(*) from public.inscriptions_formations where formation_id in (select id from retrait_formations)'
+      into v_nombre;
+  end if;
+  insert into retrait_bilan (ordre, bilan, nombre) values (4, 'Inscriptions retirées', v_nombre);
+end;
+$$;
 
 -- ─── Ce qu'aucune clé étrangère n'efface seule ──────────────────────────────────────────────────────
 -- Les points gagnés sur ces leçons (leur référence est la leçon) et sur leurs certificats (la référence est le
@@ -98,7 +121,7 @@ delete from public.certificats where formation_id in (select id from retrait_for
 delete from public.notifications where id in (select id from retrait_notifications);
 delete from public.envois e
 where e.statut = 'a_envoyer'
-  and exists (select 1 from retrait_formations f where e.lien ~ ('^/formations/' || f.slug || '([/?#]|$)'));
+  and exists (select 1 from retrait_liens r where e.lien ~ r.motif);
 
 -- ─── Les formations, et en cascade tout ce qui en dépend ────────────────────────────────────────────
 -- Modules, leçons (contenu, ressources, quiz, tentatives, exercices, rendus, notes, commentaires, progression,

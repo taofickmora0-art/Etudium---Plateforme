@@ -55,6 +55,7 @@ describe("Retrait des formations d'exemple du lot 1", () => {
   let vraie: FormationTest; // une vraie formation du parcours Réussite académique, suivie par E
   let vente: FormationTest; // une vraie formation Business, liée à Canva (monétisation)
   let certificatVraie: string;
+  let lienVraie: string; // la fiche de la vraie formation au back-office
 
   beforeAll(async () => {
     banc = await creerBanc([...migrationsJusqua("0069"), EXEMPLES]);
@@ -98,22 +99,29 @@ describe("Retrait des formations d'exemple du lot 1", () => {
     }
     await banc.db.query("select public.rafraichir_popularite()");
 
-    // Notifications : deux vers Excel (formation, leçon), une vers la vraie, une vers une adresse qui ressemble à Excel.
+    // Notifications : deux vers Excel (formation, leçon), une vers la vraie, une vers une adresse qui ressemble à Excel ;
+    // au back-office et dans l'espace formateur, deux vers Excel (par son identifiant), une vers la vraie.
     for (const lien of [
       "/formations/maitriser-microsoft-excel",
       `/formations/maitriser-microsoft-excel/lecons/${leconsExcel[2]}#commentaire-${commentaire}`,
       `/formations/${vraie.slug}`,
       "/formations/maitriser-microsoft-excel-avance",
+      `/admin/formations/${excel}?onglet=publication`,
+      `/formateur/formations/${excel}`,
+      `/admin/formations/${vraie.id}`,
     ]) {
       await banc.db.query("insert into public.notifications (destinataire, categorie, titre, lien) values ($1, 'nouveaux_contenus', 'Nouveau', $2)", [E, lien]);
     }
-    // Un e-mail encore à envoyer vers Zotero (retiré) ; un autre, déjà envoyé, reste dans l'historique.
+    // Un e-mail encore à envoyer vers Zotero (retiré) ; un autre, déjà envoyé, reste dans l'historique. Un autre encore à
+    // envoyer, vers la fiche d'Excel au back-office.
     for (const statut of ["a_envoyer", "envoye"]) {
       await banc.db.query("insert into public.envois (canal, destinataire, titre, lien, statut) values ('email', $1, 'Zotero', '/formations/zotero-gerer-ses-references', $2)", [
         E,
         statut,
       ]);
     }
+    await banc.db.query("insert into public.envois (canal, destinataire, titre, lien) values ('email', $1, 'Excel', $2)", [E, `/admin/formations/${excel}`]);
+    lienVraie = `/admin/formations/${vraie.id}`;
 
     premier = await retirer(banc);
     second = await retirer(banc);
@@ -132,7 +140,7 @@ describe("Retrait des formations d'exemple du lot 1", () => {
     expect(premier["Certificats retirés"]).toBe(1);
     expect(premier["Brouillons retirés"]).toBe(2);
     expect(premier["Versions retirées"]).toBeGreaterThanOrEqual(10);
-    expect(premier["Notifications retirées"]).toBe(2);
+    expect(premier["Notifications retirées"]).toBe(4);
     expect(premier["Fiche « Dr Mireille Adjovi » retirée"]).toBe(1);
   });
 
@@ -156,6 +164,9 @@ describe("Retrait des formations d'exemple du lot 1", () => {
     expect(await nombre(banc, "select count(*)::int as n from public.points_gagnes where reference = any($1)", [[...leconsExcel, certificatExcel]])).toBe(0);
     expect(await nombre(banc, "select count(*)::int as n from public.notifications where lien like '/formations/maitriser-microsoft-excel/%' or lien = '/formations/maitriser-microsoft-excel'")).toBe(0);
     expect(await nombre(banc, "select count(*)::int as n from public.envois where lien = '/formations/zotero-gerer-ses-references' and statut = 'a_envoyer'")).toBe(0);
+    // Le back-office et l'espace formateur : les liens par identifiant.
+    expect(await nombre(banc, "select count(*)::int as n from public.notifications where lien ~ '^/(admin|formateur)/formations/' and lien <> $1", [lienVraie])).toBe(0);
+    expect(await nombre(banc, "select count(*)::int as n from public.envois where lien ~ '^/admin/formations/' and statut = 'a_envoyer'")).toBe(0);
   });
 
   it("la fiche de la formatrice d'exemple a disparu", async () => {
@@ -196,7 +207,7 @@ describe("Retrait des formations d'exemple du lot 1", () => {
     expect(await nombre(banc, "select count(*)::int as n from public.favoris where profil_id = $1 and formation_id = $2", [E, vraie.id])).toBe(1);
     expect(await nombre(banc, "select count(*)::int as n from public.certificats where id = $1 and formation_id = $2", [certificatVraie, vraie.id])).toBe(1);
     expect(await nombre(banc, "select count(*)::int as n from public.points_gagnes where reference = any($1)", [[vraie.lecons[0], certificatVraie]])).toBe(2);
-    expect(await nombre(banc, "select count(*)::int as n from public.notifications where lien = any($1)", [[`/formations/${vraie.slug}`, "/formations/maitriser-microsoft-excel-avance"]])).toBe(2);
+    expect(await nombre(banc, "select count(*)::int as n from public.notifications where lien = any($1)", [[`/formations/${vraie.slug}`, "/formations/maitriser-microsoft-excel-avance", lienVraie]])).toBe(3);
     expect(await nombre(banc, "select count(*)::int as n from public.envois where lien = '/formations/zotero-gerer-ses-references' and statut = 'envoye'")).toBe(1);
     expect(await nombre(banc, "select count(*)::int as n from public.abonnements where profil_id = $1", [E])).toBe(1);
   });
@@ -238,4 +249,15 @@ describe("Retrait : la fiche de Mireille Adjovi n'est retirée que libre", () =>
     expect(bilan["Fiche « Dr Mireille Adjovi » retirée"]).toBe(1);
     expect(await fiche()).toBe(0);
   });
+});
+
+describe("Retrait : lancé avant la 0069 (sans la table des inscriptions), il marche aussi", () => {
+  it("les dix formations partent ; aucune inscription comptée", async () => {
+    const banc = await creerBanc([...migrationsJusqua("0068"), EXEMPLES]);
+    expect(await nombre(banc, "select count(*)::int as n from pg_class where relname = 'inscriptions_formations'")).toBe(0);
+    const bilan = await retirer(banc);
+    expect(bilan["Formations d’exemple retirées"]).toBe(10);
+    expect(bilan["Inscriptions retirées"]).toBe(0);
+    expect(bilan["Formations d’exemple restantes"]).toBe(0);
+  }, 120_000);
 });
