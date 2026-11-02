@@ -1,10 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fauxSupabase } from "../admin/faux-supabase";
 
 // La lecture du tableau de bord (lot 6 B) : mon_tableau_de_bord pour ce qui vient de la base, les cartes du catalogue
 // dans l'ordre des recommandations, et un repli sans la migration 0063.
 
 const faux = fauxSupabase();
+// L'heure n'est lue qu'après connection() (Next 16, cacheComponents : sinon « blocking-prerender-current-time »).
+vi.mock("next/server", () => ({ connection: async () => void vi.setSystemTime(new Date("2026-11-05T10:00:00Z")) }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => faux.client }));
 vi.mock("@/lib/auth/current-user", () => ({ demoModeActive: () => false, getShellUser: async () => ({ prenom: "Aïcha" }) }));
 vi.mock("@/lib/progression/data", () => ({ lireProgression: async () => [{ leconId: "l1", formationId: "f1", termineeLe: null, vueLe: "2026-11-01T10:00:00Z", positionSecondes: 0 }] }));
@@ -19,6 +21,12 @@ const { lireTableauDeBord } = await import("@/lib/tableau-de-bord/data");
 
 beforeEach(() => {
   faux.vider();
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-01T08:00:00Z"));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("La lecture du tableau de bord", () => {
@@ -38,6 +46,11 @@ describe("La lecture du tableau de bord", () => {
     expect(d.messageSuite).toBe("Vous avez terminé « Word ». Découvrez maintenant « r3 ».");
     expect(d.base?.certificats).toEqual({ nombre: 1, titres: ["Word"] });
     expect(d.session).toBeUndefined();
+  });
+
+  it("l'heure du tableau de bord est lue à la requête, après connection(), jamais au prérendu", async () => {
+    faux.repondre("rpc.mon_tableau_de_bord", { data: {} });
+    expect((await lireTableauDeBord()).maintenant).toBe("2026-11-05T10:00:00.000Z");
   });
 
   it("sans la 0063 : pas de base, et les premières formations pas encore commencées", async () => {

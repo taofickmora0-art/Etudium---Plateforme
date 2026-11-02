@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { demoModeActive, getShellUser } from "@/lib/auth/current-user";
 import { listCatalogue, listFiches } from "@/lib/catalogue/data";
 import { estFonctionAbsente } from "@/lib/contenus/lecture";
@@ -28,6 +29,8 @@ async function lireBase(): Promise<BaseTableau | null> {
  * recommandations sont les premières formations du catalogue pas encore commencées.
  */
 export async function lireTableauDeBord(): Promise<DonneesTableau> {
+  // À chaque requête, jamais au prérendu : l'heure n'est lue qu'après (Next 16, cacheComponents).
+  await connection();
   const maintenant = new Date();
   const [user, base, lignes, session, cartes] = await Promise.all([getShellUser(), lireBase(), lireProgression(), lireProchaineSession(), listCatalogue()]);
   const commencees = [...new Set((lignes ?? []).map((l) => l.formationId))];
