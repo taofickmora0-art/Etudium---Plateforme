@@ -1,5 +1,5 @@
 import { adresseDeLien, texteBrut, versDocument } from "@/lib/communaute/mise-en-forme";
-import { FOURNISSEURS } from "@/lib/video/plateformes";
+import { FOURNISSEURS, identifiantValide, type Fournisseur } from "@/lib/video/plateformes";
 
 // Le contenu riche d'une leçon (fin du lot 4, spec §1.1) : le document de l'éditeur (Tiptap), dans une liste fermée de
 // blocs et de marques. Le serveur le vérifie à chaque enregistrement ; l'affichage ne construit que ces éléments. Les
@@ -18,6 +18,7 @@ export const CHEMIN_IMAGE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0
 
 const INCONNU = "Le contenu contient un élément non reconnu.";
 const LIEN = "Un lien doit commencer par http:// ou https://.";
+const VIDEO = "Une vidéo du contenu n’a pas un identifiant valide : ajoutez-la de nouveau.";
 
 class Refus extends Error {}
 /** Un attribut vérifié : sa valeur gardée, `undefined` pour l'omettre ; une valeur refusée lève `Refus`. */
@@ -124,6 +125,8 @@ function noeud(brut: unknown, permis: readonly string[], compte: { images: numbe
       if (valeur !== undefined) attrs[cle] = valeur;
     }
     if (Object.keys(attrs).length > 0) sortie.attrs = attrs;
+    // Une vidéo collée (HTML d'ailleurs) n'est pas passée par l'analyse du lien : son identifiant est revérifié.
+    if (brut.type === "videoLecon" && !identifiantValide(attrs.fournisseur as Fournisseur, attrs.id)) return refuser(VIDEO);
   }
 
   if (brut.content !== undefined) {
@@ -132,6 +135,21 @@ function noeud(brut: unknown, permis: readonly string[], compte: { images: numbe
   }
   if (regle.plein && !sortie.content) return refuser();
   return sortie;
+}
+
+/**
+ * Le document écrit comme la base le mesure (texte d'un jsonb : une espace après chaque « : » et chaque « , ») : la
+ * même limite des deux côtés, sinon un document accepté ici serait refusé à l'enregistrement.
+ */
+function texteCommeLaBase(valeur: unknown): string {
+  if (Array.isArray(valeur)) return `[${valeur.map(texteCommeLaBase).join(", ")}]`;
+  if (valeur && typeof valeur === "object") {
+    return `{${Object.entries(valeur)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => `${JSON.stringify(k)}: ${texteCommeLaBase(v)}`)
+      .join(", ")}}`;
+  }
+  return JSON.stringify(valeur) ?? "null";
 }
 
 /** Vérifie et normalise un document reçu ; le premier refus donne son message. */
@@ -144,7 +162,7 @@ export function validerDocument(brut: unknown): { ok: true; document: DocumentLe
     if (texteDuDocument(document).length > LIMITES.caracteres) return refuser("Le texte dépasse 20 000 caractères.");
     if (compte.images > LIMITES.images) return refuser("40 images au plus par leçon.");
     if (compte.tableaux > LIMITES.tableaux) return refuser("10 tableaux au plus par leçon.");
-    if (new TextEncoder().encode(JSON.stringify(document)).length > LIMITES.octets) return refuser("Le contenu est trop lourd (300 Ko au plus).");
+    if (new TextEncoder().encode(texteCommeLaBase(document)).length > LIMITES.octets) return refuser("Le contenu est trop lourd (300 Ko au plus).");
     return { ok: true, document };
   } catch (e) {
     if (e instanceof Refus) return { ok: false, message: e.message };

@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { aDomaine } from "@/lib/auth/domaines";
+import type { Role } from "@/lib/auth/permissions";
 import type { FicheFormation } from "@/lib/catalogue/types";
 import { createClient } from "@/lib/supabase/server";
 import { versSaisieInfos } from "./saisie";
@@ -6,6 +8,9 @@ import { versSaisieInfos } from "./saisie";
 // L'aperçu des brouillons (fin du lot 4, spec §2.3) : l'équipe et le formateur de la formation voient, sur la page leçon
 // et sur la fiche, ce qu'ils ont modifié et pas encore publié. La règle de lecture des brouillons (0056) ne les donne
 // qu'à eux : pour un étudiant, ces lectures ne trouvent rien, et il voit ce qui est en ligne.
+
+/** Peut avoir un brouillon à lire : l'équipe des contenus ou un formateur. Un étudiant n'en lit jamais : aucune requête. */
+export const peutLireBrouillons = (roles: readonly Role[]) => aDomaine([...roles], "contenus") || roles.includes("formateur");
 
 /** Les données du brouillon d'une leçon, ou null (aucun, pas lisible, ou avant la 0056). */
 export async function brouillonDeLecon(supabase: SupabaseClient, leconId: string): Promise<Record<string, unknown> | null> {

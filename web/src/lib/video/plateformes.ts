@@ -91,6 +91,9 @@ export const aCoinMasque = (f: Fournisseur) => Boolean(PLATEFORMES[f].coinMasque
 export const estVertical = (f: Fournisseur) => Boolean(PLATEFORMES[f].verticale);
 export const nomPlateforme = (f: Fournisseur) => PLATEFORMES[f].nom;
 
+/** L'identifiant a le format de sa plateforme (le même contrôle que la base, 0030 et 0064). */
+export const identifiantValide = (f: Fournisseur, id: unknown): boolean => typeof id === "string" && PLATEFORMES[f].format.test(id);
+
 const VIMEO_NUMERO = /^\d{6,12}$/;
 const VIMEO_CODE = /^[0-9a-f]{6,20}$/;
 const video = (fournisseur: Fournisseur, id: string | null | undefined): Video | null =>

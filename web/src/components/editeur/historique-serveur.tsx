@@ -13,9 +13,10 @@ export async function ongletHistorique(formationId: string): Promise<{ onglet: R
   if (lu.migrationAbsente || lu.donnees.length === 0) return { onglet: undefined, version: null };
   // « aujourd’hui » se calcule à la demande, pas au moment de la construction de la page.
   await connection();
-  const enLigne = lu.donnees[0];
+  // La version que la base marque en ligne ; aucune pour une formation repassée en brouillon.
+  const enLigne = lu.donnees.find((v) => v.enLigne);
   return {
     onglet: <OngletHistorique versions={lu.donnees} />,
-    version: `Version ${enLigne.numero} · ${quandVersion(enLigne.creeLe, new Date())}`,
+    version: enLigne ? `Version ${enLigne.numero} · ${quandVersion(enLigne.creeLe, new Date())}` : null,
   };
 }

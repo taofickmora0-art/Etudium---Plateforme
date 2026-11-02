@@ -1,12 +1,12 @@
 import { estFournisseur } from "@/lib/video/plateformes";
-import { demoModeActive } from "@/lib/auth/current-user";
+import { demoModeActive, getShellUser } from "@/lib/auth/current-user";
 import { getFiche } from "@/lib/catalogue/data";
 import { versReponse } from "@/lib/communaute/data";
 import type { Reponse } from "@/lib/communaute/types";
 import { estColonneAbsente, estTablesAbsentes, liste, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { cheminsImages, documentLu } from "./document";
 import { signerImages } from "./images";
-import { brouillonDeLecon } from "@/lib/editeur/apercu";
+import { brouillonDeLecon, peutLireBrouillons } from "@/lib/editeur/apercu";
 import { createClient } from "@/lib/supabase/server";
 import { depuisMultirange } from "@/lib/video/suivi";
 import { lireQuizAPasser } from "@/lib/quiz/data";
@@ -127,7 +127,8 @@ export async function getLeconDans(fiche: FicheFormation, leconId: string, conne
 
   const enLigne = versLecon(ligne);
   // L'équipe ou le formateur de la formation voit le brouillon (fin du lot 4) ; un étudiant ne peut pas le lire.
-  const brouillon = connecte && enLigne.accessible ? await brouillonDeLecon(supabase, leconId) : null;
+  const compte = connecte && enLigne.accessible ? await getShellUser() : null;
+  const brouillon = compte && peutLireBrouillons(compte.roles) ? await brouillonDeLecon(supabase, leconId) : null;
   const lue = brouillon ? avecBrouillon(enLigne, brouillon) : enLigne;
   const lecon = lue.document ? { ...lue, images: await signerImages(supabase, cheminsImages(lue.document)) } : lue;
   if (!connecte) return { fiche, lecon, note: null, notesDisponibles: true };

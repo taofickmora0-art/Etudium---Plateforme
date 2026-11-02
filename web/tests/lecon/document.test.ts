@@ -112,12 +112,22 @@ describe("Valider un document", () => {
     expect(refus(doc({ type: "videoLecon", attrs: { fournisseur: "dailymotion", id: "x" } }))).toBe(INCONNU);
   });
 
+  it("l'identifiant d'une vidéo suit le format de sa plateforme (comme la vidéo de la leçon)", () => {
+    const VIDEO = "Une vidéo du contenu n’a pas un identifiant valide : ajoutez-la de nouveau.";
+    expect(refus(doc({ type: "videoLecon", attrs: { fournisseur: "youtube", id: "../../embed?x=1" } }))).toBe(VIDEO);
+    expect(refus(doc({ type: "videoLecon", attrs: { fournisseur: "vimeo", id: "dQw4w9WgXcQ" } }))).toBe(VIDEO);
+    expect(validerDocument(doc({ type: "videoLecon", attrs: { fournisseur: "vimeo", id: "76979871/abcdef0123" } })).ok).toBe(true);
+  });
+
   it("les limites", () => {
     expect(refus(doc(para(texte("a".repeat(20_001)))))).toBe("Le texte dépasse 20 000 caractères.");
     expect(refus(doc(...Array.from({ length: 41 }, () => image())))).toBe("40 images au plus par leçon.");
     expect(refus(doc(...Array.from({ length: 11 }, () => tableau([["a", "b"]]))))).toBe("10 tableaux au plus par leçon.");
     // Beaucoup de blocs vides : peu de texte, mais un document trop lourd.
     expect(refus(doc(...Array.from({ length: 12_000 }, () => ({ type: "horizontalRule" }))))).toBe("Le contenu est trop lourd (300 Ko au plus).");
+    // Mesuré comme la base (le texte du jsonb, une espace après chaque « : » et chaque « , ») : 11 500 blocs font moins
+    // de 300 Ko en JSON compact, mais plus pour la base ; l'appli refuse aussi, au lieu d'un échec à l'enregistrement.
+    expect(refus(doc(...Array.from({ length: 11_500 }, () => ({ type: "horizontalRule" }))))).toBe("Le contenu est trop lourd (300 Ko au plus).");
   });
 });
 

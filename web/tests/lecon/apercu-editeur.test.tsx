@@ -101,6 +101,14 @@ describe("La page leçon", () => {
     expect(await avecBrouillonFormation(EXCEL)).toEqual({ fiche: EXCEL, brouillon: false });
   });
 
+  it("seuls l'équipe des contenus et les formateurs lisent des brouillons ; un étudiant ou un modérateur, aucune requête", async () => {
+    const { peutLireBrouillons } = await import("@/lib/editeur/apercu");
+    expect(peutLireBrouillons(["etudiant"])).toBe(false);
+    expect(peutLireBrouillons(["etudiant", "moderateur"])).toBe(false);
+    expect(peutLireBrouillons(["etudiant", "admin"])).toBe(true);
+    expect(peutLireBrouillons(["etudiant", "formateur"])).toBe(true);
+  });
+
   it("aperçu d'une leçon en brouillon : le bandeau le dit", () => {
     render(<ContenuLecon donnees={donnees()} connecte apercu="lecon" />);
     expect(within(screen.getByRole("status", { name: "Aperçu : pas encore visible des étudiants" })).getByText("Cette leçon est en brouillon.")).toBeInTheDocument();

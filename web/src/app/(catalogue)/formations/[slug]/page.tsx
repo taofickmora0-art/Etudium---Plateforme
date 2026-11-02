@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { lireAvis } from "@/lib/avis/data";
 import { BandeauApercu } from "@/components/lecon/BandeauApercu";
 import { ficheApercu, lienModifierLecons } from "@/lib/catalogue/apercu";
-import { avecBrouillonFormation } from "@/lib/editeur/apercu";
+import { avecBrouillonFormation, peutLireBrouillons } from "@/lib/editeur/apercu";
 import { Banner } from "@/components/ui/Banner";
 import { getFiche, lireMonetisation, listCatalogue } from "@/lib/catalogue/data";
 import { monetisationDe } from "@/lib/catalogue/monetisation";
@@ -58,7 +58,7 @@ async function Fiche({ params }: Params) {
   // Avis (1.11), progression (1.7) et favoris (1.9) : absents tant que leurs migrations ne sont pas appliquées.
   if (!compte) return <FichePublique fiche={fiche} avis={await lireAvis(fiche.id)} monetisation={monetisation} />;
   // L'équipe ou le formateur voit les informations générales du brouillon (fin du lot 4).
-  const vue = await avecBrouillonFormation(fiche);
+  const vue = peutLireBrouillons(compte.roles) ? await avecBrouillonFormation(fiche) : { fiche, brouillon: false };
   // Le meilleur score de chaque quiz, dans le programme (lot 3).
   const aDes = (type: string) => fiche.modules.some((m) => m.lecons.some((l) => l.type === type));
   const [lignes, favoris, avis, lienModifier, scores, statuts] = await Promise.all([

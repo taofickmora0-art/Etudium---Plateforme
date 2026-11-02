@@ -5,7 +5,8 @@ import { EXCEL, id } from "./donnees";
 
 const faux = fauxSupabase();
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => faux.client }));
-vi.mock("@/lib/auth/current-user", () => ({ demoModeActive: () => false }));
+let roles = ["etudiant", "admin"];
+vi.mock("@/lib/auth/current-user", () => ({ demoModeActive: () => false, getShellUser: async () => ({ roles }) }));
 
 const { getLecon } = await import("@/lib/lecon/data");
 
@@ -109,6 +110,14 @@ describe("Lecture de la page leçon", () => {
     const enLigne = (await getLecon("maitriser-microsoft-excel", id(1), true))?.lecon;
     expect(enLigne).toMatchObject({ titre: "Découvrir l’interface" });
     expect(enLigne?.brouillon).toBeFalsy();
+  });
+
+  it("un étudiant : aucune lecture de brouillon (point reporté du lot 4)", async () => {
+    roles = ["etudiant"];
+    faux.repondre("lecons.select", { data: LECON_APERCU });
+    expect((await getLecon("maitriser-microsoft-excel", id(1), true))?.lecon).toMatchObject({ titre: "Découvrir l’interface" });
+    expect(faux.de("brouillons_lecons")).toEqual([]);
+    roles = ["etudiant", "admin"];
   });
 
   it("une leçon ouverte donne sa vidéo, son texte, ses ressources dans l'ordre et la note du compte", async () => {
