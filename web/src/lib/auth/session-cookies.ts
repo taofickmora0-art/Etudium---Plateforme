@@ -23,5 +23,15 @@ export function withRememberChoice(options: CookieOptions, remember: boolean): C
   return remember ? { ...rest, maxAge: TRENTE_JOURS } : rest;
 }
 
+/**
+ * Les options ajoutées aux cookies de session Supabase (`cookieOptions` de @supabase/ssr, fusionnées avec les siennes :
+ * path « / », sameSite « lax ») : `secure` en production, où le site est servi en https ; rien en développement, où
+ * http://localhost et l'adresse du Wi-Fi (téléphone) doivent garder la session. La durée reste celle de
+ * `withRememberChoice`. `nodeEnv` est lu en toutes lettres par défaut : Next l'injecte aussi côté navigateur.
+ */
+export function optionsCookiesSupabase(nodeEnv: string | undefined = process.env.NODE_ENV): CookieOptions {
+  return nodeEnv === "production" ? { secure: true } : {};
+}
+
 /** Valeur lue dans le cookie : absent = se souvenir. */
 export const rememberFromCookie = (value: string | undefined) => value !== "0";

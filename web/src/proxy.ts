@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { EN_TETE_CHEMIN, hasSessionCookie, isDemoMode, routeFor } from "@/lib/auth/routing";
-import { REMEMBER_COOKIE, rememberFromCookie, withRememberChoice } from "@/lib/auth/session-cookies";
+import { optionsCookiesSupabase, REMEMBER_COOKIE, rememberFromCookie, withRememberChoice } from "@/lib/auth/session-cookies";
 import { getPublicEnv } from "@/lib/env";
 
 /**
@@ -30,6 +30,8 @@ export async function proxy(request: NextRequest) {
     const { supabaseUrl, supabaseKey } = env;
     const remember = rememberFromCookie(request.cookies.get(REMEMBER_COOKIE)?.value);
     const supabase = createServerClient(supabaseUrl, supabaseKey, {
+      // `secure` en production (https seulement).
+      cookieOptions: optionsCookiesSupabase(),
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll(cookiesToSet, headers) {

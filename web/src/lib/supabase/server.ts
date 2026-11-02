@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
-import { REMEMBER_COOKIE, rememberFromCookie, withRememberChoice } from "@/lib/auth/session-cookies";
+import { optionsCookiesSupabase, REMEMBER_COOKIE, rememberFromCookie, withRememberChoice } from "@/lib/auth/session-cookies";
 import { getPublicEnv } from "@/lib/env";
 
 /**
@@ -20,6 +20,8 @@ export async function createClient(options: { remember?: boolean } = {}) {
   const remember = options.remember ?? rememberFromCookie(cookieStore.get(REMEMBER_COOKIE)?.value);
 
   return createServerClient(supabaseUrl, supabaseKey, {
+    // `secure` en production (https seulement).
+    cookieOptions: optionsCookiesSupabase(),
     cookies: {
       getAll() {
         return cookieStore.getAll();
