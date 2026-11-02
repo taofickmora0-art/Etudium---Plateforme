@@ -5,6 +5,12 @@
 export type ContenuEmail = { titre: string; texte: string; lien: string | null; prenom: string | null };
 export type ModeleEmail = { sujet: string; html: string; texte: string };
 
+/**
+ * Le logo complet d'Étudium (public/email/logo-etudium.png, scripts/generer-logo-email.mjs), à l'adresse du site en
+ * ligne : il s'affiche aussi dans les e-mails envoyés depuis la base de test. Affiché à 122 × 32 px.
+ */
+export const LOGO_EMAIL = "https://etudium.online/email/logo-etudium.png";
+
 const POLICE = "'Inter', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
 function echapper(s: string): string {
@@ -53,12 +59,7 @@ export function modeleEmail(e: ContenuEmail, site: string): ModeleEmail {
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 520px">
             <tr>
               <td style="padding: 0 4px 20px">
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                  <tr>
-                    <td width="40" height="40" align="center" valign="middle" style="width: 40px; height: 40px; background: #0b18c9; border-radius: 12px; color: #ffffff; font-family: ${POLICE}; font-size: 20px; font-weight: 700; line-height: 40px">É</td>
-                    <td style="padding-left: 10px; font-family: ${POLICE}; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; color: #0b18c9">Étudium</td>
-                  </tr>
-                </table>
+                <img src="${LOGO_EMAIL}" width="122" height="32" alt="Étudium" style="display: block; width: 122px; height: 32px; border: 0; outline: none; text-decoration: none; font-family: ${POLICE}; font-size: 19px; font-weight: 700; color: #0b18c9" />
               </td>
             </tr>
             <tr>
