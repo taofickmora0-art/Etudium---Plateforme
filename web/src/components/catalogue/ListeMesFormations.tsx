@@ -1,9 +1,7 @@
 import { useId } from "react";
 import Link from "next/link";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import type { VueCarteSuivie } from "@/components/mes-formations/CarteSuivie";
 import { CarteSuivieCompacte } from "@/components/mes-formations/CarteSuivieCompacte";
-import { Icon } from "@/components/ui/Icon";
 import { Heading } from "@/components/ui/Text";
 
 /** Jusqu'à 6 petites cartes côte à côte (spec Formations et Événements, §2). */
@@ -24,10 +22,9 @@ export function ListeMesFormations({ suivies }: { suivies: VueCarteSuivie[] }) {
         </Heading>
         <Link
           href="/mes-formations"
-          className="focus-etudium inline-flex flex-none items-center gap-1 rounded-puce text-sm leading-[22px] font-medium text-bleu no-underline hover:text-bleu-survol"
+          className="focus-etudium flex-none rounded-puce text-sm leading-[22px] font-medium text-bleu no-underline hover:underline"
         >
           Voir plus
-          <Icon icon={ArrowRight01Icon} size={16} />
         </Link>
       </div>
       <ul

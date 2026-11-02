@@ -134,7 +134,7 @@ describe("Le tableau de bord", () => {
       ["Quiz à repasserExcel · Quiz du module 3", "/formations/excel/lecons/q3"],
       ["Leçon suivanteCanva · Créer une affiche", "/formations/canva/lecons/c2"],
     ]);
-    const session = section("Prochaine session live");
+    const session = section("Prochaine session");
     expect(within(session).getByText("Excel avancé : analyse de données")).toBeInTheDocument();
     expect(within(session).getByText("+128 inscrits")).toBeInTheDocument();
     await userEvent.click(within(session).getByRole("button", { name: "Je m’inscris à la session" }));
@@ -145,7 +145,7 @@ describe("Le tableau de bord", () => {
   it("l'inscription refusée : le message de la base s'affiche", async () => {
     sinscrire.mockResolvedValue({ ok: false, message: "Les sessions live sont réservées aux abonnés." });
     render(<TableauDeBord donnees={PLEIN} />);
-    await userEvent.click(within(section("Prochaine session live")).getByRole("button", { name: "Je m’inscris à la session" }));
+    await userEvent.click(within(section("Prochaine session")).getByRole("button", { name: "Je m’inscris à la session" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Les sessions live sont réservées aux abonnés.");
   });
 
@@ -189,8 +189,14 @@ describe("Le tableau de bord", () => {
   it("rien de commencé : « Commencez votre première formation », et des cas vides partout", () => {
     render(<TableauDeBord donnees={VIDE} />);
     expect(within(section("Continuer l’apprentissage")).getByText("Commencez votre première formation")).toBeInTheDocument();
+    // Harmonisé (demande du 2 novembre 2026) : comme le bloc « Prochaine session », une phrase et un simple lien.
+    const lienCatalogue = within(section("Continuer l’apprentissage")).getByRole("link", { name: "Explorer le catalogue" });
+    expect(lienCatalogue).toHaveAttribute("href", "/formations");
+    expect(lienCatalogue.className).toContain("text-bleu");
+    expect(lienCatalogue.className).not.toContain("bg-");
+    expect(within(section("Prochaine session")).getByRole("link", { name: "Voir les événements" })).toHaveAttribute("href", "/evenements");
     expect(within(section("À faire")).getByText("Rien à faire pour l’instant.")).toBeInTheDocument();
-    expect(within(section("Prochaine session live")).getByText("Aucune session programmée pour l’instant.")).toBeInTheDocument();
+    expect(within(section("Prochaine session")).getByText("Aucune session programmée pour l’instant.")).toBeInTheDocument();
     expect(within(section("Activité récente")).getByText("Votre activité apparaîtra ici : quiz réussis, exercices validés, certificats et badges.")).toBeInTheDocument();
     expect(screen.getAllByTestId("indicateur").map((t) => t.textContent)).toEqual([
       "Progression globale0 %+0 % ce mois",

@@ -25,7 +25,8 @@ import type { AContinuer, BaseTableau, ElementAFaire, Indicateurs as DonneesIndi
 
 // Les blocs du tableau de bord de l'étudiant (design NdAccueil ; lot 6 B, §1).
 
-const LIEN = "focus-etudium text-sm leading-[22px] font-medium text-bleu no-underline hover:underline";
+/** Le lien simple des blocs (« Voir les événements ») : bleu, sans flèche ni fond. */
+export const LIEN = "focus-etudium text-sm leading-[22px] font-medium text-bleu no-underline hover:underline";
 const CARTE = "box-border flex min-w-0 flex-col rounded-carte border border-bordure-carte bg-panneau";
 export const GRILLE_INDICATEURS = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(228px,calc((100%-60px)/4))),1fr))] gap-5";
 
@@ -132,10 +133,10 @@ export function Continuer({ continuer: c }: { continuer: AContinuer | null }) {
       ) : (
         <div className={`${CARTE} items-start gap-3 px-[19px] py-5 max-sm:px-4`}>
           <h3 className="m-0 text-base leading-6 font-semibold text-encre">Commencez votre première formation</h3>
-          <p className="m-0 text-sm leading-[22px] text-texte">Choisissez une formation dans le catalogue : votre progression s’affichera ici.</p>
-          <Button asChild>
-            <Link href="/formations">Explorer le catalogue</Link>
-          </Button>
+          <p className="m-0 text-sm leading-[22px] text-discret">Choisissez une formation dans le catalogue : votre progression s’affichera ici.</p>
+          <Link href="/formations" className={LIEN}>
+            Explorer le catalogue
+          </Link>
         </div>
       )}
     </Section>

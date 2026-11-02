@@ -5,7 +5,7 @@ import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { Heading, Lead } from "@/components/ui/Text";
 import type { DonneesTableau } from "@/lib/tableau-de-bord/types";
-import { ActiviteRecente, AFaire, Continuer, Indicateurs, ObjectifSemaine, Section } from "./Blocs";
+import { ActiviteRecente, AFaire, Continuer, Indicateurs, LIEN, ObjectifSemaine, Section } from "./Blocs";
 import { ProchaineSessionBloc } from "./ProchaineSessionBloc";
 
 // Le tableau de bord de l'étudiant (lot 6 B, §1 ; design NdAccueil). Il répond aux 4 questions du design system (§22) :
@@ -45,12 +45,17 @@ export function TableauDeBord({ donnees: d, bandeau }: { donnees: DonneesTableau
           </div>
           <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-8">
             {d.session !== undefined && (
-              <Section titre="Prochaine session live" lien={{ href: "/evenements", texte: "Événements" }}>
+              <Section titre="Prochaine session">
                 <div className="box-border flex min-w-0 flex-col rounded-carte border border-bordure-carte bg-panneau px-[19px] pt-[22px] pb-[17px] max-sm:px-4 max-sm:pt-[18px]">
                   {d.session ? (
                     <ProchaineSessionBloc session={d.session} />
                   ) : (
-                    <p className="m-0 text-sm leading-[22px] text-discret">Aucune session programmée pour l’instant.</p>
+                    <div className="flex flex-col gap-2">
+                      <p className="m-0 text-sm leading-[22px] text-discret">Aucune session programmée pour l’instant.</p>
+                      <Link href="/evenements" className={LIEN}>
+                        Voir les événements
+                      </Link>
+                    </div>
                   )}
                 </div>
               </Section>

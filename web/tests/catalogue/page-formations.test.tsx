@@ -33,7 +33,10 @@ describe("Rangée « Mes formations »", () => {
     const liste = within(section).getByRole("list", { name: "Mes formations" });
     expect(within(liste).getAllByRole("listitem")).toHaveLength(6);
     expect(liste.className).toContain("grid-flow-col");
-    expect(within(section).getByRole("link", { name: "Voir plus" })).toHaveAttribute("href", "/mes-formations");
+    const voirPlus = within(section).getByRole("link", { name: "Voir plus" });
+    expect(voirPlus).toHaveAttribute("href", "/mes-formations");
+    // Harmonisé (demande du 2 novembre 2026) : un simple lien, sans flèche, comme « Voir les événements ».
+    expect(voirPlus.querySelector("svg")).toBeNull();
     expect(within(liste).getByRole("link", { name: /Formation 1/ })).toHaveAttribute("href", "/formations/formation-1/lecons/l1");
   });
 
