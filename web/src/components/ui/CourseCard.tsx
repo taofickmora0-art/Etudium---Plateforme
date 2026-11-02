@@ -65,7 +65,7 @@ export function CardShell({
         )}
       </div>
       <div className="flex min-w-0 flex-1 flex-col px-[19px] pt-4 pb-[17px]">
-        <Titre id={`${id}-titre`} title={title} className="m-0 truncate text-base leading-6 font-semibold text-encre max-sm:text-[15px] max-sm:leading-[22px]">
+        <Titre id={`${id}-titre`} title={title} className="m-0 line-clamp-2 min-h-12 text-base leading-6 font-semibold text-encre wrap-anywhere max-sm:min-h-11 max-sm:text-[15px] max-sm:leading-[22px]">
           {title}
         </Titre>
         {sousTitre}

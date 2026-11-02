@@ -42,6 +42,10 @@ describe("Cartes", () => {
     );
     expect(screen.getByText("4,8 (69)")).toBeVisible();
     expect(screen.getByText("Note 4,8 sur 5, 69 avis")).toHaveClass("sr-only");
+    // Le titre en entier, sur deux lignes au plus (demande du 2 novembre 2026 : comme les cartes de la capture).
+    const titre = screen.getByRole("heading", { name: "Lancer son activité de freelance" });
+    expect(titre).toHaveClass("line-clamp-2");
+    expect(titre).not.toHaveClass("truncate");
   });
 });
 
