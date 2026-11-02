@@ -334,10 +334,11 @@ $$;
 
 -- ─── Les recommandations (Q7) ───────────────────────────────────────────────────────────────────────
 -- Dans cet ordre, chaque formation une seule fois, à son premier rang :
---   1. « suite » : après un certificat (le plus récent d'abord), la première formation qui suit dans chacun de ses
---      parcours (ordre du parcours, puis titre), avec « Vous avez terminé « X ». Découvrez maintenant « Y ». » ;
---   2. « monetisation » : la formation Business liée à une compétence digitale commencée ; puis celles sans lien, qui
---      valent pour toutes les compétences (0048) ;
+--   1. « suite » : après une formation terminée (certificat, ou toutes ses leçons ; la plus récente d'abord), la
+--      première formation qui suit dans chacun de ses parcours (ordre du parcours, puis titre), avec « Vous avez terminé
+--      « X ». Découvrez maintenant « Y ». » ;
+--   2. « monetisation » : la formation Business liée à une compétence digitale commencée ; sans aucune, une seule
+--      formation sans lien (elle vaut pour toutes les compétences, 0048) ;
 --   3. « parcours » : les formations des parcours où le compte a commencé quelque chose, populaires (étudiants qui l'ont
 --      commencée) puis nouvelles ;
 --   4. « catalogue » : les autres, dans le même ordre.
@@ -383,20 +384,39 @@ begin
       ) po on po.formation_id = f.id
       where f.statut = 'publiee' and not exists (select 1 from commencees c where c.id = f.id)
     ),
-    suites as (
-      select x.id, x.message, row_number() over (order by x.cree_le desc, x.parcours_ordre, x.parcours_id) as rang
+    -- Terminée : son certificat, ou toutes ses leçons publiées terminées (« Terminée » dans « Mes formations », même
+    -- avant le quiz ou l'exercice qui manque au certificat).
+    terminees as (
+      select t.id, max(t.fini_le) as fini_le
       from (
-        select distinct on (c.id, fp.parcours_id)
-          ca.id, c.cree_le, p.ordre as parcours_ordre, fp.parcours_id,
-          format('Vous avez terminé « %s ». Découvrez maintenant « %s ».', ft.titre, ca.titre) as message
+        select c.formation_id as id, c.cree_le as fini_le
         from public.certificats c
-        join public.formations ft on ft.id = c.formation_id
-        join public.formations_parcours fp on fp.formation_id = c.formation_id
+        where c.profil_id = v_moi and c.formation_id is not null
+        union all
+        select m.formation_id, max(pl.terminee_le)
+        from public.lecons l
+        join public.modules m on m.id = l.module_id
+        left join public.progression_lecons pl on pl.lecon_id = l.id and pl.profil_id = v_moi
+        where l.type = 'lecon' and l.publiee and m.formation_id in (select ml.formation_id from mes_lecons ml)
+        group by m.formation_id
+        having count(*) = count(pl.terminee_le)
+      ) t
+      group by t.id
+    ),
+    suites as (
+      select x.id, x.message, row_number() over (order by x.fini_le desc, x.parcours_ordre, x.parcours_id) as rang
+      from (
+        select distinct on (t.id, fp.parcours_id)
+          ca.id, t.fini_le, p.ordre as parcours_ordre, fp.parcours_id,
+          format('Vous avez terminé « %s ». Découvrez maintenant « %s ».', ft.titre, ca.titre) as message
+        from terminees t
+        join public.formations ft on ft.id = t.id
+        join public.formations_parcours fp on fp.formation_id = t.id
         join public.parcours p on p.id = fp.parcours_id
         join public.formations_parcours apres on apres.parcours_id = fp.parcours_id
         join candidates ca on ca.id = apres.formation_id
-        where c.profil_id = v_moi and (apres.ordre, ca.titre) > (fp.ordre, ft.titre)
-        order by c.id, fp.parcours_id, apres.ordre, ca.titre
+        where (apres.ordre, ca.titre) > (fp.ordre, ft.titre)
+        order by t.id, fp.parcours_id, apres.ordre, ca.titre
       ) x
     ),
     competences as (
@@ -407,24 +427,33 @@ begin
         where fp.formation_id = ml.formation_id and p.couleur = 'digital'
       )
     ),
+    liees as (
+      select ca.id, max(co.vue_le) as vue_le
+      from public.formations_monetisation fm
+      join candidates ca on ca.id = fm.business_id
+      join competences co on co.id = fm.competence_id
+      group by ca.id
+    ),
+    -- Les formations Business liées à une compétence commencée ; sans aucune, une seule formation sans lien (« pour
+    -- toutes les compétences », 0048), la première du parcours Business. Les autres restent au catalogue : elles ne
+    -- prennent pas les places de son parcours.
     monetisation as (
-      select y.id, row_number() over (order by y.liee desc, y.vue_le desc nulls last, y.apprenants desc, y.titre) as rang
+      select l.id, row_number() over (order by l.vue_le desc nulls last, ca.apprenants desc, ca.titre) as rang
+      from liees l join candidates ca on ca.id = l.id
+      union all
+      select z.id, 1
       from (
-        select ca.id, ca.titre, ca.apprenants, true as liee, max(co.vue_le) as vue_le
-        from public.formations_monetisation fm
-        join candidates ca on ca.id = fm.business_id
-        join competences co on co.id = fm.competence_id
-        group by ca.id, ca.titre, ca.apprenants
-        union all
-        select ca.id, ca.titre, ca.apprenants, false, null
+        select ca.id
         from candidates ca
+        join public.formations_parcours fp on fp.formation_id = ca.id
+        join public.parcours p on p.id = fp.parcours_id and p.couleur = 'business'
         where exists (select 1 from competences)
+          and not exists (select 1 from liees)
           and not exists (select 1 from public.formations_monetisation fm where fm.business_id = ca.id)
-          and exists (
-            select 1 from public.formations_parcours fp join public.parcours p on p.id = fp.parcours_id
-            where fp.formation_id = ca.id and p.couleur = 'business'
-          )
-      ) y
+        group by ca.id, ca.titre
+        order by min(fp.ordre), ca.titre
+        limit 1
+      ) z
     ),
     mes_parcours as (
       select distinct fp.parcours_id from public.formations_parcours fp join commencees c on c.id = fp.formation_id

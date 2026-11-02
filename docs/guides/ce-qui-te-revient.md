@@ -1185,11 +1185,11 @@ L'étudiant a maintenant un **tableau de bord** (« Mon espace » › « Tableau
    La ligne attendue : `0 17 * * *` (17 h UTC, soit 18 h au Bénin).
 2. **Ce qui part de zéro** : la série et les points commencent à l'application de la migration. Seule exception : les certificats déjà obtenus donnent tout de suite leurs 100 points et leurs badges.
 3. **À vérifier avec un compte étudiant de test** :
-   - ouvre une leçon : la série passe à « 1 jour » dans l'en-tête, et « Points gagnés cette semaine » à 5 ;
+   - ouvre une leçon, puis va sur ton tableau de bord : la série affiche « 1 jour » et « Points gagnés cette semaine » 5. L'en-tête de la page de leçon ne change pas tout de suite : il se met à jour à la page suivante ;
    - termine la leçon : +10 et le badge « Premier pas » (profil › Informations › carte « Gamification ») ;
    - un quiz réussi donne +20, un exercice validé +30, un certificat +100 ; chaque chose ne compte qu'une fois ;
    - le tableau de bord montre la formation à reprendre, ce qu'il y a à faire (exercice à corriger, quiz à repasser), la prochaine session (inscription d'un clic), l'objectif de la semaine, l'activité récente et trois recommandations ;
-   - après un certificat, la formation suivante du même parcours est proposée en premier, avec « Vous avez terminé « X ». Découvrez maintenant « Y ». » ;
+   - après une formation terminée (toutes ses leçons, ou son certificat), la formation suivante du même parcours est proposée en premier, avec « Vous avez terminé « X ». Découvrez maintenant « Y ». » ;
    - profil › Notifications › « Objectif de la semaine » : 3, 5 ou 7 jours (5 par défaut).
 4. **Le rappel de 18 h** : à qui a une série d'au moins 2 jours et n'a encore rien fait ce jour-là, « Votre série de N jours s’arrête ce soir ». Il ne part pas si « Rappels d’apprentissage » est coupé dans le profil, ni pour un formateur, ni pour un compte suspendu. Pour l'essayer sans attendre 18 h (dans l'éditeur SQL) : `select public.rappeler_series();` rend le nombre de rappels envoyés.
 5. **Bon à savoir** :

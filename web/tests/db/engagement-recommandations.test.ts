@@ -8,7 +8,7 @@ import { creerFormation, creerParcours, MIGRATIONS_ENGAGEMENT, poserCertificat, 
 // nouvelles), et le catalogue. Jamais une formation déjà commencée.
 
 let banc: Banc;
-const [E1, E2, E3, E4, E5, S1, S2, ADMIN] = Array.from({ length: 8 }, () => randomUUID());
+const [E1, E2, E3, E4, E5, E6, E7, S1, S2, ADMIN] = Array.from({ length: 10 }, () => randomUUID());
 const f: Record<string, FormationTest> = {};
 
 type Reco = { id: string; slug: string; titre: string; motif: string; message: string | null };
@@ -18,7 +18,7 @@ const ouvrir = (qui: string, formation: FormationTest) =>
 
 beforeAll(async () => {
   banc = await creerBanc(MIGRATIONS_ENGAGEMENT);
-  for (const id of [E1, E2, E3, E4, E5, S1, S2]) await banc.creerCompte(id);
+  for (const id of [E1, E2, E3, E4, E5, E6, E7, S1, S2]) await banc.creerCompte(id);
   await banc.creerCompte(ADMIN, ["admin"]);
   const P = await creerParcours(banc, "Réussite académique");
   const D = await creerParcours(banc, "Compétences digitales", "digital");
@@ -34,9 +34,15 @@ beforeAll(async () => {
   f.K = await creerFormation(banc, "Canva", { ...options, parcours: [D] });
   f.K2 = await creerFormation(banc, "Figma", { ...options, parcours: [D] });
   f.Z = await creerFormation(banc, "Vendre ses visuels", { ...options, parcours: [BU] });
-  f.Z2 = await creerFormation(banc, "Lancer son activité", { ...options, parcours: [BU] });
+  f.K3 = await creerFormation(banc, "CapCut", { ...options, parcours: [D] });
+  f.Z2 = await creerFormation(banc, "Lancer son activité", { ...options, parcours: [BU], ordre: 1 });
+  f.Z4 = await creerFormation(banc, "Accompagner ses clients", { ...options, parcours: [BU], ordre: 5 });
   f.Z3 = await creerFormation(banc, "Vendre ses maquettes", { ...options, parcours: [BU] });
   await banc.db.query("insert into public.formations_monetisation (business_id, competence_id) values ($1, $2), ($3, $4)", [f.Z.id, f.K.id, f.Z3.id, f.K2.id]);
+  // Un parcours dont la première formation a un quiz : ses leçons terminées ne suffisent pas au certificat.
+  const P2 = await creerParcours(banc, "Méthodes de travail");
+  f.A2 = await creerFormation(banc, "Organisation", { quiz: true, exercice: null, parcours: [P2], ordre: 1 });
+  f.B2 = await creerFormation(banc, "Prise de notes", { ...options, parcours: [P2], ordre: 2 });
   f.Q1 = await creerFormation(banc, "Problématique", { ...options, parcours: [Q] });
   f.Q2 = await creerFormation(banc, "Plan", { ...options, parcours: [Q], publieeLe: "now() - interval '60 days'" });
   f.Q3 = await creerFormation(banc, "Rédaction", { ...options, parcours: [Q], publieeLe: "now()" });
@@ -60,14 +66,29 @@ describe("Migration 0063 : les recommandations", () => {
     expect(premiere).toMatchObject({ id: f.C.id, motif: "suite", message: "Vous avez terminé « Word ». Découvrez maintenant « Mémoire »." });
   });
 
-  it("une compétence digitale commencée : la formation Business liée, puis celles valables pour toutes les compétences", async () => {
+  it("toutes les leçons terminées, même sans le certificat (quiz pas encore réussi) : la suite est proposée", async () => {
+    for (const lecon of f.A2.lecons) {
+      await banc.db.query("insert into public.progression_lecons (profil_id, lecon_id, terminee_le) values ($1, $2, now())", [E7, lecon]);
+    }
+    expect((await banc.db.query("select 1 from public.certificats where profil_id = $1", [E7])).rows).toEqual([]);
+    const [premiere] = await recos(E7);
+    expect(premiere).toMatchObject({ id: f.B2.id, motif: "suite", message: "Vous avez terminé « Organisation ». Découvrez maintenant « Prise de notes »." });
+  });
+
+  it("une compétence digitale commencée : seulement la formation Business liée ; les autres Business ne prennent pas sa place", async () => {
     await ouvrir(E2, f.K);
     const liste = await recos(E2, 12);
-    expect(liste.slice(0, 2).map((r) => [r.titre, r.motif])).toEqual([
-      ["Vendre ses visuels", "monetisation"],
-      ["Lancer son activité", "monetisation"],
-    ]);
-    expect(liste.find((r) => r.id === f.Z3.id)?.motif).toBe("catalogue");
+    expect(liste.filter((r) => r.motif === "monetisation").map((r) => r.titre)).toEqual(["Vendre ses visuels"]);
+    expect(liste[0].titre).toBe("Vendre ses visuels");
+    for (const autre of [f.Z2, f.Z3, f.Z4]) expect(liste.find((r) => r.id === autre.id)?.motif).toBe("catalogue");
+  });
+
+  it("une compétence sans formation Business liée : une seule formation « pour toutes les compétences », la première du parcours Business", async () => {
+    await ouvrir(E6, f.K3);
+    const liste = await recos(E6, 12);
+    expect(liste.filter((r) => r.motif === "monetisation").map((r) => r.titre)).toEqual(["Lancer son activité"]);
+    // Les deux autres places restent à son parcours (Compétences digitales).
+    expect((await recos(E6)).map((r) => r.motif)).toEqual(["monetisation", "parcours", "parcours"]);
   });
 
   it("ses parcours : les plus suivies par les étudiants d'abord, puis les plus récentes", async () => {
@@ -85,7 +106,7 @@ describe("Migration 0063 : les recommandations", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const exclue of [f.Q1, f.W1, f.W2, f.W3]) expect(ids).not.toContain(exclue.id);
     expect(liste.slice(3).every((r) => r.motif === "catalogue")).toBe(true);
-    expect(liste.length).toBe(11);
+    expect(liste.length).toBe(12);
   });
 
   it("tout est commencé : aucune recommandation", async () => {
