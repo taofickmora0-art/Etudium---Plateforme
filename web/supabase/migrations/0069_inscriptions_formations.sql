@@ -4,17 +4,23 @@
 --   - formation_ouverte : la règle d'accès d'avant au niveau de la formation, sans l'inscription (équipe des contenus,
 --     formateur de la formation ; sinon formation publiée, et gratuite pour un compte connecté ou abonnement actif). Sert
 --     au bouton « S'inscrire à ce cours » / « Voir les abonnements » ;
---   - s_inscrire_formation : inscrit le compte connecté, non suspendu, sans le rôle formateur, à une formation publiée
---     qui lui est ouverte. Rejouable : déjà inscrit, rien ne change. inscrit_formation : l'est-il ?
+--   - s_inscrire_formation : inscrit le compte connecté, non suspendu, sans le rôle formateur, hors équipe des contenus
+--     (qui a déjà accès à tout), à une formation publiée qui lui est ouverte. Rejouable : déjà inscrit, rien ne change.
+--     inscrit_formation : l'est-il ?
 --   - acces_lecon : pour l'étudiant, une leçon qui n'est pas un aperçu exige en plus l'inscription. Les aperçus restent
 --     ouverts comme avant (visiteurs compris) ; l'équipe des contenus et le formateur de la formation ne changent pas.
 --     À la fin d'un abonnement, l'inscription reste et les leçons payantes se ferment comme avant ;
---   - apprenants_formations : le nombre d'inscrits de chaque formation publiée, lisible par tous (visiteurs compris) ;
+--   - apprenants_formations : le nombre d'inscrits de chaque formation publiée, lisible par tous (visiteurs compris),
+--     sans l'équipe ni les formateurs (règle des statistiques, 0029) ;
+--   - suiveurs_formation (qui prévenir d'une nouvelle leçon, d'un archivage ; et, par suiveurs_actifs_formation, d'une
+--     désactivation) : les inscrits en plus de ceux qui ont ouvert une leçon ;
 --   - la messagerie suit l'inscription (et non plus une leçon ouverte) : suit_formation_de, formation_commune et
 --     contacts_messagerie. Un aperçu ouvert ne suffit plus pour écrire au formateur.
--- Rattrapage : chaque compte qui a déjà une progression ou un certificat dans une formation y est inscrit, à la date de sa
--- première leçon ouverte (ou de son certificat). Personne ne perd l'accès. Il n'a lieu qu'à la première application :
--- rejoué plus tard, il inscrirait aussi qui n'a ouvert qu'un aperçu depuis.
+-- Rattrapage : chaque compte étudiant qui a déjà une progression, une tentative de quiz, un rendu d'exercice ou un
+-- certificat dans une formation y est inscrit, à la date de la plus ancienne. L'équipe (modérateurs, admins, super admins)
+-- et les formateurs, qui ouvrent des leçons pour les relire, ne le sont pas (règle de la 0029). Aucun étudiant ne perd
+-- l'accès. Il n'a lieu qu'à la première application : rejoué plus tard, il inscrirait aussi qui n'a ouvert qu'un aperçu
+-- depuis.
 -- À appliquer après la 0068. Rejouable.
 
 begin;
@@ -91,6 +97,9 @@ begin
   if public.a_role('formateur') then
     raise exception 'Un compte formateur ne suit pas de formation.' using errcode = '42501';
   end if;
+  if public.equipe_contenus() then
+    raise exception 'L’équipe a déjà accès à toutes les formations.' using errcode = '42501';
+  end if;
   if not exists (select 1 from public.formations f where f.id = p_formation and f.statut = 'publiee') then
     raise exception 'Cette formation n’est pas disponible.';
   end if;
@@ -158,6 +167,8 @@ as $$
 $$;
 
 -- ─── Les apprenants de chaque formation publiée ─────────────────────────────────────────────────────
+-- Les inscrits, sans l'équipe ni les formateurs (règle des statistiques, 0029) : un inscrit devenu modérateur ou
+-- formateur ne compte plus.
 create or replace function public.apprenants_formations()
 returns table (formation_id uuid, apprenants integer)
 language sql
@@ -167,9 +178,40 @@ set search_path = ''
 as $$
   select f.id, count(i.profil_id)::integer
   from public.formations f
-  left join public.inscriptions_formations i on i.formation_id = f.id
+  left join public.inscriptions_formations i
+    on i.formation_id = f.id
+    and not exists (
+      select 1 from public.roles r
+      where r.profil_id = i.profil_id and r.role in ('moderateur', 'admin', 'super_admin', 'formateur')
+    )
   where f.statut = 'publiee'
   group by f.id;
+$$;
+
+-- ─── Qui prévenir : les inscrits aussi ──────────────────────────────────────────────────────────────
+-- Dernière définition : 0016_notifications.sql (ceux qui ont ouvert une leçon). S'y ajoutent les inscrits, même à 0 % :
+-- ils reçoivent les nouvelles leçons et l'archivage (0016, 0034, 0060). suiveurs_actifs_formation (0059 : désactivation
+-- et réactivation, « N étudiants suivent cette formation ») la lit, avec ses filtres (comptes suspendus, équipe,
+-- formateurs) : elle suit sans changer.
+create or replace function public.suiveurs_formation(p_formation uuid)
+returns uuid[]
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(array_agg(distinct s.profil_id), '{}')
+  from (
+    select p.profil_id
+    from public.progression_lecons p
+    join public.lecons l on l.id = p.lecon_id
+    join public.modules m on m.id = l.module_id
+    where m.formation_id = p_formation
+    union
+    select i.profil_id
+    from public.inscriptions_formations i
+    where i.formation_id = p_formation
+  ) s;
 $$;
 
 -- ─── La messagerie : l'inscription relie l'étudiant au formateur ────────────────────────────────────
@@ -261,8 +303,9 @@ as $$
 $$;
 
 -- ─── Le rattrapage : qui avait commencé une formation y est inscrit ─────────────────────────────────
--- À la date de sa première leçon ouverte, ou de son certificat s'il est plus ancien. À la première application
--- seulement ; une inscription existante ne change pas.
+-- Une leçon ouverte, un quiz passé, un exercice rendu (ou marqué terminé) ou un certificat : à la date du plus ancien.
+-- Ni l'équipe ni les formateurs (règle des statistiques, 0029). À la première application seulement ; une inscription
+-- existante ne change pas.
 do $$
 begin
   if current_setting('etudium.rattrapage_0069', true) = 'true' then
@@ -274,10 +317,24 @@ begin
       join public.lecons l on l.id = p.lecon_id
       join public.modules m on m.id = l.module_id
       union all
+      select t.profil_id, m.formation_id, t.cree_le
+      from public.tentatives_quiz t
+      join public.lecons l on l.id = t.lecon_id
+      join public.modules m on m.id = l.module_id
+      union all
+      select r.profil_id, m.formation_id, r.cree_le
+      from public.rendus_exercices r
+      join public.lecons l on l.id = r.lecon_id
+      join public.modules m on m.id = l.module_id
+      union all
       select c.profil_id, c.formation_id, c.cree_le
       from public.certificats c
       where c.profil_id is not null and c.formation_id is not null
     ) x
+    where not exists (
+      select 1 from public.roles r
+      where r.profil_id = x.profil_id and r.role in ('moderateur', 'admin', 'super_admin', 'formateur')
+    )
     group by x.profil_id, x.formation_id
     on conflict do nothing;
   end if;
@@ -290,6 +347,7 @@ revoke execute on function public.formation_ouverte(uuid) from public;
 revoke execute on function public.s_inscrire_formation(uuid) from public, anon;
 revoke execute on function public.inscrit_formation(uuid) from public;
 revoke execute on function public.apprenants_formations() from public;
+revoke execute on function public.suiveurs_formation(uuid) from public, anon, authenticated;
 revoke execute on function public.suit_formation_de(uuid, uuid) from public, anon, authenticated;
 revoke execute on function public.formation_commune(uuid, uuid) from public, anon, authenticated;
 revoke execute on function public.contacts_messagerie(text, text) from public, anon;

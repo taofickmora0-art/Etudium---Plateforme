@@ -11,14 +11,18 @@ import { creerFormation, poserCertificat, type FormationTest } from "./engagemen
 const MIGRATION = "supabase/migrations/0069_inscriptions_formations.sql";
 
 let banc: Banc;
-const [S, A, F, G, E, AB, EX, SU, X, R1, R2] = Array.from({ length: 11 }, () => randomUUID());
-// S : super admin ; A : admin (équipe des contenus) ; F : formateur de « payante » et « gratuite » ; G : autre formateur ;
-// E : étudiante sans abonnement ; AB : abonnée ; EX : abonnement expiré ; SU : bientôt suspendue ; X : n'ouvre qu'un
-// aperçu ; R1, R2 : avaient commencé avant la 0069.
+const [S, A, F, G, E, AB, EX, SU, X, R1, R2, Q, RE, M, P, W, W2, N] = Array.from({ length: 18 }, () => randomUUID());
+// S : super admin ; A : admin (équipe des contenus) ; F : formateur de « payante », « gratuite », « zotero » et
+// « powerpoint » ; G : autre formateur ; E : étudiante sans abonnement ; AB : abonnée ; EX : abonnement expiré ; SU :
+// bientôt suspendue ; X : n'ouvre qu'un aperçu ; R1, R2 : avaient commencé avant la 0069 ; Q : n'avait passé qu'un quiz ;
+// RE : n'avait rendu qu'un exercice ; M : modératrice ; P : étudiant devenu formateur ; W, W2 : inscrits, puis modérateur et formateur ; N : inscrite à
+// 0 % (les notifications).
 let payante: FormationTest; // payante ; sa première leçon est un aperçu
 let gratuite: FormationTest;
 let autre: FormationTest; // de G
 let brouillon: FormationTest;
+let zotero: FormationTest; // gratuite, avec un quiz et un exercice à rendre
+let powerpoint: FormationTest; // gratuite, pour les notifications
 
 const r = async <T>(qui: string | "anon", sql: string, params: unknown[] = []) =>
   (await banc.en<{ r: T }>(qui === "anon" ? "anon" : { id: qui }, sql, params))[0].r;
@@ -35,15 +39,23 @@ const inscriptions = async (formation?: FormationTest) =>
 const suit = async (etudiant: string, formateur: string) =>
   (await banc.db.query<{ r: boolean }>("select public.suit_formation_de($1, $2) as r", [etudiant, formateur])).rows[0].r;
 const contacts = (qui: string, espace: "etudiant" | "formateur") => r<{ id: string; formation: string }[]>(qui, "select public.contacts_messagerie($1, '') as r", [espace]);
+const apprenants = async (qui: string | "anon") =>
+  Object.fromEntries(
+    (await banc.en<{ formation_id: string; apprenants: number }>(qui === "anon" ? "anon" : { id: qui }, "select formation_id, apprenants from public.apprenants_formations()")).map((x) => [
+      x.formation_id,
+      x.apprenants,
+    ]),
+  );
 const progression = (profil: string, lecon: string, ouverteLe: string) =>
   banc.db.query("insert into public.progression_lecons (profil_id, lecon_id, ouverte_le, vue_le) values ($1, $2, $3, $3)", [profil, lecon, ouverteLe]);
 
 beforeAll(async () => {
   // Le banc s'arrête à la 0068 : la progression d'avant l'inscription y est posée, puis la 0069 est appliquée.
   banc = await creerBanc(migrationsJusqua("0068"));
-  for (const [id, roles] of [[S, ["super_admin"]], [A, ["admin"]], [F, []], [G, []], [E, []], [AB, []], [EX, []], [SU, []], [X, []], [R1, []], [R2, []]] as const) {
-    await banc.creerCompte(id, [...roles]);
-  }
+  await banc.creerCompte(S, ["super_admin"]);
+  await banc.creerCompte(A, ["admin"]);
+  await banc.creerCompte(M, ["moderateur"]);
+  for (const id of [F, G, E, AB, EX, SU, X, R1, R2, Q, RE, P, W, W2, N]) await banc.creerCompte(id);
   for (const id of [F, G]) await banc.en({ id: S }, "select public.changer_role($1, 'formateur')", [id]);
   const fiche = async (compte: string) => (await banc.db.query<{ id: string }>("select id from public.formateurs where compte_id = $1", [compte])).rows[0].id;
   const [FF, FG] = [await fiche(F), await fiche(G)];
@@ -52,6 +64,8 @@ beforeAll(async () => {
   gratuite = await creerFormation(banc, "Word", { ...sans, formateur: FF });
   autre = await creerFormation(banc, "Canva", { ...sans, formateur: FG });
   brouillon = await creerFormation(banc, "Brouillon", { ...sans, statut: "brouillon" });
+  zotero = await creerFormation(banc, "Zotero", { formateur: FF });
+  powerpoint = await creerFormation(banc, "PowerPoint", { ...sans, formateur: FF });
   await abonner(banc, AB);
   await abonner(banc, EX, { debut: "now() - interval '3 months'", fin: "now() - interval '1 minute'" });
 
@@ -61,6 +75,16 @@ beforeAll(async () => {
   await progression(R1, gratuite.lecons[0], "2026-10-01 09:00:00+00");
   await poserCertificat(banc, R1, gratuite, "'2026-10-20 09:00:00+00'::timestamptz");
   await poserCertificat(banc, R2, payante, "'2026-10-05 09:00:00+00'::timestamptz");
+  // Q n'a passé que le quiz de « zotero » (le 3 octobre), RE n'a rendu que son exercice (le 4) ; l'admin A, la
+  // modératrice M et P (étudiant devenu formateur depuis) avaient ouvert une leçon de « gratuite ».
+  await banc.db.query("insert into public.tentatives_quiz (profil_id, lecon_id, numero, bonnes, total, score, cree_le) values ($1, $2, 1, 1, 1, 100, $3)", [
+    Q,
+    zotero.quiz,
+    "2026-10-03 09:00:00+00",
+  ]);
+  await banc.db.query("insert into public.rendus_exercices (lecon_id, profil_id, version, cree_le) values ($1, $2, 1, $3)", [zotero.exercice, RE, "2026-10-04 09:00:00+00"]);
+  for (const qui of [A, M, P]) await progression(qui, gratuite.lecons[0], "2026-10-02 09:00:00+00");
+  await banc.en({ id: S }, "select public.changer_role($1, 'formateur')", [P]);
 
   await banc.appliquer(MIGRATION);
 }, 60_000);
@@ -71,6 +95,21 @@ describe("Migration 0069 : le rattrapage", () => {
     expect((await inscriptions(payante)).map((i) => [i.profil_id, i.inscrit_le.toISOString()])).toEqual([[R2, "2026-10-05T09:00:00.000Z"]]);
     expect(await inscriptions(autre)).toEqual([]);
     expect(await acces(R1, gratuite.lecons[1])).toBe(true);
+  });
+
+  it("un quiz passé ou un exercice rendu suffit : le compte est inscrit à leur date, et son quiz reste ouvert", async () => {
+    expect((await inscriptions(zotero)).map((i) => [i.profil_id, i.inscrit_le.toISOString()])).toEqual([
+      [Q, "2026-10-03T09:00:00.000Z"],
+      [RE, "2026-10-04T09:00:00.000Z"],
+    ]);
+    expect(await acces(Q, zotero.quiz!)).toBe(true);
+    expect(await acces(RE, zotero.exercice!)).toBe(true);
+    expect(await acces(Q, zotero.lecons[1])).toBe(true);
+  });
+
+  it("l'équipe (modératrice comprise) et les formateurs qui avaient ouvert des leçons ne sont pas inscrits (règle de la 0029)", async () => {
+    for (const qui of [A, M, P]) expect(await inscrit(qui, gratuite)).toBe(false);
+    expect((await inscriptions()).filter((i) => [A, M, P, S, F, G].includes(i.profil_id))).toEqual([]);
   });
 
   it("à la fin d'un abonnement, l'inscription reste mais les leçons payantes se ferment", async () => {
@@ -115,10 +154,12 @@ describe("Migration 0069 : l'inscription ouvre les leçons", () => {
     expect(await inscrit(E, payante)).toBe(false);
   });
 
-  it("refusée aussi : visiteur, formateur, compte suspendu, formation non publiée ou inconnue", async () => {
+  it("refusée aussi : visiteur, formateur, équipe des contenus, compte suspendu, formation non publiée ou inconnue", async () => {
     await expect(inscrire("anon", gratuite)).rejects.toThrow();
     await expect(inscrire(F, gratuite)).rejects.toThrow(/formateur/);
     await expect(inscrire(G, gratuite)).rejects.toThrow(/formateur/);
+    await expect(inscrire(A, gratuite)).rejects.toThrow("L’équipe a déjà accès à toutes les formations.");
+    await expect(inscrire(S, payante)).rejects.toThrow("L’équipe a déjà accès à toutes les formations.");
     await expect(inscrire(E, brouillon)).rejects.toThrow(/disponible/);
     await expect(inscrire(E, randomUUID())).rejects.toThrow(/disponible/);
     expect(await ouverte("anon", gratuite)).toBe(false);
@@ -133,7 +174,7 @@ describe("Migration 0069 : l'inscription ouvre les leçons", () => {
     expect(await acces(SU, gratuite.lecons[0])).toBe(false);
     expect(await ouverte(SU, gratuite)).toBe(false);
 
-    const refuses = (await inscriptions()).filter((i) => i.profil_id === F || i.profil_id === G || i.formation_id === brouillon.id);
+    const refuses = (await inscriptions()).filter((i) => [F, G, A, S].includes(i.profil_id) || i.formation_id === brouillon.id);
     expect(refuses).toEqual([]);
   });
 
@@ -163,16 +204,18 @@ describe("Migration 0069 : la table des inscriptions", () => {
   });
 
   it("apprenants_formations : le nombre d'inscrits des formations publiées, lisible par un visiteur", async () => {
-    const apprenants = async (qui: string | "anon") =>
-      Object.fromEntries(
-        (await banc.en<{ formation_id: string; apprenants: number }>(qui === "anon" ? "anon" : { id: qui }, "select formation_id, apprenants from public.apprenants_formations()")).map((x) => [
-          x.formation_id,
-          x.apprenants,
-        ]),
-      );
-    const attendu = { [payante.id]: 2, [gratuite.id]: 3, [autre.id]: 0 };
+    const attendu = { [payante.id]: 2, [gratuite.id]: 3, [autre.id]: 0, [zotero.id]: 2, [powerpoint.id]: 0 };
     expect(await apprenants("anon")).toEqual(attendu);
     expect(await apprenants(E)).toEqual(attendu);
+  });
+
+  it("apprenants_formations ne compte ni l'équipe ni les formateurs (règle de la 0029), même inscrits", async () => {
+    for (const qui of [W, W2]) await inscrire(qui, autre);
+    expect((await apprenants("anon"))[autre.id]).toBe(2);
+    await banc.en({ id: S }, "select public.changer_role($1, 'moderateur')", [W]);
+    await banc.en({ id: S }, "select public.changer_role($1, 'formateur')", [W2]);
+    expect(await inscrit(W, autre)).toBe(true);
+    expect((await apprenants("anon"))[autre.id]).toBe(0);
   });
 });
 
@@ -191,6 +234,30 @@ describe("Migration 0069 : la messagerie suit l'inscription", () => {
     const deF = (await contacts(F, "formateur")).map((c) => c.id);
     expect(deF).toEqual(expect.arrayContaining([E, AB, R1, R2]));
     expect(deF).not.toContain(X);
+  });
+});
+
+describe("Migration 0069 : les inscrits sont prévenus, même à 0 %", () => {
+  const notifications = async (qui: string) =>
+    (await banc.db.query<{ titre: string }>("select titre from public.notifications where destinataire = $1 order by id", [qui])).rows.map((n) => n.titre);
+
+  it("une nouvelle leçon (suiveurs_formation), puis la désactivation (suiveurs_actifs_formation) : l'inscrite à 0 % est prévenue", async () => {
+    await inscrire(N, powerpoint);
+    await banc.db.query("delete from public.notifications");
+    await banc.db.query("delete from public.envois");
+
+    const module = (await banc.db.query<{ id: string }>("select id from public.modules where formation_id = $1", [powerpoint.id])).rows[0].id;
+    const lecon = (
+      await banc.db.query<{ id: string }>("insert into public.lecons (module_id, titre, type, publiee, ordre) values ($1, 'Les animations', 'lecon', false, 9) returning id", [module])
+    ).rows[0].id;
+    await banc.db.query("update public.lecons set publiee = true where id = $1", [lecon]);
+    expect(await notifications(N)).toEqual(["Nouvelle leçon dans PowerPoint"]);
+
+    expect((await banc.en<{ n: number }>({ id: S }, "select public.nombre_suiveurs_formation($1) as n", [powerpoint.id]))[0].n).toBe(1);
+    await banc.en({ id: S }, "update public.formations set statut = 'desactivee'::text::public.statut_formation where id = $1", [powerpoint.id]);
+    expect(await notifications(N)).toEqual(["Nouvelle leçon dans PowerPoint", "« PowerPoint » est momentanément indisponible"]);
+    const emails = await banc.db.query<{ destinataire: string }>("select destinataire from public.envois where canal = 'email' and titre like '%indisponible'");
+    expect(emails.rows).toEqual([{ destinataire: N }]);
   });
 });
 
