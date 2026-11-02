@@ -17,6 +17,8 @@ export const PAGES_PUBLIQUES = [
   "/auth",
   // Catalogue et fiches des formations (lot 1, spec §2) : la même adresse pour le visiteur et l'étudiant.
   "/formations",
+  // Le profil public d'un formateur (spec du 2 novembre 2026, §6). « /formateur » (son espace) reste fermé.
+  "/formateurs",
   // La vérification d'un certificat, sans compte (lot 3, R23) : la page du formulaire et celle du QR Code.
   "/verifier",
   "/c",

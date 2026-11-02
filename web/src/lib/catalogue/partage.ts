@@ -5,8 +5,8 @@ import type { FicheFormation } from "./types";
 
 const LONGUEUR_DESCRIPTION = 160;
 
-/** Coupe sur un mot, avec « … », pour rester sous 160 caractères. */
-function couper(texte: string) {
+/** Coupe sur un mot, avec « … », pour rester sous 160 caractères (aussi pour le profil d'un formateur). */
+export function couper(texte: string) {
   const propre = texte.replace(/\s+/g, " ").trim();
   if (propre.length <= LONGUEUR_DESCRIPTION) return propre;
   const coupe = propre.slice(0, LONGUEUR_DESCRIPTION - 1);

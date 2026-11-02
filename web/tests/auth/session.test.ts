@@ -117,6 +117,14 @@ describe("Pages protégées", () => {
     }
   });
 
+  it("le profil d'un formateur s'ouvre sans compte ; l'espace formateur reste fermé (spec du 2 novembre 2026, §6)", () => {
+    const profil = "/formateurs/11111111-1111-4111-8111-111111111111";
+    expect(routeFor({ pathname: profil, signedIn: false, hadSession: false })).toEqual({});
+    expect(routeFor({ pathname: profil, signedIn: true, hadSession: true })).toEqual({});
+    expect(routeFor({ pathname: "/formateur", signedIn: false, hadSession: false })).toEqual({ redirect: "/connexion?next=%2Fformateur" });
+    expect(routeFor({ pathname: "/formateur/formations", signedIn: false, hadSession: false })).toEqual({ redirect: "/connexion?next=%2Fformateur%2Fformations" });
+  });
+
   it("les formations gratuites restent dans l'espace connecté", () => {
     expect(routeFor({ pathname: "/formations-gratuites", signedIn: false, hadSession: false })).toEqual({ redirect: "/connexion?next=%2Fformations-gratuites" });
   });

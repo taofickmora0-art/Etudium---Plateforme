@@ -6,6 +6,7 @@ import { ArrowDown01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterChips } from "@/components/ui/FilterChips";
+import { GRILLE_CATALOGUE_CONNECTEE, GRILLE_CATALOGUE_PUBLIQUE } from "@/components/ui/grilles";
 import { Icon } from "@/components/ui/Icon";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { SortMenu } from "@/components/ui/SortMenu";
@@ -47,10 +48,6 @@ const ACCES: { value: Acces; label: string }[] = [
 ];
 
 const compteur = (n: number) => `${n} ${n > 1 ? "formations" : "formation"}`;
-
-const GRILLE_PUBLIQUE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(250px,calc((100%-60px)/4))),1fr))] gap-5";
-// Connecté : 5 colonnes au plus, cartes de 190 px au moins (4 à 5 sur ordinateur ; spec Formations et Événements, §2).
-const GRILLE_CONNECTEE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(190px,calc((100%-80px)/5))),1fr))] gap-5";
 
 /**
  * Catalogue des formations (NdCataloguePublic pour un visiteur, NdCatalogue et NdMobCatalogue pour un compte connecté).
@@ -155,7 +152,7 @@ export function Catalogue({ cartes, parcours, filtresInitiaux, variante, chemin,
                 {compteur(visibles.length)}
               </p>
             )}
-            {grille(GRILLE_PUBLIQUE)}
+            {grille(GRILLE_CATALOGUE_PUBLIQUE)}
           </div>
         </section>
       </>
@@ -224,7 +221,7 @@ export function Catalogue({ cartes, parcours, filtresInitiaux, variante, chemin,
         </div>
       </div>
       <div aria-hidden="true" className="mt-5 h-px bg-[#DBE0EB]" />
-      <div className="mt-8">{grille(GRILLE_CONNECTEE)}</div>
+      <div className="mt-8">{grille(GRILLE_CATALOGUE_CONNECTEE)}</div>
     </div>
   );
 }
