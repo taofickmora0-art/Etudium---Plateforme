@@ -1141,3 +1141,35 @@ L'équipe peut **désactiver** une formation publiée : plus aucun étudiant n'y
    - chaque désactivation ou réactivation envoie **un e-mail par étudiant** qui la suit : teste avec une petite formation, et surveille le quota d'envoi de Resend (l'offre gratuite en limite le nombre par jour) ;
    - le filtre « Désactivées » de la liste des formations les retrouve ;
    - réactiver ne crée pas de nouvelle version dans l'historique (le contenu n'a pas changé).
+
+## 61. Pilotage : droits par rôle, journal, comptes, statistiques (lot 6, partie A), 25 minutes
+
+Le back-office suit maintenant le rôle de chacun :
+- **le modérateur** ne gère que la communauté : modération, annonce épinglée, avis, messages d'assistance, sessions live ;
+- **l'admin** gère tout, sauf les rôles, la suppression d'un compte et le journal ;
+- **le super admin** gère tout.
+
+La base le vérifie aussi : un modérateur ne peut rien modifier hors de la communauté, même en appelant la base directement.
+
+1. **Les migrations**, dans l'éditeur SQL de Supabase, dans l'ordre, après la 0059 :
+   - `web/supabase/migrations/0060_domaines_equipe.sql` (les droits par rôle) ;
+   - `web/supabase/migrations/0061_journal_comptes.sql` (le journal, renommer et supprimer un compte) ;
+   - `web/supabase/migrations/0062_statistiques_pilotage.sql` (la vue d'ensemble et les statistiques).
+2. **Les droits**, avec un compte de test passé « Modérateur » (back-office › Utilisateurs › ⋮ › « Changer le rôle ») :
+   - son menu ne montre que Tableau de bord, Avis, Sessions live, Messages, Communauté et Modération ;
+   - son tableau de bord montre seulement ce qu'il a à traiter ;
+   - une adresse comme `/admin/formations` ou `/admin/paiements` le ramène au tableau de bord.
+3. **Le journal** (toi seul, en super admin) : back-office › Pilotage › « Journal ».
+   - Change le rôle d'un compte de test, suspends-le puis réactive-le, masque un avis : chaque action y apparaît, avec son auteur et l'heure.
+   - Les filtres (catégorie, auteur, période) gardent leur choix dans l'adresse.
+   - Personne ne peut modifier ni effacer une ligne du journal.
+4. **Renommer, supprimer** : back-office › Utilisateurs › ⋮ d'un compte de test (ou sa fiche, en bas : « Gérer le compte ») :
+   - « Modifier le nom » corrige le prénom et le nom (un admin ; un membre de l'équipe, toi seul) ;
+   - « Supprimer le compte » (toi seul) demande un motif. Le compte part avec sa progression, ses publications et ses messages ; ses paiements et ses certificats restent (un certificat reste vérifiable). Ni ton propre compte, ni un autre super admin.
+5. **Les statistiques** :
+   - le tableau de bord du back-office suit le design : 6 indicateurs, abonnements par mois, formules, « À traiter », dernières inscriptions, derniers paiements ;
+   - Pilotage › « Statistiques » : la période (30 jours, 3 mois, 12 mois) et trois onglets (Étudiants, Formations, Business) ; le tableau des formations se trie en cliquant sur une colonne ;
+   - compare quelques chiffres avec tes données de test (nombre d'abonnés, revenus du mois).
+6. **Bon à savoir** :
+   - le temps d'apprentissage n'est mesuré que sur les vidéos suivies (YouTube, Vimeo, TikTok, Tella), pas sur le texte, Loom, ScreenPal ni Drive ;
+   - le journal ne garde que les actions faites par l'équipe dans le back-office (pas celles faites directement dans le tableau de bord de Supabase).
