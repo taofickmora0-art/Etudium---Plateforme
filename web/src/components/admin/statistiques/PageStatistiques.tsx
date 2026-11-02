@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { BookOpen01Icon, Certificate01Icon, Clock01Icon, CreditCardIcon, CrownIcon, Discount01Icon, TaskDone01Icon, UserAdd01Icon, UserMultipleIcon } from "@hugeicons/core-free-icons";
 import { Carte, GRILLE_CHIFFRES, RANGEE, Tuile } from "@/components/tableau/Blocs";
@@ -46,8 +46,13 @@ const COLONNES_FORMATIONS: { cle: keyof StatistiquesFormation | "titre"; libelle
 ];
 
 function TableauFormations({ formations }: { formations: StatistiquesFormation[] }) {
-  const [tri, setTri] = useState<keyof StatistiquesFormation | null>(null);
-  const lignes = tri ? [...formations].sort((a, b) => Number(b[tri] ?? -1) - Number(a[tri] ?? -1)) : [...formations].sort((a, b) => a.titre.localeCompare(b.titre, "fr"));
+  // Premier clic : du plus grand au plus petit ; second clic sur la même colonne : l'inverse.
+  const [tri, setTri] = useState<{ cle: keyof StatistiquesFormation; sens: "descending" | "ascending" } | null>(null);
+  const trier = (cle: keyof StatistiquesFormation) =>
+    setTri((avant) => (avant?.cle === cle ? { cle, sens: avant.sens === "descending" ? "ascending" : "descending" } : { cle, sens: "descending" }));
+  const lignes = tri
+    ? [...formations].sort((a, b) => (tri.sens === "descending" ? 1 : -1) * (Number(b[tri.cle] ?? -1) - Number(a[tri.cle] ?? -1)))
+    : [...formations].sort((a, b) => a.titre.localeCompare(b.titre, "fr"));
   if (formations.length === 0) return <p className="m-0 text-sm leading-[22px] text-discret">Aucune formation en ligne.</p>;
   return (
     <div role="region" aria-label="Tableau des formations" tabIndex={0} className="focus-etudium overflow-x-auto rounded-2xl border border-bordure-carte">
@@ -61,10 +66,10 @@ function TableauFormations({ formations }: { formations: StatistiquesFormation[]
               État
             </th>
             {COLONNES_FORMATIONS.map((c) => (
-              <th key={c.cle} scope="col" aria-sort={tri === c.cle ? "descending" : "none"} className="bg-page px-2 py-2 text-left text-[13px] font-medium whitespace-nowrap text-ardoise">
-                <button type="button" onClick={() => setTri(c.cle as keyof StatistiquesFormation)} className="focus-etudium cursor-pointer rounded-champ px-2 py-1.5 font-medium hover:bg-panneau">
+              <th key={c.cle} scope="col" aria-sort={tri?.cle === c.cle ? tri.sens : "none"} className="bg-page px-2 py-2 text-left text-[13px] font-medium whitespace-nowrap text-ardoise">
+                <button type="button" onClick={() => trier(c.cle as keyof StatistiquesFormation)} className="focus-etudium cursor-pointer rounded-champ px-2 py-1.5 font-medium hover:bg-panneau">
                   {c.libelle}
-                  {tri === c.cle && <span aria-hidden="true"> ↓</span>}
+                  {tri?.cle === c.cle && <span aria-hidden="true">{tri.sens === "descending" ? " ↓" : " ↑"}</span>}
                 </button>
               </th>
             ))}
@@ -93,6 +98,19 @@ function TableauFormations({ formations }: { formations: StatistiquesFormation[]
 export function PageStatistiques({ donnees: d, periode, onglet }: { donnees: StatistiquesPeriode; periode: Periode; onglet: OngletStatistiques }) {
   const router = useRouter();
   const aller = (p: Periode, o: OngletStatistiques) => router.replace(`/admin/statistiques?periode=${p}&onglet=${o}`, { scroll: false });
+  const base = useId();
+  const idOnglet = (o: OngletStatistiques) => `${base}-onglet-${o}`;
+  const idPanneau = (o: OngletStatistiques) => `${base}-panneau-${o}`;
+  // Les flèches passent d'un onglet à l'autre (en boucle), Début et Fin vont au premier et au dernier.
+  const clavier = (e: KeyboardEvent<HTMLButtonElement>) => {
+    const i = ONGLETS.findIndex((o) => o.value === onglet);
+    const cible = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: ONGLETS.length - 1 }[e.key];
+    if (cible === undefined) return;
+    e.preventDefault();
+    const suivant = ONGLETS[(cible + ONGLETS.length) % ONGLETS.length].value;
+    document.getElementById(idOnglet(suivant))?.focus();
+    aller(periode, suivant);
+  };
   const e = d.etudiants;
   const b = d.business;
 
@@ -103,9 +121,13 @@ export function PageStatistiques({ donnees: d, periode, onglet }: { donnees: Sta
         {ONGLETS.map((o) => (
           <button
             key={o.value}
+            id={idOnglet(o.value)}
             type="button"
             role="tab"
             aria-selected={onglet === o.value}
+            aria-controls={idPanneau(o.value)}
+            tabIndex={onglet === o.value ? 0 : -1}
+            onKeyDown={clavier}
             onClick={() => aller(periode, o.value)}
             className={cn(
               "focus-etudium -mb-px cursor-pointer border-b-2 px-3 py-2.5 text-[15px] leading-[22px] font-medium",
@@ -118,7 +140,7 @@ export function PageStatistiques({ donnees: d, periode, onglet }: { donnees: Sta
       </div>
 
       {onglet === "etudiants" && (
-        <div role="tabpanel" aria-label="Étudiants" className="flex min-w-0 flex-col gap-5">
+        <div role="tabpanel" id={idPanneau("etudiants")} aria-labelledby={idOnglet("etudiants")} className="flex min-w-0 flex-col gap-5">
           <div className={GRILLE_CHIFFRES}>
             <Tuile icon={UserAdd01Icon} tone="information" label="Nouveaux inscrits" value={chiffre(e.inscrits)} />
             <Tuile icon={UserMultipleIcon} label="Étudiants actifs" value={chiffre(e.actifs)} hint="une leçon ouverte sur la période" />
@@ -137,14 +159,14 @@ export function PageStatistiques({ donnees: d, periode, onglet }: { donnees: Sta
       )}
 
       {onglet === "formations" && (
-        <div role="tabpanel" aria-label="Formations" className="flex min-w-0 flex-col gap-3">
+        <div role="tabpanel" id={idPanneau("formations")} aria-labelledby={idOnglet("formations")} className="flex min-w-0 flex-col gap-3">
           <TableauFormations formations={d.formations} />
           <p className="m-0 text-xs leading-[18px] text-discret">Temps mesuré sur les vidéos suivies (YouTube, Vimeo, TikTok, Tella). Achèvement : part des étudiants qui ont leur certificat.</p>
         </div>
       )}
 
       {onglet === "business" && (
-        <div role="tabpanel" aria-label="Business" className="flex min-w-0 flex-col gap-5">
+        <div role="tabpanel" id={idPanneau("business")} aria-labelledby={idOnglet("business")} className="flex min-w-0 flex-col gap-5">
           <div className={GRILLE_CHIFFRES}>
             <Tuile icon={CrownIcon} tone="attention" label="Abonnés actifs" value={chiffre(b.abonnesActifs)} hint="aujourd’hui" />
             <Tuile icon={UserAdd01Icon} label="Nouveaux abonnements" value={chiffre(b.nouveaux)} />

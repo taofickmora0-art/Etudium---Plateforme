@@ -129,6 +129,43 @@ describe("La vue d'ensemble", () => {
   });
 });
 
+describe("Points reportés : onglets, tri et graphiques", () => {
+  it("les onglets mènent à leur panneau et se parcourent aux flèches", async () => {
+    const user = userEvent.setup();
+    render(<PageStatistiques donnees={PERIODE} periode="30" onglet="etudiants" />);
+    const onglet = screen.getByRole("tab", { name: "Étudiants" });
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("id", onglet.getAttribute("aria-controls"));
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", onglet.id);
+    expect(screen.getByRole("tab", { name: "Formations" })).toHaveAttribute("tabindex", "-1");
+    onglet.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(replace).toHaveBeenLastCalledWith("/admin/statistiques?periode=30&onglet=formations", { scroll: false });
+    await user.keyboard("{ArrowLeft}");
+    expect(replace).toHaveBeenLastCalledWith("/admin/statistiques?periode=30&onglet=business", { scroll: false });
+  });
+
+  it("le tri s'inverse au second clic", async () => {
+    const user = userEvent.setup();
+    render(<PageStatistiques donnees={PERIODE} periode="30" onglet="formations" />);
+    const titres = () => screen.getAllByRole("row").slice(1).map((r) => r.querySelector("th, td")?.textContent);
+    const bouton = screen.getByRole("button", { name: /Étudiants/ });
+    await user.click(bouton);
+    expect(titres()).toEqual(["Word", "Excel"]);
+    expect(bouton.closest("th")).toHaveAttribute("aria-sort", "descending");
+    await user.click(bouton);
+    expect(titres()).toEqual(["Excel", "Word"]);
+    expect(bouton.closest("th")).toHaveAttribute("aria-sort", "ascending");
+  });
+
+  it("un graphique de plus de 7 colonnes n'affiche qu'un libellé sur deux sur téléphone", async () => {
+    const { Barres } = await import("@/components/admin/statistiques/Graphiques");
+    const colonnes = Array.from({ length: 13 }, (_, i) => ({ cle: String(i), court: `M${i}`, long: `Mois ${i}`, valeurs: [i] }));
+    render(<Barres titre="Inscriptions" series={[{ nom: "Inscrits", couleur: "bg-bleu" }]} colonnes={colonnes} />);
+    expect(screen.getByText("M1").className).toContain("max-sm:invisible");
+    expect(screen.getByText("M2").className).not.toContain("max-sm:invisible");
+  });
+});
+
 describe("La page « Statistiques »", () => {
   it("la période et l'onglet dans l'adresse ; les chiffres des étudiants", async () => {
     const user = userEvent.setup();

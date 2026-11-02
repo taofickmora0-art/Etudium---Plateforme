@@ -26,8 +26,9 @@ export function Barres({ titre, series, colonnes, format = (n) => n.toLocaleStri
         ))}
       </div>
       <div aria-hidden="true" className="mt-2 flex">
-        {colonnes.map((c) => (
-          <span key={c.cle} className="flex-1 text-center text-xs leading-[18px] text-discret">
+        {colonnes.map((c, i) => (
+          // Plus de 7 colonnes : sur téléphone, un libellé sur deux (sinon ils se chevauchent).
+          <span key={c.cle} className={`flex-1 text-center text-xs leading-[18px] text-discret ${colonnes.length > 7 && i % 2 === 1 ? "max-sm:invisible" : ""}`}>
             {c.court}
           </span>
         ))}
