@@ -1,3 +1,5 @@
+import { codePaysValide } from "@/lib/paiements/pays";
+import { codeOperateurValide } from "@/lib/paiements/regles";
 import type { CartePaiement, CodeFormule, DureeMois, EssaiCode, EtatAbonnement, Formule, MoyenManuel, Operateur, StatutPaiement } from "./types";
 
 // Des réponses de la base (0049, en snake_case) vers les types de l'appli. Ce module n'importe rien du serveur : la coque
@@ -14,7 +16,10 @@ const texteOuNull = (v: unknown) => (typeof v === "string" && v !== "" ? v : nul
 const nombre = (v: unknown) => Number(v ?? 0) || 0;
 const code = (v: unknown): CodeFormule => (CODES.includes(v as CodeFormule) ? (v as CodeFormule) : "standard");
 const duree = (v: unknown): DureeMois => (Number(v) === 12 ? 12 : Number(v) === 6 ? 6 : 3);
-const operateur = (v: unknown): Operateur | null => (v === "mtn" || v === "moov" ? v : null);
+/** Un code d'opérateur Payiz (« mtn », « celtiis »…) ; null s'il est illisible. */
+export const versOperateur = (v: unknown): Operateur | null => (codeOperateurValide(v) ? v : null);
+/** Un pays ISO 3166 alpha-3 (« BEN ») ; null sinon. */
+export const versPays = (v: unknown): string | null => (codePaysValide(v) ? v : null);
 const MOYENS: MoyenManuel[] = ["mobile_money", "especes", "virement", "offert"];
 export const versMoyenManuel = (v: unknown): MoyenManuel | null => (MOYENS.includes(v as MoyenManuel) ? (v as MoyenManuel) : null);
 
@@ -51,7 +56,9 @@ export function versCartePaiement(j: unknown): CartePaiement {
     remise: nombre(o.remise),
     montant: nombre(o.montant),
     code: texteOuNull(o.code),
-    operateur: operateur(o.operateur),
+    operateur: versOperateur(o.operateur),
+    operateurNom: texteOuNull(o.operateur_nom),
+    pays: versPays(o.pays),
     telephoneMasque: texteOuNull(o.telephone_masque),
     motifEchec: texteOuNull(o.motif_echec),
     numeroRecu: texteOuNull(o.numero_recu),

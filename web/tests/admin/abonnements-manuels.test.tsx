@@ -35,6 +35,8 @@ const ACTIF: AbonnementsCompte = {
       source: "manuel",
       moyenManuel: "especes",
       operateur: null,
+      operateurNom: null,
+      pays: null,
       montant: 9000,
       numeroRecu: "ET-R-2026-000002",
     },
@@ -47,7 +49,9 @@ const ACTIF: AbonnementsCompte = {
       motifAnnulation: null,
       source: "payiz",
       moyenManuel: null,
-      operateur: "mtn",
+      operateur: "togocel",
+      operateurNom: "Mixx by Yas",
+      pays: "TGO",
       montant: 15000,
       numeroRecu: "ET-R-2026-000001",
     },
@@ -67,7 +71,8 @@ describe("La section « Abonnement » de la fiche", () => {
     expect(lignes[0]).toHaveTextContent("Basique");
     expect(lignes[0]).toHaveTextContent("Espèces");
     expect(lignes[0]).toHaveTextContent("Du 1er mai 2027 au 1er août 2027");
-    expect(lignes[1]).toHaveTextContent("MTN Mobile Money");
+    // Le nom de l'opérateur au moment du paiement et le pays du payeur (0072).
+    expect(lignes[1]).toHaveTextContent("Mixx by Yas (Togo)");
     expect(within(lignes[1]).getByRole("link", { name: "Reçu ET-R-2026-000001" })).toHaveAttribute("href", "/abonnement/recus/ET-R-2026-000001");
   });
 

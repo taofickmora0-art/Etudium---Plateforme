@@ -9,6 +9,7 @@ import {
   joursRestants,
   libelleMoyen,
   libelleStatut,
+  montantDevise,
   montantFcfa,
   periodeSouscription,
 } from "@/lib/abonnement/regles";
@@ -22,6 +23,14 @@ describe("Montants, durées et dates", () => {
   it("les montants en FCFA", () => {
     expect(montantFcfa(15000)).toBe("15 000 FCFA");
     expect(montantFcfa(0)).toBe("0 FCFA");
+  });
+
+  it("un montant dans la monnaie d'un opérateur (Payiz compte en unités mineures)", () => {
+    const espaces = (t: string) => t.replace(/[  ]/g, " ");
+    expect(espaces(montantDevise(15000, "XOF"))).toBe("15 000 FCFA");
+    expect(espaces(montantDevise(15450, "XAF"))).toBe("15 450 XAF");
+    expect(espaces(montantDevise(32150, "GHS"))).toBe("321,50 GHS");
+    expect(espaces(montantDevise(150000, "GNF"))).toBe("150 000 GNF");
   });
 
   it("les durées", () => {
@@ -67,8 +76,15 @@ describe("Libellés", () => {
   });
 
   it("le moyen de paiement", () => {
+    // Un paiement d'avant la 0072 : le code seul.
     expect(libelleMoyen(carte({ operateur: "mtn" }))).toBe("MTN Mobile Money");
     expect(libelleMoyen(carte({ operateur: "moov" }))).toBe("Moov Money");
+    // Depuis la 0072 : le nom donné par Payiz et le pays du payeur ; un code inconnu sans nom, mis en forme.
+    expect(libelleMoyen(carte({ operateur: "celtiis", operateur_nom: "Celtiis Cash", pays: "BEN" }))).toBe("Celtiis Cash (Bénin)");
+    expect(libelleMoyen(carte({ operateur: "togocel", operateur_nom: "Mixx by Yas", pays: "TGO" }))).toBe("Mixx by Yas (Togo)");
+    expect(libelleMoyen(carte({ operateur: "mtn", pays: "BEN" }))).toBe("MTN Mobile Money (Bénin)");
+    expect(libelleMoyen(carte({ operateur: "orange_money", pays: "CIV" }))).toBe("Orange money (Côte d’Ivoire)");
+    expect(libelleMoyen(carte({ operateur: null }))).toBe("Mobile Money");
     expect(libelleMoyen(carte({ montant: 0, operateur: null }))).toBe("Offert");
     // Attribué à la main au back-office (0054).
     expect(libelleMoyen(carte({ source: "manuel", moyen_manuel: "mobile_money" }))).toBe("Mobile Money hors plateforme");

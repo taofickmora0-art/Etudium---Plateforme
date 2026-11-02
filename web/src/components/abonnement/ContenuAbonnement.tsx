@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { lireAbonnement, lireFormules, lirePaiements, paiementsOuverts } from "@/lib/abonnement/data";
+import { moyensParMontant } from "@/lib/paiements/moyens";
 import { resynchroniserEnAttente } from "@/lib/paiements/synchroniser";
 import { PageAbonnement } from "./PageAbonnement";
 
@@ -12,5 +13,7 @@ export async function ContenuAbonnement() {
   await connection();
   await resynchroniserEnAttente();
   const [abonnement, paiements, formules, ouverts] = await Promise.all([lireAbonnement(), lirePaiements(), lireFormules(), paiementsOuverts()]);
-  return <PageAbonnement abonnement={abonnement} paiements={paiements} maintenant={new Date()} formules={formules} ouverts={ouverts} />;
+  // Les moyens de paiement de Payiz (gardés 5 minutes), seulement quand la souscription s'affiche ici et qu'on peut payer.
+  const moyens = ouverts && abonnement.etat !== "actif" ? await moyensParMontant(formules.map((f) => f.prix)) : {};
+  return <PageAbonnement abonnement={abonnement} paiements={paiements} maintenant={new Date()} formules={formules} ouverts={ouverts} moyens={moyens} />;
 }

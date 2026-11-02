@@ -52,6 +52,8 @@ export function versPagePaiements(v: unknown): PagePaiements {
         montant: carte.montant,
         statut: carte.statut,
         operateur: carte.operateur,
+        operateurNom: carte.operateurNom,
+        pays: carte.pays,
         telephoneMasque: carte.telephoneMasque,
         numeroRecu: carte.numeroRecu,
         source: carte.source,
@@ -117,7 +119,14 @@ export function versAbonnementsCompte(v: unknown): AbonnementsCompte {
   return {
     etat: versEtatAbonnement(o.etat),
     abonnements: liste(o.abonnements).map((a) => {
-      const carte = versCartePaiement({ formule: a.formule, montant: a.montant, operateur: a.operateur, numero_recu: a.numero_recu });
+      const carte = versCartePaiement({
+        formule: a.formule,
+        montant: a.montant,
+        operateur: a.operateur,
+        operateur_nom: a.operateur_nom,
+        pays: a.pays,
+        numero_recu: a.numero_recu,
+      });
       return {
         id: texte(a.id),
         formule: carte.formule,
@@ -128,6 +137,8 @@ export function versAbonnementsCompte(v: unknown): AbonnementsCompte {
         source: a.source === "manuel" ? "manuel" : "payiz",
         moyenManuel: versMoyenManuel(a.moyen_manuel),
         operateur: carte.operateur,
+        operateurNom: carte.operateurNom,
+        pays: carte.pays,
         montant: carte.montant,
         numeroRecu: carte.numeroRecu,
       };

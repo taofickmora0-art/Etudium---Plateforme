@@ -1,6 +1,7 @@
 import type { TagTone } from "@/components/ui/Tag";
 import { FUSEAU_BENIN } from "@/lib/dates/fuseau";
-import { messageEchec } from "@/lib/paiements/regles";
+import { nomPays } from "@/lib/paiements/pays";
+import { messageEchec, nomOperateur } from "@/lib/paiements/regles";
 import type { CartePaiement, EtapePaiement, EtatAbonnement, MoyenManuel, StatutPaiement } from "./types";
 
 // Les règles des abonnements (lot 2) : durées, montants, dates (à l'heure du Bénin), étapes d'un paiement.
@@ -12,6 +13,22 @@ const FCFA = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
 
 /** « 15 000 FCFA ». */
 export const montantFcfa = (n: number): string => `${FCFA.format(n)} FCFA`;
+
+/**
+ * Un montant dans la monnaie d'un opérateur, tel que Payiz le donne (en unités mineures : 32150 GHS → « 321,50 GHS ») ;
+ * le franc CFA reste « 15 000 FCFA ».
+ */
+export function montantDevise(n: number, devise: string): string {
+  if (devise === "XOF") return montantFcfa(n);
+  let decimales = 0;
+  try {
+    decimales = new Intl.NumberFormat("fr-FR", { style: "currency", currency: devise }).resolvedOptions().maximumFractionDigits ?? 0;
+  } catch {
+    decimales = 0;
+  }
+  const format = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: decimales, maximumFractionDigits: decimales });
+  return `${format.format(n / 10 ** decimales)} ${devise}`;
+}
 
 const DATE_LONGUE = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: FUSEAU_BENIN });
 
@@ -68,13 +85,18 @@ const MOYENS_MANUELS: Record<MoyenManuel, string> = {
   offert: "Offert",
 };
 
-/** « MTN Mobile Money », « Moov Money », un moyen enregistré à la main (0054), ou « Offert » (code promo à 100 %). */
-export function libelleMoyen(p: Pick<CartePaiement, "montant" | "operateur"> & { moyenManuel?: MoyenManuel | null }): string {
+/**
+ * « Celtiis Cash (Bénin) » : le nom de l'opérateur au moment du paiement et le pays du payeur (0072). Un paiement d'avant
+ * n'a que le code (« MTN Mobile Money », « Moov Money ») ; un moyen enregistré à la main (0054), ou « Offert » (code
+ * promo à 100 %).
+ */
+export function libelleMoyen(
+  p: Pick<CartePaiement, "montant" | "operateur"> & { operateurNom?: string | null; pays?: string | null; moyenManuel?: MoyenManuel | null },
+): string {
   if (p.moyenManuel) return MOYENS_MANUELS[p.moyenManuel];
   if (p.montant === 0) return "Offert";
-  if (p.operateur === "moov") return "Moov Money";
-  if (p.operateur === "mtn") return "MTN Mobile Money";
-  return "Mobile Money";
+  const nom = nomOperateur(p.operateur, p.operateurNom);
+  return p.pays ? `${nom} (${nomPays(p.pays)})` : nom;
 }
 
 /** L'écran d'attente redemande l'état pendant 3 minutes après chaque essai. */

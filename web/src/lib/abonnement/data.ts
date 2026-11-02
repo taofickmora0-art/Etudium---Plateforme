@@ -3,7 +3,7 @@ import { demoModeActive } from "@/lib/auth/current-user";
 import { liste } from "@/lib/contenus/lecture";
 import { configurationPaiement } from "@/lib/paiements/config";
 import { createClient } from "@/lib/supabase/server";
-import { versCartePaiement, versEtatAbonnement, versFormule, versMoyenManuel } from "./conversion";
+import { versCartePaiement, versEtatAbonnement, versFormule, versMoyenManuel, versOperateur, versPays } from "./conversion";
 import type { CartePaiement, EtatAbonnement, Formule, MoyenManuel, Operateur } from "./types";
 
 // Les lectures des abonnements (0049). Sans la migration, l'appli se comporte comme avant le lot 2 : compte gratuit,
@@ -24,6 +24,9 @@ export type Recu = {
   code: string | null;
   montant: number;
   operateur: Operateur | null;
+  /** Le nom de l'opérateur au moment du paiement, et le pays du payeur (0072) ; null pour un paiement d'avant. */
+  operateurNom: string | null;
+  pays: string | null;
   telephoneMasque: string | null;
   /** Attribué à la main au back-office (0054). */
   moyenManuel: MoyenManuel | null;
@@ -79,7 +82,9 @@ export async function lireRecu(numero: string): Promise<Recu | null> {
     remise: nombre(r.remise),
     code: texteOuNull(r.code),
     montant: nombre(r.montant),
-    operateur: r.operateur === "mtn" || r.operateur === "moov" ? r.operateur : null,
+    operateur: versOperateur(r.operateur),
+    operateurNom: texteOuNull(r.operateur_nom),
+    pays: versPays(r.pays),
     telephoneMasque: texteOuNull(r.telephone_masque),
     moyenManuel: versMoyenManuel(r.moyen_manuel),
     referenceManuelle: texteOuNull(r.reference_manuelle),

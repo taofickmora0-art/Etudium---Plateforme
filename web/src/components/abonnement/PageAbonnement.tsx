@@ -6,7 +6,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Tag, type TagTone } from "@/components/ui/Tag";
 import { Heading, Lead } from "@/components/ui/Text";
 import { dateLongue, joursRestants } from "@/lib/abonnement/regles";
-import type { CartePaiement, EtatAbonnement, Formule } from "@/lib/abonnement/types";
+import type { CartePaiement, EtatAbonnement, Formule, MoyensDePaiement } from "@/lib/abonnement/types";
 import { HistoriquePaiements } from "./HistoriquePaiements";
 import { Souscription } from "./Souscription";
 
@@ -46,6 +46,8 @@ type Props = {
   formules: Formule[];
   /** « Payer » est possible (paiements activés, serveur configuré). */
   ouverts: boolean;
+  /** Les moyens de paiement de Payiz pour chaque prix. */
+  moyens?: Record<number, MoyensDePaiement>;
 };
 
 /**
@@ -53,7 +55,7 @@ type Props = {
  * en cours (compte gratuit, abonnement expiré), les abonnements et le paiement s'affichent directement, sans détour
  * (demande du 1er novembre 2026).
  */
-export function PageAbonnement({ abonnement, paiements, maintenant, formules, ouverts }: Props) {
+export function PageAbonnement({ abonnement, paiements, maintenant, formules, ouverts, moyens }: Props) {
   const carte = carteEtat(abonnement, maintenant);
   return (
     <div className="flex min-w-0 flex-col">
@@ -75,7 +77,15 @@ export function PageAbonnement({ abonnement, paiements, maintenant, formules, ou
                 Choisissez un abonnement pour retrouver l’accès. Rien n’a été supprimé.
               </Banner>
             )}
-            <Souscription formules={formules} abonnement={abonnement} ouverts={ouverts} initiale={null} maintenant={maintenant.toISOString()} enTete={false} />
+            <Souscription
+              formules={formules}
+              abonnement={abonnement}
+              ouverts={ouverts}
+              initiale={null}
+              maintenant={maintenant.toISOString()}
+              enTete={false}
+              moyens={moyens}
+            />
           </>
         )}
         {abonnement.etat === "actif" && (

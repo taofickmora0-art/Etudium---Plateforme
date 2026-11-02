@@ -5,6 +5,7 @@ import { PageAbonnement } from "@/components/abonnement/PageAbonnement";
 import { versCartePaiement } from "@/lib/abonnement/conversion";
 import { montantFcfa } from "@/lib/abonnement/regles";
 import type { EtatAbonnement, Formule } from "@/lib/abonnement/types";
+import { MOYENS_REPLI } from "@/lib/paiements/regles";
 import { carteSql } from "./fixtures";
 
 // « Mon abonnement » (lot 2, spec §6) : l'état du compte, « S'abonner » / « Prolonger » / « Renouveler », l'historique
@@ -13,12 +14,16 @@ import { carteSql } from "./fixtures";
 const lectures: string[] = [];
 vi.mock("next/server", () => ({ connection: async () => {} }));
 vi.mock("@/lib/paiements/synchroniser", () => ({ resynchroniserEnAttente: vi.fn(async () => void lectures.push("resynchroniser")) }));
+const ouverts = { valeur: true };
 vi.mock("@/lib/abonnement/data", () => ({
   lireAbonnement: vi.fn(async () => (lectures.push("abonnement"), { etat: "gratuit" })),
   lirePaiements: vi.fn(async () => (lectures.push("paiements"), [])),
-  lireFormules: vi.fn(async () => (lectures.push("formules"), [])),
-  paiementsOuverts: vi.fn(async () => (lectures.push("ouverts"), true)),
+  lireFormules: vi.fn(async () => (lectures.push("formules"), FORMULES)),
+  paiementsOuverts: vi.fn(async () => (lectures.push("ouverts"), ouverts.valeur)),
 }));
+// Les moyens de paiement de Payiz, lus pour chaque prix (gardés 5 minutes, src/lib/paiements/moyens.ts).
+const moyensParMontant = vi.fn(async (montants: (number | null)[]) => (lectures.push("moyens"), Object.fromEntries(montants.map((m) => [m, MOYENS_REPLI]))));
+vi.mock("@/lib/paiements/moyens", () => ({ moyensParMontant: (montants: (number | null)[]) => moyensParMontant(montants) }));
 
 vi.mock("@/lib/abonnement/actions", () => ({ essayerCode: vi.fn(), payer: vi.fn(), suivrePaiement: vi.fn(), reessayer: vi.fn() }));
 
@@ -101,7 +106,18 @@ describe("La page serveur", () => {
     lectures.length = 0;
     await ContenuAbonnement();
     expect(lectures[0]).toBe("resynchroniser");
-    expect([...lectures].sort()).toEqual(["abonnement", "formules", "ouverts", "paiements", "resynchroniser"]);
+    expect([...lectures].sort()).toEqual(["abonnement", "formules", "moyens", "ouverts", "paiements", "resynchroniser"]);
+    // Les moyens de paiement, pour le prix de chaque abonnement.
+    expect(moyensParMontant).toHaveBeenLastCalledWith([9000, 15000, 25000]);
+  });
+
+  it("paiements fermés : Payiz n'est pas interrogé sur ses moyens de paiement", async () => {
+    const { ContenuAbonnement } = await import("@/components/abonnement/ContenuAbonnement");
+    ouverts.valeur = false;
+    lectures.length = 0;
+    await ContenuAbonnement();
+    ouverts.valeur = true;
+    expect(lectures).not.toContain("moyens");
   });
 
   it("la souscription aussi : un paiement réussi pendant l'absence ne se paie pas deux fois (revue finale)", async () => {
@@ -110,5 +126,6 @@ describe("La page serveur", () => {
     await ContenuSouscription({ formule: "standard" });
     expect(lectures[0]).toBe("resynchroniser");
     expect(lectures).toContain("abonnement");
+    expect(lectures).toContain("moyens");
   });
 });

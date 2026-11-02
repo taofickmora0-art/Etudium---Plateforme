@@ -24,6 +24,9 @@ export type LignePaiement = {
   montant: number;
   statut: StatutPaiement;
   operateur: Operateur | null;
+  /** Le nom de l'opérateur au moment du paiement et le pays du payeur (0072). */
+  operateurNom: string | null;
+  pays: string | null;
   telephoneMasque: string | null;
   numeroRecu: string | null;
   source: "payiz" | "manuel";
@@ -50,6 +53,8 @@ export type AbonnementCompte = {
   source: "payiz" | "manuel";
   moyenManuel: MoyenManuel | null;
   operateur: Operateur | null;
+  operateurNom: string | null;
+  pays: string | null;
   montant: number;
   numeroRecu: string | null;
 };

@@ -15,9 +15,20 @@ const minutesSecondes = (ms: number) => {
 
 /**
  * L'attente de la validation sur le téléphone (NdPaiementAttente ; feuille du bas au téléphone, NdMobPaiementAttente) :
- * le montant, le numéro masqué, et le compte à rebours. Le suivi lui-même est mené par la souscription.
+ * le montant, le numéro masqué, et le compte à rebours. Le suivi lui-même est mené par la souscription. `montant` : ce
+ * que Payiz a annoncé au payeur dans sa monnaie (« 321,50 GHS ») ; sans lui, le montant du paiement en FCFA.
  */
-export function AttentePaiement({ paiement, finAttente, onFermer }: { paiement: CartePaiement; finAttente: string; onFermer: () => void }) {
+export function AttentePaiement({
+  paiement,
+  finAttente,
+  montant,
+  onFermer,
+}: {
+  paiement: CartePaiement;
+  finAttente: string;
+  montant?: string;
+  onFermer: () => void;
+}) {
   const [maintenant, setMaintenant] = useState(() => Date.now());
   useEffect(() => {
     const minuterie = setInterval(() => setMaintenant(Date.now()), 1000);
@@ -31,7 +42,7 @@ export function AttentePaiement({ paiement, finAttente, onFermer }: { paiement: 
       onOpenChange={(ouverte) => !ouverte && onFermer()}
       dismissible={false}
       title="Confirmez sur votre téléphone"
-      description={`Une demande de ${montantFcfa(paiement.montant)} a été envoyée au ${paiement.telephoneMasque ?? "numéro indiqué"}. Saisissez votre code secret Mobile Money pour valider.`}
+      description={`Une demande de ${montant ?? montantFcfa(paiement.montant)} a été envoyée au ${paiement.telephoneMasque ?? "numéro indiqué"}. Saisissez votre code secret Mobile Money pour valider.`}
       footer={
         <Button variant="contour" onClick={onFermer}>
           Fermer

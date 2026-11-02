@@ -12,6 +12,8 @@ export const carteSql = (champs: Record<string, unknown> = {}) => ({
   montant: 12000,
   code: "PROMO20",
   operateur: null,
+  operateur_nom: null,
+  pays: null,
   telephone_masque: null,
   motif_echec: null,
   numero_recu: null,
@@ -22,6 +24,31 @@ export const carteSql = (champs: Record<string, unknown> = {}) => ({
   abonnement: null,
   ...champs,
 });
+
+const moyen = (pays: string, indicatif: string, code: string, nom: string, prefixes: string[]) => ({
+  object: "payment_method",
+  country: pays,
+  dial_code: indicatif,
+  operator: { code, name: nom, logo_url: `https://cdn.payiz.app/operateurs/${code}.png` },
+  phone_prefixes: prefixes,
+  currency: "XOF",
+  min_amount: 1000,
+  max_amount: 2_000_000,
+});
+
+/** Les moyens de paiement de Payiz (GET /v1/payment_methods) : le Bénin avec Celtiis, le Togo, et un pays hors de la table. */
+export const MOYENS_PAYIZ = {
+  object: "list",
+  has_more: false,
+  url: "/v1/payment_methods",
+  data: [
+    moyen("BEN", "+229", "mtn", "MTN Mobile Money", ["0142", "0197"]),
+    moyen("BEN", "+229", "moov", "Moov Money", ["0155"]),
+    moyen("BEN", "+229", "celtiis", "Celtiis Cash", ["0143"]),
+    moyen("TGO", "+228", "togocel", "Mixx by Yas", ["90", "91", "92", "93", "70"]),
+    moyen("XKX", "+383", "ipko", "IPKO", []),
+  ],
+};
 
 /** Un paiement Payiz (GET /v1/payments/{id}). */
 export const payizSql = (champs: Record<string, unknown> = {}) => ({

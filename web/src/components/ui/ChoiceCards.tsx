@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { RadioGroup } from "radix-ui";
 import { cn } from "@/lib/cn";
 import { Tag } from "./Tag";
@@ -13,6 +14,8 @@ type ChoiceOption = {
   badge?: string;
   /** Option visible mais pas choisissable (abonnement sans prix). */
   disabled?: boolean;
+  /** Un visuel décoratif avant le titre (le logo d'un opérateur) ; le titre seul est annoncé. */
+  visual?: ReactNode;
 };
 
 type ChoiceCardsProps = {
@@ -40,6 +43,11 @@ export function ChoiceCards({ label, options, value, onValueChange, className }:
           disabled={option.disabled}
           className="group focus-etudium box-border flex w-full cursor-pointer items-center gap-3.5 rounded-bouton border border-bordure bg-panneau px-4 py-3.5 text-left text-texte transition-colors hover:bg-page data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60 data-[disabled]:hover:bg-panneau data-[state=checked]:border-bleu data-[state=checked]:shadow-[inset_0_0_0_1px_var(--color-bleu)]"
         >
+          {option.visual && (
+            <span aria-hidden="true" className="flex flex-none">
+              {option.visual}
+            </span>
+          )}
           <span className="flex min-w-[96px] flex-1 flex-col gap-0.5">
             <span className="flex flex-wrap items-center gap-2">
               <span className="text-[15px] leading-[22px] font-semibold text-encre">{option.title}</span>

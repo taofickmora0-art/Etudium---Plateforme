@@ -1,13 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fauxSupabase } from "../admin/faux-supabase";
-import { carteSql, FORMULE_ID, PAIEMENT_ID, payizSql } from "./fixtures";
+import { carteSql, FORMULE_ID, MOYENS_PAYIZ, PAIEMENT_ID, payizSql } from "./fixtures";
 import { jetonServeur } from "@/lib/paiements/config";
+import { viderCacheMoyens } from "@/lib/paiements/moyens";
 
 // Le jeton du serveur, tiré de la clé Payiz de test.
 const JETON = jetonServeur("sk_test_x");
 
 // Les actions de la souscription (lot 2) : préparer en base, lancer chez Payiz, suivre, réessayer ; et la
-// resynchronisation des paiements restés en attente (onglet fermé, pas de notification en local).
+// resynchronisation des paiements restés en attente (onglet fermé, pas de notification en local). Tous pays et tous
+// opérateurs depuis le 3 novembre 2026 : le pays et l'opérateur partent chez Payiz, le pays et le nom de l'opérateur
+// sont notés.
 
 const faux = fauxSupabase();
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => faux.client }));
@@ -22,11 +25,18 @@ const fetchPayiz = vi.fn<typeof fetch>();
 const reponse = (status: number, corps: unknown) => new Response(JSON.stringify(corps), { status });
 const corpsEnvoye = (i = 0) => JSON.parse(String(fetchPayiz.mock.calls[i][1]?.body));
 const entete = (i: number, nom: string) => (fetchPayiz.mock.calls[i][1]?.headers as Record<string, string>)[nom];
+/** Les appels à Payiz, sans la lecture des moyens de paiement (faite en même temps, et gardée 5 minutes). */
+const appelsPaiement = () => fetchPayiz.mock.calls.filter((c) => !String(c[0]).includes("/payment_methods"));
 
 beforeEach(() => {
   faux.vider();
   viderFileApres.mockClear();
+  viderCacheMoyens();
   fetchPayiz.mockReset();
+  // Les moyens de paiement répondent toujours ; chaque test prépare la réponse des autres appels (mockResolvedValueOnce).
+  fetchPayiz.mockImplementation(async (url) =>
+    String(url).includes("/payment_methods") ? reponse(200, MOYENS_PAYIZ) : reponse(500, { error: { code: "internal_error", message: "non préparé" } }),
+  );
   vi.stubGlobal("fetch", fetchPayiz);
   vi.stubEnv("PAYIZ_CLE_SECRETE", "sk_test_x");
   faux.repondre("rpc.paiements_prets", { data: true });
@@ -36,15 +46,25 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const ENTREE = { formuleId: FORMULE_ID, code: "", telephone: "01 42 00 00 00", operateur: "mtn" as const };
+const ENTREE = { formuleId: FORMULE_ID, code: "", telephone: "01 42 00 00 00", pays: "BEN", operateur: "mtn" };
 
 describe("Essayer un code", () => {
-  it("rend le montant ou le refus de la base", async () => {
+  it("rend le montant, avec les moyens de paiement pour ce montant, ou le refus de la base", async () => {
     faux.repondre("rpc.essayer_code", { data: { ok: true, code_id: "c", prix_initial: 15000, remise: 3000, montant: 12000 } });
-    expect(await essayerCode(FORMULE_ID, " promo20 ")).toEqual({ ok: true, prixInitial: 15000, remise: 3000, montant: 12000 });
+    const essai = await essayerCode(FORMULE_ID, " promo20 ");
+    expect(essai).toMatchObject({ ok: true, prixInitial: 15000, remise: 3000, montant: 12000, moyens: { repli: false } });
+    expect(essai.ok && essai.moyens?.pays.map((p) => p.code)).toEqual(["BEN", "TGO", "XKX"]);
+    expect(fetchPayiz.mock.calls[0][0]).toBe("https://api.payiz.app/v1/payment_methods?amount=12000&currency=XOF");
     expect(faux.de("rpc", "essayer_code")[0].valeurs).toEqual({ p_code: "promo20", p_formule: FORMULE_ID });
     faux.repondre("rpc.essayer_code", { data: { ok: false, message: "Ce code a expiré." } });
     expect(await essayerCode(FORMULE_ID, "VIEUX")).toEqual({ ok: false, message: "Ce code a expiré." });
+  });
+
+  it("sans clé Payiz : le montant seul", async () => {
+    vi.stubEnv("PAYIZ_CLE_SECRETE", "");
+    faux.repondre("rpc.essayer_code", { data: { ok: true, code_id: "c", prix_initial: 15000, remise: 3000, montant: 12000 } });
+    expect(await essayerCode(FORMULE_ID, "PROMO20")).toEqual({ ok: true, prixInitial: 15000, remise: 3000, montant: 12000 });
+    expect(fetchPayiz).not.toHaveBeenCalled();
   });
 });
 
@@ -69,34 +89,98 @@ describe("Payer", () => {
     expect(fetchPayiz).not.toHaveBeenCalled();
   });
 
-  it("paiement lancé : Payiz puis noter_essai avec le numéro masqué", async () => {
+  it("paiement lancé : Payiz (numéro, pays, opérateur) puis noter_essai avec le numéro masqué, le pays et le nom de l'opérateur", async () => {
     faux.repondre("rpc.preparer_paiement", { data: carteSql({ repris: false }) });
     fetchPayiz.mockResolvedValueOnce(reponse(201, payizSql()));
-    faux.repondre("rpc.noter_essai", { data: carteSql({ payiz_id: "pay_1", essai_le: "2026-11-01T10:00:00Z", operateur: "mtn", telephone_masque: "+229 01 •• •• •• 00" }) });
+    faux.repondre("rpc.noter_essai", { data: carteSql({ payiz_id: "pay_1", essai_le: "2026-11-01T10:00:00Z", operateur: "mtn", telephone_masque: "+229 •• •• •• •• 00" }) });
 
     const etape = await payer(ENTREE);
 
     expect(faux.de("rpc", "preparer_paiement")[0].valeurs).toEqual({ p_formule: FORMULE_ID, p_code: null });
     expect(fetchPayiz.mock.calls[0][0]).toBe("https://api.payiz.app/v1/payments");
-    expect(corpsEnvoye()).toMatchObject({ amount: 12000, reference: PAIEMENT_ID, payer: { phone: "+2290142000000", operator: "mtn" } });
+    expect(corpsEnvoye()).toMatchObject({
+      amount: 12000,
+      currency: "XOF",
+      reference: PAIEMENT_ID,
+      payer: { phone: "+2290142000000", country: "BEN", operator: "mtn" },
+    });
     expect(entete(0, "Idempotency-Key")).toBe(PAIEMENT_ID);
+    // Le nom de l'opérateur vient de la liste de Payiz, lue en même temps pour le montant du paiement.
+    expect(fetchPayiz.mock.calls[1][0]).toBe("https://api.payiz.app/v1/payment_methods?amount=12000&currency=XOF");
     expect(faux.de("rpc", "noter_essai")[0].valeurs).toEqual({
       p_paiement: PAIEMENT_ID,
       p_payiz: "pay_1",
       p_operateur: "mtn",
-      p_telephone_masque: "+229 01 •• •• •• 00",
+      p_operateur_nom: "MTN Mobile Money",
+      p_pays: "BEN",
+      p_telephone_masque: "+229 •• •• •• •• 00",
       p_jeton: JETON,
     });
-    expect(etape).toMatchObject({ etat: "attente", finAttente: "2026-11-01T10:03:00.000Z", paiement: { telephoneMasque: "+229 01 •• •• •• 00" } });
+    expect(etape).toMatchObject({ etat: "attente", finAttente: "2026-11-01T10:03:00.000Z", paiement: { telephoneMasque: "+229 •• •• •• •• 00" } });
   });
 
-  it("sans opérateur choisi, on note celui que Payiz a déduit", async () => {
+  it("sans opérateur choisi, on note celui que Payiz a déduit, avec son nom", async () => {
     faux.repondre("rpc.preparer_paiement", { data: carteSql({ repris: false }) });
     fetchPayiz.mockResolvedValueOnce(reponse(201, payizSql({ latest_attempt: { id: "a", status: "pending", failure_code: null, operator: "moov", phone: null } })));
     faux.repondre("rpc.noter_essai", { data: carteSql({ payiz_id: "pay_1", essai_le: "2026-11-01T10:00:00Z" }) });
     await payer({ ...ENTREE, telephone: "01 55 00 00 00", operateur: null });
-    expect(corpsEnvoye().payer).toEqual({ phone: "+2290155000000" });
-    expect(faux.de("rpc", "noter_essai")[0].valeurs).toMatchObject({ p_operateur: "moov" });
+    expect(corpsEnvoye().payer).toEqual({ phone: "+2290155000000", country: "BEN" });
+    expect(faux.de("rpc", "noter_essai")[0].valeurs).toMatchObject({ p_operateur: "moov", p_operateur_nom: "Moov Money", p_pays: "BEN" });
+  });
+
+  it("un payeur du Togo : son indicatif, son pays et son opérateur partent chez Payiz", async () => {
+    faux.repondre("rpc.preparer_paiement", { data: carteSql({ repris: false }) });
+    fetchPayiz.mockResolvedValueOnce(reponse(201, payizSql()));
+    faux.repondre("rpc.noter_essai", { data: carteSql({ payiz_id: "pay_1", essai_le: "2026-11-01T10:00:00Z" }) });
+    await payer({ ...ENTREE, telephone: "90 12 34 56", pays: "TGO", operateur: "togocel" });
+    expect(corpsEnvoye().payer).toEqual({ phone: "+22890123456", country: "TGO", operator: "togocel" });
+    expect(faux.de("rpc", "noter_essai")[0].valeurs).toMatchObject({
+      p_operateur: "togocel",
+      p_operateur_nom: "Mixx by Yas",
+      p_pays: "TGO",
+      p_telephone_masque: "+228 •• •• •• •• 56",
+    });
+  });
+
+  it("Celtiis, au Bénin, quand Payiz le propose", async () => {
+    faux.repondre("rpc.preparer_paiement", { data: carteSql({ repris: false }) });
+    fetchPayiz.mockResolvedValueOnce(reponse(201, payizSql()));
+    faux.repondre("rpc.noter_essai", { data: carteSql({ payiz_id: "pay_1", essai_le: "2026-11-01T10:00:00Z" }) });
+    await payer({ ...ENTREE, telephone: "01 43 00 00 00", operateur: "celtiis" });
+    expect(corpsEnvoye().payer).toEqual({ phone: "+2290143000000", country: "BEN", operator: "celtiis" });
+    expect(faux.de("rpc", "noter_essai")[0].valeurs).toMatchObject({ p_operateur: "celtiis", p_operateur_nom: "Celtiis Cash" });
+  });
+
+  it("un pays hors de la table : son indicatif vient de Payiz ; inconnu de Payiz aussi : pas proposé", async () => {
+    faux.repondre("rpc.preparer_paiement", { data: carteSql({ repris: false }) });
+    fetchPayiz.mockImplementationOnce(async () => reponse(200, MOYENS_PAYIZ)).mockResolvedValueOnce(reponse(201, payizSql()));
+    faux.repondre("rpc.noter_essai", { data: carteSql({ payiz_id: "pay_1", essai_le: "2026-11-01T10:00:00Z" }) });
+    await payer({ ...ENTREE, telephone: "044 123 456", pays: "XKX", operateur: "ipko" });
+    expect(appelsPaiement()[0][0]).toBe("https://api.payiz.app/v1/payments");
+    expect(JSON.parse(String(appelsPaiement()[0][1]?.body)).payer).toEqual({ phone: "+383044123456", country: "XKX", operator: "ipko" });
+
+    faux.vider();
+    expect(await payer({ ...ENTREE, pays: "ZZZ" })).toEqual({
+      etat: "erreur",
+      message: "Le paiement n’est pas proposé dans ce pays pour le moment. Choisissez un autre pays.",
+    });
+    expect(faux.appels).toEqual([]);
+  });
+
+  it("un pays illisible, ou un numéro faux hors du Bénin : message, sans appel", async () => {
+    expect(await payer({ ...ENTREE, pays: "togo" })).toEqual({ etat: "erreur", message: "Choisissez votre pays." });
+    expect(await payer({ ...ENTREE, telephone: "12", pays: "TGO" })).toEqual({ etat: "erreur", message: "Ce numéro n’est pas valide pour le pays choisi. Vérifiez-le." });
+    expect(faux.appels).toEqual([]);
+    expect(fetchPayiz).not.toHaveBeenCalled();
+  });
+
+  it("un code d'opérateur illisible n'est pas envoyé", async () => {
+    faux.repondre("rpc.preparer_paiement", { data: carteSql({ repris: false }) });
+    fetchPayiz.mockResolvedValueOnce(reponse(201, payizSql({ latest_attempt: null })));
+    faux.repondre("rpc.noter_essai", { data: carteSql({ payiz_id: "pay_1", essai_le: "2026-11-01T10:00:00Z" }) });
+    await payer({ ...ENTREE, operateur: "MTN <b>" });
+    expect(corpsEnvoye().payer).toEqual({ phone: "+2290142000000", country: "BEN" });
+    expect(faux.de("rpc", "noter_essai")[0].valeurs).toMatchObject({ p_operateur: null, p_operateur_nom: null });
   });
 
   it("jeton du serveur non reconnu (ou paiements désactivés) : rien ne part chez Payiz (revue finale)", async () => {
@@ -104,7 +188,7 @@ describe("Payer", () => {
     faux.repondre("rpc.paiements_prets", { data: false });
     expect(await payer(ENTREE)).toEqual({ etat: "erreur", message: "Les paiements ouvrent bientôt." });
     expect(faux.de("rpc", "paiements_prets")[0].valeurs).toEqual({ p_jeton: JETON });
-    expect(fetchPayiz).not.toHaveBeenCalled();
+    expect(appelsPaiement()).toEqual([]);
   });
 
   it("un refus du jeton par la base ne s'affiche pas tel quel (revue finale)", async () => {
@@ -138,8 +222,44 @@ describe("Payer", () => {
   it("erreur Payiz traduite", async () => {
     faux.repondre("rpc.preparer_paiement", { data: carteSql({ repris: false }) });
     fetchPayiz.mockResolvedValueOnce(reponse(422, { error: { code: "operator_required", message: "…" } }));
-    expect(await payer(ENTREE)).toEqual({ etat: "erreur", message: "Choisissez votre opérateur, MTN ou Moov." });
+    expect(await payer(ENTREE)).toEqual({ etat: "erreur", message: "Choisissez votre opérateur." });
     expect(faux.de("rpc", "noter_essai")).toEqual([]);
+    fetchPayiz.mockResolvedValueOnce(reponse(422, { error: { code: "phone_invalid", message: "…" } }));
+    expect(await payer(ENTREE)).toEqual({ etat: "erreur", message: "Ce numéro n’est pas valide pour le pays choisi. Vérifiez-le." });
+  });
+
+  it("operator_required : les opérateurs candidats, nommés, pour que l'étudiant choisisse", async () => {
+    faux.repondre("rpc.preparer_paiement", { data: carteSql({ repris: false }) });
+    fetchPayiz.mockResolvedValueOnce(reponse(422, { error: { code: "operator_required", message: "…", details: { operators: ["mtn", "celtiis", "MAUVAIS"] } } }));
+    expect(await payer({ ...ENTREE, operateur: null })).toEqual({
+      etat: "erreur",
+      message: "Choisissez votre opérateur : MTN Mobile Money ou Celtiis Cash.",
+      candidats: ["mtn", "celtiis"],
+    });
+    // Les candidats peuvent aussi venir avec leur nom.
+    fetchPayiz.mockResolvedValueOnce(
+      reponse(422, { error: { code: "operator_required", message: "…", details: { operators: [{ code: "orange", name: "Orange Money" }, { code: "moov" }] } } }),
+    );
+    expect(await payer({ ...ENTREE, operateur: null })).toMatchObject({ message: "Choisissez votre opérateur : Orange Money ou Moov Money.", candidats: ["orange", "moov"] });
+  });
+
+  it("pays, monnaie ou conversion indisponibles : traduits pour l'étudiant, signalés à l'équipe", async () => {
+    const journal = vi.spyOn(console, "error").mockImplementation(() => {});
+    faux.repondre("rpc.preparer_paiement", { data: carteSql({ repris: false }) });
+    fetchPayiz.mockResolvedValueOnce(reponse(422, { error: { code: "country_unavailable", message: "Country not enabled." } }));
+    expect(await payer({ ...ENTREE, telephone: "90 12 34 56", pays: "TGO", operateur: null })).toEqual({
+      etat: "erreur",
+      message: "Le paiement n’est pas proposé dans ce pays pour le moment. Choisissez un autre pays.",
+    });
+    fetchPayiz.mockResolvedValueOnce(reponse(422, { error: { code: "currency_unavailable", message: "…" } }));
+    expect(await payer(ENTREE)).toEqual({
+      etat: "erreur",
+      message: "Ce moyen de paiement n’accepte pas le franc CFA pour le moment. Choisissez un autre opérateur ou un autre pays.",
+    });
+    expect(journal).toHaveBeenCalledTimes(2);
+    expect(journal.mock.calls[0].join(" ")).toContain("country_unavailable");
+    expect(journal.mock.calls[0].join(" ")).not.toContain("90123456");
+    journal.mockRestore();
   });
 
   it("erreur Payiz non traduite : notée dans le journal du serveur, sans la clé ni le numéro", async () => {
@@ -191,16 +311,33 @@ describe("Suivre et réessayer", () => {
     faux.repondre("rpc.mon_paiement", { data: carteSql({ statut: "echoue", motif_echec: "insufficient_funds", payiz_id: "pay_1" }) });
     fetchPayiz.mockResolvedValueOnce(reponse(201, { object: "payment_attempt" }));
     faux.repondre("rpc.noter_essai", { data: carteSql({ payiz_id: "pay_1", essai_le: "2026-11-01T10:05:00Z" }) });
-    expect(await reessayer({ paiementId: PAIEMENT_ID, telephone: "01 42 00 00 00", operateur: "mtn" })).toMatchObject({ etat: "attente" });
+    expect(await reessayer({ paiementId: PAIEMENT_ID, telephone: "01 42 00 00 00", pays: "BEN", operateur: "mtn" })).toMatchObject({ etat: "attente" });
     expect(fetchPayiz.mock.calls[0][0]).toBe("https://api.payiz.app/v1/payments/pay_1/attempts");
     expect(entete(0, "Idempotency-Key")).toMatch(new RegExp(`^${PAIEMENT_ID}-\\d+$`));
+    expect(corpsEnvoye()).toEqual({ phone: "+2290142000000", country: "BEN", operator: "mtn" });
+  });
+
+  it("réessayer avec un numéro d'un autre pays, sans opérateur : celui que Payiz retient est noté", async () => {
+    faux.repondre("rpc.mon_paiement", { data: carteSql({ statut: "echoue", motif_echec: "insufficient_funds", payiz_id: "pay_1" }) });
+    fetchPayiz.mockResolvedValueOnce(
+      reponse(201, { object: "payment_attempt", id: "tnt_2", status: "pending", failure_code: null, operator: "togocel", phone: "+228 •• 56", country: "TGO" }),
+    );
+    faux.repondre("rpc.noter_essai", { data: carteSql({ payiz_id: "pay_1", essai_le: "2026-11-01T10:05:00Z" }) });
+    await reessayer({ paiementId: PAIEMENT_ID, telephone: "+228 90 12 34 56", pays: "TGO", operateur: null });
+    expect(corpsEnvoye()).toEqual({ phone: "+22890123456", country: "TGO" });
+    expect(faux.de("rpc", "noter_essai")[0].valeurs).toMatchObject({
+      p_operateur: "togocel",
+      p_operateur_nom: "Mixx by Yas",
+      p_pays: "TGO",
+      p_telephone_masque: "+228 •• •• •• •• 56",
+    });
   });
 
   it("réessayer : paiement clos chez Payiz, noté expiré", async () => {
     faux.repondre("rpc.mon_paiement", { data: carteSql({ statut: "echoue", payiz_id: "pay_1" }) });
     fetchPayiz.mockResolvedValueOnce(reponse(409, { error: { code: "payment_closed", message: "…" } }));
     faux.repondre("rpc.noter_echec", { data: carteSql({ statut: "expire", payiz_id: "pay_1" }) });
-    expect(await reessayer({ paiementId: PAIEMENT_ID, telephone: "01 42 00 00 00", operateur: "mtn" })).toMatchObject({ etat: "expire" });
+    expect(await reessayer({ paiementId: PAIEMENT_ID, telephone: "01 42 00 00 00", pays: "BEN", operateur: "mtn" })).toMatchObject({ etat: "expire" });
     expect(faux.de("rpc", "noter_echec")[0].valeurs).toEqual({ p_paiement: PAIEMENT_ID, p_statut: "expire", p_motif: null, p_jeton: JETON });
   });
 });

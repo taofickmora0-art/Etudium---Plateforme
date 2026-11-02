@@ -44,8 +44,10 @@ const PAIEMENTS: Page = {
       formule: { code: "standard", nom: "Standard", dureeMois: 6 },
       montant: 12000,
       statut: "reussi",
-      operateur: "mtn",
-      telephoneMasque: "+229 01 •• •• •• 00",
+      operateur: "celtiis",
+      operateurNom: "Celtiis Cash",
+      pays: "BEN",
+      telephoneMasque: "+229 •• •• •• •• 00",
       numeroRecu: "ET-R-2026-000001",
       source: "payiz",
       moyenManuel: null,
@@ -109,7 +111,10 @@ describe("Les chiffres et les onglets", () => {
         remise: 3000,
         montant: 12000,
         code: "PROMO20",
+        // Un paiement d'avant la 0072 : le code de l'opérateur seul, le pays noté par la migration.
         operateur: "mtn",
+        operateurNom: null,
+        pays: "BEN",
         telephoneMasque: "+229 01 •• •• •• 00",
         motifEchec: null,
         numeroRecu: "ET-R-2026-000001",
@@ -129,9 +134,12 @@ describe("Les chiffres et les onglets", () => {
     const ligne = screen.getByRole("row", { name: /Awa Kpadé/ });
     expect(ligne).toHaveTextContent("Standard · 6 mois");
     expect(ligne).toHaveTextContent("Réussi");
+    // Le nom de l'opérateur au moment du paiement et le pays du payeur (0072).
+    expect(ligne).toHaveTextContent("Celtiis Cash (Bénin)");
     await userEvent.click(within(ligne).getByRole("button", { name: "Voir le détail" }));
     const detail = await screen.findByRole("dialog", { name: "Paiement ET-R-2026-000001" });
     expect(detail).toHaveTextContent("awa@exemple.com");
+    expect(detail).toHaveTextContent("MTN Mobile Money (Bénin) · +229 01 •• •• •• 00");
     expect(within(detail).getByRole("link", { name: "Voir le reçu" })).toHaveAttribute("href", "/abonnement/recus/ET-R-2026-000001");
     expect(within(detail).getByRole("button", { name: "Annuler l’abonnement" })).toBeInTheDocument();
   });
