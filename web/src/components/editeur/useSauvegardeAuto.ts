@@ -137,7 +137,12 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
 
   // Chaque modification : la copie de l'appareil, puis l'envoi 1,5 s après la dernière.
   useEffect(() => {
-    if (json === confirmeActuel.current && !enCours.current) return;
+    if (json === confirmeActuel.current && !enCours.current) {
+      // Revenu à la valeur enregistrée : plus rien à garder sur l'appareil, ni à réessayer.
+      clearTimeout(minuteur.current);
+      effacerCopie(cle);
+      return;
+    }
     ecrireCopie(cle, valeurActuelle.current, revision.current);
     essais.current = 0;
     clearTimeout(minuteur.current);
@@ -161,8 +166,10 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
     };
   }, [cle]);
 
+  // Revenu à la valeur enregistrée après un échec, hors ligne ou un refus : à jour (le conflit et l'envoi en cours restent).
+  const revenu = json === confirme && (phase.type === "echec" || phase.type === "hors_ligne" || phase.type === "invalide");
   const etat: EtatSauvegarde =
-    phase.type === "repos"
+    phase.type === "repos" || revenu
       ? json !== confirme
         ? { type: "modifie" }
         : { type: "a_jour", le: dernier.le, brouillon: dernier.brouillon }

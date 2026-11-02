@@ -180,6 +180,21 @@ describe("La sauvegarde automatique", () => {
     expect(enregistrer.mock.calls[1][0]).toEqual({ titre: "ABC" });
   });
 
+  it("point reporté du lot 4 : revenir à la valeur enregistrée efface l'échec et la copie de l'appareil", async () => {
+    const enregistrer = vi.fn(async (): Promise<ResultatSauvegarde> => ({ ok: false, code: "echec", message: "Panne" }));
+    const { result, rerender } = monter(enregistrer);
+    rerender({ valeur: { titre: "AB" } });
+    await avancer(1500);
+    expect(result.current.etat.type).toBe("echec");
+    expect(lireCopie("lecon:l1")).not.toBeNull();
+    rerender({ valeur: { titre: "A" } });
+    await avancer(0);
+    expect(result.current.etat.type).toBe("a_jour");
+    expect(lireCopie("lecon:l1")).toBeNull();
+    await avancer(30_000);
+    expect(enregistrer).toHaveBeenCalledTimes(1);
+  });
+
   it("relecture (3) : en conflit ou en refus, quitter la page est retenu (rien n'est enregistré)", async () => {
     const enregistrer = vi.fn(async (): Promise<ResultatSauvegarde> => ({ ok: false, code: "conflit", par: null }));
     const { rerender } = monter(enregistrer);
