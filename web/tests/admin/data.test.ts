@@ -5,7 +5,7 @@ const faux = fauxSupabase();
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => faux.client }));
 vi.mock("@/lib/auth/current-user", () => ({ demoModeActive: () => false }));
 
-const { getFormationAdmin, getLeconAdmin, listFormations, listParcours, nombreSuiveurs, TablesAbsentesError } = await import("@/lib/admin/data");
+const { getFormateur, getFormationAdmin, getLeconAdmin, listFormations, listParcours, nombreSuiveurs, TablesAbsentesError } = await import("@/lib/admin/data");
 
 describe("Lecture des contenus du back-office", () => {
   beforeEach(() => {
@@ -190,5 +190,18 @@ describe("Lecture des contenus du back-office", () => {
   it("les tables absentes sont signalées", async () => {
     faux.repondre("parcours.select", { error: { code: "PGRST205", message: "Could not find the table" } });
     await expect(listParcours()).rejects.toBeInstanceOf(TablesAbsentesError);
+  });
+
+  it("0070 : la fiche d'un formateur porte ses réseaux ; sans la colonne, elle s'ouvre quand même", async () => {
+    const ID = "00000000-0000-4000-8000-000000000001";
+    const ligne = { id: ID, nom: "Koffi Mensah", titre: "Expert Excel", domaine: "Bureautique", presentation: "Bio" };
+    faux.repondre("formateurs.select", { data: { ...ligne, reseaux: { instagram: "https://instagram.com/koffi", twitter: "https://x.com/koffi" } } });
+    expect(await getFormateur(ID)).toEqual({ ...ligne, reseaux: { instagram: "https://instagram.com/koffi" } });
+    expect(String(faux.de("formateurs", "select")[0].valeurs)).toContain("reseaux");
+
+    faux.vider();
+    faux.repondre("formateurs.select", (appel) => (String(appel.valeurs).includes("reseaux") ? { error: { code: "42703" } } : { data: ligne }));
+    expect(await getFormateur(ID)).toEqual({ ...ligne, reseaux: {} });
+    expect(faux.de("formateurs", "select")).toHaveLength(2);
   });
 });

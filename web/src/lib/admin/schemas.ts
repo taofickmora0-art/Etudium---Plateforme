@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CLES_RESEAUX, RESEAU_MAX, type CleReseau, type Reseaux } from "@/lib/formateurs/reseaux";
 import { FORMATS, formatParMime, RESSOURCE_MAX_OCTETS } from "./fichiers";
 
 // Règles de saisie du back-office (spec du lot 1, §10) : les mêmes limites que la base (migration 0004).
@@ -33,12 +34,39 @@ export const parcoursSchema = z.object({
   actif: z.boolean(),
 });
 
+/**
+ * L'adresse d'un réseau du formateur (0070) : facultative ; sinon en https://, sans espace, 300 caractères au plus
+ * (la règle de la base, contrainte formateurs_reseaux).
+ */
+function erreurReseau(valeur: string): string | null {
+  if (valeur === "") return null;
+  if (valeur.length > RESEAU_MAX) return maximum(RESEAU_MAX).error;
+  if (!valeur.startsWith("https://")) return "L’adresse doit commencer par https://.";
+  if (/\s/.test(valeur)) return "L’adresse ne doit pas contenir d’espace.";
+  if (valeur === "https://") return "Complétez l’adresse après https://.";
+  return null;
+}
+const adresseReseau = z
+  .string()
+  .trim()
+  .superRefine((valeur, ctx) => {
+    const message = erreurReseau(valeur);
+    if (message) ctx.addIssue({ code: "custom", message });
+  });
+const champsReseaux = Object.fromEntries(CLES_RESEAUX.map((cle) => [cle, adresseReseau])) as Record<CleReseau, typeof adresseReseau>;
+
+/** La fiche formateur : nom, titre, domaine, présentation et un champ par réseau (vide : pas de réseau). */
 export const formateurSchema = z.object({
   nom: requis("Entrez le nom du formateur.", 80),
   titre: facultatif(120),
   domaine: facultatif(120),
   presentation: facultatif(600),
+  ...champsReseaux,
 });
+
+/** Les réseaux renseignés de la saisie, à écrire dans formateurs.reseaux. */
+export const reseauxDeLaSaisie = (saisie: Record<CleReseau, string>): Reseaux =>
+  Object.fromEntries(CLES_RESEAUX.filter((cle) => saisie[cle] !== "").map((cle) => [cle, saisie[cle]]));
 
 const SEUIL = { error: "Entre 50 et 100 %." };
 

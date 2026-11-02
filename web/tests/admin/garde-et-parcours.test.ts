@@ -87,7 +87,67 @@ describe("Back-office : garde de l'équipe, parcours et formateurs", () => {
       status: "success",
       redirection: "/admin/formateurs",
     });
-    expect(faux.de("formateurs", "insert")[0].valeurs).toEqual({ nom: "Dr Mireille Adjovi", titre: "Enseignante", domaine: "Statistiques", presentation: "Bio" });
+    expect(faux.de("formateurs", "insert")[0].valeurs).toEqual({ nom: "Dr Mireille Adjovi", titre: "Enseignante", domaine: "Statistiques", presentation: "Bio", reseaux: {} });
+  });
+
+  it("0070 : les réseaux renseignés sont enregistrés (sans espaces autour) ; un champ vidé retire le réseau", async () => {
+    const saisie = { id: "fo1", nom: "Koffi Mensah", titre: "", domaine: "", presentation: "", instagram: "  https://instagram.com/koffi ", youtube: "", tiktok: "https://tiktok.com/@koffi" };
+    expect((await saveFormateur(IDLE, form(saisie))).status).toBe("success");
+    const [maj] = faux.de("formateurs", "update");
+    expect(maj.valeurs).toEqual({
+      nom: "Koffi Mensah",
+      titre: "",
+      domaine: "",
+      presentation: "",
+      reseaux: { instagram: "https://instagram.com/koffi", tiktok: "https://tiktok.com/@koffi" },
+    });
+    expect(maj.filtres).toContainEqual(["eq", "id", "fo1"]);
+  });
+
+  it("0070 : une adresse de réseau invalide est signalée sur son champ, sans rien écrire", async () => {
+    const state = await saveFormateur(
+      IDLE,
+      form({
+        nom: "Koffi Mensah",
+        instagram: "http://instagram.com/koffi",
+        youtube: "youtube.com/@koffi",
+        linkedin: "https://linkedin.com/in/koffi mensah",
+        facebook: `https://facebook.com/${"a".repeat(290)}`,
+        telegram: "https://",
+        tiktok: "https://tiktok.com/@koffi",
+      }),
+    );
+    expect(state.status).toBe("error");
+    expect(state.fieldErrors).toEqual({
+      instagram: "L’adresse doit commencer par https://.",
+      youtube: "L’adresse doit commencer par https://.",
+      linkedin: "L’adresse ne doit pas contenir d’espace.",
+      facebook: "300 caractères au maximum.",
+      telegram: "Complétez l’adresse après https://.",
+    });
+    expect(state.values).toMatchObject({ instagram: "http://instagram.com/koffi", tiktok: "https://tiktok.com/@koffi" });
+    expect(faux.appels).toEqual([]);
+  });
+
+  it("0070 absente : la fiche s'enregistre sans les réseaux ; des réseaux saisis demandent la migration", async () => {
+    // La colonne n'existe pas : PostgREST répond PGRST204 à l'écriture.
+    faux.repondre("formateurs.update", (appel) =>
+      appel.valeurs && typeof appel.valeurs === "object" && "reseaux" in appel.valeurs ? { error: { code: "PGRST204", message: "Could not find the 'reseaux' column" } } : {},
+    );
+    expect((await saveFormateur(IDLE, form({ id: "fo1", nom: "Koffi Mensah" }))).status).toBe("success");
+    expect(faux.de("formateurs", "update").map((a) => a.valeurs)).toEqual([
+      { nom: "Koffi Mensah", titre: "", domaine: "", presentation: "", reseaux: {} },
+      { nom: "Koffi Mensah", titre: "", domaine: "", presentation: "" },
+    ]);
+
+    faux.vider();
+    faux.repondre("formateurs.insert", (appel) =>
+      appel.valeurs && typeof appel.valeurs === "object" && "reseaux" in appel.valeurs ? { error: { code: "42703", message: "column \"reseaux\" does not exist" } } : {},
+    );
+    const state = await saveFormateur(IDLE, form({ nom: "Koffi Mensah", instagram: "https://instagram.com/koffi" }));
+    expect(state).toMatchObject({ status: "error", message: "Les réseaux ne peuvent pas encore être enregistrés : appliquez la migration 0070, ou videz ces champs." });
+    expect(state.values?.instagram).toBe("https://instagram.com/koffi");
+    expect(faux.de("formateurs", "insert")).toHaveLength(1);
   });
 
   it("ranger un parcours (glisser-déposer) : autant de crans que nécessaire, dans le bon sens", async () => {

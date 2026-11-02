@@ -9,7 +9,8 @@ import { cheminValide } from "@/lib/couvertures/regles";
 import { baseFormations, espaceDe, type EspaceEdition } from "./espace";
 import { ACCES_EQUIPE, exigerDomaine, exigerEditeur } from "./garde";
 import { formatParMime } from "./fichiers";
-import { formateurSchema, formationInfosSchema, leconSchema, moduleSchema, parcoursSchema, ressourceSchema } from "./schemas";
+import { formateurSchema, formationInfosSchema, leconSchema, moduleSchema, parcoursSchema, reseauxDeLaSaisie, ressourceSchema } from "./schemas";
+import { CLES_RESEAUX } from "@/lib/formateurs/reseaux";
 import { slugify } from "./slug";
 import { MIGRATION_QUIZ } from "@/lib/quiz/conversion";
 import { MIGRATION_EXERCICES } from "@/lib/exercices/conversion";
@@ -28,6 +29,7 @@ const DEPLACEMENT_ECHOUE = "Le déplacement n’a pas abouti.";
 const FORMATION_VIDE = "Publiez au moins une leçon avant de publier la formation.";
 const MIGRATION_LECONS = "Appliquez la migration 0027 (guide « Ce qui te revient », section 33).";
 const MIGRATION_MONETISATION = "Appliquez la migration 0048 (guide « Ce qui te revient », section 54).";
+const MIGRATION_RESEAUX = "Les réseaux ne peuvent pas encore être enregistrés : appliquez la migration 0070, ou videz ces champs.";
 /** Une table absente de la base (migration pas encore appliquée). */
 const tableAbsente = (erreur: { code?: string } | null) => erreur?.code === "42P01" || erreur?.code === "PGRST205";
 const PUBLIEE_ARCHIVER = "Une formation publiée s’archive, elle ne s’efface pas.";
@@ -104,16 +106,32 @@ export async function saveParcours(_prev: FormState, fd: FormData): Promise<Form
 
 export async function saveFormateur(_prev: FormState, fd: FormData): Promise<FormState> {
   const id = texte(fd, "id");
-  const saisie = { nom: texte(fd, "nom"), titre: texte(fd, "titre"), domaine: texte(fd, "domaine"), presentation: texte(fd, "presentation") };
+  const saisie = {
+    nom: texte(fd, "nom"),
+    titre: texte(fd, "titre"),
+    domaine: texte(fd, "domaine"),
+    presentation: texte(fd, "presentation"),
+    ...Object.fromEntries(CLES_RESEAUX.map((cle) => [cle, texte(fd, cle)])),
+  };
   const values = enTextes(saisie);
   const parsed = formateurSchema.safeParse(saisie);
   if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error), values };
+  const { nom, titre, domaine, presentation } = parsed.data;
+  const fiche = { nom, titre, domaine, presentation };
+  const reseaux = reseauxDeLaSaisie(parsed.data);
 
   try {
     const garde = await exigerDomaine("contenus");
     if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
     const { supabase } = garde;
-    const { error } = id ? await supabase.from("formateurs").update(parsed.data).eq("id", id) : await supabase.from("formateurs").insert(parsed.data);
+    const ecrire = (valeurs: typeof fiche & { reseaux?: typeof reseaux }) =>
+      id ? supabase.from("formateurs").update(valeurs).eq("id", id) : supabase.from("formateurs").insert(valeurs);
+    let { error } = await ecrire({ ...fiche, reseaux });
+    // Sans la 0070, la colonne manque : la fiche s'enregistre sans les réseaux, s'il n'y en a aucun à garder.
+    if (colonneAbsente(error)) {
+      if (Object.keys(reseaux).length > 0) return { status: "error", message: MIGRATION_RESEAUX, values };
+      ({ error } = await ecrire(fiche));
+    }
     if (error) return erreurEnregistrement(error, values);
   } catch {
     return { status: "error", message: ECHEC, values };

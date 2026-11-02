@@ -4,6 +4,7 @@ import type { GenreExercice } from "@/lib/exercices/types";
 import type { TypeLecon } from "@/lib/catalogue/types";
 import type { EtatFormation } from "@/lib/contenus/etat";
 import type { Badge, CouleurParcours, Niveau, StatutFormation } from "@/lib/contenus/libelles";
+import type { Reseaux } from "@/lib/formateurs/reseaux";
 import type { Video } from "./video";
 
 // Ce que le back-office lit de la base (migration 0004), en camelCase.
@@ -19,7 +20,15 @@ export type ParcoursAdmin = {
   actif: boolean;
 };
 
-export type FormateurAdmin = { id: string; nom: string; titre: string; domaine: string; presentation: string };
+export type FormateurAdmin = {
+  id: string;
+  nom: string;
+  titre: string;
+  domaine: string;
+  presentation: string;
+  /** Les réseaux renseignés (0070), lus pour la fiche seulement ; vides avant la migration. */
+  reseaux?: Reseaux;
+};
 
 export type FormationResume = {
   id: string;

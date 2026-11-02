@@ -10,6 +10,7 @@ import { signerImages } from "@/lib/lecon/images";
 import { versEtatEdition, versSaisieInfos, versSaisieLecon } from "@/lib/editeur/saisie";
 import { estFonctionAbsente, estTablesAbsentes, lireAvecRepli, liste, parOrdre, TablesAbsentesError, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
+import { versReseaux } from "@/lib/formateurs/reseaux";
 import { versChiffresFormateurs, versChiffresFormations, type ChiffresFormateurs, type ChiffresFormations } from "./cartes-chiffres";
 import { versFicheParcours, versStatistiquesParcours, type FicheParcoursDonnees, type StatistiquesParcours } from "./parcours-chiffres";
 import type {
@@ -141,11 +142,14 @@ export async function listFormateurs(): Promise<FormateurAdmin[]> {
   return (lignes as Ligne[]).map(versFormateur);
 }
 
+/** La fiche d'un formateur, avec ses réseaux (0070) ; sans la colonne, relue sans eux (réseaux vides). */
 export async function getFormateur(id: string): Promise<FormateurAdmin | null> {
   if (demoModeActive() || !estUuid(id)) return null;
   const supabase = await createClient();
-  const ligne = verifier(await supabase.from("formateurs").select(COLONNES_FORMATEUR).eq("id", id).maybeSingle());
-  return ligne ? versFormateur(ligne as Ligne) : null;
+  const ligne = (await lireAvecRepli([`${COLONNES_FORMATEUR}, reseaux`, COLONNES_FORMATEUR], (colonnes) =>
+    supabase.from("formateurs").select(colonnes).eq("id", id).maybeSingle(),
+  )) as Ligne | null;
+  return ligne ? { ...versFormateur(ligne), reseaux: versReseaux(ligne.reseaux) } : null;
 }
 
 const dateOuNull = (valeur: unknown) => (typeof valeur === "string" && valeur ? valeur : null);
