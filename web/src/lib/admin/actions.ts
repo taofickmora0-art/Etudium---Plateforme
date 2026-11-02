@@ -29,7 +29,7 @@ const DEPLACEMENT_ECHOUE = "Le déplacement n’a pas abouti.";
 const FORMATION_VIDE = "Publiez au moins une leçon avant de publier la formation.";
 const MIGRATION_LECONS = "Appliquez la migration 0027 (guide « Ce qui te revient », section 33).";
 const MIGRATION_MONETISATION = "Appliquez la migration 0048 (guide « Ce qui te revient », section 54).";
-const MIGRATION_RESEAUX = "Les réseaux ne peuvent pas encore être enregistrés : appliquez la migration 0070, ou videz ces champs.";
+const MIGRATION_RESEAUX = "Les réseaux ne peuvent pas encore être enregistrés : appliquez la migration 0070 (guide « Ce qui te revient », section 69), ou videz ces champs.";
 /** Une table absente de la base (migration pas encore appliquée). */
 const tableAbsente = (erreur: { code?: string } | null) => erreur?.code === "42P01" || erreur?.code === "PGRST205";
 const PUBLIEE_ARCHIVER = "Une formation publiée s’archive, elle ne s’efface pas.";

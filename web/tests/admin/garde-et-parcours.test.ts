@@ -145,7 +145,7 @@ describe("Back-office : garde de l'équipe, parcours et formateurs", () => {
       appel.valeurs && typeof appel.valeurs === "object" && "reseaux" in appel.valeurs ? { error: { code: "42703", message: "column \"reseaux\" does not exist" } } : {},
     );
     const state = await saveFormateur(IDLE, form({ nom: "Koffi Mensah", instagram: "https://instagram.com/koffi" }));
-    expect(state).toMatchObject({ status: "error", message: "Les réseaux ne peuvent pas encore être enregistrés : appliquez la migration 0070, ou videz ces champs." });
+    expect(state).toMatchObject({ status: "error", message: "Les réseaux ne peuvent pas encore être enregistrés : appliquez la migration 0070 (guide « Ce qui te revient », section 69), ou videz ces champs." });
     expect(state.values?.instagram).toBe("https://instagram.com/koffi");
     expect(faux.de("formateurs", "insert")).toHaveLength(1);
   });

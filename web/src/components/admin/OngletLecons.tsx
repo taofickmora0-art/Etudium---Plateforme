@@ -50,6 +50,7 @@ import { formatDuree } from "@/lib/admin/duree";
 import { baseFormations, type EspaceEdition } from "@/lib/admin/espace";
 import { cleLecon, cleModule, deplacementApresDepot, deplacerDans, type Deplacement } from "@/lib/admin/rangement";
 import type { FormationAdmin, LeconResume, ModuleAdmin } from "@/lib/admin/types";
+import { titreModule } from "@/lib/catalogue/regles";
 import { Tag } from "@/components/ui/Tag";
 import { StatutLecon } from "./StatutLecon";
 import { useFormulaireAdmin } from "./useFormulaireAdmin";
@@ -258,7 +259,7 @@ function Section({
   return (
     <section
       ref={setNodeRef}
-      aria-label={`Module ${rang} : ${module.titre}`}
+      aria-label={titreModule(rang, module.titre)}
       style={{ transform: CSS.Translate.toString(transform), transition }}
       className={cn("min-w-0 border-t border-bordure-carte first:border-t-0", isDragging && "relative z-10 bg-panneau shadow-menu")}
     >
@@ -266,7 +267,7 @@ function Section({
         <Poignee nom={`la section « ${module.titre} »`} id={cleModule(module.id)} />
         {/* Sur téléphone, le titre a sa ligne ; la pastille et les boutons passent dessous, à droite. */}
         <h3 className="m-0 min-w-0 flex-1 text-[15px] leading-[22px] font-semibold wrap-anywhere text-encre max-sm:min-w-[calc(100%-40px)] max-sm:text-sm max-sm:leading-5">
-          Module {rang} : {module.titre}
+          {titreModule(rang, module.titre)}
         </h3>
         <span className="ml-auto flex flex-none items-center gap-1.5">
           <button
@@ -531,7 +532,7 @@ export function OngletLecons({ formation, base = "/admin/formations" }: OngletLe
         }
       >
         <Field label="Section" htmlFor="deplacer-section">
-          <Select id="deplacer-section" aria-label="Section" value={cible} onChange={(e) => setCible(e.target.value)} options={programme.map((m, i) => ({ value: m.id, label: `Module ${i + 1} : ${m.titre}` }))} />
+          <Select id="deplacer-section" aria-label="Section" value={cible} onChange={(e) => setCible(e.target.value)} options={programme.map((m, i) => ({ value: m.id, label: titreModule(i + 1, m.titre) }))} />
         </Field>
         <p className="m-0 mt-2 text-[13px] leading-5 text-discret">La leçon va à la fin de cette section.</p>
       </Dialog>

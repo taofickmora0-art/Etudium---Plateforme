@@ -48,7 +48,7 @@ function IllustrationHero() {
           <Tag tone="academique">Académique</Tag>
         </div>
         <span className="mt-[21px] truncate text-base leading-6 font-semibold text-encre">Maîtriser Microsoft Excel</span>
-        <span className="mt-[11px] text-xs leading-5 text-discret">Module 3 : les tableaux croisés dynamiques</span>
+        <span className="mt-[11px] text-xs leading-5 text-discret">Module 3 - Les tableaux croisés dynamiques</span>
         <ProgressBar value={68} className="mt-[17px] -ml-px" />
         <ProgressMeta value={68} timeLabel="2 h restantes" className="mt-2 flex-nowrap" />
       </div>

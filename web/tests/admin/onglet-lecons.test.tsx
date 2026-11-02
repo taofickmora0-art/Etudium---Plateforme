@@ -53,7 +53,9 @@ describe("L'onglet Leçons", () => {
   it("le compte, les sections et leurs leçons, le résumé et le statut de chaque leçon", () => {
     afficher();
     expect(screen.getByRole("heading", { name: "2 sections · 3 leçons" })).toBeInTheDocument();
-    expect(within(section(/Module 1 : Bases d’Excel/)).getAllByRole("listitem").map((l) => l.getAttribute("aria-label"))).toEqual(["Découvrir l’interface", "Les formules"]);
+    // Un seul format de module partout (spec du 2 novembre 2026, §1.8) : « Module N - Titre ».
+    expect(within(section(/^Module 1 - Bases d’Excel$/)).getAllByRole("listitem").map((l) => l.getAttribute("aria-label"))).toEqual(["Découvrir l’interface", "Les formules"]);
+    expect(screen.getByRole("heading", { level: 3, name: "Module 2 - Automatisation" })).toBeInTheDocument();
     expect(within(ligne("Découvrir l’interface")).getByText("06:10 · Vidéo · Aperçu")).toBeInTheDocument();
     expect(within(ligne("Découvrir l’interface")).getByRole("button", { name: "Statut : Publiée" })).toBeInTheDocument();
     expect(within(ligne("Les formules")).getByRole("button", { name: "Statut : Brouillon" })).toBeInTheDocument();
@@ -104,6 +106,7 @@ describe("L'onglet Leçons", () => {
     expect(within(section(/Module 1/)).getAllByRole("listitem").map((l) => l.getAttribute("aria-label"))).toEqual(["Les formules", "Découvrir l’interface"]);
     await menuLecon(user, "Les formules", "Déplacer vers…");
     const fenetre = screen.getByRole("dialog", { name: "Déplacer « Les formules »" });
+    expect(within(fenetre).getAllByRole("option").map((o) => o.textContent)).toEqual(["Module 1 - Bases d’Excel", "Module 2 - Automatisation"]);
     await user.selectOptions(within(fenetre).getByRole("combobox", { name: "Section" }), "m2");
     await user.click(within(fenetre).getByRole("button", { name: "Déplacer" }));
     expect(actions.ranger).toHaveBeenLastCalledWith("lecons", "l2", "m2", 2);

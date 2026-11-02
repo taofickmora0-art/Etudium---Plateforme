@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   actionDeCarte,
@@ -123,6 +125,14 @@ describe("La fiche d'une formation (spec du 2 novembre 2026, §5)", () => {
   it("un seul format de module partout : « Module N - Titre »", () => {
     expect(titreModule(1, "Bases d’Excel")).toBe("Module 1 - Bases d’Excel");
     expect(titreModule(12, "Automatisation")).toBe("Module 12 - Automatisation");
+  });
+
+  it("plus aucun « Module N : Titre » dans l'appli (recherche, back-office, illustrations)", () => {
+    const fichiers = (dossier: string): string[] =>
+      readdirSync(dossier, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? fichiers(join(dossier, e.name)) : /\.tsx?$/.test(e.name) ? [join(dossier, e.name)] : []));
+    const ancienFormat = /Module (\d+|\$\{[^}]+\}|\{[^}]+\}) :/;
+    const restants = fichiers(join(process.cwd(), "src")).filter((f) => ancienFormat.test(readFileSync(f, "utf8")));
+    expect(restants.map((f) => relative(process.cwd(), f))).toEqual([]);
   });
 
   it("non inscrit, formation ouverte : « S'inscrire à ce cours », puis la première leçon du programme", () => {

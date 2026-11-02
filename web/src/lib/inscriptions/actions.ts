@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SESSION_EXPIREE = "Votre session a expiré. Reconnectez-vous.";
 const INSCRIPTION_ECHEC = "L’inscription n’a pas abouti. Réessayez.";
-const MIGRATION_INSCRIPTIONS = "Appliquez la migration 0069.";
+const MIGRATION_INSCRIPTIONS = "Appliquez la migration 0069 (guide « Ce qui te revient », section 68).";
 
 /** Inscrit le compte connecté à la formation ; la fiche, ses leçons, « Mes formations », le catalogue et les favoris se relisent. */
 export async function sInscrireFormation(formationId: string): Promise<{ ok: true } | { ok: false; message: string }> {

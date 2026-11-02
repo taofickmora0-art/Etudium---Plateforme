@@ -8,7 +8,7 @@ import type { FormateurPublic, FormationDuFormateur } from "./types";
 // La réponse de formateur_public (migration 0070) dans les formes de l'appli. Conversion pure : une valeur manquante ou
 // inattendue prend une valeur sûre.
 
-export const MIGRATION_FORMATEURS = "Appliquez la migration 0070.";
+export const MIGRATION_FORMATEURS = "Appliquez la migration 0070 (guide « Ce qui te revient », section 69).";
 
 const NIVEAUX: readonly Niveau[] = ["debutant", "intermediaire", "avance"];
 const BADGES: readonly Badge[] = ["populaire", "nouveau"];

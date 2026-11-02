@@ -176,7 +176,7 @@ describe("lireFormateurPublic", () => {
     expect(await lireFormateurPublic(ID)).toBe("absente");
     faux.repondre("rpc.formateur_public", { error: { code: "57014", message: "timeout" } });
     await expect(lireFormateurPublic(ID)).rejects.toThrow(/formateur/);
-    expect(MIGRATION_FORMATEURS).toMatch(/0070/);
+    expect(MIGRATION_FORMATEURS).toBe("Appliquez la migration 0070 (guide « Ce qui te revient », section 69).");
   });
 });
 

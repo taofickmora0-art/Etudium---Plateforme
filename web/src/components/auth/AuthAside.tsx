@@ -33,7 +33,7 @@ function Illustration() {
               <Tag tone="academique">Académique</Tag>
             </div>
             <p className="mt-[21px] mb-0 truncate text-base leading-6 font-semibold text-encre">Maîtriser Microsoft Excel</p>
-            <p className="mt-[11px] mb-0 h-10 overflow-hidden text-xs leading-5 text-discret">Module 3 : les tableaux croisés dynamiques</p>
+            <p className="mt-[11px] mb-0 h-10 overflow-hidden text-xs leading-5 text-discret">Module 3 - Les tableaux croisés dynamiques</p>
             <ProgressBar value={68} className="mt-[17px] -ml-px" />
             <ProgressMeta value={68} timeLabel="2 h restantes" className="mt-2 flex-nowrap" />
           </div>

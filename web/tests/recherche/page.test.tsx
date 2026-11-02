@@ -67,7 +67,7 @@ describe("Page Recherche", () => {
     const ouverte = screen.getByRole("link", { name: /Découvrir l’interface/ });
     expect(ouverte).toHaveAttribute("href", `/formations/${excel.slug}/lecons/l1`);
     expect(within(ouverte).getByText("Terminée")).toBeInTheDocument();
-    expect(within(ouverte).getByText("Maîtriser Microsoft Excel · Module 1 : Bases d’Excel")).toBeInTheDocument();
+    expect(within(ouverte).getByText("Maîtriser Microsoft Excel · Module 1 - Bases d’Excel")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Les formules essentielles/ })).toHaveAttribute("href", `/formations/${excel.slug}`);
   });
 

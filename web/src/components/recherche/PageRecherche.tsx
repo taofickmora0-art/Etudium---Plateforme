@@ -11,6 +11,7 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { Tag } from "@/components/ui/Tag";
 import { Heading, Lead } from "@/components/ui/Text";
 import { formatDuree } from "@/lib/admin/duree";
+import { titreModule } from "@/lib/catalogue/regles";
 import type { CarteCatalogue, ParcoursCatalogue } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
 import type { CouleurParcours } from "@/lib/contenus/libelles";
@@ -70,7 +71,7 @@ function LigneLecon({ lecon, terminee }: { lecon: LeconTrouvable; terminee: bool
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="text-[15px] leading-[22px] font-medium text-encre">{lecon.titre}</span>
-          <span className="text-[13px] leading-5 text-discret">{`${lecon.formation.titre} · Module ${lecon.module.numero} : ${lecon.module.titre}`}</span>
+          <span className="text-[13px] leading-5 text-discret">{`${lecon.formation.titre} · ${titreModule(lecon.module.numero, lecon.module.titre)}`}</span>
         </span>
         <span className="flex-none text-xs leading-[18px] text-discret max-sm:hidden">{formatDuree(lecon.dureeSecondes)}</span>
         {terminee && <Tag tone="valide">Terminée</Tag>}

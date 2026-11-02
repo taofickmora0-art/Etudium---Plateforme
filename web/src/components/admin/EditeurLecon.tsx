@@ -22,6 +22,7 @@ import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
 import { changerStatutLecon } from "@/lib/admin/actions";
 import { baseFormations } from "@/lib/admin/espace";
+import { titreModule } from "@/lib/catalogue/regles";
 import type { LeconAdmin } from "@/lib/admin/types";
 import { parseVideoUrl, videoLabel, videoLink } from "@/lib/admin/video";
 import { enregistrerLecon, enregistrerQuestions, reglerLecon } from "@/lib/editeur/actions";
@@ -255,7 +256,7 @@ function Editeur({ lecon, base = "/admin/formations", quiz, surEnregistre }: Edi
         <span className="ml-auto flex min-w-0 flex-wrap items-center gap-2 max-sm:ml-0 max-sm:w-full">
           {/* Sur téléphone, la position (tronquée) et les flèches tiennent sur une ligne. */}
           <span className="flex min-w-0 items-center gap-2 max-sm:w-full">
-            <span className="min-w-0 text-[13px] leading-5 text-discret max-sm:flex-1 max-sm:truncate max-sm:text-xs">{`Leçon ${position.rang} sur ${position.total} · Module ${position.module.rang} : ${position.module.titre}`}</span>
+            <span className="min-w-0 text-[13px] leading-5 text-discret max-sm:flex-1 max-sm:truncate max-sm:text-xs">{`Leçon ${position.rang} sur ${position.total} · ${titreModule(position.module.rang, position.module.titre)}`}</span>
             <span className="flex flex-none items-center gap-1">
               {voisines.precedente && (
                 <Link href={versLecon(voisines.precedente)} aria-label="Leçon précédente" className={fleche}>

@@ -125,7 +125,7 @@ export type LeconAdmin = {
   type: TypeLecon;
   /** Un exercice (0032) : simple, ou avec rendu ; null pour les autres types, ou avant la 0032. */
   genreExercice: GenreExercice | null;
-  /** « Leçon 2 sur 5 · Module 1 : titre » : son rang dans toute la formation, et sa section. */
+  /** « Leçon 2 sur 5 · Module 1 - titre » : son rang dans toute la formation, et sa section. */
   position: { rang: number; total: number; module: { rang: number; titre: string } };
   /** Les leçons voisines dans l'ordre de la formation (flèches ‹ › de l'éditeur). */
   voisines: { precedente: string | null; suivante: string | null };

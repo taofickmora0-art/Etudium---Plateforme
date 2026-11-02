@@ -102,7 +102,7 @@ describe("L'éditeur de leçon", () => {
   it("la barre du haut : retour aux leçons, position, voisines, statut, voir comme un étudiant", () => {
     afficher();
     expect(screen.getByRole("link", { name: "Retour aux leçons (Maîtriser Excel)" })).toHaveAttribute("href", "/admin/formations/f1?onglet=programme");
-    expect(screen.getByText("Leçon 2 sur 5 · Module 1 : Les bases")).toBeInTheDocument();
+    expect(screen.getByText("Leçon 2 sur 5 · Module 1 - Les bases")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Leçon précédente" })).toHaveAttribute("href", "/admin/formations/f1/lecons/l1");
     expect(screen.getByRole("link", { name: "Leçon suivante" })).toHaveAttribute("href", "/admin/formations/f1/lecons/l3");
     expect(screen.getByRole("button", { name: "Statut : Brouillon" })).toBeInTheDocument();
