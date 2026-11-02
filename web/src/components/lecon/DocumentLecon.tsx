@@ -2,6 +2,7 @@ import { Fragment, type ReactNode } from "react";
 import { Alert02Icon, BulbIcon, InformationCircleIcon, StarIcon } from "@hugeicons/core-free-icons";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
+import { ImageSignee } from "./ImageSignee";
 import type { DocumentLecon as Doc, MarqueDoc, NoeudDoc, TonEncadre } from "@/lib/lecon/document";
 import { FOURNISSEURS, type Fournisseur } from "@/lib/video/plateformes";
 import { LecteurVideo } from "./LecteurVideo";
@@ -99,8 +100,7 @@ function Bloc({ n, images }: { n: NoeudDoc; images: Record<string, string> }): R
       return (
         <figure className="m-0 flex flex-col gap-2">
           {url ? (
-            // eslint-disable-next-line @next/next/no-img-element -- image privée, servie par un lien signé d'une heure
-            <img src={url} alt={alt} loading="lazy" className="block h-auto max-w-full rounded-carte border border-bordure-carte" />
+            <ImageSignee src={url} alt={alt} className="block h-auto max-w-full rounded-carte border border-bordure-carte" />
           ) : (
             <div className="flex h-32 items-center justify-center rounded-carte border border-dashed border-bordure-champ bg-page text-sm text-discret">Image indisponible</div>
           )}

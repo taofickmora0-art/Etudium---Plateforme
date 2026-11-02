@@ -181,6 +181,20 @@ describe("La sauvegarde automatique", () => {
     expect(enregistrer.mock.calls[1][0]).toEqual({ titre: "ABC" });
   });
 
+  it("point reporté du lot 4 : pendant une frappe rapide, la copie de l'appareil s'écrit au plus une fois par seconde, la dernière valeur gardée", async () => {
+    const enregistrer = vi.fn(async () => OK(4));
+    const { rerender } = monter(enregistrer);
+    const ecrire = vi.spyOn(Storage.prototype, "setItem");
+    for (const titre of ["A", "AB", "ABC", "ABCD", "ABCDE"]) {
+      rerender({ valeur: { titre } });
+      await avancer(100);
+    }
+    expect(ecrire.mock.calls.filter(([cle]) => String(cle).startsWith("etudium-editeur:"))).toHaveLength(1);
+    await avancer(600);
+    expect(lireCopie<V>("lecon:l1")?.valeur).toEqual({ titre: "ABCDE" });
+    ecrire.mockRestore();
+  });
+
   it("point reporté du lot 4 : revenir à la valeur enregistrée efface l'échec et la copie de l'appareil", async () => {
     const enregistrer = vi.fn(async (): Promise<ResultatSauvegarde> => ({ ok: false, code: "echec", message: "Panne" }));
     const { result, rerender } = monter(enregistrer);

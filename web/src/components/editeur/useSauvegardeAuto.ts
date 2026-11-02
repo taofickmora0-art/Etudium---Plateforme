@@ -60,6 +60,9 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
   const arrete = useRef(false);
   const essais = useRef(0);
   const minuteur = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // La copie de l'appareil : au plus une écriture par seconde pendant la frappe (gros documents), la dernière gardée.
+  const copieEnAttente = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const derniereCopie = useRef(0);
   const envoyerActuel = useRef<() => Promise<void>>(async () => {});
 
   useEffect(() => {
@@ -108,6 +111,7 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
       setConfirme(envoye);
       setDernier({ le: r.enregistreLe, brouillon: r.brouillon });
       setPhase({ type: "repos" });
+      clearTimeout(copieEnAttente.current);
       if (JSON.stringify(valeurActuelle.current) === envoye) effacerCopie(cle);
       else ecrireCopie(cle, valeurActuelle.current, revision.current);
       if (relancer.current || JSON.stringify(valeurActuelle.current) !== envoye) {
@@ -141,10 +145,19 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
     if (json === confirmeActuel.current && !enCours.current) {
       // Revenu à la valeur enregistrée : plus rien à garder sur l'appareil, ni à réessayer.
       clearTimeout(minuteur.current);
+      clearTimeout(copieEnAttente.current);
       effacerCopie(cle);
       return;
     }
-    ecrireCopie(cle, valeurActuelle.current, revision.current);
+    clearTimeout(copieEnAttente.current);
+    const copier = () => {
+      copieEnAttente.current = undefined;
+      ecrireCopie(cle, valeurActuelle.current, revision.current);
+      derniereCopie.current = Date.now();
+    };
+    const ecart = Date.now() - derniereCopie.current;
+    if (ecart >= 1000) copier();
+    else copieEnAttente.current = setTimeout(copier, 1000 - ecart);
     essais.current = 0;
     clearTimeout(minuteur.current);
     minuteur.current = setTimeout(() => void envoyerActuel.current(), delaiMs);
@@ -157,6 +170,11 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
     return () => {
       window.removeEventListener("online", reprendre);
       clearTimeout(minuteur.current);
+      // Une copie encore en attente part tout de suite : on quitte l'éditeur.
+      if (copieEnAttente.current !== undefined) {
+        clearTimeout(copieEnAttente.current);
+        ecrireCopie(cle, valeurActuelle.current, revision.current);
+      }
       const reste = valeurActuelle.current;
       if (!arrete.current && !enCours.current && JSON.stringify(reste) !== confirmeActuel.current && !horsLigne()) {
         void enregistrerActuel.current(reste, revision.current).then(
@@ -211,6 +229,7 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
   }, [copie]);
   const ignorer = useCallback(() => {
     setDecide(true);
+    clearTimeout(copieEnAttente.current);
     effacerCopie(cle);
   }, [cle]);
   const enregistrerMaintenant = useCallback(() => envoyerActuel.current(), []);

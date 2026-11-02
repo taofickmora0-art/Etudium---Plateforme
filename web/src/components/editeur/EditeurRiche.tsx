@@ -49,6 +49,8 @@ export function EditeurRiche({ formationId, valeur, images, onChange, onBlur, et
   const [erreur, setErreur] = useState<string | null>(null);
   // Le dernier document émis : une valeur égale vient de l'éditeur lui-même et ne le recharge pas.
   const emis = useRef(JSON.stringify(valeur));
+  // Le dernier document émis lui-même : sa valeur revient telle quelle, sans la resérialiser (gros documents).
+  const emisObjet = useRef<unknown>(null);
   const rappels = useRef({ onChange, onBlur });
   useEffect(() => {
     rappels.current = { onChange, onBlur };
@@ -81,6 +83,7 @@ export function EditeurRiche({ formationId, valeur, images, onChange, onBlur, et
     onUpdate: ({ editor: e }) => {
       const doc = e.getJSON() as DocumentLecon;
       emis.current = JSON.stringify(doc);
+      emisObjet.current = doc;
       rappels.current.onChange(doc);
     },
     onBlur: () => rappels.current.onBlur?.(),
@@ -103,8 +106,9 @@ export function EditeurRiche({ formationId, valeur, images, onChange, onBlur, et
 
   // Une valeur changée de l'extérieur (récupération d'une copie, restauration) remplace le contenu, sans émettre.
   useEffect(() => {
+    if (!editor || valeur === emisObjet.current) return;
     const json = JSON.stringify(valeur);
-    if (!editor || json === emis.current) return;
+    if (json === emis.current) return;
     emis.current = json;
     editor.commands.setContent(valeur, { emitUpdate: false });
   }, [editor, valeur]);
