@@ -9,10 +9,12 @@ import { ETATS, TON_ETAT } from "@/lib/contenus/etat";
 import type { CouleurParcours } from "@/lib/contenus/libelles";
 import { urlCouverture } from "@/lib/couvertures/adresse";
 import { dateCourte } from "@/lib/utilisateurs/regles";
+import { MenuFormation } from "./MenuFormation";
 
 // Les formations du back-office au style de l'espace étudiant (demande du 2 novembre 2026) : la carte du catalogue, sa
 // couverture, son parcours et son état posés dessus ; dessous, ses leçons, ses apprenants, ses certificats, sa note, son
-// formateur, et ce qui l'attend (modifications à publier, exercices à corriger).
+// formateur, et ce qui l'attend (modifications à publier, exercices à corriger). En haut à gauche de la couverture, hors
+// du lien de la carte, son menu ⋮ d'actions (MenuFormation).
 
 const TONS_PARCOURS: Record<CouleurParcours, TagTone> = { academique: "academique", digital: "digital", business: "business" };
 
@@ -43,6 +45,12 @@ function CarteFormationAdmin({ formation: f, chiffres }: { formation: FormationR
       parcoursTag={{ tone: f.couleur ? TONS_PARCOURS[f.couleur] : "enAttente", label: f.parcours[0] ?? "Sans parcours" }}
       tag={{ tone: TON_ETAT[f.etat], label: ETATS[f.etat] }}
       titleAs="h2"
+      coinGaucheOccupe
+      horsLien={
+        <div className="absolute top-3 left-3 flex">
+          <MenuFormation formation={{ id: f.id, slug: f.slug, titre: f.titre, statut: f.statut, etat: f.etat, publieeLe: f.publieeLe ?? null }} suiveurs={c?.apprenants ?? null} />
+        </div>
+      }
     >
       <div aria-hidden="true" className="mt-4 h-px bg-bordure-carte" />
       <p data-testid="meta-formation" className="m-0 mt-3 text-xs leading-[18px] text-discret">

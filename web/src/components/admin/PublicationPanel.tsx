@@ -1,21 +1,23 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Delete02Icon } from "@hugeicons/core-free-icons";
+import { useState, type ComponentProps } from "react";
 import { Button } from "@/components/ui/Button";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { useToast } from "@/components/ui/Toast";
-import { deleteFormation, setStatutFormation } from "@/lib/admin/actions";
 import type { FormationAdmin } from "@/lib/admin/types";
-import { texteDesactivation } from "@/lib/admin/desactivation";
 import type { StatutFormation } from "@/lib/contenus/libelles";
 import { dateCourte } from "@/lib/utilisateurs/regles";
 import { ModificationsNonPubliees } from "@/components/editeur/ModificationsNonPubliees";
-import { RenvoyerAuFormateur } from "./RenvoyerAuFormateur";
+import { actionsFormation, FenetresFormation, LIBELLES_ACTIONS, type ActionFormation, type FenetreFormation } from "./formations/ActionsFormation";
 
-type Resultat = { ok: boolean; message?: string; redirection?: string };
-type Confirmation = "publier" | "archiver" | "desactiver" | "reactiver" | "supprimer" | null;
+/** L'allure de chaque bouton : l'action principale en bleu, les retraits en contour, les actions graves en rouge doux. */
+const VARIANTES: Record<ActionFormation, ComponentProps<typeof Button>["variant"]> = {
+  publier: "principal",
+  renvoyer: "contour",
+  archiver: "contour",
+  desactiver: "dangerDoux",
+  reactiver: "principal",
+  republier: "principal",
+  supprimer: "dangerDoux",
+};
 
 const EXPLICATION: Record<StatutFormation, string> = {
   brouillon: "Brouillon : visible seulement par l’équipe et par son formateur.",
@@ -60,30 +62,12 @@ function EtatRelecture({ formation, formateurNom }: Omit<Props, "id" | "version"
 
 /**
  * Onglet « Publication » : publier, archiver, republier, renvoyer au formateur, supprimer un brouillon (spec du lot 1,
- * §10) ; désactiver ou réactiver une formation publiée (lot 5, étape C).
+ * §10) ; désactiver ou réactiver une formation publiée (lot 5, étape C). Les règles et les fenêtres sont celles du menu
+ * ⋮ des cartes de la liste (ActionsFormation).
  */
 export function PublicationPanel({ id, formation, formateurNom, version = null, suiveurs = null }: Props) {
   const { statut } = formation;
-  const router = useRouter();
-  const { toast } = useToast();
-  const [confirmation, setConfirmation] = useState<Confirmation>(null);
-  const [erreur, setErreur] = useState<string | undefined>();
-
-  /** Lance l'action ; un refus garde la fenêtre ouverte avec son message (ConfirmDialog). */
-  const lancer = (action: () => Promise<Resultat>, succes: string) => async () => {
-    const resultat = await action();
-    if (!resultat.ok) {
-      setErreur(resultat.message);
-      throw new Error(resultat.message);
-    }
-    toast({ tone: "reussite", title: succes });
-    if (resultat.redirection) router.push(resultat.redirection);
-  };
-  const ouvrir = (quoi: Confirmation) => {
-    setErreur(undefined);
-    setConfirmation(quoi);
-  };
-  const fermer = (ouvert: boolean) => !ouvert && setConfirmation(null);
+  const [fenetre, setFenetre] = useState<FenetreFormation>(null);
 
   return (
     <div className="flex max-w-[680px] flex-col gap-4 rounded-carte border border-bordure-carte bg-panneau p-6">
@@ -92,78 +76,13 @@ export function PublicationPanel({ id, formation, formateurNom, version = null, 
       <p className="m-0 text-[15px] leading-6 text-texte">{EXPLICATION[statut]}</p>
       {version && <p className="m-0 text-sm leading-[22px] text-discret">{version}</p>}
       <div className="flex flex-wrap gap-2">
-        {statut === "brouillon" && <Button onClick={() => ouvrir("publier")}>Publier</Button>}
-        {formation.etat === "en_attente" && <RenvoyerAuFormateur id={id} />}
-        {(statut === "publiee" || statut === "desactivee") && (
-          <Button variant="contour" onClick={() => ouvrir("archiver")}>
-            Archiver
+        {actionsFormation(formation).map((action) => (
+          <Button key={action} variant={VARIANTES[action]} onClick={() => setFenetre(action)}>
+            {LIBELLES_ACTIONS[action]}
           </Button>
-        )}
-        {statut === "publiee" && (
-          <Button variant="dangerDoux" onClick={() => ouvrir("desactiver")}>
-            Désactiver
-          </Button>
-        )}
-        {statut === "desactivee" && <Button onClick={() => ouvrir("reactiver")}>Réactiver</Button>}
-        {statut === "archivee" && <Button onClick={() => ouvrir("publier")}>Republier</Button>}
-        {statut === "brouillon" && (
-          <Button variant="dangerDoux" onClick={() => ouvrir("supprimer")}>
-            Supprimer le brouillon
-          </Button>
-        )}
+        ))}
       </div>
-
-      <ConfirmDialog
-        open={confirmation === "publier"}
-        onOpenChange={fermer}
-        title={statut === "archivee" ? "Republier cette formation ?" : "Publier cette formation ?"}
-        description={
-          statut === "archivee" ? "Elle revient dans le catalogue et ses leçons se rouvrent." : "Elle apparaîtra dans le catalogue. Son adresse ne pourra plus changer."
-        }
-        confirmLabel={statut === "archivee" ? "Republier" : "Publier"}
-        errorMessage={erreur}
-        onConfirm={lancer(() => setStatutFormation(id, "publiee"), "Formation publiée")}
-      />
-      <ConfirmDialog
-        open={confirmation === "archiver"}
-        onOpenChange={fermer}
-        title="Archiver cette formation ?"
-        description="Elle disparaît du catalogue et ses leçons se ferment. Rien n’est supprimé : vous pourrez la republier."
-        confirmLabel="Archiver"
-        errorMessage={erreur}
-        onConfirm={lancer(() => setStatutFormation(id, "archivee"), "Formation archivée")}
-      />
-      <ConfirmDialog
-        open={confirmation === "desactiver"}
-        onOpenChange={fermer}
-        tone="danger"
-        title="Désactiver cette formation ?"
-        description={texteDesactivation(suiveurs)}
-        confirmLabel="Désactiver"
-        errorMessage={erreur}
-        onConfirm={lancer(() => setStatutFormation(id, "desactivee"), "Formation désactivée")}
-      />
-      <ConfirmDialog
-        open={confirmation === "reactiver"}
-        onOpenChange={fermer}
-        title="Réactiver cette formation ?"
-        description="Elle revient dans le catalogue et ses leçons se rouvrent. Les étudiants qui la suivent sont prévenus."
-        confirmLabel="Réactiver"
-        errorMessage={erreur}
-        onConfirm={lancer(() => setStatutFormation(id, "publiee"), "Formation réactivée")}
-      />
-      <ConfirmDialog
-        open={confirmation === "supprimer"}
-        onOpenChange={fermer}
-        tone="danger"
-        icon={Delete02Icon}
-        iconTone="danger"
-        title="Supprimer ce brouillon ?"
-        description="Le brouillon, ses modules, ses leçons et leurs fichiers seront supprimés. Cette action est définitive."
-        confirmLabel="Supprimer"
-        errorMessage={erreur}
-        onConfirm={lancer(() => deleteFormation(id), "Brouillon supprimé")}
-      />
+      <FenetresFormation id={id} statut={statut} suiveurs={suiveurs} fenetre={fenetre} onFenetreChange={setFenetre} />
     </div>
   );
 }

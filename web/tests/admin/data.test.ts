@@ -61,6 +61,23 @@ describe("Lecture des contenus du back-office", () => {
     expect((await listFormations()).map((f) => f.etat)).toEqual(["brouillon"]);
   });
 
+  it("la liste des formations porte leur date de publication (0004), même par le repli le plus court", async () => {
+    const lignes = [
+      { id: "f1", slug: "a", titre: "A", statut: "archivee", niveau: "debutant", publiee_le: "2026-10-01T08:00:00Z", modules: [], formations_parcours: [] },
+      { id: "f2", slug: "b", titre: "B", statut: "brouillon", niveau: "debutant", publiee_le: null, modules: [], formations_parcours: [] },
+    ];
+    faux.repondre("formations.select", { data: lignes });
+    expect((await listFormations()).map((f) => [f.id, f.publieeLe])).toEqual([
+      ["f1", "2026-10-01T08:00:00Z"],
+      ["f2", null],
+    ]);
+    faux.vider();
+    // Avant la 0014 : seules les colonnes de base répondent ; la date de publication en fait partie.
+    faux.repondre("formations.select", (appel) => (String(appel.valeurs).includes("envoyee_le") ? { error: { code: "42703" } } : { data: [lignes[0]] }));
+    expect((await listFormations()).map((f) => f.publieeLe)).toEqual(["2026-10-01T08:00:00Z"]);
+    expect(String(faux.de("formations", "select").at(-1)?.valeurs)).toContain("publiee_le");
+  });
+
   it("la liste d'un formateur : filtrée sur sa fiche, les plus récemment modifiées d'abord", async () => {
     faux.repondre("formations.select", { data: [] });
     await listFormations({ formateurId: "fa" });

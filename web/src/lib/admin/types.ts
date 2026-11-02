@@ -45,6 +45,11 @@ export type FormationResume = {
   modifieeParFormateurLe: string | null;
   /** Des brouillons attendent « Publier les modifications » (0056) ; faux avant la 0056. */
   modificationsNonPubliees?: boolean;
+  /**
+   * Date de la première publication (0004), ou null pour une formation jamais publiée : seule celle-ci peut être
+   * supprimée (menu ⋮ des cartes du back-office).
+   */
+  publieeLe?: string | null;
   /** Pour la carte du back-office : le résumé, la couverture, la note, le formateur, la couleur du premier parcours. */
   resume?: string;
   couverture?: string | null;

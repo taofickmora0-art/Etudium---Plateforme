@@ -197,11 +197,12 @@ export async function listFormations(filtre?: { formateurId: string }): Promise<
   const supabase = await createClient();
   // Le type des leçons (0031) : « n leçons » ne compte pas les quiz. « colonnes de la formation|colonnes des leçons ».
   const relue = ", envoyee_le, renvoyee_le, modifiee_par_formateur_le";
-  // La carte du back-office : résumé, couverture (0012), note (0010) et formateur ; repli sans elles.
+  // La carte du back-office : résumé, couverture (0012), note (0010) et formateur ; repli sans elles. La date de
+  // publication (0004) est de base : le menu des cartes ne propose « Supprimer » qu'aux formations jamais publiées.
   const carte = ", resume, couverture, note_moyenne, nb_avis, formateurs(nom)";
   const lignes = await lireAvecRepli([`${relue}${carte}|, type`, `${relue}|, type`, `${relue}|`, "|"], (variante) => {
     const [colonnes, lecons] = variante.split("|");
-    const requete = supabase.from("formations").select(`id, slug, titre, statut, niveau${colonnes}, formations_parcours(parcours(nom_court, couleur)), modules(lecons(id${lecons}))`);
+    const requete = supabase.from("formations").select(`id, slug, titre, statut, niveau, publiee_le${colonnes}, formations_parcours(parcours(nom_court, couleur)), modules(lecons(id${lecons}))`);
     return filtre ? requete.eq("formateur_id", filtre.formateurId).order("modifie_le", { ascending: false }) : requete.order("titre");
   });
   const avecBrouillons = await formationsAvecBrouillons(supabase);
@@ -218,6 +219,7 @@ export async function listFormations(filtre?: { formateurId: string }): Promise<
       etat,
       modifieeParFormateurLe,
       modificationsNonPubliees: avecBrouillons.has(String(f.id)),
+      publieeLe: dateOuNull(f.publiee_le),
       resume: texte(f.resume),
       couverture: texte(f.couverture) || null,
       note: typeof f.note_moyenne === "number" || typeof f.note_moyenne === "string" ? Number(f.note_moyenne) || null : null,

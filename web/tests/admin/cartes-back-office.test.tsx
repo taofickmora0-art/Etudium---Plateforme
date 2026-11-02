@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
-import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render as rendre, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { ToastProvider } from "@/components/ui/Toast";
 import type { FormateurAdmin, FormationResume } from "@/lib/admin/types";
+
+// Le menu ⋮ des cartes (ActionsFormation) agit et relit la liste : ses actions et le routeur sont simulés.
+vi.mock("@/lib/admin/actions", () => ({ setStatutFormation: vi.fn(), deleteFormation: vi.fn(), renvoyerAuFormateur: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
+const render = (ui: React.ReactNode) => rendre(<ToastProvider>{ui}</ToastProvider>);
 
 // Les pages Formations et Formateurs du back-office, au style de l'espace étudiant (demande du 2 novembre 2026) : des
 // cartes avec couverture, statut, parcours et chiffres ; des chiffres clés en haut.

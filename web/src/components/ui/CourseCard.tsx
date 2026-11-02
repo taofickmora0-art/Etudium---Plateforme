@@ -21,6 +21,7 @@ export function CardShell({
   couverture = null,
   sousTitre,
   horsLien,
+  coinGaucheOccupe = false,
   children,
 }: {
   /** Sans adresse, la carte n'est pas un lien (formation verrouillée dont la fiche n'existe plus). */
@@ -43,6 +44,11 @@ export function CardShell({
    * (position absolue dans la carte). Jamais un bouton dans un lien.
    */
   horsLien?: ReactNode;
+  /**
+   * L'élément hors lien occupe le coin haut gauche de la couverture (menu ⋮ du back-office) : les étiquettes, alignées à
+   * droite, lui laissent sa place même quand elles remplissent la ligne.
+   */
+  coinGaucheOccupe?: boolean;
   children: ReactNode;
 }) {
   const id = useId();
@@ -54,7 +60,7 @@ export function CardShell({
       <div data-couverture="" className="relative">
         <Couverture src={couverture} parcours={parcours} sizes="(max-width: 640px) 100vw, 360px" />
         {etiquettes.length > 0 && (
-          <span id={`${id}-etiquette`} className="absolute top-3 right-3 left-3 flex flex-wrap justify-end gap-1.5">
+          <span id={`${id}-etiquette`} className={cn("absolute top-3 right-3 left-3 flex flex-wrap justify-end gap-1.5", coinGaucheOccupe && "left-[58px]")}>
             {/* Anneau blanc : le badge reste lisible sur une photo, ou sur la couverture par défaut de sa couleur. */}
             {etiquettes.map((t) => (
               <Tag key={t.label} tone={t.tone} className="ring-2 ring-white">
