@@ -2,11 +2,14 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider } from "@/components/ui/Toast";
 import { FILTRES_PAR_DEFAUT } from "@/lib/catalogue/filtres";
+import type { EtatsCartes } from "@/lib/catalogue/types";
 import { CARTES_DESIGN, PARCOURS_DESIGN } from "./cartes-design";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace: vi.fn(), refresh: vi.fn() }), usePathname: () => "/formations" }));
+vi.mock("@/lib/favoris/actions", () => ({ ajouterFavori: vi.fn(), retirerFavori: vi.fn() }));
 
 const { Catalogue } = await import("@/components/catalogue/Catalogue");
 
@@ -111,5 +114,35 @@ describe("Catalogue des formations", () => {
   it("en connecté, un niveau ou l'accès « incluses » venus de l'adresse ne cachent pas de formations (pas de commande pour les retirer)", () => {
     afficher("connecte", "/formations", { ...FILTRES_PAR_DEFAUT, niveau: "avance", acces: "incluses" });
     expect(cartes()).toHaveLength(10);
+  });
+});
+
+describe("Cartes du catalogue : apprenants, inscription et favoris (spec du 2 novembre 2026, §4)", () => {
+  const ZOTERO = "zotero-gerer-ses-references";
+  const EXCEL = "maitriser-microsoft-excel";
+  const avecEtats = (variante: "public" | "connecte", etats: EtatsCartes) =>
+    render(
+      <ToastProvider>
+        <Catalogue cartes={CARTES_DESIGN} parcours={PARCOURS_DESIGN} filtresInitiaux={FILTRES_PAR_DEFAUT} variante={variante} chemin="/formations" etats={etats} />
+      </ToastProvider>,
+    );
+  const carte = (titre: RegExp) => screen.getByRole("link", { name: titre });
+
+  it("connecté : le pourcentage des formations où il est inscrit (même 0 %), « Voir le cours » ailleurs, et un cœur par carte", () => {
+    avecEtats("connecte", { apprenants: { [EXCEL]: 34, [ZOTERO]: 1 }, inscrites: { [ZOTERO]: 0 }, favoris: [EXCEL] });
+    expect(within(carte(/Zotero/)).getByText("0 % terminé")).toBeInTheDocument();
+    expect(within(carte(/Zotero/)).getByText("1 apprenant")).toBeInTheDocument();
+    expect(within(carte(/Maîtriser Microsoft Excel/)).getByText("Voir le cours")).toBeInTheDocument();
+    expect(within(carte(/Maîtriser Microsoft Excel/)).getByText("34 apprenants")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /aux favoris$|des favoris$/ })).toHaveLength(10);
+    expect(screen.getByRole("button", { name: "Retirer Maîtriser Microsoft Excel des favoris" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Ajouter Zotero : gérer ses références aux favoris" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("le visiteur : la même carte, « Voir le cours », sans cœur", () => {
+    avecEtats("public", { apprenants: { [EXCEL]: 34 }, inscrites: {}, favoris: null });
+    expect(within(carte(/Maîtriser Microsoft Excel/)).getByText("34 apprenants")).toBeInTheDocument();
+    expect(screen.getAllByText("Voir le cours")).toHaveLength(10);
+    expect(screen.queryByRole("button", { name: /favoris/ })).toBeNull();
   });
 });

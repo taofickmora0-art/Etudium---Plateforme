@@ -23,6 +23,8 @@ export type CarteCatalogue = {
   publieeLe: string;
   /** Somme des durées des leçons. */
   dureeSecondes: number;
+  /** Les modules du programme (« 4 modules • 12 leçons ») ; absent : non lu (la carte n'affiche que les leçons). */
+  nbModules?: number;
   nbLecons: number;
   /** Les quiz du programme (0031), comptés à part ; absent : aucun. */
   nbQuiz?: number;
@@ -35,6 +37,19 @@ export type CarteCatalogue = {
   nbAvis: number;
   /** Chemin de l'image de couverture (espace « couvertures ») ; null : couverture par défaut du parcours. */
   couverture: string | null;
+};
+
+/**
+ * Ce que les cartes du catalogue montrent en plus de la formation (spec du 2 novembre 2026, §4), par identifiant de
+ * formation. Données simples : elles passent du serveur aux composants du navigateur.
+ */
+export type EtatsCartes = {
+  /** Le nombre d'inscrits de chaque formation publiée ; null sans la migration 0069 : il ne s'affiche pas. */
+  apprenants: Record<string, number> | null;
+  /** Les formations où le compte est inscrit, avec son pourcentage terminé (0 à 100) ; aucune pour un visiteur. */
+  inscrites: Record<string, number>;
+  /** Les favoris du compte ; null pour un visiteur (ou sans la table des favoris) : pas de cœur sur les cartes. */
+  favoris: string[] | null;
 };
 
 /** Un élément du programme : une leçon de contenu, un quiz ou un exercice (lot 3, 0031). */

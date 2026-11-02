@@ -19,6 +19,8 @@ export function CardShell({
   titleAs: Titre = "h3",
   describedBy,
   couverture = null,
+  sousTitre,
+  horsLien,
   children,
 }: {
   /** Sans adresse, la carte n'est pas un lien (formation verrouillée dont la fiche n'existe plus). */
@@ -34,6 +36,13 @@ export function CardShell({
   describedBy?: string;
   /** Adresse de l'image de couverture ; null : couverture par défaut du parcours. */
   couverture?: string | null;
+  /** Une ligne entre le titre et la description (« 4 modules • 12 leçons » du catalogue). */
+  sousTitre?: ReactNode;
+  /**
+   * Un élément interactif posé sur la carte mais hors de son lien (le cœur favori du catalogue) : il se place lui-même
+   * (position absolue dans la carte). Jamais un bouton dans un lien.
+   */
+  horsLien?: ReactNode;
   children: ReactNode;
 }) {
   const id = useId();
@@ -56,24 +65,34 @@ export function CardShell({
         )}
       </div>
       <div className="flex min-w-0 flex-1 flex-col px-[19px] pt-4 pb-[17px]">
-        <Titre id={`${id}-titre`} title={title} className="m-0 truncate text-base leading-6 font-semibold text-encre">
+        <Titre id={`${id}-titre`} title={title} className="m-0 truncate text-base leading-6 font-semibold text-encre max-sm:text-[15px] max-sm:leading-[22px]">
           {title}
         </Titre>
-        <p className="mt-[11px] mb-0 line-clamp-2 h-10 text-xs leading-5 text-discret">{description}</p>
+        {sousTitre}
+        <p className={cn("mb-0 line-clamp-2 h-10 text-xs leading-5 text-discret", sousTitre ? "mt-2" : "mt-[11px]")}>{description}</p>
         {children}
       </div>
     </>
   );
-  if (!href) return <div className={classes}>{contenu}</div>;
-  return (
+  const carte = !href ? (
+    <div className={cn(classes, horsLien && "flex-1")}>{contenu}</div>
+  ) : (
     <Link
       href={href}
       aria-labelledby={etiquettes.length > 0 ? `${id}-titre ${id}-etiquette` : `${id}-titre`}
       aria-describedby={describedBy}
-      className={cn(classes, "focus-etudium transition-colors hover:border-bordure-champ")}
+      className={cn(classes, "group focus-etudium transition-colors hover:border-bordure-champ", horsLien && "flex-1")}
     >
       {contenu}
     </Link>
+  );
+  if (!horsLien) return carte;
+  // Le lien et l'élément posé dessus sont frères : la carte garde un seul lien, et le bouton n'y est pas imbriqué.
+  return (
+    <div className="relative flex min-w-0 flex-col">
+      {carte}
+      {horsLien}
+    </div>
   );
 }
 

@@ -34,4 +34,14 @@ describe("Cartes de la page Favoris", () => {
     expect(screen.getByText("Accès fermé")).toBeInTheDocument();
     for (const badge of BADGES) expect(screen.queryByText(badge)).toBeNull();
   });
+
+  it("inscrite sans leçon ouverte (0069) : la carte de suivi à 0 %, vers la première leçon ; non inscrite : « Voir le cours »", () => {
+    const ZOTERO_OUVERTE = { ...ZOTERO, modules: ZOTERO.modules.map((m) => ({ ...m, lecons: m.lecons.map((l) => ({ ...l, accessible: true })) })) };
+    const favoris = cartesFavorites([ZOTERO.id, EXCEL_OUVERTE.id], [avec(EXCEL_OUVERTE, "publiee"), avec(ZOTERO_OUVERTE, "publiee")], [], [{ formationId: ZOTERO.id, inscritLe: "2026-10-13T10:00:00Z" }]);
+    render(<>{favoris.map((f) => <div key={f.id}>{f.carte}</div>)}</>);
+    expect(screen.getByRole("link", { name: /Zotero/ })).toHaveAttribute("href", `/formations/zotero-gerer-ses-references/lecons/${id(21)}`);
+    expect(screen.getByRole("progressbar", { name: /Zotero/ })).toHaveAttribute("aria-valuenow", "0");
+    expect(screen.getByRole("link", { name: /Maîtriser Microsoft Excel/ })).toHaveAttribute("href", "/formations/maitriser-microsoft-excel");
+    expect(screen.getByText("Voir le cours")).toBeInTheDocument();
+  });
 });

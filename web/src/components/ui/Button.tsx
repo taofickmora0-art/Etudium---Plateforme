@@ -12,6 +12,8 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         principal: "bg-bleu text-white enabled:hover:bg-bleu-survol [a&]:hover:bg-bleu-survol",
+        // Bleu doux : fond bleu clair, texte bleu (bas des cartes du catalogue, spec du 2 novembre 2026, §4).
+        doux: "bg-bleu-clair text-bleu enabled:hover:bg-bleu-pale [a&]:hover:bg-bleu-pale",
         gris: "bg-coque text-texte enabled:hover:bg-coque-survol [a&]:hover:bg-coque-survol",
         contour: "border border-bordure bg-panneau text-texte enabled:hover:bg-page [a&]:hover:bg-page",
         discret: "bg-transparent text-texte enabled:hover:bg-coque [a&]:hover:bg-coque",

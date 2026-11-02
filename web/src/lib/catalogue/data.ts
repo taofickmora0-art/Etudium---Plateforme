@@ -34,8 +34,11 @@ const versParcours = (p: Ligne): ParcoursCatalogue => ({
   ordre: Number(p.ordre ?? 0),
 });
 
-/** Les champs communs à la carte et à la fiche ; `lecons` donne la durée et le nombre de leçons (sans les quiz). */
-function versCarte(f: Ligne, lecons: Ligne[]): CarteCatalogue {
+/**
+ * Les champs communs à la carte et à la fiche ; `lecons` donne la durée et le nombre de leçons (sans les quiz),
+ * `nbModules` le nombre de modules du programme.
+ */
+function versCarte(f: Ligne, lecons: Ligne[], nbModules: number): CarteCatalogue {
   const contenu = lecons.filter((l) => estLeconDeContenu({ type: typeof l.type === "string" ? l.type : undefined }));
   const parcours = liste(f.formations_parcours)
     .map((lien) => ({ lien, p: un(lien.parcours) }))
@@ -52,6 +55,7 @@ function versCarte(f: Ligne, lecons: Ligne[]): CarteCatalogue {
     badge: (f.badge as Badge | null) ?? null,
     publieeLe: texte(f.publiee_le),
     dureeSecondes: contenu.reduce((total, l) => total + Number(l.duree_secondes ?? 0), 0),
+    nbModules,
     nbLecons: contenu.length,
     nbQuiz: lecons.filter((l) => l.type === "quiz").length,
     nbExercices: lecons.filter((l) => l.type === "exercice").length,
@@ -69,7 +73,7 @@ export async function listCatalogue(): Promise<CarteCatalogue[]> {
     const [notes, lecons = ""] = variante.split("|");
     return supabase.from("formations").select(`${COLONNES_CARTE}${notes}, modules(lecons(duree_secondes${lecons}))`).eq("statut", "publiee");
   })) as Ligne[] | null;
-  return (lignes ?? []).map((f) => versCarte(f, liste(f.modules).flatMap((m) => liste(m.lecons))));
+  return (lignes ?? []).map((f) => versCarte(f, liste(f.modules).flatMap((m) => liste(m.lecons)), liste(f.modules).length));
 }
 
 /**
@@ -137,6 +141,7 @@ function versFiche(f: Ligne): FicheFormation {
     ...versCarte(
       f,
       modules.flatMap((m) => m.lecons.map((l) => ({ duree_secondes: l.dureeSecondes, type: l.type }))),
+      modules.length,
     ),
     description: texte(f.description),
     seuilVideo: Number(f.seuil_video ?? 90),

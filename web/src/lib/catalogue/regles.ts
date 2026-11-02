@@ -1,7 +1,7 @@
 import { LIBELLES_STATUT, type StatutRendu } from "@/lib/exercices/types";
 import type { CardTag } from "@/components/ui/CourseCard";
 import type { CouleurParcours } from "@/lib/contenus/libelles";
-import type { CarteCatalogue, FicheFormation, LeconFiche } from "./types";
+import type { CarteCatalogue, EtatsCartes, FicheFormation, LeconFiche } from "./types";
 
 // Règles d'affichage du catalogue et de la fiche (spec du lot 1, §2, §3 et §11).
 
@@ -15,6 +15,34 @@ export function dureeLisible(secondes: number): string {
 
 /** « 1 leçon », « 12 leçons » (zéro reste au singulier). */
 export const nombreDeLecons = (n: number) => `${n} ${n > 1 ? "leçons" : "leçon"}`;
+
+/** « 1 module », « 4 modules » (zéro reste au singulier). */
+export const nombreDeModules = (n: number) => `${n} ${n > 1 ? "modules" : "module"}`;
+
+/** « 1 apprenant », « 1 234 apprenants » (zéro reste au singulier). */
+export const nombreDApprenants = (n: number) => `${n.toLocaleString("fr-FR")} ${n > 1 ? "apprenants" : "apprenant"}`;
+
+/** La ligne du programme d'une carte : « 4 modules • 12 leçons » ; les leçons seules si les modules n'ont pas été lus. */
+export const programmeDeCarte = (carte: Pick<CarteCatalogue, "nbModules" | "nbLecons">) =>
+  carte.nbModules === undefined ? nombreDeLecons(carte.nbLecons) : `${nombreDeModules(carte.nbModules)} • ${nombreDeLecons(carte.nbLecons)}`;
+
+/**
+ * Le bouton du bas d'une carte du catalogue (spec du 2 novembre 2026, §4 et §9.3) : « 40 % terminé » pour un inscrit,
+ * même à 0 % ; sinon « Voir le cours ». Le nombre et « % » restent sur la même ligne (espace insécable).
+ */
+export const actionDeCarte = (pourcentage: number | undefined) => (pourcentage === undefined ? "Voir le cours" : `${Math.round(pourcentage)}\u00a0% terminé`);
+
+/**
+ * Ce que le compte ajoute à la carte d'une formation : son nombre d'apprenants (absent sans la 0069), le pourcentage s'il
+ * y est inscrit, et son cœur (absent pour un visiteur).
+ */
+export function etatDeCarte(etats: EtatsCartes | undefined, formationId: string): { apprenants?: number; progression?: number; favori?: boolean } {
+  return {
+    apprenants: etats?.apprenants?.[formationId],
+    progression: etats?.inscrites[formationId],
+    favori: etats?.favoris ? etats.favoris.includes(formationId) : undefined,
+  };
+}
 
 /** « 4 quiz » ; rien sans quiz (lot 3). */
 export const nombreDeQuiz = (n: number | undefined) => (n ? `${n} quiz` : "");

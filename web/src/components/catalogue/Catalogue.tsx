@@ -11,7 +11,8 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { SortMenu } from "@/components/ui/SortMenu";
 import { Heading, Lead } from "@/components/ui/Text";
 import { appliquerFiltres, ecrireFiltres, FILTRES_PAR_DEFAUT, type Acces, type Filtres, type Tri } from "@/lib/catalogue/filtres";
-import type { CarteCatalogue, ParcoursCatalogue } from "@/lib/catalogue/types";
+import { etatDeCarte } from "@/lib/catalogue/regles";
+import type { CarteCatalogue, EtatsCartes, ParcoursCatalogue } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
 import { NIVEAUX } from "@/lib/contenus/libelles";
 import { CarteFormation } from "./CarteFormation";
@@ -28,6 +29,8 @@ type CatalogueProps = {
   imposer?: Partial<Filtres>;
   /** Page Formations du compte connecté : la rangée « Mes formations », sous le titre. */
   rangee?: ReactNode;
+  /** Apprenants, inscription et favoris pour les cartes (spec du 2 novembre 2026, §4) ; absent : cartes sans eux. */
+  etats?: EtatsCartes;
 };
 
 const TRIS: { value: Tri; label: string }[] = [
@@ -60,7 +63,7 @@ const GRILLE_CONNECTEE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(1
 const pourVariante = (f: Filtres, variante: CatalogueProps["variante"]): Filtres =>
   variante === "connecte" ? { ...f, niveau: "tous", acces: f.acces === "incluses" ? "tout" : f.acces } : f;
 
-export function Catalogue({ cartes, parcours, filtresInitiaux, variante, chemin, imposer, rangee }: CatalogueProps) {
+export function Catalogue({ cartes, parcours, filtresInitiaux, variante, chemin, imposer, rangee, etats }: CatalogueProps) {
   const router = useRouter();
   const base: Filtres = { ...FILTRES_PAR_DEFAUT, ...imposer };
   const [filtres, setFiltres] = useState(() => pourVariante(filtresInitiaux, variante));
@@ -92,7 +95,7 @@ export function Catalogue({ cartes, parcours, filtresInitiaux, variante, chemin,
     ) : (
       <div className={classe}>
         {visibles.map((carte) => (
-          <CarteFormation key={carte.id} carte={carte} />
+          <CarteFormation key={carte.id} carte={carte} {...etatDeCarte(etats, carte.id)} />
         ))}
       </div>
     );

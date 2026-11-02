@@ -68,3 +68,40 @@ describe("Formations suivies", () => {
     expect(filtrer(suivies, "toutes")).toHaveLength(2);
   });
 });
+
+describe("Formations suivies : l'inscription (0069 ; spec du 2 novembre 2026, §2)", () => {
+  const inscription = (formationId: string, inscritLe: string) => ({ formationId, inscritLe });
+
+  it("inscrite sans leçon ouverte : « à moi » à 0 %, elle mène à la première leçon ouverte et se classe à sa date d'inscription", () => {
+    const suivies = formationsSuivies(
+      [publiee(EXCEL_OUVERTE), publiee(ZOTERO_OUVERTE)],
+      [ligne(EXCEL_OUVERTE.id, 1, true, 60)],
+      new Set(["zotero"]),
+      [inscription("zotero", "2026-10-13T12:30:00Z"), inscription(EXCEL_OUVERTE.id, "2026-10-01T10:00:00Z")],
+    );
+    expect(suivies.map((s) => s.fiche.id)).toEqual(["zotero", EXCEL_OUVERTE.id]);
+    const [zotero] = suivies;
+    expect(zotero).toMatchObject({
+      etat: "enCours",
+      href: `/formations/zotero-gerer-ses-references/lecons/${id(21)}`,
+      temps: "15 min restantes",
+      favori: true,
+      derniereVisite: "2026-10-13T12:30:00Z",
+    });
+    expect(zotero.progression.pourcentage).toBe(0);
+    expect(filtrer(suivies, "enCours").map((s) => s.fiche.id)).toContain("zotero");
+  });
+
+  it("inscrite, rien d'ouvert (abonnement échu, sans aperçu) : verrouillée, la carte mène à la fiche", () => {
+    const [zotero] = formationsSuivies([publiee({ ...ZOTERO, id: "zotero" })], [], new Set(), [inscription("zotero", "2026-10-13T12:30:00Z")]);
+    expect(zotero).toMatchObject({ etat: "verrouillee", href: "/formations/zotero-gerer-ses-references", temps: "Accès fermé" });
+  });
+
+  it("une formation commencée n'est comptée qu'une fois ; une inscription sans fiche lisible est ignorée ; sans inscription, rien ne change", () => {
+    const lignes = [ligne(EXCEL_OUVERTE.id, 1, true, 60)];
+    const avec = formationsSuivies([publiee(EXCEL_OUVERTE)], lignes, new Set(), [inscription(EXCEL_OUVERTE.id, "2026-10-01T10:00:00Z"), inscription("inconnue", "2026-10-02T10:00:00Z")]);
+    expect(avec.map((s) => s.fiche.id)).toEqual([EXCEL_OUVERTE.id]);
+    expect(avec).toEqual(formationsSuivies([publiee(EXCEL_OUVERTE)], lignes, new Set()));
+    expect(formationsSuivies([publiee(ZOTERO_OUVERTE)], [], new Set())).toEqual([]);
+  });
+});

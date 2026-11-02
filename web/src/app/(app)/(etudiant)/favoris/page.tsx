@@ -7,6 +7,7 @@ import { SessionGuard } from "@/components/layout/SessionGuard";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { listFiches } from "@/lib/catalogue/data";
 import { lireFavoris } from "@/lib/favoris/data";
+import { lireInscriptions } from "@/lib/inscriptions/data";
 import { lireProgression } from "@/lib/progression/data";
 
 export const metadata: Metadata = { title: "Favoris · Étudium" };
@@ -14,9 +15,9 @@ export const metadata: Metadata = { title: "Favoris · Étudium" };
 async function Contenu() {
   let favoris: Favori[];
   try {
-    const [lus, lignes] = await Promise.all([lireFavoris(), lireProgression()]);
+    const [lus, lignes, inscriptions] = await Promise.all([lireFavoris(), lireProgression(), lireInscriptions()]);
     const ids = (lus ?? []).map((f) => f.formationId);
-    favoris = cartesFavorites(ids, await listFiches(ids), lignes ?? []);
+    favoris = cartesFavorites(ids, await listFiches(ids), lignes ?? [], inscriptions ?? []);
   } catch (erreur) {
     return siTablesAbsentes(erreur);
   }
