@@ -13,5 +13,10 @@ export async function chargerJournal(filtres: FiltresJournal, avant: string): Pr
     auteur: typeof filtres?.auteur === "string" && /^[0-9a-f-]{36}$/i.test(filtres.auteur) ? filtres.auteur : null,
     jours: typeof filtres?.jours === "number" && [7, 30, 365].includes(filtres.jours) ? filtres.jours : null,
   };
-  return lireJournal(propres, avant);
+  try {
+    return await lireJournal(propres, avant);
+  } catch {
+    // « Voir plus » dit que la suite n'a pas pu être chargée.
+    return null;
+  }
 }

@@ -1,10 +1,10 @@
 import type { MoyenManuel, Operateur, StatutPaiement } from "@/lib/abonnement/types";
 import { demoModeActive } from "@/lib/auth/current-user";
+import { estFonctionAbsente } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import type { ElementPaiement, JoursPeriode, StatistiquesPeriode, VueEnsemble } from "./types";
 
-// Lire la vue d'ensemble et les statistiques (migration 0062, domaine « statistiques » : la base le vérifie). null :
-// migration absente, démo, droit refusé ou base injoignable ; la page le dit.
+// Lire la vue d'ensemble et les statistiques (migration 0062, domaine « statistiques » : la base le vérifie).
 
 type Brut = Record<string, unknown>;
 const nb = (v: unknown) => (typeof v === "number" ? v : Number(v) || 0);
@@ -22,14 +22,15 @@ const versPaiement = (p: Brut): ElementPaiement => ({
   date: txt(p.date),
 });
 
+/** null : démo ou migration 0062 absente (la page le dit) ; une autre erreur remonte à la page d'erreur (« Réessayer »). */
 async function rpc(nom: string, args?: Record<string, unknown>): Promise<Brut | null> {
   if (demoModeActive()) return null;
-  try {
-    const { data, error } = await (await createClient()).rpc(nom, args);
-    return error || !data ? null : (data as Brut);
-  } catch {
-    return null;
+  const { data, error } = await (await createClient()).rpc(nom, args);
+  if (error) {
+    if (estFonctionAbsente(error)) return null;
+    throw new Error(`Lecture des statistiques impossible (${error.code ?? "?"}).`);
   }
+  return data ? (data as Brut) : null;
 }
 
 export async function lireVueEnsemble(): Promise<VueEnsemble | null> {

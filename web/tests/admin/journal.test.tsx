@@ -38,6 +38,8 @@ describe("Le journal des actions", () => {
     expect(faux.de("rpc", "lire_journal")[0].valeurs).toEqual({ p_categorie: "comptes", p_auteur: null, p_jours: 30, p_avant: null, p_nombre: 50 });
     faux.repondre("rpc.lire_journal", { error: { code: "PGRST202" } });
     expect(await lireJournal({ categorie: null, auteur: null, jours: null })).toBeNull();
+    faux.repondre("rpc.lire_journal", { error: { code: "500", message: "panne" } });
+    await expect(lireJournal({ categorie: null, auteur: null, jours: null })).rejects.toThrow();
   });
 
   it("une ligne par action : date à l'heure du Bénin, auteur, catégorie, résumé ; sans ligne, le message", () => {

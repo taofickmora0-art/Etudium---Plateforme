@@ -85,6 +85,11 @@ describe("La vue d'ensemble", () => {
     expect(await lireVueEnsemble()).toBeNull();
     faux.repondre("rpc.statistiques_periode", { error: { code: "PGRST202" } });
     expect(await lireStatistiquesPeriode(30)).toBeNull();
+    // Point reporté : une autre erreur (panne, refus) n'est pas une migration absente : elle remonte à la page d'erreur.
+    faux.repondre("rpc.vue_ensemble_back_office", { error: { code: "500", message: "panne" } });
+    await expect(lireVueEnsemble()).rejects.toThrow();
+    faux.repondre("rpc.statistiques_periode", { error: { code: "42501", message: "Réservé aux administrateurs." } });
+    await expect(lireStatistiquesPeriode(30)).rejects.toThrow();
   });
 
   it("les six indicateurs du design, les abonnements par mois, les formules", () => {
