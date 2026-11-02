@@ -1214,4 +1214,11 @@ Les petites corrections des lots 4, 5, 6 A et 6 B, faites avant ta recette.
      - la limite de 300 Ko est la même à l'écran et à l'enregistrement ;
    - **le push** : ton téléphone est rattaché à ton compte à chaque visite. Si le navigateur renouvelle son abonnement, tu n'as plus à rallumer l'interrupteur.
 3. **Vérification rapide** : sur la fiche d'un compte de test (back-office › Utilisateurs), résilie son abonnement (avec un motif), puis regarde le journal (Pilotage › Journal) : une seule ligne.
+4. **Les vidéos déjà collées dans le contenu riche** : l'appli vérifie maintenant leur lien. Pour t'assurer qu'aucune leçon existante n'est concernée, lance dans l'éditeur SQL :
+   ```sql
+   select c.lecon_id from public.lecons_contenus c,
+     jsonb_path_query(coalesce(c.document, 'null'), 'lax $.** ? (@.type == "videoLecon")') n
+   where not public.video_valide(n #>> '{attrs,fournisseur}', n #>> '{attrs,id}');
+   ```
+   Aucune ligne attendue. Si une leçon sort, rouvre-la dans l'éditeur et remets sa vidéo avec le bouton « Vidéo ».
 
