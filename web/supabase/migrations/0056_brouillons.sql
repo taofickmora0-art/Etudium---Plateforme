@@ -377,6 +377,10 @@ declare
   v_b public.brouillons_lecons;
   v_formation uuid;
 begin
+  -- Supprimée pendant qu'un autre membre l'avait ouverte : un refus clair, sans nouvel essai (P0001).
+  if not exists (select 1 from public.lecons where id = p_lecon) then
+    raise exception 'Cette leçon n’existe plus : elle a été supprimée. Revenez au programme de la formation.' using errcode = 'P0001';
+  end if;
   if not public.editeur_de_lecon(p_lecon) then
     raise exception 'Vous ne pouvez pas modifier cette leçon.' using errcode = '42501';
   end if;
