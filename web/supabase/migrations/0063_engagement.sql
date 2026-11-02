@@ -332,6 +332,132 @@ begin
 end;
 $$;
 
+-- ─── Les recommandations (Q7) ───────────────────────────────────────────────────────────────────────
+-- Dans cet ordre, chaque formation une seule fois, à son premier rang :
+--   1. « suite » : après un certificat (le plus récent d'abord), la première formation qui suit dans chacun de ses
+--      parcours (ordre du parcours, puis titre), avec « Vous avez terminé « X ». Découvrez maintenant « Y ». » ;
+--   2. « monetisation » : la formation Business liée à une compétence digitale commencée ; puis celles sans lien, qui
+--      valent pour toutes les compétences (0048) ;
+--   3. « parcours » : les formations des parcours où le compte a commencé quelque chose, populaires (étudiants qui l'ont
+--      commencée) puis nouvelles ;
+--   4. « catalogue » : les autres, dans le même ordre.
+-- Seulement des formations publiées que le compte n'a ni commencées ni terminées.
+create or replace function public.recommandations_pour_moi(p_nombre integer default 3)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_moi uuid := (select auth.uid());
+  v_nombre integer := least(greatest(coalesce(p_nombre, 3), 1), 12);
+begin
+  if v_moi is null then
+    raise exception 'Connectez-vous pour voir vos recommandations.' using errcode = '42501';
+  end if;
+  return coalesce((
+    with mes_lecons as (
+      select m.formation_id, max(pl.vue_le) as vue_le
+      from public.progression_lecons pl
+      join public.lecons l on l.id = pl.lecon_id
+      join public.modules m on m.id = l.module_id
+      where pl.profil_id = v_moi
+      group by m.formation_id
+    ),
+    commencees as (
+      select formation_id as id from mes_lecons
+      union
+      select c.formation_id from public.certificats c where c.profil_id = v_moi and c.formation_id is not null
+    ),
+    candidates as (
+      select f.id, f.slug, f.titre, f.publiee_le, coalesce(po.apprenants, 0) as apprenants
+      from public.formations f
+      left join (
+        select m.formation_id, count(distinct pl.profil_id) as apprenants
+        from public.progression_lecons pl
+        join public.lecons l on l.id = pl.lecon_id
+        join public.modules m on m.id = l.module_id
+        where not exists (select 1 from public.roles r where r.profil_id = pl.profil_id and r.role <> 'etudiant')
+        group by m.formation_id
+      ) po on po.formation_id = f.id
+      where f.statut = 'publiee' and not exists (select 1 from commencees c where c.id = f.id)
+    ),
+    suites as (
+      select x.id, x.message, row_number() over (order by x.cree_le desc, x.parcours_ordre, x.parcours_id) as rang
+      from (
+        select distinct on (c.id, fp.parcours_id)
+          ca.id, c.cree_le, p.ordre as parcours_ordre, fp.parcours_id,
+          format('Vous avez terminé « %s ». Découvrez maintenant « %s ».', ft.titre, ca.titre) as message
+        from public.certificats c
+        join public.formations ft on ft.id = c.formation_id
+        join public.formations_parcours fp on fp.formation_id = c.formation_id
+        join public.parcours p on p.id = fp.parcours_id
+        join public.formations_parcours apres on apres.parcours_id = fp.parcours_id
+        join candidates ca on ca.id = apres.formation_id
+        where c.profil_id = v_moi and (apres.ordre, ca.titre) > (fp.ordre, ft.titre)
+        order by c.id, fp.parcours_id, apres.ordre, ca.titre
+      ) x
+    ),
+    competences as (
+      select ml.formation_id as id, ml.vue_le
+      from mes_lecons ml
+      where exists (
+        select 1 from public.formations_parcours fp join public.parcours p on p.id = fp.parcours_id
+        where fp.formation_id = ml.formation_id and p.couleur = 'digital'
+      )
+    ),
+    monetisation as (
+      select y.id, row_number() over (order by y.liee desc, y.vue_le desc nulls last, y.apprenants desc, y.titre) as rang
+      from (
+        select ca.id, ca.titre, ca.apprenants, true as liee, max(co.vue_le) as vue_le
+        from public.formations_monetisation fm
+        join candidates ca on ca.id = fm.business_id
+        join competences co on co.id = fm.competence_id
+        group by ca.id, ca.titre, ca.apprenants
+        union all
+        select ca.id, ca.titre, ca.apprenants, false, null
+        from candidates ca
+        where exists (select 1 from competences)
+          and not exists (select 1 from public.formations_monetisation fm where fm.business_id = ca.id)
+          and exists (
+            select 1 from public.formations_parcours fp join public.parcours p on p.id = fp.parcours_id
+            where fp.formation_id = ca.id and p.couleur = 'business'
+          )
+      ) y
+    ),
+    mes_parcours as (
+      select distinct fp.parcours_id from public.formations_parcours fp join commencees c on c.id = fp.formation_id
+    ),
+    toutes as (
+      select s.id, s.message, 1 as regle, s.rang from suites s
+      union all
+      select mo.id, null, 2, mo.rang from monetisation mo
+      union all
+      select ca.id, null, 3, row_number() over (order by ca.apprenants desc, ca.publiee_le desc nulls last, ca.titre)
+      from candidates ca
+      where exists (select 1 from public.formations_parcours fp join mes_parcours mp on mp.parcours_id = fp.parcours_id where fp.formation_id = ca.id)
+      union all
+      select ca.id, null, 4, row_number() over (order by ca.apprenants desc, ca.publiee_le desc nulls last, ca.titre)
+      from candidates ca
+    ),
+    retenues as (
+      select r.* from (select distinct on (t.id) t.id, t.message, t.regle, t.rang from toutes t order by t.id, t.regle, t.rang) r
+      order by r.regle, r.rang
+      limit v_nombre
+    )
+    select jsonb_agg(
+      jsonb_build_object(
+        'id', ca.id, 'slug', ca.slug, 'titre', ca.titre,
+        'motif', case r.regle when 1 then 'suite' when 2 then 'monetisation' when 3 then 'parcours' else 'catalogue' end,
+        'message', r.message
+      ) order by r.regle, r.rang
+    )
+    from retenues r join candidates ca on ca.id = r.id
+  ), '[]'::jsonb);
+end;
+$$;
+
 -- ─── Les droits ─────────────────────────────────────────────────────────────────────────────────────
 revoke execute on function public.jour_benin(timestamptz) from public, anon, authenticated;
 revoke execute on function public.serie_de(uuid, date) from public, anon, authenticated;
@@ -345,5 +471,7 @@ revoke execute on function public.choisir_objectif(integer) from public, anon;
 grant execute on function public.choisir_objectif(integer) to authenticated;
 revoke execute on function public.ma_progression_jeu() from public, anon;
 grant execute on function public.ma_progression_jeu() to authenticated;
+revoke execute on function public.recommandations_pour_moi(integer) from public, anon;
+grant execute on function public.recommandations_pour_moi(integer) to authenticated;
 
 commit;

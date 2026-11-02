@@ -51,7 +51,12 @@ export async function creerFormation(banc: Banc, titre: string, o: OptionsFormat
   }
   const exercice = o.exercice === null ? null : await lecon("Tableau des ventes", "exercice", 60, o.exercice ?? "rendu");
   await banc.db.query("update public.formations set statut = 'publiee' where id = $1", [id]);
-  if (o.publieeLe) await banc.db.query(`update public.formations set publiee_le = ${o.publieeLe} where id = $1`, [id]);
+  if (o.publieeLe) {
+    // La date de première publication est figée par la base (0004) : on la pose sans les déclencheurs.
+    await banc.db.exec("set session_replication_role = replica");
+    await banc.db.query(`update public.formations set publiee_le = ${o.publieeLe} where id = $1`, [id]);
+    await banc.db.exec("set session_replication_role = origin");
+  }
   if (o.statut && o.statut !== "publiee") await banc.db.query("update public.formations set statut = $2 where id = $1", [id, o.statut]);
   return { id, slug, titre, lecons, quiz, question, exercice };
 }
