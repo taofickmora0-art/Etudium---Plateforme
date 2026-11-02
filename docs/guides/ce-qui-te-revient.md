@@ -1251,3 +1251,13 @@ Les deux ne comptent que les comptes étudiants : l'équipe et les formateurs n'
 1. **La migration**, dans l'éditeur SQL de Supabase, après la 0066 : `web/supabase/migrations/0067_vue_ensemble_complements.sql`.
 2. **À vérifier** : le tableau de bord du back-office montre les 8 indicateurs. Avec un compte de test abonné dont l'abonnement finit bientôt (section 56, étape 10, en reculant moins loin), « Abonnements à renouveler » le compte.
 
+## 67. Les pages Formations et Formateurs du back-office en cartes, 5 minutes
+
+Les deux pages prennent le style de l'espace étudiant :
+- **Formations** : en haut, les formations publiées, en attente de validation, en brouillon, et le nombre d'apprenants ; puis le filtre par statut et une carte par formation, avec sa couverture, son parcours et son état. Sous le titre : ses leçons, ses apprenants, ses certificats, sa note, son formateur, et ce qui l'attend (modifications non publiées, exercices à corriger) ;
+- **Formateurs** : en haut, le nombre de formateurs, leurs formations publiées, les corrections en attente et la note moyenne ; puis une carte par fiche avec ses formations, ses apprenants, sa note, ses corrections en attente, et « Compte relié » ou « Sans compte » (sans compte, le formateur ne peut pas se connecter à son espace).
+
+1. **La migration**, dans l'éditeur SQL de Supabase, après la 0067 : `web/supabase/migrations/0068_back_office_cartes.sql`.
+2. **À vérifier** :
+   - back-office › Formations : les chiffres du haut et ceux des cartes correspondent à tes formations de test ; le filtre par statut garde les chiffres du haut ;
+   - back-office › Formateurs : un formateur dont la fiche est reliée à un compte affiche « Compte relié » ; la note moyenne tient compte du nombre d'avis de chaque formation.

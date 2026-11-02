@@ -36,6 +36,13 @@ export type FormationResume = {
   modifieeParFormateurLe: string | null;
   /** Des brouillons attendent « Publier les modifications » (0056) ; faux avant la 0056. */
   modificationsNonPubliees?: boolean;
+  /** Pour la carte du back-office : le résumé, la couverture, la note, le formateur, la couleur du premier parcours. */
+  resume?: string;
+  couverture?: string | null;
+  note?: number | null;
+  nbAvis?: number;
+  formateur?: string | null;
+  couleur?: CouleurParcours;
 };
 
 /** `publiee` : statut de la leçon (0027) ; vrai avant la 0027. */

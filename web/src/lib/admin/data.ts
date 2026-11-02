@@ -10,6 +10,7 @@ import { signerImages } from "@/lib/lecon/images";
 import { versEtatEdition, versSaisieInfos, versSaisieLecon } from "@/lib/editeur/saisie";
 import { estFonctionAbsente, estTablesAbsentes, lireAvecRepli, liste, parOrdre, TablesAbsentesError, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
+import { versChiffresFormateurs, versChiffresFormations, type ChiffresFormateurs, type ChiffresFormations } from "./cartes-chiffres";
 import { versFicheParcours, versStatistiquesParcours, type FicheParcoursDonnees, type StatistiquesParcours } from "./parcours-chiffres";
 import type {
   FormateurAdmin,
@@ -87,6 +88,12 @@ const nomsDesParcours = (f: Ligne) =>
   liste(f.formations_parcours)
     .map((lien) => texte(un(lien.parcours)?.nom_court))
     .filter(Boolean);
+const COULEURS_PARCOURS: readonly string[] = ["academique", "digital", "business"];
+/** La couleur du premier parcours d'une formation (couverture par défaut de sa carte). */
+const couleurDuParcours = (f: Ligne): CouleurParcours | undefined => {
+  const couleur = texte(un(liste(f.formations_parcours)[0]?.parcours)?.couleur);
+  return COULEURS_PARCOURS.includes(couleur) ? (couleur as CouleurParcours) : undefined;
+};
 
 const COLONNES_PARCOURS = "id, slug, nom, nom_court, description, couleur, ordre, actif";
 const COLONNES_FORMATEUR = "id, nom, titre, domaine, presentation";
@@ -186,9 +193,11 @@ export async function listFormations(filtre?: { formateurId: string }): Promise<
   const supabase = await createClient();
   // Le type des leçons (0031) : « n leçons » ne compte pas les quiz. « colonnes de la formation|colonnes des leçons ».
   const relue = ", envoyee_le, renvoyee_le, modifiee_par_formateur_le";
-  const lignes = await lireAvecRepli([`${relue}|, type`, `${relue}|`, "|"], (variante) => {
+  // La carte du back-office : résumé, couverture (0012), note (0010) et formateur ; repli sans elles.
+  const carte = ", resume, couverture, note_moyenne, nb_avis, formateurs(nom)";
+  const lignes = await lireAvecRepli([`${relue}${carte}|, type`, `${relue}|, type`, `${relue}|`, "|"], (variante) => {
     const [colonnes, lecons] = variante.split("|");
-    const requete = supabase.from("formations").select(`id, slug, titre, statut, niveau${colonnes}, formations_parcours(parcours(nom_court)), modules(lecons(id${lecons}))`);
+    const requete = supabase.from("formations").select(`id, slug, titre, statut, niveau${colonnes}, formations_parcours(parcours(nom_court, couleur)), modules(lecons(id${lecons}))`);
     return filtre ? requete.eq("formateur_id", filtre.formateurId).order("modifie_le", { ascending: false }) : requete.order("titre");
   });
   const avecBrouillons = await formationsAvecBrouillons(supabase);
@@ -205,8 +214,36 @@ export async function listFormations(filtre?: { formateurId: string }): Promise<
       etat,
       modifieeParFormateurLe,
       modificationsNonPubliees: avecBrouillons.has(String(f.id)),
+      resume: texte(f.resume),
+      couverture: texte(f.couverture) || null,
+      note: typeof f.note_moyenne === "number" || typeof f.note_moyenne === "string" ? Number(f.note_moyenne) || null : null,
+      nbAvis: Number(f.nb_avis ?? 0) || 0,
+      formateur: texte(un(f.formateurs)?.nom) || null,
+      couleur: couleurDuParcours(f),
     };
   });
+}
+
+/** Les chiffres des cartes des formations (0068) ; null en démonstration ou sans la migration (cartes sans chiffres). */
+export async function lireChiffresFormations(): Promise<ChiffresFormations | null> {
+  if (demoModeActive()) return null;
+  const { data, error } = await (await createClient()).rpc("formations_back_office");
+  if (error) {
+    if (estFonctionAbsente(error)) return null;
+    throw new Error(`Lecture des chiffres des formations impossible (${error.code ?? "?"}).`);
+  }
+  return versChiffresFormations(data);
+}
+
+/** Les chiffres des cartes des formateurs (0068) ; null en démonstration ou sans la migration. */
+export async function lireChiffresFormateurs(): Promise<ChiffresFormateurs | null> {
+  if (demoModeActive()) return null;
+  const { data, error } = await (await createClient()).rpc("formateurs_back_office");
+  if (error) {
+    if (estFonctionAbsente(error)) return null;
+    throw new Error(`Lecture des chiffres des formateurs impossible (${error.code ?? "?"}).`);
+  }
+  return versChiffresFormateurs(data);
 }
 
 /** Le nombre de questions de chaque quiz d'une formation (0031) ; vide avant elle. */
