@@ -1,13 +1,22 @@
 import type { NextConfig } from "next";
 import { motifsImages } from "./src/lib/couvertures/adresse";
-import { assertNoSecretKey } from "./src/lib/env";
+import { entetesDeSecurite } from "./src/lib/entetes-securite";
+import { assertNoSecretKey, assertSiteUrlEnProduction } from "./src/lib/env";
 
 // Une clé secrète dans une variable NEXT_PUBLIC_ serait recopiée dans le code envoyé au navigateur : on refuse de démarrer.
 assertNoSecretKey(process.env);
+// Le build de production Vercel exige l'adresse du site en https:// (liens des e-mails, certificats, plan du site).
+assertSiteUrlEnProduction(process.env);
 
 const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
+  // Pas d'en-tête « X-Powered-By: Next.js » : rien à apprendre sur le serveur.
+  poweredByHeader: false,
+  // En-têtes de sécurité sur toutes les routes (src/lib/entetes-securite.ts) ; HSTS sur le site en ligne seulement.
+  async headers() {
+    return [{ source: "/:path*", headers: entetesDeSecurite({ production: process.env.VERCEL_ENV === "production" }) }];
+  },
   // Tests sur téléphone, sur le même Wi-Fi (http://192.168.x.x:3000) : sans cela, Next bloque ses fichiers de
   // développement pour toute autre adresse que localhost, et la page reste sans réaction. Sans effet en production.
   // `nip.io` donne un nom à l'adresse (http://192.168.0.3.nip.io:3000) : Supabase refuse tout retour de connexion

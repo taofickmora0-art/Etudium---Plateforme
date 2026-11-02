@@ -1,3 +1,5 @@
+import { adresseDuSite } from "@/lib/site/adresse";
+
 // L'identifiant d'un certificat et son adresse de vérification (celle du QR Code).
 
 /** « ET-2026-K7Q2-M9XD » : l'année, puis 8 caractères (sans 0, O, 1, I). */
@@ -25,6 +27,5 @@ export function identifiantDeLAdresse(brut: string): string {
 
 /** L'adresse publique qui montre directement le résultat de la vérification. */
 export function adresseVerification(identifiant: string): string {
-  const site = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/+$/, "");
-  return `${site}/c/${identifiant}`;
+  return `${adresseDuSite()}/c/${identifiant}`;
 }

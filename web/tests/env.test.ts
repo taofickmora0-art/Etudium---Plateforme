@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertNoSecretKey, EnvError, readPublicEnv } from "@/lib/env";
+import { assertNoSecretKey, assertSiteUrlEnProduction, EnvError, readPublicEnv } from "@/lib/env";
 
 const b64url = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
 const fakeJwt = (payload: object) => `${b64url({ alg: "HS256", typ: "JWT" })}.${b64url(payload)}.signature`;
@@ -99,5 +99,49 @@ describe("assertNoSecretKey (contrôle au démarrage de Next)", () => {
 
   it("laisse démarrer avec une clé publique", () => {
     expect(() => assertNoSecretKey({ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_xyz" })).not.toThrow();
+  });
+});
+
+describe("assertSiteUrlEnProduction (contrôle du build de production Vercel)", () => {
+  function erreurSite(source: Record<string, string | undefined>): EnvError {
+    try {
+      assertSiteUrlEnProduction(source);
+    } catch (error) {
+      if (error instanceof EnvError) return error;
+      throw error;
+    }
+    throw new Error("assertSiteUrlEnProduction aurait dû lever une EnvError");
+  }
+
+  it("exige NEXT_PUBLIC_SITE_URL pour le build de production, avec un message clair", () => {
+    const error = erreurSite({ VERCEL_ENV: "production" });
+    expect(error.variable).toBe("NEXT_PUBLIC_SITE_URL");
+    expect(error.message).toContain("NEXT_PUBLIC_SITE_URL");
+    expect(error.message).toContain("https://etudium.online");
+    expect(error.message).toContain("Vercel");
+  });
+
+  it("refuse une adresse faite d'espaces", () => {
+    expect(erreurSite({ VERCEL_ENV: "production", NEXT_PUBLIC_SITE_URL: "   " }).variable).toBe("NEXT_PUBLIC_SITE_URL");
+  });
+
+  it("refuse une adresse sans https:// en production", () => {
+    const error = erreurSite({ VERCEL_ENV: "production", NEXT_PUBLIC_SITE_URL: "http://etudium.online" });
+    expect(error.message).toContain("https://");
+  });
+
+  it("refuse une adresse illisible en production", () => {
+    expect(erreurSite({ VERCEL_ENV: "production", NEXT_PUBLIC_SITE_URL: "https://" }).variable).toBe("NEXT_PUBLIC_SITE_URL");
+  });
+
+  it("accepte l'adresse du site en https://", () => {
+    expect(() => assertSiteUrlEnProduction({ VERCEL_ENV: "production", NEXT_PUBLIC_SITE_URL: " https://etudium.online/ " })).not.toThrow();
+  });
+
+  it("n'exige rien en local ni en prévisualisation", () => {
+    expect(() => assertSiteUrlEnProduction({})).not.toThrow();
+    expect(() => assertSiteUrlEnProduction({ VERCEL_ENV: "preview" })).not.toThrow();
+    expect(() => assertSiteUrlEnProduction({ VERCEL_ENV: "development", NEXT_PUBLIC_SITE_URL: "http://localhost:3000" })).not.toThrow();
+    expect(() => assertSiteUrlEnProduction({ NODE_ENV: "production" })).not.toThrow();
   });
 });

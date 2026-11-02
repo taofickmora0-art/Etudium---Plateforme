@@ -1,4 +1,4 @@
-export type PublicEnvVariable = "NEXT_PUBLIC_SUPABASE_URL" | "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY";
+export type PublicEnvVariable = "NEXT_PUBLIC_SUPABASE_URL" | "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" | "NEXT_PUBLIC_SITE_URL";
 
 export type PublicEnv = { supabaseUrl: string; supabaseKey: string };
 
@@ -20,6 +20,10 @@ const MESSAGES = {
     "La clé collée dans NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY est une clé secrète. Remplacez-la par la clé publique (publishable ou anon) et ne la partagez avec personne.",
   cleInconnue:
     "La valeur de NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY n’est pas une clé publique Supabase : copiez la clé « publishable » (sb_publishable_…) ou l’ancienne clé « anon » depuis Project Settings › API.",
+  siteVide:
+    "NEXT_PUBLIC_SITE_URL est vide : le site en production a besoin de son adresse (exemple : https://etudium.online) pour les liens des e-mails, des certificats et le plan du site. Ajoutez-la dans Vercel › Settings › Environment Variables (environnement Production), puis redéployez.",
+  siteSansHttps:
+    "NEXT_PUBLIC_SITE_URL doit être une adresse complète qui commence par https:// (exemple : https://etudium.online). Corrigez-la dans Vercel › Settings › Environment Variables (environnement Production), puis redéployez.",
 } as const;
 
 /** Retire espaces, guillemets (droits ou typographiques) et préfixe « Bearer » ajoutés par erreur autour d'une clé. */
@@ -71,6 +75,23 @@ export function readPublicEnv(source: Record<string, string | undefined>): Publi
 export function assertNoSecretKey(source: Record<string, string | undefined>): void {
   const key = cleanKey(source.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
   if (key && isSecretKey(key)) throw new EnvError("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", MESSAGES.cleSecrete);
+}
+
+/**
+ * Appelé au démarrage de Next (next.config.ts) : le build de production Vercel (VERCEL_ENV=production) exige l'adresse
+ * du site, en https://. En local et en prévisualisation, rien n'est exigé (repli sur http://localhost:3000).
+ */
+export function assertSiteUrlEnProduction(source: Record<string, string | undefined>): void {
+  if (source.VERCEL_ENV !== "production") return;
+  const url = (source.NEXT_PUBLIC_SITE_URL ?? "").trim();
+  if (!url) throw new EnvError("NEXT_PUBLIC_SITE_URL", MESSAGES.siteVide);
+  let lisible = true;
+  try {
+    lisible = Boolean(new URL(url).hostname);
+  } catch {
+    lisible = false;
+  }
+  if (!url.startsWith("https://") || !lisible) throw new EnvError("NEXT_PUBLIC_SITE_URL", MESSAGES.siteSansHttps);
 }
 
 /** Lit la configuration publique. Les deux variables sont écrites en toutes lettres pour que Next les injecte côté navigateur. */
