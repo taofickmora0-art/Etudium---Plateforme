@@ -26,9 +26,11 @@ describe("Le menu du back-office", () => {
     ]);
   });
 
-  it("admin : tout ; compte pas encore lu : le tableau de bord seulement", () => {
+  it("admin : tout sauf le journal ; super admin : tout ; compte pas encore lu : le tableau de bord seulement", () => {
     const tout = MENUS.admin.groupes.flatMap((g) => g.entrees.map((e) => e.label));
-    expect(filtrerGroupes(MENUS.admin.groupes, ["communaute", "contenus", "utilisateurs", "paiements", "statistiques"]).flatMap((g) => g.entrees.map((e) => e.label))).toEqual(tout);
+    const entrees = (domaines: Parameters<typeof filtrerGroupes>[1]) => filtrerGroupes(MENUS.admin.groupes, domaines).flatMap((g) => g.entrees.map((e) => e.label));
+    expect(entrees(["communaute", "contenus", "utilisateurs", "paiements", "statistiques"])).toEqual(tout.filter((l) => l !== "Journal"));
+    expect(entrees(["communaute", "contenus", "utilisateurs", "paiements", "statistiques", "roles", "journal"])).toEqual(tout);
     expect(libelles(filtrerGroupes(MENUS.admin.groupes, null))).toEqual([["", ["Tableau de bord"]]]);
   });
 

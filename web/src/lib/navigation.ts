@@ -1,5 +1,6 @@
 import {
   AssignmentsIcon,
+  Audit01Icon,
   BookOpen01Icon,
   BubbleChatIcon,
   Calendar03Icon,
@@ -131,6 +132,10 @@ export const MENUS: Record<Espace, { libelle: string; groupes: GroupeNav[] }> = 
           { href: "/admin/communaute", label: "Communauté", icon: UserGroupIcon, domaine: "communaute" },
           { href: "/admin/moderation", label: "Modération", icon: Shield01Icon, domaine: "communaute" },
         ],
+      },
+      {
+        titre: "Pilotage",
+        entrees: [{ href: "/admin/journal", label: "Journal", icon: Audit01Icon, domaine: "journal" }],
       },
     ],
   },
