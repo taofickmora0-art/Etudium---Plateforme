@@ -109,7 +109,7 @@ describe("Migration 0069 : le rattrapage", () => {
 
   it("l'équipe (modératrice comprise) et les formateurs qui avaient ouvert des leçons ne sont pas inscrits (règle de la 0029)", async () => {
     for (const qui of [A, M, P]) expect(await inscrit(qui, gratuite)).toBe(false);
-    expect((await inscriptions()).filter((i) => [A, M, P, S, F, G].includes(i.profil_id))).toEqual([]);
+    expect((await inscriptions()).filter((i) => ([A, M, P, S, F, G] as string[]).includes(i.profil_id))).toEqual([]);
   });
 
   it("à la fin d'un abonnement, l'inscription reste mais les leçons payantes se ferment", async () => {
@@ -174,7 +174,7 @@ describe("Migration 0069 : l'inscription ouvre les leçons", () => {
     expect(await acces(SU, gratuite.lecons[0])).toBe(false);
     expect(await ouverte(SU, gratuite)).toBe(false);
 
-    const refuses = (await inscriptions()).filter((i) => [F, G, A, S].includes(i.profil_id) || i.formation_id === brouillon.id);
+    const refuses = (await inscriptions()).filter((i) => ([F, G, A, S] as string[]).includes(i.profil_id) || i.formation_id === brouillon.id);
     expect(refuses).toEqual([]);
   });
 
@@ -246,9 +246,9 @@ describe("Migration 0069 : les inscrits sont prévenus, même à 0 %", () => {
     await banc.db.query("delete from public.notifications");
     await banc.db.query("delete from public.envois");
 
-    const module = (await banc.db.query<{ id: string }>("select id from public.modules where formation_id = $1", [powerpoint.id])).rows[0].id;
+    const idModule = (await banc.db.query<{ id: string }>("select id from public.modules where formation_id = $1", [powerpoint.id])).rows[0].id;
     const lecon = (
-      await banc.db.query<{ id: string }>("insert into public.lecons (module_id, titre, type, publiee, ordre) values ($1, 'Les animations', 'lecon', false, 9) returning id", [module])
+      await banc.db.query<{ id: string }>("insert into public.lecons (module_id, titre, type, publiee, ordre) values ($1, 'Les animations', 'lecon', false, 9) returning id", [idModule])
     ).rows[0].id;
     await banc.db.query("update public.lecons set publiee = true where id = $1", [lecon]);
     expect(await notifications(N)).toEqual(["Nouvelle leçon dans PowerPoint"]);
