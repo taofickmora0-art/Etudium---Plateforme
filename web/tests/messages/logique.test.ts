@@ -88,6 +88,17 @@ describe("Lire", () => {
     expect(await chercherContacts("formateur", "aïch")).toHaveLength(1);
     expect(faux.de("rpc", "contacts_messagerie").at(-1)?.valeurs).toEqual({ p_espace: "formateur", p_recherche: "aïch" });
   });
+
+  it("l'étudiant cherche un formateur : la base filtre par le nom ; l'Équipe Étudium n'y est que si elle correspond", async () => {
+    faux.repondre("rpc.contacts_messagerie", { data: [{ id: F, nom: "Dr Mireille Adjovi", photo: null, formation: "Excel" }] });
+    expect(await chercherContacts("etudiant", " adjo ")).toEqual([{ id: F, nom: "Dr Mireille Adjovi", photoUrl: null, formation: "Excel" }]);
+    expect(faux.de("rpc", "contacts_messagerie").at(-1)?.valeurs).toEqual({ p_espace: "etudiant", p_recherche: " adjo " });
+    faux.repondre("rpc.contacts_messagerie", { data: [] });
+    expect(await chercherContacts("etudiant", "equipe")).toEqual([{ id: null, nom: "Équipe Étudium", photoUrl: null, formation: null }]);
+    expect(await chercherContacts("etudiant", "ÉTUDIUM")).toHaveLength(1);
+    expect(await chercherContacts("etudiant", "")).toEqual([{ id: null, nom: "Équipe Étudium", photoUrl: null, formation: null }]);
+    expect(await chercherContacts("etudiant", "koffi")).toEqual([]);
+  });
 });
 
 describe("Écrire", () => {

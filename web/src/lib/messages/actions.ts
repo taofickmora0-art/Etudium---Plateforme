@@ -1,6 +1,7 @@
 "use server";
 
 import { getShellUser } from "@/lib/auth/current-user";
+import { sansAccents } from "@/lib/catalogue/filtres";
 import { estFonctionAbsente, liste, texte, un } from "@/lib/contenus/lecture";
 import { viderFileApres } from "@/lib/envois/declencher";
 import { createClient } from "@/lib/supabase/server";
@@ -91,14 +92,20 @@ export async function relireConversations(espace: EspaceMessages): Promise<Conve
   }
 }
 
-/** « Nouveau message » : cherche à qui écrire ; vide sur une erreur. */
+/**
+ * « Nouveau message » : cherche à qui écrire par le nom (le formateur, un de ses étudiants ; l'étudiant, un de ses
+ * formateurs). Pour l'étudiant, l'Équipe Étudium s'ajoute si elle correspond au terme (« équipe », « etudium »). Vide sur
+ * une erreur.
+ */
 export async function chercherContacts(espace: EspaceMessages, recherche: string): Promise<Contact[]> {
   if (!estEspace(espace) || !(await getShellUser())) return [];
+  const terme = typeof recherche === "string" ? recherche.slice(0, 80) : "";
   try {
-    const { data, error } = await (await createClient()).rpc("contacts_messagerie", { p_espace: espace, p_recherche: typeof recherche === "string" ? recherche.slice(0, 80) : "" });
+    const { data, error } = await (await createClient()).rpc("contacts_messagerie", { p_espace: espace, p_recherche: terme });
     if (error) return [];
     const contacts = liste(data).map(versContact);
-    return espace === "etudiant" ? [...contacts, CONTACT_EQUIPE] : contacts;
+    if (espace !== "etudiant") return contacts;
+    return sansAccents(CONTACT_EQUIPE.nom).includes(sansAccents(terme)) ? [...contacts, CONTACT_EQUIPE] : contacts;
   } catch {
     return [];
   }

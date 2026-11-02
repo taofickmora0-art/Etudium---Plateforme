@@ -10,9 +10,13 @@ import { chercherContacts, ouvrirConversation } from "@/lib/messages/actions";
 import type { Contact, EspaceMessages } from "@/lib/messages/types";
 import { AvatarInterlocuteur } from "./AvatarInterlocuteur";
 
+/** L'étudiant n'est inscrit à aucune formation : seule l'Équipe Étudium lui est proposée. */
+const INVITE_INSCRIPTION = "Inscrivez-vous à une formation pour écrire à son formateur.";
+
 /**
- * « Nouveau message » : à qui écrire. L'étudiant choisit parmi ses formateurs et l'Équipe Étudium ; le formateur
- * cherche un de ses étudiants par son nom. Choisir ouvre (ou retrouve) la conversation.
+ * « Nouveau message » : à qui écrire. L'étudiant choisit parmi les formateurs des formations où il est inscrit et
+ * l'Équipe Étudium, et peut chercher un formateur par son nom (spec du 2 novembre 2026, §7) ; le formateur cherche un de
+ * ses étudiants par son nom. Choisir ouvre (ou retrouve) la conversation.
  */
 export function NouveauMessage({
   espace,
@@ -34,17 +38,21 @@ export function NouveauMessage({
   const [ouverture, setOuverture] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const formateur = espace === "formateur";
+  // Qui l'on cherche : l'étudiant, un formateur ; le formateur, un étudiant.
+  const cherche = formateur ? "étudiant" : "formateur";
+  // L'étudiant sans formateur à qui écrire (inscrit à aucune formation) : l'Équipe Étudium seule.
+  const sansFormateur = !formateur && contactsInitiaux.every((c) => c.id === null);
 
-  // Le formateur cherche : une lecture 250 ms après la dernière touche.
+  // La recherche par le nom : une lecture 250 ms après la dernière touche.
   useEffect(() => {
-    if (!formateur || !open) return;
+    if (!open) return;
     const terme = recherche.trim();
     if (!terme) return;
     const minuterie = setTimeout(() => {
       void chercherContacts(espace, terme).then((contacts) => setTrouves({ terme, contacts }));
     }, 250);
     return () => clearTimeout(minuterie);
-  }, [recherche, formateur, open, espace]);
+  }, [recherche, open, espace]);
 
   async function choisir(contact: Contact) {
     const cle = contact.id ?? "equipe";
@@ -58,7 +66,7 @@ export function NouveauMessage({
   }
 
   const terme = recherche.trim();
-  const contacts = formateur && terme ? (trouves?.terme === terme ? trouves.contacts : []) : contactsInitiaux;
+  const contacts = terme ? (trouves?.terme === terme ? trouves.contacts : []) : contactsInitiaux;
   return (
     <Dialog
       open={open}
@@ -72,21 +80,19 @@ export function NouveauMessage({
       title="Nouveau message"
       description={formateur ? "Écrivez à un étudiant qui suit une de vos formations." : "Écrivez à un formateur de vos formations, ou à l’équipe Étudium."}
     >
-      {formateur && (
-        <span className="relative mt-4 block">
-          <span className="pointer-events-none absolute top-3.5 left-3.5 text-discret">
-            <Icon icon={Search01Icon} size={20} />
-          </span>
-          <input
-            type="search"
-            value={recherche}
-            onChange={(e) => setRecherche(e.target.value)}
-            aria-label="Rechercher un étudiant"
-            placeholder="Rechercher un étudiant…"
-            className="box-border h-12 w-full rounded-champ border border-bordure-champ bg-panneau pr-3.5 pl-11 font-[inherit] text-[15px] text-texte placeholder:text-indice focus:border-bleu focus:outline-none"
-          />
+      <span className="relative mt-4 block">
+        <span className="pointer-events-none absolute top-3.5 left-3.5 text-discret">
+          <Icon icon={Search01Icon} size={20} />
         </span>
-      )}
+        <input
+          type="search"
+          value={recherche}
+          onChange={(e) => setRecherche(e.target.value)}
+          aria-label={`Rechercher un ${cherche}`}
+          placeholder={`Rechercher un ${cherche}…`}
+          className="box-border h-12 w-full rounded-champ border border-bordure-champ bg-panneau pr-3.5 pl-11 font-[inherit] text-[15px] text-texte placeholder:text-indice focus:border-bleu focus:outline-none"
+        />
+      </span>
       {erreur && (
         <p role="alert" className="m-0 mt-3 text-[13px] leading-5 text-erreur-texte">
           {erreur}
@@ -95,13 +101,13 @@ export function NouveauMessage({
       <ul className="m-0 mt-4 flex max-h-[50dvh] list-none flex-col gap-1 overflow-y-auto p-0">
         {contacts.length === 0 && (
           <li className="py-6 text-center text-sm leading-[22px] text-discret">
-            {formateur
-              ? terme
-                ? trouves?.terme === terme
-                  ? "Aucun étudiant ne correspond."
-                  : "Recherche…"
-                : "Aucun étudiant ne suit encore vos formations."
-              : "Commencez une formation pour écrire à son formateur."}
+            {terme
+              ? trouves?.terme === terme
+                ? `Aucun ${cherche} ne correspond.`
+                : "Recherche…"
+              : formateur
+                ? "Aucun étudiant ne suit encore vos formations."
+                : INVITE_INSCRIPTION}
           </li>
         )}
         {contacts.map((c) => (
@@ -122,6 +128,7 @@ export function NouveauMessage({
           </li>
         ))}
       </ul>
+      {sansFormateur && !terme && contacts.length > 0 && <p className="m-0 mt-3 px-3 text-sm leading-[22px] text-pretty text-discret">{INVITE_INSCRIPTION}</p>}
     </Dialog>
   );
 }

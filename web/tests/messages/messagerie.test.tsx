@@ -63,7 +63,7 @@ const CONTACTS: Contact[] = [
   { id: null, nom: "Équipe Étudium", photoUrl: null, formation: null },
 ];
 
-function afficher(o: { fil?: Fil | null; choisie?: string | null; espace?: "etudiant" | "formateur" | "equipe" } = {}) {
+function afficher(o: { fil?: Fil | null; choisie?: string | null; espace?: "etudiant" | "formateur" | "equipe"; contacts?: Contact[] } = {}) {
   return render(
     <Messagerie
       espace={o.espace ?? "etudiant"}
@@ -71,7 +71,7 @@ function afficher(o: { fil?: Fil | null; choisie?: string | null; espace?: "etud
       conversations={[CONV, EQUIPE]}
       fil={o.fil === undefined ? FIL : o.fil}
       choisie={o.choisie === undefined ? C : o.choisie}
-      contacts={CONTACTS}
+      contacts={o.contacts ?? CONTACTS}
     />,
   );
 }
@@ -251,6 +251,7 @@ describe("Sans conversation choisie, au téléphone, nouveau message", () => {
     await user.click(screen.getByRole("button", { name: "Nouveau message" }));
     const fenetre = screen.getByRole("dialog", { name: "Nouveau message" });
     expect(within(fenetre).getByRole("button", { name: /Dr Mireille Adjovi/ })).toHaveTextContent("Maîtriser Microsoft Excel");
+    expect(within(fenetre).queryByText("Inscrivez-vous à une formation pour écrire à son formateur.")).toBeNull();
     await user.click(within(fenetre).getByRole("button", { name: /Équipe Étudium/ }));
     await waitFor(() => expect(actions.ouvrirConversation).toHaveBeenCalledWith(null));
     expect(push).toHaveBeenCalledWith(`/messages?c=${C2}`);
@@ -261,9 +262,42 @@ describe("Sans conversation choisie, au téléphone, nouveau message", () => {
     vi.mocked(actions.chercherContacts).mockResolvedValue([{ id: F, nom: "Aïcha Kpadé", photoUrl: null, formation: "Excel" }]);
     afficher({ espace: "formateur" });
     await user.click(screen.getByRole("button", { name: "Nouveau message" }));
+    expect(screen.getByRole("searchbox", { name: "Rechercher un étudiant" })).toHaveAttribute("placeholder", "Rechercher un étudiant…");
+    expect(screen.queryByRole("searchbox", { name: "Rechercher un formateur" })).toBeNull();
     await user.type(screen.getByRole("searchbox", { name: "Rechercher un étudiant" }), "aïch");
     await waitFor(() => expect(actions.chercherContacts).toHaveBeenLastCalledWith("formateur", "aïch"));
     expect(await screen.findByRole("button", { name: /Aïcha Kpadé/ })).toBeInTheDocument();
+    expect(screen.queryByText("Inscrivez-vous à une formation pour écrire à son formateur.")).toBeNull();
+  });
+
+  it("l'étudiant cherche un formateur par son nom (spec du 2 novembre 2026, §7) ; sans résultat, il le lit ; le champ vidé, la liste revient", async () => {
+    const user = userEvent.setup();
+    const KOFFI: Contact = { id: "44444444-4444-4444-8444-444444444444", nom: "Koffi Mensah", photoUrl: null, formation: "Canva, de débutant à expert" };
+    vi.mocked(actions.chercherContacts).mockImplementation(async (_espace, terme) => (terme === "koff" ? [KOFFI] : []));
+    afficher();
+    await user.click(screen.getByRole("button", { name: "Nouveau message" }));
+    const fenetre = screen.getByRole("dialog", { name: "Nouveau message" });
+    const champ = within(fenetre).getByRole("searchbox", { name: "Rechercher un formateur" });
+    expect(champ).toHaveAttribute("placeholder", "Rechercher un formateur…");
+    await user.type(champ, "koff");
+    await waitFor(() => expect(actions.chercherContacts).toHaveBeenLastCalledWith("etudiant", "koff"));
+    expect(await within(fenetre).findByRole("button", { name: /Koffi Mensah/ })).toHaveTextContent("Canva, de débutant à expert");
+    expect(within(fenetre).queryByRole("button", { name: /Dr Mireille Adjovi/ })).toBeNull();
+    await user.type(champ, "zz");
+    expect(await within(fenetre).findByText("Aucun formateur ne correspond.")).toBeInTheDocument();
+    await user.clear(champ);
+    expect(within(fenetre).getByRole("button", { name: /Dr Mireille Adjovi/ })).toBeInTheDocument();
+    expect(within(fenetre).getByRole("button", { name: /Équipe Étudium/ })).toBeInTheDocument();
+  });
+
+  it("l'étudiant inscrit à aucune formation : l'Équipe Étudium seule, et une phrase pour s'inscrire", async () => {
+    const user = userEvent.setup();
+    afficher({ contacts: [{ id: null, nom: "Équipe Étudium", photoUrl: null, formation: null }] });
+    await user.click(screen.getByRole("button", { name: "Nouveau message" }));
+    const fenetre = screen.getByRole("dialog", { name: "Nouveau message" });
+    expect(within(fenetre).getAllByRole("button", { name: /Équipe Étudium/ })).toHaveLength(1);
+    expect(within(fenetre).getByText("Inscrivez-vous à une formation pour écrire à son formateur.")).toBeInTheDocument();
+    expect(within(fenetre).getByRole("searchbox", { name: "Rechercher un formateur" })).toBeInTheDocument();
   });
 
   it("l'équipe n'a pas de « Nouveau message » (elle répond à l'assistance)", () => {
