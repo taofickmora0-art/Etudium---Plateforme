@@ -24,7 +24,7 @@ type Props = {
   /** Toutes les formations publiées (nombre de formations de chaque parcours). */
   cartes: CarteCatalogue[];
   recommandees: CarteCatalogue[];
-  /** Formations commencées : leur carte montre la progression. */
+  /** Formations « à moi » (inscrites ; sans la 0069, commencées) : leur carte montre la progression. */
   suivies: ReadonlyMap<string, VueCarteSuivie>;
   /** Leçons terminées du compte. */
   terminees: ReadonlySet<string>;

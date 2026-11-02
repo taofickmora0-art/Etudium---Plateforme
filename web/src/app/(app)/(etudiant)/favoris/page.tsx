@@ -17,7 +17,7 @@ async function Contenu() {
   try {
     const [lus, lignes, inscriptions] = await Promise.all([lireFavoris(), lireProgression(), lireInscriptions()]);
     const ids = (lus ?? []).map((f) => f.formationId);
-    favoris = cartesFavorites(ids, await listFiches(ids), lignes ?? [], inscriptions ?? []);
+    favoris = cartesFavorites(ids, await listFiches(ids), lignes ?? [], inscriptions);
   } catch (erreur) {
     return siTablesAbsentes(erreur);
   }

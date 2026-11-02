@@ -3,14 +3,14 @@ import { listFiches } from "@/lib/catalogue/data";
 import { lireFavoris } from "@/lib/favoris/data";
 import { lireInscriptions } from "@/lib/inscriptions/data";
 import { lireProgression } from "@/lib/progression/data";
-import { formationsSuivies } from "./regles";
+import { formationsALire, formationsSuivies } from "./regles";
 
 /**
  * Ce que « Mes formations », sa rangée de la page Formations et les cartes du catalogue montrent du compte connecté
  * (spec du 2 novembre 2026, §2 et §4). Données simples : elles passent aux composants du navigateur.
  */
 export type SuiviDuCompte = {
-  /** Ses formations (commencées, ou inscrites même à 0 %), de la plus récemment ouverte ou rejointe à la plus ancienne. */
+  /** Ses formations (inscrites, même à 0 %), de la plus récemment ouverte ou rejointe à la plus ancienne. */
   suivies: VueCarteSuivie[];
   /**
    * Les formations où il est inscrit, avec son pourcentage terminé (« 40 % terminé » sur la carte). Sans la 0069, ses
@@ -23,19 +23,19 @@ export type SuiviDuCompte = {
 
 /**
  * Lit en parallèle la progression, les favoris et les inscriptions du compte, puis les fiches de ses formations en une
- * seule requête. Sans les tables de progression (0007, 0008), aucune n'est commencée ; sans la 0069, aucune n'est
- * inscrite (comportement d'avant). Relance les erreurs.
+ * seule requête : celles où il est inscrit. Un aperçu ouvert sans inscription n'en fait pas une de ses formations. Sans
+ * les tables de progression (0007, 0008), aucune n'est commencée ; sans la 0069, ses formations sont celles qu'il a
+ * commencées (comportement d'avant). Relance les erreurs.
  */
 export async function lireSuiviDuCompte(): Promise<SuiviDuCompte> {
   const [lignes, favoris, inscriptions] = await Promise.all([lireProgression(), lireFavoris(), lireInscriptions()]);
-  const ids = [...new Set([...(lignes ?? []).map((l) => l.formationId), ...(inscriptions ?? []).map((i) => i.formationId)])];
+  const ids = formationsALire(lignes, inscriptions);
   const favorisIds = favoris ? favoris.map((f) => f.formationId) : null;
   if (ids.length === 0) return { suivies: [], inscrites: {}, favoris: favorisIds };
-  const suivies = formationsSuivies(await listFiches(ids), lignes ?? [], new Set(favorisIds ?? []), inscriptions ?? []);
-  const inscrites = inscriptions ? new Set(inscriptions.map((i) => i.formationId)) : null;
+  const suivies = formationsSuivies(await listFiches(ids), lignes ?? [], new Set(favorisIds ?? []), inscriptions);
   return {
     suivies: suivies.map(versVueCarte),
-    inscrites: Object.fromEntries(suivies.filter((s) => !inscrites || inscrites.has(s.fiche.id)).map((s) => [s.fiche.id, s.progression.pourcentage])),
+    inscrites: Object.fromEntries(suivies.map((s) => [s.fiche.id, s.progression.pourcentage])),
     favoris: favorisIds,
   };
 }

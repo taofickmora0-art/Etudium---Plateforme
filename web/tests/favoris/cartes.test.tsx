@@ -44,4 +44,14 @@ describe("Cartes de la page Favoris", () => {
     expect(screen.getByRole("link", { name: /Maîtriser Microsoft Excel/ })).toHaveAttribute("href", "/formations/maitriser-microsoft-excel");
     expect(screen.getByText("Voir le cours")).toBeInTheDocument();
   });
+
+  it("inscriptions lues : une formation commencée sans inscription (un aperçu) est une carte du catalogue ; sans la 0069 (null), sa progression", () => {
+    const fiches = [avec(EXCEL_OUVERTE, "publiee")];
+    const lignes = [ligne(EXCEL_OUVERTE.id, 1, false)];
+    const { unmount } = render(<>{cartesFavorites([EXCEL_OUVERTE.id], fiches, lignes, [])[0].carte}</>);
+    expect(screen.getByText("Voir le cours")).toBeInTheDocument();
+    unmount();
+    render(<>{cartesFavorites([EXCEL_OUVERTE.id], fiches, lignes, null)[0].carte}</>);
+    expect(screen.getByRole("link", { name: /Maîtriser Microsoft Excel/ })).toHaveAttribute("href", `/formations/maitriser-microsoft-excel/lecons/${id(1)}`);
+  });
 });

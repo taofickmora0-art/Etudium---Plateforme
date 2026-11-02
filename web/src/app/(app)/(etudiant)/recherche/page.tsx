@@ -2,14 +2,9 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { SessionGuard } from "@/components/layout/SessionGuard";
-import { versVueCarte, type VueCarteSuivie } from "@/components/mes-formations/CarteSuivie";
 import { PageRecherche } from "@/components/recherche/PageRecherche";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { listCatalogue, listFiches, listParcoursCatalogue } from "@/lib/catalogue/data";
-import { formationsSuivies } from "@/lib/mes-formations/regles";
-import { lireProgression } from "@/lib/progression/data";
-import { listLeconsPubliees } from "@/lib/recherche/data";
-import { recommandations, rechercher } from "@/lib/recherche/regles";
+import { lireRecherche } from "@/lib/recherche/donnees";
 
 export const metadata: Metadata = { title: "Recherche · Étudium" };
 
@@ -21,21 +16,7 @@ async function Contenu({ searchParams }: Recherche) {
   const q = (Array.isArray(brut) ? brut[0] : (brut ?? "")).slice(0, 100);
   let donnees;
   try {
-    const [cartes, parcours, lecons, lignes] = await Promise.all([
-      listCatalogue(),
-      listParcoursCatalogue(),
-      q.trim() ? listLeconsPubliees() : [],
-      lireProgression(),
-    ]);
-    const commencees = new Set((lignes ?? []).map((l) => l.formationId));
-    const resultats = q.trim() ? rechercher({ cartes, parcours, lecons }, q) : null;
-    // Les formations trouvées et déjà commencées montrent leur progression.
-    const ids = (resultats?.formations ?? []).map((c) => c.id).filter((id) => commencees.has(id));
-    const suivies = new Map<string, VueCarteSuivie>(
-      formationsSuivies(await listFiches(ids), lignes ?? [], new Set()).map((s) => [s.fiche.id, versVueCarte(s)]),
-    );
-    const terminees = new Set((lignes ?? []).filter((l) => l.termineeLe).map((l) => l.leconId));
-    donnees = { cartes, resultats, suivies, terminees, recommandees: recommandations(cartes, commencees) };
+    donnees = await lireRecherche(q);
   } catch (erreur) {
     return siTablesAbsentes(erreur);
   }

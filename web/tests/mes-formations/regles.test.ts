@@ -89,12 +89,33 @@ describe("Formations suivies : l'inscription (0069 ; spec du 2 novembre 2026, §
       derniereVisite: "2026-10-13T12:30:00Z",
     });
     expect(zotero.progression.pourcentage).toBe(0);
+    // La leçon où reprendre est aussi celle de la progression (« Continuer l'apprentissage » du tableau de bord).
+    expect(zotero.progression.aReprendre?.id).toBe(id(21));
     expect(filtrer(suivies, "enCours").map((s) => s.fiche.id)).toContain("zotero");
+  });
+
+  it("inscrite à 0 %, la première leçon est un aperçu et tout est ouvert : elle mène à cette première leçon", () => {
+    const [excel] = formationsSuivies([publiee(EXCEL_OUVERTE)], [], new Set(), [inscription(EXCEL_OUVERTE.id, "2026-10-13T12:30:00Z")]);
+    expect(excel).toMatchObject({ etat: "enCours", href: `${ADRESSE}/${id(1)}` });
   });
 
   it("inscrite, rien d'ouvert (abonnement échu, sans aperçu) : verrouillée, la carte mène à la fiche", () => {
     const [zotero] = formationsSuivies([publiee({ ...ZOTERO, id: "zotero" })], [], new Set(), [inscription("zotero", "2026-10-13T12:30:00Z")]);
     expect(zotero).toMatchObject({ etat: "verrouillee", href: "/formations/zotero-gerer-ses-references", temps: "Accès fermé" });
+  });
+
+  it("inscrite à une formation payante, pas commencée, abonnement échu : « Accès fermé », même si ses aperçus restent ouverts", () => {
+    const [excel] = formationsSuivies([publiee(EXCEL)], [], new Set(), [inscription(EXCEL.id, "2026-10-13T12:30:00Z")]);
+    expect(excel).toMatchObject({ etat: "verrouillee", href: "/formations/maitriser-microsoft-excel", temps: "Accès fermé" });
+    expect(excel.progression.aReprendre).toBeNull();
+  });
+
+  it("inscriptions lues : seules les formations où l'on est inscrit ; un aperçu ouvert sans inscription n'y met pas la formation", () => {
+    const apercus = [ligne(EXCEL.id, 1, true, 20), ligne(EXCEL.id, 2, true, 10)];
+    expect(formationsSuivies([publiee(EXCEL)], apercus, new Set(), [])).toEqual([]);
+    expect(formationsSuivies([publiee(EXCEL_OUVERTE), publiee(ZOTERO_OUVERTE)], [ligne(EXCEL_OUVERTE.id, 1, false, 5)], new Set(), [inscription("zotero", "2026-10-13T12:30:00Z")]).map((s) => s.fiche.id)).toEqual(["zotero"]);
+    // Sans la 0069 (null) : comme avant, les formations commencées.
+    expect(formationsSuivies([publiee(EXCEL)], apercus, new Set(), null).map((s) => s.fiche.id)).toEqual([EXCEL.id]);
   });
 
   it("une formation commencée n'est comptée qu'une fois ; une inscription sans fiche lisible est ignorée ; sans inscription, rien ne change", () => {

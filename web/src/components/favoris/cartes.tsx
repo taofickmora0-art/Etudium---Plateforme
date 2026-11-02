@@ -7,10 +7,10 @@ import type { Favori } from "./PageFavoris";
 
 /**
  * Les cartes de la page Favoris, dans l'ordre des favoris (le plus récent d'abord), sans badge : le cœur occupe ce coin.
- * Une formation commencée, ou inscrite (0069), montre sa progression ; une formation archivée jamais commencée n'est plus
- * visible (règles de la base) et disparaît de la liste.
+ * Une formation où le compte est inscrit (0069 ; sans elle, commencée) montre sa progression ; une formation archivée
+ * jamais commencée n'est plus visible (règles de la base) et disparaît de la liste.
  */
-export function cartesFavorites(ids: string[], fiches: FicheSuivie[], lignes: LigneProgression[], inscriptions: readonly Inscription[] = []): Favori[] {
+export function cartesFavorites(ids: string[], fiches: FicheSuivie[], lignes: LigneProgression[], inscriptions: readonly Inscription[] | null = null): Favori[] {
   const suivies = formationsSuivies(fiches, lignes, new Set(ids), inscriptions);
   return ids.flatMap((id): Favori[] => {
     const fiche = fiches.find((f) => f.id === id);

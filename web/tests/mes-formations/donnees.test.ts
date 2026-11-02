@@ -56,12 +56,13 @@ describe("Suivi du compte", () => {
     expect(await lireFormationsSuivies()).toEqual(suivi.suivies);
   });
 
-  it("commencée sans inscription (un aperçu ouvert) : dans « Mes formations », mais pas inscrite sur la carte", async () => {
+  it("commencée sans inscription (un aperçu ouvert) : ni dans « Mes formations » (seuls les inscrits y sont), ni inscrite sur la carte", async () => {
     lireProgression.mockResolvedValue([ligne(EXCEL_OUVERTE.id, 1, false)]);
     lireInscriptions.mockResolvedValue([]);
     const suivi = await lireSuiviDuCompte();
-    expect(suivi.suivies.map((v) => v.id)).toEqual([EXCEL_OUVERTE.id]);
+    expect(suivi.suivies).toEqual([]);
     expect(suivi.inscrites).toEqual({});
+    expect(listFiches).not.toHaveBeenCalled();
   });
 
   it("sans la 0069 : comme avant, les formations commencées seulement, qui comptent comme inscrites sur la carte", async () => {
