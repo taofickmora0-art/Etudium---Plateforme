@@ -2,15 +2,16 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { unstable_rethrow } from "next/navigation";
 import { PageAdmin } from "@/components/admin/PageAdmin";
-import { TableauDeBordAdmin } from "@/components/admin/TableauDeBordAdmin";
+import { VueEnsemble } from "@/components/admin/statistiques/VueEnsemble";
 import { TableauModerateur } from "@/components/admin/TableauModerateur";
+import { Banner } from "@/components/ui/Banner";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { lireStatistiques } from "@/lib/admin/statistiques";
 import { aDomaine } from "@/lib/auth/domaines";
 import { requireSpace } from "@/lib/auth/require-space";
 import { compterMessagesNonLus } from "@/lib/messages/actions";
 import { lireNombreAExaminer } from "@/lib/moderation/data";
 import { lireSessionsEquipe } from "@/lib/sessions/data";
+import { lireVueEnsemble } from "@/lib/statistiques/data";
 
 export const metadata: Metadata = { title: "Back-office · Étudium" };
 
@@ -59,10 +60,17 @@ async function AccueilAdmin() {
       </PageAdmin>
     );
   }
-  const [stats, sessions, moderation] = await Promise.all([lireStatistiques(), sessionsAVenir(), aExaminer()]);
+  // La vue d'ensemble du design (NdAdmin ; lot 6 A, migration 0062).
+  const vue = await lireVueEnsemble();
   return (
-    <PageAdmin titre="Tableau de bord" description="Vue d’ensemble de la plateforme : inscriptions, apprentissage et, à partir du lot 2, revenus.">
-      <TableauDeBordAdmin stats={stats} sessionsAVenir={sessions} aExaminer={moderation} />
+    <PageAdmin titre="Back-office" description="Vue d’ensemble de la plateforme.">
+      {vue ? (
+        <VueEnsemble donnees={vue} />
+      ) : (
+        <Banner tone="attention" title="La vue d’ensemble n’est pas disponible">
+          Appliquez la migration 0062 (guide « Ce qui te revient », section 61).
+        </Banner>
+      )}
     </PageAdmin>
   );
 }

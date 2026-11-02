@@ -1,4 +1,5 @@
 import {
+  Analytics01Icon,
   AssignmentsIcon,
   Audit01Icon,
   BookOpen01Icon,
@@ -135,7 +136,10 @@ export const MENUS: Record<Espace, { libelle: string; groupes: GroupeNav[] }> = 
       },
       {
         titre: "Pilotage",
-        entrees: [{ href: "/admin/journal", label: "Journal", icon: Audit01Icon, domaine: "journal" }],
+        entrees: [
+          { href: "/admin/statistiques", label: "Statistiques", icon: Analytics01Icon, domaine: "statistiques" },
+          { href: "/admin/journal", label: "Journal", icon: Audit01Icon, domaine: "journal" },
+        ],
       },
     ],
   },

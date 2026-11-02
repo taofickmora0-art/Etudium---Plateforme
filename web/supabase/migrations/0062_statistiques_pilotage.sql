@@ -124,7 +124,7 @@ begin
       'paiements_echoues', (
         select coalesce(jsonb_agg(x.e order by x.d desc), '[]'::jsonb) from (
           select jsonb_build_object('id', p.id, 'nom', public.nom_du_profil(p.profil_id), 'formule', f.nom,
-                   'moyen', coalesce(p.operateur, p.moyen_manuel), 'date', coalesce(p.essai_le, p.cree_le)) as e,
+                   'operateur', p.operateur, 'moyen_manuel', p.moyen_manuel, 'date', coalesce(p.essai_le, p.cree_le)) as e,
                  coalesce(p.essai_le, p.cree_le) as d
           from public.paiements p join public.formules f on f.id = p.formule_id
           where p.statut = 'echoue' and coalesce(p.essai_le, p.cree_le) between p_maintenant - interval '48 hours' and p_maintenant
@@ -134,7 +134,7 @@ begin
       'paiements_en_attente', (
         select coalesce(jsonb_agg(x.e order by x.d desc), '[]'::jsonb) from (
           select jsonb_build_object('id', p.id, 'nom', public.nom_du_profil(p.profil_id), 'formule', f.nom,
-                   'moyen', p.operateur, 'date', p.essai_le) as e, p.essai_le as d
+                   'operateur', p.operateur, 'moyen_manuel', p.moyen_manuel, 'date', p.essai_le) as e, p.essai_le as d
           from public.paiements p join public.formules f on f.id = p.formule_id
           where p.statut = 'en_attente' and p.essai_le between p_maintenant - interval '24 hours' and p_maintenant - interval '15 minutes'
           order by d desc limit 5
@@ -165,7 +165,7 @@ begin
     'derniers_paiements', (
       select coalesce(jsonb_agg(x.e order by x.d desc), '[]'::jsonb) from (
         select jsonb_build_object('id', p.id, 'nom', public.nom_du_profil(p.profil_id), 'formule', f.nom, 'duree_mois', f.duree_mois,
-                 'moyen', coalesce(p.operateur, p.moyen_manuel), 'montant', p.montant, 'statut', p.statut,
+                 'operateur', p.operateur, 'moyen_manuel', p.moyen_manuel, 'montant', p.montant, 'statut', p.statut,
                  'date', coalesce(p.confirme_le, p.essai_le, p.cree_le)) as e,
                coalesce(p.confirme_le, p.essai_le, p.cree_le) as d
         from public.paiements p join public.formules f on f.id = p.formule_id

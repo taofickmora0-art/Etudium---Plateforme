@@ -34,6 +34,7 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
       ["Abonnements et paiements", "/admin/paiements"],
       ["Communauté", "/admin/communaute"],
       ["Modération", "/admin/moderation"],
+      ["Statistiques", "/admin/statistiques"],
     ]);
     expect(within(nav).getByRole("group", { name: "Contenus" })).toBeInTheDocument();
     expect(within(nav).getByRole("group", { name: "Plateforme" })).toBeInTheDocument();
