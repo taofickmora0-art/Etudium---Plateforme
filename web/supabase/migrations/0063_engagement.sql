@@ -458,6 +458,88 @@ begin
 end;
 $$;
 
+-- ─── Le tableau de bord de l'étudiant (§1), en une lecture ──────────────────────────────────────────
+-- La progression des formations (indicateurs, « Continuer », leçon suivante) est calculée par l'appli, avec les règles de
+-- « Mes formations » ; la prochaine session vient de prochaine_session(). Ici : le reste.
+create or replace function public.mon_tableau_de_bord()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_moi uuid := (select auth.uid());
+begin
+  if v_moi is null then
+    raise exception 'Connectez-vous pour voir votre tableau de bord.' using errcode = '42501';
+  end if;
+  return jsonb_build_object(
+    'certificats', jsonb_build_object(
+      'nombre', (select count(*) from public.certificats c where c.profil_id = v_moi),
+      'titres', coalesce((
+        select jsonb_agg(x.formation_titre order by x.cree_le desc)
+        from (select c.formation_titre, c.cree_le from public.certificats c where c.profil_id = v_moi order by c.cree_le desc limit 2) x
+      ), '[]'::jsonb)
+    ),
+    -- À faire : l'exercice dont la correction demande une reprise, le quiz tenté mais pas encore réussi.
+    'a_faire', coalesce((
+      select jsonb_agg(jsonb_build_object('type', x.type, 'formation', x.formation, 'slug', x.slug, 'lecon_id', x.lecon_id, 'lecon', x.lecon) order by x.rang, x.quand desc)
+      from (
+        select y.* from (
+          select 1 as rang, 'exercice' as type, f.titre as formation, f.slug, l.id as lecon_id, l.titre as lecon, coalesce(d.corrige_le, d.cree_le) as quand
+          from public.derniers_rendus d
+          join public.lecons l on l.id = d.lecon_id
+          join public.modules m on m.id = l.module_id
+          join public.formations f on f.id = m.formation_id
+          where d.profil_id = v_moi and d.statut = 'a_corriger' and l.publiee and f.statut = 'publiee'
+          union all
+          select 2, 'quiz', f.titre, f.slug, l.id, l.titre, max(t.cree_le)
+          from public.tentatives_quiz t
+          join public.lecons l on l.id = t.lecon_id
+          join public.modules m on m.id = l.module_id
+          join public.formations f on f.id = m.formation_id
+          where t.profil_id = v_moi and l.publiee and f.statut = 'publiee'
+          group by f.titre, f.slug, l.id, l.titre, f.score_quiz
+          having max(t.score) < f.score_quiz
+        ) y
+        order by y.rang, y.quand desc
+        limit 6
+      ) x
+    ), '[]'::jsonb),
+    -- L'activité récente : quiz réussis, exercices validés, certificats et badges (pas les leçons ni les jours).
+    'activite', coalesce((
+      select jsonb_agg(jsonb_build_object('type', x.type, 'titre', x.titre, 'formation', x.formation, 'score', x.score, 'quand', x.quand) order by x.quand desc, x.genre)
+      from (
+        select z.* from (
+          select g.raison as type, l.titre, f.titre as formation,
+            case when g.raison = 'quiz' then (select max(t.score) from public.tentatives_quiz t where t.profil_id = v_moi and t.lecon_id = l.id)::integer end as score,
+            g.gagne_le as quand, 0 as genre
+          from public.points_gagnes g
+          join public.lecons l on l.id::text = g.reference
+          join public.modules m on m.id = l.module_id
+          join public.formations f on f.id = m.formation_id
+          where g.profil_id = v_moi and g.raison in ('quiz', 'exercice')
+          union all
+          select 'certificat', c.formation_titre, null, null, g.gagne_le, 0
+          from public.points_gagnes g
+          join public.certificats c on c.id::text = g.reference
+          where g.profil_id = v_moi and g.raison = 'certificat'
+          union all
+          select 'badge', b.badge, null, null, b.obtenu_le, 1
+          from public.badges_obtenus b
+          where b.profil_id = v_moi
+        ) z
+        order by z.quand desc, z.genre
+        limit 3
+      ) x
+    ), '[]'::jsonb),
+    'jeu', public.ma_progression_jeu(),
+    'recommandations', public.recommandations_pour_moi(3)
+  );
+end;
+$$;
+
 -- ─── Les droits ─────────────────────────────────────────────────────────────────────────────────────
 revoke execute on function public.jour_benin(timestamptz) from public, anon, authenticated;
 revoke execute on function public.serie_de(uuid, date) from public, anon, authenticated;
@@ -473,5 +555,7 @@ revoke execute on function public.ma_progression_jeu() from public, anon;
 grant execute on function public.ma_progression_jeu() to authenticated;
 revoke execute on function public.recommandations_pour_moi(integer) from public, anon;
 grant execute on function public.recommandations_pour_moi(integer) to authenticated;
+revoke execute on function public.mon_tableau_de_bord() from public, anon;
+grant execute on function public.mon_tableau_de_bord() to authenticated;
 
 commit;
