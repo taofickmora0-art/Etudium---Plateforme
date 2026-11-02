@@ -359,4 +359,20 @@ grant execute on function public.publier_modifications(uuid) to authenticated;
 grant execute on function public.versions_formation(uuid) to authenticated;
 grant execute on function public.restaurer_version(uuid) to authenticated;
 
+-- ─── Les formations déjà en ligne : une version de départ ───────────────────────────────────────────
+-- Leur historique commence ici (sans elle, il resterait vide jusqu'à la première publication). Rejouée, la migration
+-- n'en ajoute pas d'autre.
+do $depart$
+declare
+  v_formation uuid;
+begin
+  for v_formation in
+    select f.id from public.formations f
+    where f.statut = 'publiee' and not exists (select 1 from public.versions_formations v where v.formation_id = f.id)
+  loop
+    perform public.noter_version(v_formation, 'Version de départ');
+  end loop;
+end
+$depart$;
+
 commit;
