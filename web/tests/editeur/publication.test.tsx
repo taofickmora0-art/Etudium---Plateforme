@@ -15,6 +15,7 @@ vi.mock("@/lib/editeur/actions", () => ({
 const actions = await import("@/lib/editeur/actions");
 const { BoutonPublierModifications } = await import("@/components/editeur/FenetrePublication");
 const { ModificationsNonPubliees } = await import("@/components/editeur/ModificationsNonPubliees");
+const { noterAttente } = await import("@/lib/editeur/en-attente");
 
 const F = "44444444-4444-4444-8444-444444444444";
 const L = "33333333-3333-4333-8333-333333333333";
@@ -47,6 +48,16 @@ describe("Publier les modifications", () => {
     expect(actions.publierModifications).toHaveBeenCalledWith(F);
     expect(await screen.findByText("Modifications publiées : version 8.")).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("point reporté du lot 4 : une modification pas encore enregistrée sur la page est signalée avant de publier", async () => {
+    const user = userEvent.setup();
+    noterAttente("lecon:l1", true);
+    afficher(<BoutonPublierModifications formationId={F} />);
+    await user.click(screen.getByRole("button", { name: "Publier les modifications" }));
+    const fenetre = await screen.findByRole("dialog", { name: "Publier les modifications ?" });
+    expect(within(fenetre).getByText("Une modification n’est pas encore enregistrée.")).toBeInTheDocument();
+    noterAttente("lecon:l1", false);
   });
 
   it("rien en attente : le dit, et Publier est désactivé ; un refus reste dans la fenêtre", async () => {

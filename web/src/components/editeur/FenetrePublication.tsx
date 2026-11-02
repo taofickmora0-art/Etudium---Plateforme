@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { useToast } from "@/components/ui/Toast";
 import { lireModificationsEnAttente, publierModifications } from "@/lib/editeur/actions";
+import { useEnregistrementsEnAttente } from "@/lib/editeur/en-attente";
 import type { ModificationEnAttente } from "@/lib/editeur/types";
 
 // « Publier les modifications » (fin du lot 4, spec §2.3) : la fenêtre liste ce qui part (informations générales,
@@ -22,6 +23,8 @@ function Contenu({ formationId, onFermer }: { formationId: string; onFermer: () 
   const [liste, setListe] = useState<ModificationEnAttente[] | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [occupe, setOccupe] = useState(false);
+  // Un éditeur de la page n'a pas fini d'enregistrer : ce qu'il garde ne partira pas avec la publication.
+  const attente = useEnregistrementsEnAttente();
 
   useEffect(() => {
     let actif = true;
@@ -70,6 +73,11 @@ function Contenu({ formationId, onFermer }: { formationId: string; onFermer: () 
     >
       <div className="mt-4 flex flex-col gap-3">
         {erreur && <Banner tone="erreur" title={erreur} />}
+        {attente && (
+          <Banner tone="attention" title="Une modification n’est pas encore enregistrée.">
+            Elle ne partira pas avec cette publication. Attendez « Enregistré », puis publiez.
+          </Banner>
+        )}
         {liste === null && !erreur && <p className="m-0 text-sm text-discret">Lecture des modifications…</p>}
         {liste?.length === 0 && <p className="m-0 text-sm text-discret">Aucune modification à publier.</p>}
         {liste && liste.length > 0 && (

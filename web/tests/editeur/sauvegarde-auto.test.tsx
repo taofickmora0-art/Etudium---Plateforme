@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { IndicateurSauvegarde } from "@/components/editeur/IndicateurSauvegarde";
 import { useSauvegardeAuto, type EtatSauvegarde } from "@/components/editeur/useSauvegardeAuto";
 import { ecrireCopie, lireCopie } from "@/lib/editeur/copie-locale";
+import { enregistrementsEnAttente } from "@/lib/editeur/en-attente";
 import type { ResultatSauvegarde } from "@/lib/editeur/types";
 
 // La sauvegarde automatique (fin du lot 4, spec §2.1) : 1,5 s après la dernière modification, une sauvegarde à la fois,
@@ -187,10 +188,12 @@ describe("La sauvegarde automatique", () => {
     await avancer(1500);
     expect(result.current.etat.type).toBe("echec");
     expect(lireCopie("lecon:l1")).not.toBeNull();
+    expect(enregistrementsEnAttente()).toBe(true);
     rerender({ valeur: { titre: "A" } });
     await avancer(0);
     expect(result.current.etat.type).toBe("a_jour");
     expect(lireCopie("lecon:l1")).toBeNull();
+    expect(enregistrementsEnAttente()).toBe(false);
     await avancer(30_000);
     expect(enregistrer).toHaveBeenCalledTimes(1);
   });

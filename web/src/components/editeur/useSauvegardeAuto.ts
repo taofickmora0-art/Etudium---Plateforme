@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { effacerCopie, ecrireCopie, lireCopie } from "@/lib/editeur/copie-locale";
+import { noterAttente } from "@/lib/editeur/en-attente";
 import type { ResultatSauvegarde } from "@/lib/editeur/types";
 
 // La sauvegarde automatique de l'éditeur (fin du lot 4, spec §2.1). 1,5 seconde après la dernière modification, la
@@ -177,6 +178,11 @@ export function useSauvegardeAuto<T>({ cle, valeur, revisionInitiale, brouillonI
 
   // Fermer l'onglet avec quelque chose à enregistrer : le navigateur demande confirmation.
   const aRetenir = etat.type !== "a_jour";
+  // La fenêtre « Publier les modifications » prévient qu'une modification de la page ne partira pas.
+  useEffect(() => {
+    noterAttente(cle, aRetenir);
+    return () => noterAttente(cle, false);
+  }, [cle, aRetenir]);
   useEffect(() => {
     if (!aRetenir) return;
     const retenir = (e: BeforeUnloadEvent) => {
