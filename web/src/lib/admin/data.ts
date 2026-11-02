@@ -10,6 +10,7 @@ import { signerImages } from "@/lib/lecon/images";
 import { versEtatEdition, versSaisieInfos, versSaisieLecon } from "@/lib/editeur/saisie";
 import { estFonctionAbsente, estTablesAbsentes, lireAvecRepli, liste, parOrdre, TablesAbsentesError, texte, textes, un, verifier, type Ligne } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
+import { versStatistiquesParcours, type StatistiquesParcours } from "./parcours-chiffres";
 import type {
   FormateurAdmin,
   FormationAdmin,
@@ -95,6 +96,17 @@ export async function listParcours(): Promise<ParcoursAdmin[]> {
   const supabase = await createClient();
   const lignes = verifier(await supabase.from("parcours").select(COLONNES_PARCOURS).order("ordre").order("cree_le"));
   return (lignes as Ligne[]).map(versParcours);
+}
+
+/** Les chiffres de la page Parcours (0065) ; null en démonstration ou sans la migration (la page le dit). */
+export async function lireStatistiquesParcours(): Promise<StatistiquesParcours | null> {
+  if (demoModeActive()) return null;
+  const { data, error } = await (await createClient()).rpc("parcours_back_office");
+  if (error) {
+    if (estFonctionAbsente(error)) return null;
+    throw new Error(`Lecture des chiffres des parcours impossible (${error.code ?? "?"}).`);
+  }
+  return versStatistiquesParcours(data);
 }
 
 export async function getParcours(id: string): Promise<ParcoursAdmin | null> {

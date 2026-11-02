@@ -14,7 +14,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-const { saveParcours, saveFormateur, deplacer } = await import("@/lib/admin/actions");
+const { saveParcours, saveFormateur, deplacer, rangerParcours } = await import("@/lib/admin/actions");
 const { IDLE } = await import("@/lib/auth/schemas");
 
 const form = (valeurs: Record<string, string>) => {
@@ -88,6 +88,23 @@ describe("Back-office : garde de l'équipe, parcours et formateurs", () => {
       redirection: "/admin/formateurs",
     });
     expect(faux.de("formateurs", "insert")[0].valeurs).toEqual({ nom: "Dr Mireille Adjovi", titre: "Enseignante", domaine: "Statistiques", presentation: "Bio" });
+  });
+
+  it("ranger un parcours (glisser-déposer) : autant de crans que nécessaire, dans le bon sens", async () => {
+    const [P1, P2, P3] = ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222", "33333333-3333-4333-8333-333333333333"];
+    faux.repondre("parcours.select", { data: [{ id: P1 }, { id: P2 }, { id: P3 }] });
+    expect(await rangerParcours(P3, 1)).toEqual({ ok: true });
+    expect(faux.de("rpc", "deplacer").map((a) => a.valeurs)).toEqual([
+      { p_table: "parcours", p_id: P3, p_sens: -1 },
+      { p_table: "parcours", p_id: P3, p_sens: -1 },
+    ]);
+    faux.vider();
+    faux.repondre("parcours.select", { data: [{ id: P1 }, { id: P2 }, { id: P3 }] });
+    expect(await rangerParcours(P1, 9)).toEqual({ ok: true });
+    expect(faux.de("rpc", "deplacer").map((a) => (a.valeurs as { p_sens: number }).p_sens)).toEqual([1, 1]);
+    getShellUser.mockResolvedValue(compte(["etudiant", "formateur"]));
+    expect((await rangerParcours(P1, 2)).ok).toBe(false);
+    expect((await rangerParcours("pas-un-uuid", 1)).ok).toBe(false);
   });
 
   it("déplacer appelle la fonction de la base", async () => {

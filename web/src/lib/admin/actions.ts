@@ -146,6 +146,34 @@ export async function deplacer(table: TableOrdonnee, id: string, sens: -1 | 1): 
 }
 
 /**
+ * Range un parcours à un rang (1 = en tête), par glisser-déposer sur la page Parcours (demande du 2 novembre 2026) :
+ * autant de crans que nécessaire avec la fonction deplacer de la base. L'équipe seulement.
+ */
+export async function rangerParcours(id: string, position: number): Promise<{ ok: boolean; message?: string }> {
+  if (!estUuid(id) || !Number.isInteger(position) || position < 1) return { ok: false, message: DEPLACEMENT_ECHOUE };
+  try {
+    const garde = await exigerEditeur();
+    if ("erreur" in garde) return { ok: false, message: garde.erreur };
+    if (!garde.equipe) return { ok: false, message: ACCES_EQUIPE };
+    const { data, error } = await garde.supabase.from("parcours").select("id").order("ordre").order("cree_le");
+    if (error || !Array.isArray(data)) return { ok: false, message: DEPLACEMENT_ECHOUE };
+    const ids = (data as { id: string }[]).map((p) => p.id);
+    const depart = ids.indexOf(id);
+    if (depart < 0) return { ok: false, message: DEPLACEMENT_ECHOUE };
+    const arrivee = Math.min(position, ids.length) - 1;
+    const sens = arrivee < depart ? -1 : 1;
+    for (let i = 0; i < Math.abs(arrivee - depart); i++) {
+      const { error: refus } = await garde.supabase.rpc("deplacer", { p_table: "parcours", p_id: id, p_sens: sens });
+      if (refus) return { ok: false, message: DEPLACEMENT_ECHOUE };
+    }
+  } catch {
+    return { ok: false, message: DEPLACEMENT_ECHOUE };
+  }
+  refresh();
+  return { ok: true };
+}
+
+/**
  * Range une section ou une leçon à un rang (1 = en tête), une leçon pouvant changer de section dans sa formation
  * (fonction ranger de la migration 0027 : glisser-déposer et « Déplacer vers… » de l'onglet Leçons).
  */

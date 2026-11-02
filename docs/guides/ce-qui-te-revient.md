@@ -1222,3 +1222,13 @@ Les petites corrections des lots 4, 5, 6 A et 6 B, faites avant ta recette.
    ```
    Aucune ligne attendue. Si une leçon sort, rouvre-la dans l'éditeur et remets sa vidéo avec le bouton « Vidéo ».
 
+## 64. La page Parcours du back-office, 5 minutes
+
+La page Parcours a maintenant ses chiffres (l'option A que tu as choisie) : en haut, les parcours actifs, les formations publiées, les apprenants et les certificats ; puis une carte par parcours, à ses couleurs, avec ses formations, ses brouillons, ses apprenants, ses certificats et sa part des apprenants.
+
+1. **La migration**, dans l'éditeur SQL de Supabase, après la 0064 : `web/supabase/migrations/0065_parcours_back_office.sql`.
+2. **À vérifier** (back-office › Parcours) :
+   - les chiffres correspondent à tes formations de test ; une formation de deux parcours compte dans chacun, mais une seule fois en haut ;
+   - fais glisser une carte (poignée en haut à droite, ou au clavier : Tab jusqu'à la poignée, Espace, flèches, Espace) : l'ordre change, et le catalogue suit ;
+   - un clic sur le nom ouvre la modification du parcours.
+
