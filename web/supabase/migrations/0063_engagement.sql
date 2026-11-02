@@ -540,6 +540,54 @@ begin
 end;
 $$;
 
+-- ─── Le rappel de série, chaque jour à 18 h au Bénin (Q8) ──────────────────────────────────────────
+-- À qui a une série d'au moins 2 jours (actif hier) et n'a encore rien fait aujourd'hui : une notification « Rappels
+-- d'apprentissage » (coupable dans le profil ; notifier() écarte aussi les formateurs). Jamais à un compte suspendu, une
+-- seule fois par jour.
+create or replace function public.rappeler_series()
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_aujourdhui date := public.jour_benin(now());
+  v_minuit timestamptz := (public.jour_benin(now())::timestamp at time zone 'Africa/Porto-Novo');
+  v_total integer := 0;
+  r record;
+begin
+  if not pg_try_advisory_xact_lock(hashtext('etudium.rappeler_series')) then
+    return 0;
+  end if;
+  for r in
+    select x.serie, array_agg(x.profil_id) as comptes
+    from (
+      select a.profil_id, public.serie_de(a.profil_id, v_aujourdhui) as serie
+      from public.activite_jours a
+      where a.jour = v_aujourdhui - 1
+        and not exists (select 1 from public.activite_jours b where b.profil_id = a.profil_id and b.jour = v_aujourdhui)
+        and not exists (select 1 from public.suspensions s where s.profil_id = a.profil_id)
+        and not exists (
+          select 1 from public.notifications n
+          where n.destinataire = a.profil_id and n.categorie = 'rappels_apprentissage' and n.cree_le >= v_minuit
+        )
+    ) x
+    where x.serie >= 2
+    group by x.serie
+  loop
+    v_total := v_total + public.notifier(
+      r.comptes,
+      'rappels_apprentissage',
+      format('Votre série de %s jours s’arrête ce soir', r.serie),
+      'Une leçon, un quiz ou un exercice aujourd’hui suffit pour la garder.',
+      '/tableau-de-bord',
+      true
+    );
+  end loop;
+  return v_total;
+end;
+$$;
+
 -- ─── Les droits ─────────────────────────────────────────────────────────────────────────────────────
 revoke execute on function public.jour_benin(timestamptz) from public, anon, authenticated;
 revoke execute on function public.serie_de(uuid, date) from public, anon, authenticated;
@@ -549,6 +597,7 @@ revoke execute on function public.engagement_progression() from public, anon, au
 revoke execute on function public.engagement_quiz() from public, anon, authenticated;
 revoke execute on function public.engagement_rendu() from public, anon, authenticated;
 revoke execute on function public.engagement_certificat() from public, anon, authenticated;
+revoke execute on function public.rappeler_series() from public, anon, authenticated;
 revoke execute on function public.choisir_objectif(integer) from public, anon;
 grant execute on function public.choisir_objectif(integer) to authenticated;
 revoke execute on function public.ma_progression_jeu() from public, anon;
@@ -559,3 +608,20 @@ revoke execute on function public.mon_tableau_de_bord() from public, anon;
 grant execute on function public.mon_tableau_de_bord() to authenticated;
 
 commit;
+
+-- ─── Le rappel de série, chaque jour à 17 h UTC (18 h au Bénin) ─────────────────────────────────────
+do $cron$
+begin
+  begin
+    create extension if not exists pg_cron with schema pg_catalog;
+  exception when others then
+    raise notice 'pg_cron indisponible (%) : activez Cron dans Supabase, puis relancez ce bloc.', sqlerrm;
+    return;
+  end;
+  begin
+    perform cron.schedule('etudium-rappel-serie', '0 17 * * *', 'select public.rappeler_series()');
+  exception when others then
+    raise notice 'Tâche planifiée non créée (%) : voir le guide « Ce qui te revient », section 62.', sqlerrm;
+  end;
+end
+$cron$;
