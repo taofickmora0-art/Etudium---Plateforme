@@ -21,6 +21,12 @@ describe("Actions de la page Utilisateurs", () => {
     getShellUser.mockResolvedValue({ roles: ["etudiant", "super_admin"] });
   });
 
+  it("point reporté du lot 6 A : un admin ne change pas un rôle (le super admin seul), sans appel à la base", async () => {
+    getShellUser.mockResolvedValue({ roles: ["etudiant", "admin"] });
+    expect(await changerRole(ID, "formateur")).toEqual({ ok: false, message: "Vous n’avez pas accès à cette partie du back-office." });
+    expect(faux.appels).toEqual([]);
+  });
+
   it("refusées hors de l'équipe, sans appel à la base", async () => {
     getShellUser.mockResolvedValue({ roles: ["etudiant", "formateur"] });
     expect(await chercherComptes("", "tous", 1)).toEqual({ ok: false, message: "Accès réservé à l’équipe." });

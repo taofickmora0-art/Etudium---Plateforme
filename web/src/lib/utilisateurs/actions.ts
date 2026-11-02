@@ -44,7 +44,7 @@ export async function chercherComptes(
  * formateur, ou lui rend la sienne : la base s'en charge.
  */
 export async function changerRole(compteId: string, role: Role): Promise<Resultat> {
-  const garde = await exigerDomaine("utilisateurs");
+  const garde = await exigerDomaine("roles");
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   if (!UUID.test(compteId) || !estRole(role)) return { ok: false, message: ECHEC };
   const { error } = await garde.supabase.rpc("changer_role", { p_compte: compteId, p_role: role });

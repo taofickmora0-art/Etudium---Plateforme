@@ -78,6 +78,14 @@ describe("Migration 0059 : désactiver une formation", () => {
     expect(await emails()).toEqual([{ destinataire: E, titre: "« Maîtriser Microsoft Excel » est momentanément indisponible" }]);
   });
 
+  it("points reportés : le formateur ne réactive pas sa formation ; une formation archivée ne se désactive pas", async () => {
+    await expect(statut(F, "publiee")).rejects.toThrow();
+    expect((await un<{ s: string }>("select statut::text as s from public.formations where id = $1", [FORMATION])).s).toBe("desactivee");
+    const archivee = (await un<{ id: string }>("insert into public.formations (titre, slug, statut) values ('Archivée', $1, 'publiee') returning id", [randomUUID()])).id;
+    await statut(S, "archivee", archivee);
+    await expect(statut(S, "desactivee", archivee)).rejects.toThrow("Seule une formation publiée peut être désactivée.");
+  });
+
   it("Review Focus 3 et 5 : désactivée, elle ne redevient pas brouillon ; les certificats délivrés restent vérifiables", async () => {
     await expect(statut(S, "brouillon")).rejects.toThrow("Une formation désactivée se réactive (elle redevient publiée) ou s’archive.");
     await banc.db.query(
