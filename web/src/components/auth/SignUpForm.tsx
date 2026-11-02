@@ -21,6 +21,18 @@ export function SignUpForm() {
   return (
     <>
       <GoogleButton />
+      {/* Google n'a pas de case à cocher : la phrase vaut acceptation (conditions, §2). */}
+      <p className="m-0 -mt-1 text-center text-xs leading-[18px] text-discret">
+        En continuant avec Google, vous acceptez les{" "}
+        <Link href="/conditions" target="_blank" className={LIEN}>
+          conditions d’utilisation
+        </Link>{" "}
+        et la{" "}
+        <Link href="/confidentialite" target="_blank" className={LIEN}>
+          politique de confidentialité
+        </Link>
+        .
+      </p>
       <OrDivider label="ou avec votre e-mail" />
       <form action={action} noValidate className="flex flex-col gap-[18px]">
         <NextField />
