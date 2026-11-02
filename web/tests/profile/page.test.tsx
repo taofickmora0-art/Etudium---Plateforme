@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ProfileTabs } from "@/components/profile/ProfileTabs";
 import { ToastProvider } from "@/components/ui/Toast";
 import { routeFor } from "@/lib/auth/routing";
-import { DEMO_PROFILE } from "@/lib/demo-user";
+import { DEMO_JEU, DEMO_PROFILE } from "@/lib/demo-user";
 import { PAGES_A_VENIR } from "@/lib/pages-a-venir";
 import { ongletProfil } from "@/lib/profile/onglets";
 import { updatePreferences } from "@/lib/profile/actions";
@@ -14,6 +14,7 @@ vi.mock("@/lib/profile/actions", () => ({
   updateProfile: vi.fn(),
   updatePhoto: vi.fn(),
   updatePreferences: vi.fn(),
+  choisirObjectif: vi.fn(),
   changePassword: vi.fn(),
   deleteAccount: vi.fn(),
 }));
@@ -39,6 +40,25 @@ describe("Page du profil", () => {
       </ToastProvider>,
     );
     expect(screen.getByRole("tab", { name: "Notifications" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("l'étudiant : la carte « Gamification » (Informations) et l'objectif de la semaine (Notifications) ; le formateur, ni l'un ni l'autre", () => {
+    const { unmount } = render(
+      <ToastProvider>
+        <ProfileTabs profile={DEMO_PROFILE} jeu={DEMO_JEU} />
+      </ToastProvider>,
+    );
+    expect(screen.getByRole("region", { name: "Gamification" })).toBeInTheDocument();
+    // L'onglet Notifications reste monté, caché : on y cherche aussi les éléments cachés.
+    expect(screen.getByRole("radio", { name: "5 jours", hidden: true })).toBeChecked();
+    unmount();
+    render(
+      <ToastProvider>
+        <ProfileTabs profile={DEMO_PROFILE} />
+      </ToastProvider>,
+    );
+    expect(screen.queryByRole("region", { name: "Gamification" })).toBeNull();
+    expect(screen.queryByRole("radio", { name: "5 jours", hidden: true })).toBeNull();
   });
 
   it("les trois sections du profil", async () => {

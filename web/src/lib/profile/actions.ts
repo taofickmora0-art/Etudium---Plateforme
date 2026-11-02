@@ -90,6 +90,17 @@ export async function updatePreferences(prefs: NotificationPreferences): Promise
   }
 }
 
+/** Onglet Notifications : l'objectif de la semaine (lot 6 B), 3, 5 ou 7 jours ; la base revérifie le compte et la valeur. */
+export async function choisirObjectif(jours: number): Promise<{ ok: boolean }> {
+  if (jours !== 3 && jours !== 5 && jours !== 7) return { ok: false };
+  try {
+    const { error } = await (await createClient()).rpc("choisir_objectif", { p_jours: jours });
+    return { ok: !error };
+  } catch {
+    return { ok: false };
+  }
+}
+
 /**
  * Onglet Sécurité (NdMotDePasseModifie) : le mot de passe actuel est vérifié d'abord (spec §7), puis les autres appareils
  * sont déconnectés. Celui-ci reste connecté : la vérification lui a ouvert une session neuve.

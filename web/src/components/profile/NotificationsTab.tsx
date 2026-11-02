@@ -1,11 +1,13 @@
 "use client";
 
 import { Fragment, useRef, useState } from "react";
+import { ChoixObjectif } from "@/components/profile/ChoixObjectif";
 import { InterrupteurPush } from "@/components/profile/InterrupteurPush";
 import { Switch } from "@/components/ui/Switch";
 import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
 import { updatePreferences } from "@/lib/profile/actions";
+import type { ObjectifJours } from "@/lib/engagement/types";
 import type { ProfileData } from "@/lib/profile/data";
 import { CHANNELS, NOTIFICATION_CATEGORIES, type NotificationPreferences, type PreferenceKey } from "@/lib/profile/preferences";
 
@@ -13,9 +15,10 @@ const SEPARATEUR = <div className="h-px bg-bordure-carte" />;
 
 /**
  * Onglet Notifications (NdProfil). Chaque interrupteur s'enregistre tout de suite ; les envois partent un par un,
- * toujours avec le dernier état. En cas d'échec, retour au dernier état enregistré, et on le dit.
+ * toujours avec le dernier état. En cas d'échec, retour au dernier état enregistré, et on le dit. `objectif` : l'objectif
+ * de la semaine de l'étudiant (lot 6 B), sous les canaux.
  */
-export function NotificationsTab({ profile }: { profile: ProfileData }) {
+export function NotificationsTab({ profile, objectif }: { profile: ProfileData; objectif?: ObjectifJours }) {
   const { toast } = useToast();
   const [prefs, setPrefs] = useState<NotificationPreferences>(profile.preferences);
   const enregistre = useRef(profile.preferences);
@@ -80,28 +83,31 @@ export function NotificationsTab({ profile }: { profile: ProfileData }) {
           ))}
         </div>
       </div>
-      <div className="min-w-0 flex-[1_1_300px] rounded-carte border border-bordure-carte bg-panneau p-5 pb-2">
-        <h3 className="m-0 text-base leading-6 font-semibold text-encre">Canaux</h3>
-        <div className="mt-1.5 flex flex-col">
-          {CHANNELS.map((c, i) => (
-            <Fragment key={c.key}>
-              {i > 0 && SEPARATEUR}
-              {c.key === "canal_push" ? (
-                <InterrupteurPush actif={prefs.canal_push} onChange={(v) => basculer("canal_push", v)} />
-              ) : (
-                <Switch label={c.label} checked={prefs[c.key]} onCheckedChange={(v) => basculer(c.key, v)} className="min-h-11 py-2.5" />
-              )}
-            </Fragment>
-          ))}
-          {SEPARATEUR}
-          <div className="flex min-h-11 items-center justify-between gap-3 py-2.5">
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-[15px] leading-[22px] font-medium text-encre">E-mail</span>
-              <span className="text-[13px] leading-5 text-discret">Pour les messages importants</span>
+      <div className="flex min-w-0 flex-[1_1_300px] flex-col gap-5">
+        <div className="min-w-0 rounded-carte border border-bordure-carte bg-panneau p-5 pb-2">
+          <h3 className="m-0 text-base leading-6 font-semibold text-encre">Canaux</h3>
+          <div className="mt-1.5 flex flex-col">
+            {CHANNELS.map((c, i) => (
+              <Fragment key={c.key}>
+                {i > 0 && SEPARATEUR}
+                {c.key === "canal_push" ? (
+                  <InterrupteurPush actif={prefs.canal_push} onChange={(v) => basculer("canal_push", v)} />
+                ) : (
+                  <Switch label={c.label} checked={prefs[c.key]} onCheckedChange={(v) => basculer(c.key, v)} className="min-h-11 py-2.5" />
+                )}
+              </Fragment>
+            ))}
+            {SEPARATEUR}
+            <div className="flex min-h-11 items-center justify-between gap-3 py-2.5">
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <span className="text-[15px] leading-[22px] font-medium text-encre">E-mail</span>
+                <span className="text-[13px] leading-5 text-discret">Pour les messages importants</span>
+              </div>
+              <Tag tone="enAttente">Toujours actif</Tag>
             </div>
-            <Tag tone="enAttente">Toujours actif</Tag>
           </div>
         </div>
+        {objectif && <ChoixObjectif valeur={objectif} />}
       </div>
     </div>
   );

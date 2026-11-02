@@ -5,6 +5,7 @@ import { ProfileTabs } from "@/components/profile/ProfileTabs";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Heading, Lead } from "@/components/ui/Text";
 import { redirectToSortie } from "@/lib/auth/sortie";
+import { lireProgressionJeu } from "@/lib/engagement/data";
 import { getProfile } from "@/lib/profile/data";
 import { ongletProfil } from "@/lib/profile/onglets";
 
@@ -13,10 +14,11 @@ export const metadata: Metadata = { title: "Mon profil · Étudium" };
 type Params = { searchParams: Promise<{ onglet?: string }> };
 
 async function ProfilDuCompte({ searchParams }: Params) {
-  const [profile, { onglet }] = await Promise.all([getProfile(), searchParams]);
+  const [profile, { onglet }, jeu] = await Promise.all([getProfile(), searchParams, lireProgressionJeu()]);
   // Supabase ne reconnaît plus la session (fermée sur un autre appareil) : /auth/sortie l'efface de l'appareil.
   if (!profile) return redirectToSortie();
-  return <ProfileTabs profile={profile} ongletInitial={ongletProfil(onglet)} />;
+  // La progression du jeu (lot 6 B) : la carte « Gamification » et l'objectif ; rien sans la migration 0063.
+  return <ProfileTabs profile={profile} ongletInitial={ongletProfil(onglet)} jeu={jeu} />;
 }
 
 /** Mon profil (NdProfil) : onglets Informations, Notifications et Sécurité. */
