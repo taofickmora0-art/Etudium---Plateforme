@@ -18,6 +18,10 @@ vi.mock("@/lib/moderation/actions", () => ({
 vi.mock("@/lib/moderation/data", () => ({ lireEtatModeration: vi.fn(), lireFileModeration: vi.fn(), lireNombreAExaminer: vi.fn() }));
 
 const actions = await import("@/lib/moderation/actions");
+const { fixerDomaines } = await import("@/lib/auth/domaines-du-compte");
+
+// La file vue par un admin : le nom de l'auteur mène à sa fiche (lot 6 A ; le modérateur : tests/admin/acces-moderateur).
+fixerDomaines(["communaute", "contenus", "utilisateurs", "paiements", "statistiques"]);
 const { lireEtatModeration, lireFileModeration } = await import("@/lib/moderation/data");
 const { PageModeration } = await import("@/components/admin/moderation/PageModeration");
 const { ContenuModeration } = await import("@/components/admin/moderation/ContenuModeration");
