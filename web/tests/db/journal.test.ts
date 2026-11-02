@@ -119,6 +119,15 @@ describe("Migration 0061 : le journal des actions", () => {
     expect(lignes[0]).toMatchObject({ auteur: M, auteur_nom: "Gildas Tossou" });
   });
 
+  it("point reporté : modifier le commentaire d'un autre est au journal ; son propre commentaire, non", async () => {
+    const publication = (await un<{ id: string }>("insert into public.publications (auteur, texte) values ($1, 'Question') returning id", [E])).id;
+    const commentaire = (await un<{ id: string }>("insert into public.commentaires_publications (publication_id, auteur, texte) values ($1, $2, 'Réponse brute') returning id", [publication, E])).id;
+    const avant = await dernier();
+    await en(M, "select public.modifier_commentaire($1, 'Réponse corrigée par l’équipe')", [commentaire]);
+    await en(E, "select public.modifier_commentaire($1, 'Réponse corrigée par son autrice')", [commentaire]);
+    expect(await depuis(avant)).toMatchObject([{ categorie: "communaute", resume: "Commentaire de Fifamè Agossou modifié", auteur: M }]);
+  });
+
   it("une action d'étudiant, ou faite sans compte (tâche planifiée), n'écrit rien", async () => {
     const avant = await dernier();
     const publication = (await un<{ id: string }>("insert into public.publications (auteur, texte) values ($1, 'À effacer') returning id", [E])).id;

@@ -402,6 +402,29 @@ drop trigger if exists journal_commentaires on public.commentaires_lecons;
 create trigger journal_commentaires after delete on public.commentaires_lecons
   for each row execute function public.journal_commentaires();
 
+-- Le commentaire d'un autre corrigé par l'équipe (modifier_commentaire, 0025) : l'ancien texte reste au journal.
+create or replace function public.journal_commentaire_modifie()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_nom text;
+begin
+  if new.texte is not distinct from old.texte or new.auteur = (select auth.uid()) then
+    return null;
+  end if;
+  v_nom := coalesce(public.nom_du_profil(new.auteur), 'un membre');
+  perform public.journaliser('communaute', 'contenu_modifie', 'commentaire', new.id::text, v_nom, format('Commentaire de %s modifié', v_nom),
+    jsonb_build_object('avant', left(old.texte, 200), 'apres', left(new.texte, 200)));
+  return null;
+end;
+$$;
+drop trigger if exists journal_commentaire_modifie on public.commentaires_publications;
+create trigger journal_commentaire_modifie after update of texte on public.commentaires_publications
+  for each row execute function public.journal_commentaire_modifie();
+
 create or replace function public.journal_annonce_communaute()
 returns trigger
 language plpgsql
@@ -682,6 +705,7 @@ revoke execute on function public.journal_avis() from public, anon, authenticate
 revoke execute on function public.journal_publications() from public, anon, authenticated;
 revoke execute on function public.journal_commentaires() from public, anon, authenticated;
 revoke execute on function public.journal_annonce_communaute() from public, anon, authenticated;
+revoke execute on function public.journal_commentaire_modifie() from public, anon, authenticated;
 revoke execute on function public.journal_reglages_moderation() from public, anon, authenticated;
 revoke execute on function public.lire_journal(text, uuid, integer, bigint, integer) from public, anon;
 revoke execute on function public.auteurs_journal() from public, anon;
