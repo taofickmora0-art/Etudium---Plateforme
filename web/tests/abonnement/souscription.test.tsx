@@ -229,6 +229,24 @@ describe("Le pays et l'opérateur (Payiz, tous pays)", () => {
     expect(screen.getByText("Vous paierez 321,50 GHS (frais compris)")).toBeInTheDocument();
   });
 
+  it("un pays à un seul opérateur : il est choisi d'office", async () => {
+    avecMoyens();
+    await user.selectOptions(champPays(), "GHA");
+    expect(screen.getByRole("radio", { name: /MTN MoMo/ })).toBeChecked();
+  });
+
+  it("un montant hors des limites de l'opérateur : on le dit", async () => {
+    const limite: MoyensDePaiement = {
+      repli: false,
+      pays: [{ ...MOYENS.pays[0], operateurs: [...MOYENS.pays[0].operateurs.slice(0, 1), operateur("moov", "Moov Money", { maximum: 10000 })] }],
+    };
+    afficher({ moyens: { 15000: limite } });
+    await user.click(screen.getByRole("radio", { name: /Moov Money/ }));
+    expect(screen.getByText("Ce montant dépasse les limites de cet opérateur. Choisissez un autre opérateur.")).toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: /MTN Mobile Money/ }));
+    expect(screen.queryByText(/dépasse les limites/)).toBeNull();
+  });
+
   it("des frais annoncés en FCFA s'affichent aussi", () => {
     const avecFrais: MoyensDePaiement = {
       repli: false,

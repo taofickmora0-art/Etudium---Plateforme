@@ -18,7 +18,8 @@ const ouverts = { valeur: true };
 vi.mock("@/lib/abonnement/data", () => ({
   lireAbonnement: vi.fn(async () => (lectures.push("abonnement"), { etat: "gratuit" })),
   lirePaiements: vi.fn(async () => (lectures.push("paiements"), [])),
-  lireFormules: vi.fn(async () => (lectures.push("formules"), FORMULES)),
+  // Une formule retirée (inactive) : son prix n'est pas demandé à Payiz.
+  lireFormules: vi.fn(async () => (lectures.push("formules"), [...FORMULES, { ...FORMULES[0], id: "f4", prix: 30000, active: false }])),
   paiementsOuverts: vi.fn(async () => (lectures.push("ouverts"), ouverts.valeur)),
 }));
 // Les moyens de paiement de Payiz, lus pour chaque prix (gardés 5 minutes, src/lib/paiements/moyens.ts).

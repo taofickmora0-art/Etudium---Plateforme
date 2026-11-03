@@ -14,6 +14,6 @@ export async function ContenuAbonnement() {
   await resynchroniserEnAttente();
   const [abonnement, paiements, formules, ouverts] = await Promise.all([lireAbonnement(), lirePaiements(), lireFormules(), paiementsOuverts()]);
   // Les moyens de paiement de Payiz (gardés 5 minutes), seulement quand la souscription s'affiche ici et qu'on peut payer.
-  const moyens = ouverts && abonnement.etat !== "actif" ? await moyensParMontant(formules.map((f) => f.prix)) : {};
+  const moyens = ouverts && abonnement.etat !== "actif" ? await moyensParMontant(formules.filter((f) => f.active).map((f) => f.prix)) : {};
   return <PageAbonnement abonnement={abonnement} paiements={paiements} maintenant={new Date()} formules={formules} ouverts={ouverts} moyens={moyens} />;
 }

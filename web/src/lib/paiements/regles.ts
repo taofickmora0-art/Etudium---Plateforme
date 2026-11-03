@@ -44,7 +44,7 @@ export function normaliserTelephone(saisie: string, pays: PaysTelephone): string
 /**
  * L'opérateur proposé d'après le numéro normalisé et les préfixes de Payiz : le préfixe le plus long l'emporte ; deux
  * opérateurs à égalité, ou aucun : null (le payeur choisit). Au Bénin, des préfixes sans « 01 » (ancien format) valent
- * aussi après « 01 ». Payiz déduit aussi l'opérateur du numéro : ceci n'est qu'une proposition.
+ * aussi après « 01 » ; là où le « 0 » national tombe (Ghana), des préfixes écrits avec ce 0 valent aussi. Payiz déduit aussi l'opérateur du numéro : ceci n'est qu'une proposition.
  */
 export function operateurDuNumero(
   telephone: string,
@@ -54,7 +54,9 @@ export function operateurDuNumero(
   const chiffres = telephone.replace(/\D/g, "");
   if (!indicatif || !chiffres.startsWith(indicatif)) return null;
   const national = chiffres.slice(indicatif.length);
-  const formes = pays.code === "BEN" && /^01\d{8}$/.test(national) ? [national, national.slice(2)] : [national];
+  const formes = [national];
+  if (pays.code === "BEN" && /^01\d{8}$/.test(national)) formes.push(national.slice(2));
+  if (zeroNational(pays.code)) formes.push(`0${national}`);
   let meilleur: { code: Operateur; longueur: number } | null = null;
   let egalite = false;
   for (const o of pays.operateurs) {

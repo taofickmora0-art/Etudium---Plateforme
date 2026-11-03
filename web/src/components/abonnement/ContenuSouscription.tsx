@@ -15,7 +15,7 @@ export async function ContenuSouscription({ formule }: { formule: string | strin
   await resynchroniserEnAttente();
   const [formules, abonnement, ouverts] = await Promise.all([lireFormules(), lireAbonnement(), paiementsOuverts()]);
   const initiale = CODES.find((c) => c === formule) ?? null;
-  const moyens = ouverts ? await moyensParMontant(formules.map((f) => f.prix)) : {};
+  const moyens = ouverts ? await moyensParMontant(formules.filter((f) => f.active).map((f) => f.prix)) : {};
   return (
     <Souscription formules={formules} abonnement={abonnement} ouverts={ouverts} initiale={initiale} maintenant={new Date().toISOString()} moyens={moyens} />
   );

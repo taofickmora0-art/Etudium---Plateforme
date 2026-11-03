@@ -93,6 +93,12 @@ describe("Le numéro Mobile Money dans les autres pays", () => {
     expect(operateurDuNumero("+22860123456", togo)).toBeNull();
   });
 
+  it("là où le 0 national tombe (Ghana), des préfixes écrits avec ce 0 se reconnaissent aussi", () => {
+    const ghana = { ...GHANA, operateurs: [{ code: "mtn", prefixes: ["024", "054"] }, { code: "telecel", prefixes: ["20"] }] };
+    expect(operateurDuNumero("+233241234567", ghana)).toBe("mtn");
+    expect(operateurDuNumero("+233201234567", ghana)).toBe("telecel");
+  });
+
   it("au Bénin, des préfixes de l'ancien format (sans « 01 ») se reconnaissent aussi", () => {
     const benin = { ...BENIN, operateurs: [{ code: "celtiis", prefixes: ["40", "41", "43", "44"] }, { code: "mtn", prefixes: ["0142", "0197"] }] };
     expect(operateurDuNumero("+2290143000000", benin)).toBe("celtiis");
