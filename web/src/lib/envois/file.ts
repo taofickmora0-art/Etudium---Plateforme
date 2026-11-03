@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getPublicEnv } from "@/lib/env";
 import { configurationEnvois, type ConfigEnvois } from "./config";
-import { modeleEmail } from "./email";
+import { modeleEmail, type LigneDetail } from "./email";
 import { envoyerEmail as envoyerEmailResend } from "./resend";
 import { envoyerPush as envoyerPushWeb, type AppareilPush } from "./push";
 
@@ -20,10 +20,21 @@ type EnvoiPris = {
   titre: string;
   texte: string;
   lien: string | null;
+  /** Les lignes de détail d'un e-mail (0073) ; absentes avant la migration. */
+  details?: unknown;
   email: string | null;
   prenom: string | null;
   appareils: AppareilPush[] | null;
 };
+
+/** Les lignes de détail lisibles (libellé et valeur en texte) ; les autres sont ignorées. */
+function lignesDetail(v: unknown): LigneDetail[] {
+  if (!Array.isArray(v)) return [];
+  return v.flatMap((l) => {
+    const o = l && typeof l === "object" ? (l as Record<string, unknown>) : null;
+    return o && typeof o.libelle === "string" && typeof o.valeur === "string" ? [{ libelle: o.libelle, valeur: o.valeur }] : [];
+  });
+}
 
 export type DepsFile = {
   client?: SupabaseClient;
@@ -66,7 +77,7 @@ export async function viderFile(deps: DepsFile = {}): Promise<{ envoyes: number;
       if (e.canal === "email") {
         if (!config.email || !e.email) resultat = { ok: false, erreur: "Pas d’adresse e-mail ou pas de clé Resend." };
         else {
-          const m = modeleEmail({ titre: e.titre, texte: e.texte, lien: e.lien, prenom: e.prenom }, config.site);
+          const m = modeleEmail({ titre: e.titre, texte: e.texte, lien: e.lien, prenom: e.prenom, details: lignesDetail(e.details) }, config.site);
           // Propre à cette base : le numéro seul se répète d'une base à l'autre (essai, production).
           resultat = await envoyerEmail(config.email, { a: e.email, ...m, idempotence: `envoi-${e.id}-${Date.parse(e.cree_le)}` });
         }

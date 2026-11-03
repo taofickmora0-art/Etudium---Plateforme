@@ -133,6 +133,19 @@ describe("Vider la file", () => {
     ]);
   });
 
+  it("les lignes de détail d'un e-mail (0073) passent au modèle ; une ligne illisible est ignorée", async () => {
+    const details = [{ libelle: "Étudiant", valeur: "Awa Kpadé" }, { libelle: 3, valeur: "x" }, "rien", { libelle: "Reçu", valeur: "ET-R-2026-000004" }];
+    const f = fauxClient([
+      { id: 3, prise: PRISE, cree_le: CREE, canal: "email", titre: "Nouvel abonnement : Awa Kpadé", texte: "Basique", lien: "/admin/utilisateurs/x", details, email: "admin@exemple.com", prenom: null, appareils: [] },
+    ]);
+    const envoyerEmail = vi.fn().mockResolvedValue({ ok: true });
+    await viderFile({ client: f.client, config: configurationEnvois(CLES), envoyerEmail });
+    const { html } = envoyerEmail.mock.calls[0][1];
+    expect(html).toContain(">Awa Kpadé</td>");
+    expect(html).toContain(">ET-R-2026-000004</td>");
+    expect(html).not.toContain(">x</td>");
+  });
+
   it("Review Focus 3 : un push vers un appareil disparu le retire, l'envoi est fait", async () => {
     const appareils = [{ adresse: "https://push.exemple/1", p256dh: "k", auth: "a" }];
     const f = fauxClient([{ id: 3, prise: PRISE, cree_le: CREE, canal: "push", titre: "Nouveau message", texte: "Bonjour", lien: "/messages", email: null, prenom: null, appareils }]);

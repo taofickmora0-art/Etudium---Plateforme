@@ -1,8 +1,12 @@
 // Le modèle des e-mails importants (paiement reçu, rappels d'abonnement, compte suspendu ou réactivé) : la charte des
 // modèles de web/supabase/templates, un bouton vers la page concernée, la raison de l'envoi en pied de page.
 // Tout ce qui vient de la base est échappé ; seul un lien interne (« /… ») est suivi, rendu absolu avec l'adresse du site.
+// Depuis la 0073, un e-mail peut porter des lignes de détail (l'alerte de l'équipe à chaque nouvel abonnement : nom de
+// l'étudiant, formule, prix, reçu…), en tableau sous le texte ; un e-mail qui mène au back-office s'adresse à l'équipe.
 
-export type ContenuEmail = { titre: string; texte: string; lien: string | null; prenom: string | null };
+/** Une ligne de détail : « Prix » → « 9 000 FCFA ». */
+export type LigneDetail = { libelle: string; valeur: string };
+export type ContenuEmail = { titre: string; texte: string; lien: string | null; prenom: string | null; details?: LigneDetail[] };
 export type ModeleEmail = { sujet: string; html: string; texte: string };
 
 /**
@@ -23,19 +27,43 @@ function adresse(lien: string | null, site: string): string | null {
   return site + lien;
 }
 
+/** Un lien vers le back-office : l'e-mail s'adresse à l'équipe. */
+const versBackOffice = (lien: string | null) => lien === "/admin" || Boolean(lien?.startsWith("/admin/"));
+
+/** Les lignes de détail, en tableau : le libellé en gris, la valeur en noir. */
+function tableauDetails(details: LigneDetail[]): string {
+  if (details.length === 0) return "";
+  const lignes = details
+    .map(
+      (l) => `<tr>
+                    <td style="padding: 8px 16px 8px 0; border-bottom: 1px solid #e4e7ec; font-size: 14px; line-height: 20px; color: #667085; vertical-align: top; white-space: nowrap">${echapper(l.libelle)}</td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #e4e7ec; font-size: 14px; line-height: 20px; color: #1d1d1f; vertical-align: top">${echapper(l.valeur)}</td>
+                  </tr>`,
+    )
+    .join("\n                  ");
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0 0; border-top: 1px solid #e4e7ec; font-family: ${POLICE}">
+                  ${lignes}
+                </table>`;
+}
+
 export function modeleEmail(e: ContenuEmail, site: string): ModeleEmail {
   const sujet = e.titre.replace(/\s+/g, " ").trim();
   const url = adresse(e.lien, site);
   const bonjour = e.prenom?.trim() ? `Bonjour ${e.prenom.trim()},` : "Bonjour,";
   const texte = e.texte.trim();
+  const details = e.details ?? [];
+  const equipe = versBackOffice(e.lien);
+  const libelleBouton = equipe ? "Ouvrir le back-office" : "Ouvrir Étudium";
+  const raison = equipe ? "Vous recevez cet e-mail car vous faites partie de l’équipe Étudium." : "Vous recevez cet e-mail car il concerne votre compte Étudium.";
 
-  const texteBrut = [bonjour, sujet, texte, url ? `Ouvrir Étudium : ${url}` : "", "— L’équipe Étudium"].filter(Boolean).join("\n\n");
+  const lignesTexte = details.map((l) => `${l.libelle} : ${l.valeur}`).join("\n");
+  const texteBrut = [bonjour, sujet, texte, lignesTexte, url ? `${libelleBouton} : ${url}` : "", "— L’équipe Étudium"].filter(Boolean).join("\n\n");
 
   const bouton = url
     ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 24px 0 0">
                   <tr>
                     <td style="background: #0b18c9; border-radius: 12px">
-                      <a href="${echapper(url)}" style="display: inline-block; padding: 12px 22px; font-family: ${POLICE}; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none">Ouvrir Étudium</a>
+                      <a href="${echapper(url)}" style="display: inline-block; padding: 12px 22px; font-family: ${POLICE}; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none">${libelleBouton}</a>
                     </td>
                   </tr>
                 </table>`
@@ -67,13 +95,14 @@ export function modeleEmail(e: ContenuEmail, site: string): ModeleEmail {
                 <p style="margin: 0 0 12px; font-size: 15px; line-height: 24px; color: #232326">${echapper(bonjour)}</p>
                 <h1 style="margin: 0 0 12px; font-size: 22px; line-height: 30px; font-weight: 600; color: #1d1d1f">${echapper(sujet)}</h1>
                 ${paragraphe}
+                ${tableauDetails(details)}
                 ${bouton}
                 <p style="margin: 24px 0 0; font-size: 14px; line-height: 22px; color: #667085">— L’équipe Étudium</p>
               </td>
             </tr>
             <tr>
               <td style="padding: 20px 4px 0; font-family: ${POLICE}; font-size: 12px; line-height: 18px; color: #667085">
-                Vous recevez cet e-mail car il concerne votre compte Étudium.<br />
+                ${raison}<br />
                 Étudium · Formation, compétences digitales et accompagnement des étudiants et des jeunes diplômés.
               </td>
             </tr>

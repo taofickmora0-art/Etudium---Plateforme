@@ -1328,12 +1328,17 @@ Les dix formations d'exemple (Excel, Word, Zotero, PowerPoint, Méthodologie du 
    - quelle forme ont les éléments de `details.operators` dans l'erreur `operator_required` : des codes, ou des objets `{ code, name }` ? (Étudium accepte les deux.)
    - le format des `phone_prefixes` au Bénin depuis le passage à 10 chiffres : « 0197 » ou « 97 » ? (Étudium accepte les deux.)
 
-## 72. Un code promo pour les abonnements choisis (migration 0073), 10 minutes
+## 72. Codes promo par abonnement, et l'équipe prévenue de chaque abonnement (migration 0073), 15 minutes
 
 Un code promo ne vaut plus forcément pour tous les abonnements : tu choisis ceux qu'il concerne, en plus du type de remise, des dates, de la limite d'utilisations et du réglage « Actif ».
 - **Au back-office** (Abonnements et paiements › onglet « Codes promo ») : la fenêtre d'un code a une rubrique « Abonnements concernés », avec une case par abonnement (« Basique · 3 mois », « Standard · 6 mois », « Premium · 1 an »). Un nouveau code a toutes ses cases décochées : coches-en au moins une, sinon « Choisissez au moins un abonnement. » s'affiche sous la rubrique. « Modifier » coche les abonnements actuels du code. La liste a une colonne « Abonnements » : « Basique, Premium », ou « Tous » quand le code vaut pour les trois.
 - **Les codes existants** valent pour les trois abonnements : la migration les coche tous, rien ne change pour eux tant que tu ne les modifies pas.
 - **Côté étudiant** : un code appliqué à un abonnement qu'il ne concerne pas affiche « Ce code ne s'applique pas à l'abonnement Standard. » sous le champ, sans remise. Si l'étudiant change d'abonnement après avoir appliqué un code, le code est revérifié pour le nouvel abonnement : la remise est recalculée, ou retirée avec ce message ; « Payer » attend la réponse. Un code refusé pour un abonnement est aussi réessayé quand il en choisit un autre. Chaque vérification compte comme un essai de code (10 par 10 minutes, section 56).
+- **L'équipe prévenue de chaque abonnement** : après la 0073, chaque abonnement pris par un étudiant (payé, ou offert par un code à 100 %) prévient l'équipe des paiements, c'est-à-dire les admins et le super admin dont le compte n'est pas suspendu, une seule fois par paiement :
+  - une notification dans la cloche du back-office (avec le son, et en push sur un appareil enregistré) : « Nouvel abonnement : Awa Kpadé », puis par exemple « Basique · 3 mois · 8 100 FCFA payés (code TESTP10) · Moov Money (Bénin) » ; un clic ouvre la fiche du compte au back-office (Utilisateurs), avec son abonnement et ses paiements ;
+  - un e-mail aux mêmes personnes, avec le détail : nom et adresse e-mail de l'étudiant, abonnement et durée, période (début et fin), prix, remise et code promo, montant payé, opérateur et pays, numéro de reçu, date et heure du paiement (heure du Bénin), et un bouton « Ouvrir le back-office ». L'e-mail ne part que si les envois sont actifs (section 59) ; ils le sont déjà en production ;
+  - un abonnement que tu attribues à la main (paiement hors plateforme ou offert, section 57) ne prévient personne : c'est toi qui l'as fait. Les paiements d'avant la 0073 ne sont pas annoncés après coup : ils sont dans l'onglet « Paiements » ;
+  - cette notification est de la catégorie « service », comme « À modérer » : elle ne se coupe pas dans les préférences.
 
 1. **La migration, sur la base de test** (etudium-dev) : Supabase › SQL Editor › New query, colle tout le fichier `web/supabase/migrations/0073_codes_promo_formules.sql`, après la 0072 (section 71), puis Run. Elle se relance sans risque : un code que tu as restreint le reste.
 2. **Sur la base de production** : si elle existe déjà, colle ce même fichier dans son éditeur SQL (SQL Editor › New query › Run), **avant** de mettre le code en ligne. L'ancien code marche avec la nouvelle base (un code qu'il crée vaut pour tous les abonnements, une modification garde ceux du code), pas l'inverse. Une base de production neuve l'a déjà : la 0073 est à la fin de `web/supabase/production/partie-5.sql`.
@@ -1344,4 +1349,6 @@ Un code promo ne vaut plus forcément pour tous les abonnements : tu choisis ceu
    - « Modifier » sur `BASIQUE10` : seule la case Basique est cochée ; « Désactiver » puis « Activer » ne changent pas ses abonnements ;
    - en étudiant, « S'abonner » : choisis Standard, saisis `BASIQUE10`, puis « Appliquer » : « Ce code ne s'applique pas à l'abonnement Standard. », et le total reste le prix de Standard ;
    - clique sur Basique : le code est réessayé tout seul et la remise s'affiche ; reviens sur Standard : la remise disparaît, et le message revient ;
-   - un ancien code (`PROMO20`, par exemple) marche toujours sur les trois abonnements.
+   - un ancien code (`PROMO20`, par exemple) marche toujours sur les trois abonnements ;
+   - après un paiement de test réussi (section 56), ton compte admin a « Nouvel abonnement : … » dans la cloche, avec le son, et un clic ouvre la fiche du compte ; l'e-mail « Nouvel abonnement : … » arrive avec le détail, si les envois sont actifs ;
+   - un abonnement attribué à la main depuis une fiche de compte ne crée ni notification ni e-mail « Nouvel abonnement ».

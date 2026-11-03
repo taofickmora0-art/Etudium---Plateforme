@@ -891,6 +891,10 @@ commit;
 --   - enregistrer_code_promo reçoit la liste des abonnements et refuse une liste vide. Appelée sans elle (l'appli d'avant
 --     cette version, avec ses 8 paramètres), elle garde les abonnements du code, ou les donne tous à un nouveau code.
 --   - codes_promo_equipe renvoie les abonnements de chaque code.
+-- Deuxième partie (même jour : « quand quelqu'un fait un abonnement, peu importe le type, je dois recevoir une
+-- notification dans l'espace admin et aussi un mail ») : chaque abonnement pris par un étudiant (payé, ou offert par un
+-- code) prévient l'équipe des paiements, une seule fois, par une notification (cloche, push) et un e-mail détaillé
+-- (lignes de détail : nouvelle colonne envois.details, renvoyée par prendre_envois).
 -- À appliquer après la 0072. Rejouable.
 
 begin;
@@ -1093,12 +1097,197 @@ begin
 end;
 $$;
 
+-- ═══ Deuxième partie : chaque nouvel abonnement prévient l'équipe des paiements ═══════════════════════
+
+-- ─── Les lignes de détail d'un e-mail ───────────────────────────────────────────────────────────────
+-- [{ "libelle": "Prix", "valeur": "9 000 FCFA" }, …] : affichées en tableau sous le texte (src/lib/envois/email.ts).
+alter table public.envois add column if not exists details jsonb;
+alter table public.envois drop constraint if exists envois_details;
+alter table public.envois add constraint envois_details check (details is null or jsonb_typeof(details) = 'array');
+
+-- ─── Le nom d'un pays de Payiz (code alpha-3), en français ──────────────────────────────────────────
+-- Les pays d'Afrique où Payiz peut proposer le paiement ; un autre code reste tel quel.
+create or replace function public.nom_pays(p_code text)
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select case p_code
+    when 'BEN' then 'Bénin' when 'BFA' then 'Burkina Faso' when 'CIV' then 'Côte d’Ivoire' when 'GNB' then 'Guinée-Bissau'
+    when 'MLI' then 'Mali' when 'NER' then 'Niger' when 'SEN' then 'Sénégal' when 'TGO' then 'Togo'
+    when 'CMR' then 'Cameroun' when 'CAF' then 'Centrafrique' when 'COG' then 'Congo-Brazzaville' when 'COD' then 'Congo-Kinshasa'
+    when 'GAB' then 'Gabon' when 'GNQ' then 'Guinée équatoriale' when 'TCD' then 'Tchad' when 'GIN' then 'Guinée'
+    when 'GHA' then 'Ghana' when 'NGA' then 'Nigeria' when 'GMB' then 'Gambie' when 'SLE' then 'Sierra Leone' when 'LBR' then 'Liberia'
+    when 'MRT' then 'Mauritanie' when 'CPV' then 'Cap-Vert' when 'KEN' then 'Kenya' when 'UGA' then 'Ouganda' when 'TZA' then 'Tanzanie'
+    when 'RWA' then 'Rwanda' when 'BDI' then 'Burundi' when 'ZMB' then 'Zambie' when 'MOZ' then 'Mozambique' when 'MDG' then 'Madagascar'
+    when 'MAR' then 'Maroc' when 'DZA' then 'Algérie' when 'TUN' then 'Tunisie' when 'EGY' then 'Égypte' when 'ZAF' then 'Afrique du Sud'
+    else p_code
+  end;
+$$;
+
+-- ─── L'alerte de l'équipe ───────────────────────────────────────────────────────────────────────────
+-- Au moment unique où un paiement réussi crée son abonnement (activer_paiement : un abonnement par paiement, et un
+-- webhook rejoué ne repasse pas par là). Destinataires : les comptes actifs du domaine « paiements » (admins et super
+-- admins, membres_domaine de la 0060), l'auteur compris s'il en fait partie. Un abonnement attribué à la main (0054)
+-- ne prévient pas : c'est l'équipe qui l'a fait. Un abonnement offert par un code à 100 % prévient, avec « offert ».
+-- La notification (catégorie « service », comme « À modérer ») va dans la cloche, et en push pour qui a un appareil ;
+-- l'e-mail, plus détaillé, est mis directement dans la file d'envoi (0058).
+create or replace function public.prevenir_equipe_abonnement()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_paiement public.paiements%rowtype;
+  v_formule public.formules%rowtype;
+  v_equipe uuid[] := public.membres_domaine('paiements');
+  v_nom text;
+  v_email text;
+  v_code text;
+  v_duree text;
+  v_moyen text;
+  v_offert text;
+  v_paye_le timestamptz;
+  v_titre text;
+  v_texte text;
+  v_lien text := '/admin/utilisateurs/' || new.profil_id::text;
+  v_details jsonb;
+begin
+  select * into v_paiement from public.paiements p where p.id = new.paiement_id;
+  if not found or v_paiement.source = 'manuel' or cardinality(v_equipe) = 0 then
+    return null;
+  end if;
+  select * into v_formule from public.formules f where f.id = new.formule_id;
+  select nullif(btrim(concat_ws(' ', nullif(btrim(pr.prenom), ''), nullif(btrim(pr.nom), ''))), ''), nullif(btrim(u.email), '')
+  into v_nom, v_email
+  from public.profils pr
+  left join auth.users u on u.id = pr.id
+  where pr.id = new.profil_id;
+  select c.code into v_code from public.codes_promo c where c.id = v_paiement.code_promo_id;
+  v_duree := case when v_formule.duree_mois = 12 then '1 an' else v_formule.duree_mois || ' mois' end;
+  v_paye_le := coalesce(v_paiement.confirme_le, now());
+  if v_paiement.montant > 0 then
+    v_moyen := coalesce(
+      nullif(btrim(v_paiement.operateur_nom), ''),
+      case v_paiement.operateur when 'mtn' then 'MTN Mobile Money' when 'moov' then 'Moov Money' when 'celtiis' then 'Celtiis Cash' end,
+      initcap(nullif(btrim(replace(replace(v_paiement.operateur, '_', ' '), '-', ' ')), '')),
+      'Mobile Money'
+    ) || coalesce(' (' || public.nom_pays(v_paiement.pays) || ')', '');
+  else
+    v_offert := 'offert' || coalesce(' (code ' || v_code || ')', '');
+  end if;
+
+  v_titre := 'Nouvel abonnement : ' || coalesce(v_nom, v_email, 'un compte');
+  v_texte := concat_ws(' · ',
+    v_formule.nom,
+    v_duree,
+    coalesce(v_offert, public.montant_lisible(v_paiement.montant) || ' FCFA payés' || coalesce(' (code ' || v_code || ')', '')),
+    v_moyen
+  );
+
+  select coalesce(jsonb_agg(jsonb_build_object('libelle', l.libelle, 'valeur', l.valeur) order by l.rang), '[]'::jsonb)
+  into v_details
+  from (values
+    (1, 'Étudiant', coalesce(v_nom, '—')),
+    (2, 'E-mail', v_email),
+    (3, 'Abonnement', v_formule.nom || ' · ' || v_duree),
+    (4, 'Période', 'Du ' || public.date_longue(new.debut) || ' au ' || public.date_longue(new.fin)),
+    (5, 'Prix', public.montant_lisible(v_paiement.prix_initial) || ' FCFA'),
+    (6, 'Remise', case when v_paiement.remise > 0 then '− ' || public.montant_lisible(v_paiement.remise) || ' FCFA' || coalesce(' (code ' || v_code || ')', '') end),
+    (7, 'Montant payé', public.montant_lisible(v_paiement.montant) || ' FCFA'
+      || case when v_paiement.montant = 0 then ' (offert' || coalesce(' par le code ' || v_code, '') || ')' else '' end),
+    (8, 'Moyen de paiement', v_moyen || coalesce(' · ' || nullif(btrim(v_paiement.telephone_masque), ''), '')),
+    (9, 'Reçu', v_paiement.numero_recu),
+    (10, 'Payé le', public.date_longue(v_paye_le) || ' à ' || to_char(v_paye_le at time zone 'Africa/Porto-Novo', 'HH24" h "MI') || ' (heure du Bénin)')
+  ) as l (rang, libelle, valeur)
+  where l.valeur is not null;
+
+  perform public.notifier(v_equipe, 'service', v_titre, v_texte, v_lien, true);
+  insert into public.envois (canal, destinataire, titre, texte, lien, details)
+  select 'email', p.id, left(v_titre, 200), left(v_texte, 400), v_lien, v_details
+  from public.profils p
+  where p.id = any (v_equipe);
+  return null;
+end;
+$$;
+drop trigger if exists abonnements_equipe_prevenue on public.abonnements;
+create trigger abonnements_equipe_prevenue
+  after insert on public.abonnements
+  for each row when (new.paiement_id is not null)
+  execute function public.prevenir_equipe_abonnement();
+
+-- ─── Le serveur prend la file (dernière définition : 0058_push_emails.sql), avec les lignes de détail ─
+create or replace function public.prendre_envois(p_jeton text, p_canaux text[], p_limite integer)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_resultat jsonb;
+  v_prise uuid := gen_random_uuid();
+begin
+  perform public.exiger_jeton_envois(p_jeton);
+  -- Plus de 24 heures : trop tard pour prévenir.
+  update public.envois set statut = 'abandonne', erreur = coalesce(erreur, 'Trop ancien'), pris_le = null
+  where statut = 'a_envoyer' and cree_le < now() - interval '24 hours';
+  -- Un compte sans adresse e-mail : rien à essayer.
+  update public.envois e set statut = 'abandonne', erreur = 'Pas d’adresse e-mail', pris_le = null
+  where e.statut = 'a_envoyer' and e.canal = 'email'
+    and not exists (select 1 from auth.users u where u.id = e.destinataire and coalesce(btrim(u.email), '') <> '');
+
+  with pris as (
+    select e.id from public.envois e
+    where e.statut = 'a_envoyer'
+      and e.canal = any (coalesce(p_canaux, '{}'))
+      and e.prochain_essai <= now()
+      and (e.pris_le is null or e.pris_le < now() - interval '2 minutes')
+    order by e.id
+    limit greatest(1, least(coalesce(p_limite, 20), 50))
+    for update skip locked
+  ),
+  reserves as (
+    update public.envois e set pris_le = now(), prise = v_prise, essais = e.essais + 1
+    from pris where e.id = pris.id
+    returning e.*
+  )
+  select coalesce(jsonb_agg(
+    jsonb_build_object(
+      'id', r.id,
+      'prise', r.prise,
+      'cree_le', r.cree_le,
+      'canal', r.canal,
+      'titre', r.titre,
+      'texte', r.texte,
+      'lien', r.lien,
+      'details', r.details,
+      'email', case when r.canal = 'email' then (select u.email from auth.users u where u.id = r.destinataire) end,
+      'prenom', (select nullif(btrim(p.prenom), '') from public.profils p where p.id = r.destinataire),
+      'appareils', case when r.canal = 'push' then coalesce((
+        select jsonb_agg(jsonb_build_object('adresse', a.adresse, 'p256dh', a.cle_p256dh, 'auth', a.cle_auth))
+        from public.appareils_push a where a.profil_id = r.destinataire
+      ), '[]'::jsonb) else '[]'::jsonb end
+    )
+    order by r.id
+  ), '[]'::jsonb) into v_resultat
+  from reserves r;
+  return v_resultat;
+end;
+$$;
+
 -- ─── Droits ─────────────────────────────────────────────────────────────────────────────────────────
 revoke execute on function public.remise_code(text, uuid, uuid) from public, anon, authenticated;
 revoke execute on function public.codes_promo_equipe() from public, anon, authenticated;
 revoke execute on function public.enregistrer_code_promo(uuid, text, text, integer, timestamptz, timestamptz, integer, boolean, uuid[]) from public, anon, authenticated;
+revoke execute on function public.nom_pays(text) from public, anon, authenticated;
+revoke execute on function public.prevenir_equipe_abonnement() from public, anon, authenticated;
+revoke execute on function public.prendre_envois(text, text[], integer) from public;
 
 grant execute on function public.codes_promo_equipe() to authenticated;
 grant execute on function public.enregistrer_code_promo(uuid, text, text, integer, timestamptz, timestamptz, integer, boolean, uuid[]) to authenticated;
+-- Le serveur prend la file avec ou sans session : le jeton fait foi (comme en 0058).
+grant execute on function public.prendre_envois(text, text[], integer) to anon, authenticated;
 
 commit;

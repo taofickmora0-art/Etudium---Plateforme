@@ -39,6 +39,53 @@ describe("Le modèle d'e-mail", () => {
   });
 });
 
+// L'alerte de l'équipe à chaque nouvel abonnement (0073) : des lignes de détail sous le texte, et un bouton vers le
+// back-office.
+describe("Le modèle d'e-mail avec des lignes de détail", () => {
+  const ALERTE = {
+    titre: "Nouvel abonnement : Awa Kpadé",
+    texte: "Basique · 3 mois · 8 100 FCFA payés (code TESTP10) · Moov Money (Bénin)",
+    lien: "/admin/utilisateurs/11111111-1111-4111-8111-111111111111",
+    prenom: "Koffi",
+    details: [
+      { libelle: "Étudiant", valeur: "Awa Kpadé" },
+      { libelle: "E-mail", valeur: "awa@exemple.com" },
+      { libelle: "Remise", valeur: "− 900 FCFA (code <TESTP10>)" },
+      { libelle: "Payé le", valeur: "3 novembre 2026 à 14 h 05 (heure du Bénin)" },
+    ],
+  };
+
+  it("chaque ligne en tableau, libellé puis valeur, échappée", () => {
+    const m = modeleEmail(ALERTE, SITE);
+    expect(m.html).toContain(">Étudiant</td>");
+    expect(m.html).toContain(">Awa Kpadé</td>");
+    expect(m.html).toContain(">3 novembre 2026 à 14 h 05 (heure du Bénin)</td>");
+    expect(m.html).toContain("− 900 FCFA (code &lt;TESTP10&gt;)");
+    expect(m.html).not.toContain("<TESTP10>");
+    expect(m.html.indexOf(">Étudiant</td>")).toBeLessThan(m.html.indexOf(">E-mail</td>"));
+  });
+
+  it("un bouton « Ouvrir le back-office » et la raison de l'envoi pour l'équipe", () => {
+    const m = modeleEmail(ALERTE, SITE);
+    expect(m.html).toContain('href="https://etudium.app/admin/utilisateurs/11111111-1111-4111-8111-111111111111"');
+    expect(m.html).toContain("Ouvrir le back-office");
+    expect(m.html).not.toContain("Ouvrir Étudium");
+    expect(m.html).toContain("Vous recevez cet e-mail car vous faites partie de l’équipe Étudium.");
+  });
+
+  it("le texte brut reprend les lignes, « Libellé : valeur »", () => {
+    const m = modeleEmail(ALERTE, SITE);
+    expect(m.texte).toContain("Basique · 3 mois · 8 100 FCFA payés (code TESTP10) · Moov Money (Bénin)\n\nÉtudiant : Awa Kpadé\nE-mail : awa@exemple.com\n");
+    expect(m.texte).toContain("Ouvrir le back-office : https://etudium.app/admin/utilisateurs/");
+  });
+
+  it("sans lignes (les autres e-mails) : rien ne change", () => {
+    const sans = { titre: "Paiement reçu", texte: "Jusqu’au 1er mai 2027.", lien: "/abonnement", prenom: "Aïcha" };
+    expect(modeleEmail({ ...sans, details: [] }, SITE)).toEqual(modeleEmail(sans, SITE));
+    expect(modeleEmail(sans, SITE).html).not.toContain("Ouvrir le back-office");
+  });
+});
+
 describe("L'envoi par Resend", () => {
   const config = { cle: "re_test", expediteur: "Étudium <equipe@etudium.app>" };
   const message = { a: "a@exemple.com", sujet: "Paiement reçu", html: "<p>Bonjour</p>", texte: "Bonjour", idempotence: "envoi-12" };
