@@ -209,3 +209,15 @@ html[data-menu="reduit"] .menu-lateral .menu-lateral-entree {
   color: var(--color-indice);
 }
 
+
+/* Les champs de nombres sans les petites flèches du navigateur (demande du 3 novembre 2026 : rien de natif qui sorte
+   du design) ; on saisit au clavier, et le clavier numérique du téléphone reste proposé (inputMode). */
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

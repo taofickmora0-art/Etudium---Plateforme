@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
+import { ChampDate } from "@/components/ui/ChampDate";
 import { Dialog } from "@/components/ui/Dialog";
 import { Field } from "@/components/ui/Field";
 import { FilterChips } from "@/components/ui/FilterChips";
@@ -105,10 +106,10 @@ function FenetreCode({ initiale, onFermer }: { initiale: Saisie; onFermer: () =>
         </Field>
         <div className="flex flex-wrap gap-3.5">
           <Field label="Début (facultatif)" htmlFor="code-promo-debut" className="min-w-[150px] flex-1">
-            <TextInput id="code-promo-debut" type="date" value={s.debut} onChange={(e) => changer({ debut: e.target.value })} />
+            <ChampDate id="code-promo-debut" value={s.debut} onChange={(iso) => changer({ debut: iso })} />
           </Field>
           <Field label="Fin (facultatif)" htmlFor="code-promo-fin" className="min-w-[150px] flex-1">
-            <TextInput id="code-promo-fin" type="date" value={s.fin} onChange={(e) => changer({ fin: e.target.value })} />
+            <ChampDate id="code-promo-fin" value={s.fin} onChange={(iso) => changer({ fin: iso })} min={s.debut || undefined} />
           </Field>
         </div>
         <Field label="Limite d’utilisations (facultatif)" htmlFor="code-promo-limite" hint="Vide : sans limite.">
