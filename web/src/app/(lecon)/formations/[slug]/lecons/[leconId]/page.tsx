@@ -26,6 +26,7 @@ import { lireProgression } from "@/lib/progression/data";
 import { etatFormation } from "@/lib/progression/regles";
 import { lireMesScores } from "@/lib/quiz/data";
 import { lireStatutsExercices } from "@/lib/exercices/data";
+import { groupeDeLaFormation } from "@/lib/groupes/data";
 import type { DonneesLecon } from "@/lib/lecon/types";
 
 type Params = { params: Promise<{ slug: string; leconId: string }> };
@@ -56,6 +57,7 @@ async function Lecon({ params }: Params) {
   let lienModifier: string | null = null;
   let scores: Record<string, number> = {};
   let statuts: Awaited<ReturnType<typeof lireStatutsExercices>> = {};
+  let groupe: Awaited<ReturnType<typeof groupeDeLaFormation>> = null;
   try {
     // Une formation non publiée ne s'ouvre qu'en aperçu, pour l'équipe et son formateur (refonte des formations, §3.5).
     fiche = await getFiche(slug);
@@ -65,13 +67,15 @@ async function Lecon({ params }: Params) {
     }
     [donnees, lignes] = fiche ? await Promise.all([getLeconDans(fiche, leconId, connecte), connecte ? lireProgression() : null]) : [null, null];
     const aDes = (type: string) => Boolean(donnees?.fiche.modules.some((m) => m.lecons.some((l) => l.type === type)));
-    [moi, lienModifier, scores, statuts] = await Promise.all([
+    [moi, lienModifier, scores, statuts, groupe] = await Promise.all([
       connecte && donnees?.discussion ? moiCommunaute() : null,
       connecte && donnees ? lienModifierLecon(donnees.fiche.id, leconId) : null,
       // Le meilleur score de chaque quiz, dans le programme (lot 3).
       connecte && donnees && aDes("quiz") ? lireMesScores(donnees.fiche.id) : {},
       // Le dernier statut de chaque exercice, dans le programme (lot 3).
       connecte && donnees && aDes("exercice") ? lireStatutsExercices(donnees.fiche.id) : {},
+      // Le groupe de discussion de la formation (0075) : « Groupe de la formation », pour ses membres.
+      connecte && donnees ? groupeDeLaFormation(donnees.fiche.id) : null,
     ]);
   } catch (erreur) {
     return siTablesAbsentes(erreur);
@@ -101,6 +105,8 @@ async function Lecon({ params }: Params) {
     }
   }
   const progression = connecte && !apercu;
+  // Pas en aperçu (l'équipe et le formateur ouvrent le groupe depuis leur espace).
+  const lienGroupe = !apercu && groupe?.actif && groupe.ouvert && groupe.slug ? `/groupes/${groupe.slug}` : null;
   const terminees = lignes ? etatFormation(donnees.fiche, lignes).terminees : new Set<string>();
   const { precedente, suivante } = voisines(donnees.fiche.modules, leconId);
   // Bouton de fin : compte connecté, leçon ouverte, progression disponible en base (0007, 0008), et pas en aperçu.
@@ -124,6 +130,7 @@ async function Lecon({ params }: Params) {
             statuts={statuts}
             retour={retourEdition ? { href: retourEdition, libelle: "Retour à l’édition" } : undefined}
             progression={progression}
+            groupe={lienGroupe}
           />
         }
         haut={
@@ -137,7 +144,7 @@ async function Lecon({ params }: Params) {
         barre={precedente || suivante || actif ? <BarreLecon fiche={donnees.fiche} leconId={leconId} /> : undefined}
         tiroir={
           <TiroirLecons pied={progression ? <ProgressionCours fiche={donnees.fiche} terminees={terminees} /> : undefined}>
-            <ProgrammeMobile fiche={donnees.fiche} leconId={leconId} connecte={connecte} terminees={terminees} scores={scores} statuts={statuts} progression={progression} />
+            <ProgrammeMobile fiche={donnees.fiche} leconId={leconId} connecte={connecte} terminees={terminees} scores={scores} statuts={statuts} progression={progression} groupe={lienGroupe} />
           </TiroirLecons>
         }
       >

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight02Icon, Certificate01Icon, Clock01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight02Icon, Certificate01Icon, Clock01Icon, MessageMultiple02Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import { SectionAvis } from "@/components/avis/SectionAvis";
 import { BoutonFavori } from "@/components/favoris/BoutonFavori";
 import { BoutonInscription } from "@/components/inscriptions/BoutonInscription";
@@ -15,6 +15,7 @@ import type { FicheFormation } from "@/lib/catalogue/types";
 import { cn } from "@/lib/cn";
 import type { StatutRendu } from "@/lib/exercices/types";
 import type { ApercuFormateur } from "@/lib/formateurs/types";
+import type { GroupeDeFormation } from "@/lib/groupes/types";
 import type { AccesFormation } from "@/lib/inscriptions/types";
 import type { EtatProgression } from "@/lib/progression/regles";
 import { BlocMonetisation } from "./BlocMonetisation";
@@ -98,7 +99,19 @@ function etatDeLaCarte(fiche: FicheFormation, acces: AccesFormation | null): "in
  * compte peut suivre (inscrit, à inscrire, aperçu, verrouillée). Puis le favori, « Validation et certificat » et le
  * parcours. Le bouton principal n'y est plus : il est en haut de la fiche (spec du 2 novembre 2026, §5).
  */
-function CarteAcces({ fiche, progression, favori, acces }: { fiche: FicheFormation; progression: EtatProgression | null; favori: boolean | null; acces: AccesFormation | null }) {
+function CarteAcces({
+  fiche,
+  progression,
+  favori,
+  acces,
+  groupe,
+}: {
+  fiche: FicheFormation;
+  progression: EtatProgression | null;
+  favori: boolean | null;
+  acces: AccesFormation | null;
+  groupe: GroupeDeFormation | null;
+}) {
   const etat = etatDeLaCarte(fiche, acces);
   const parcours = [...fiche.parcours].sort((a, b) => a.ordre - b.ordre)[0];
   const apercus = leconsApercu(fiche);
@@ -160,6 +173,18 @@ function CarteAcces({ fiche, progression, favori, acces }: { fiche: FicheFormati
           <span>Validation et certificat</span>
         </Link>
       )}
+      {/* Le groupe de discussion de la formation (0075), s'il est actif : le rejoindre, ou s'inscrire pour le rejoindre. */}
+      {groupe?.actif &&
+        (groupe.ouvert && groupe.slug ? (
+          <Button asChild variant="contour" className="mt-3.5 w-full">
+            <Link href={`/groupes/${groupe.slug}`}>
+              <Icon icon={MessageMultiple02Icon} size={18} />
+              <span>Rejoindre le groupe de discussion</span>
+            </Link>
+          </Button>
+        ) : (
+          <p className="m-0 mt-3.5 text-center text-[13px] leading-5 text-pretty text-discret">Inscrivez-vous pour rejoindre le groupe de discussion.</p>
+        ))}
       {/* Le parcours guide, il n'ouvre plus l'accès (restructuration, §5.2). */}
       {parcours && <p className="m-0 mt-3.5 text-center text-xs leading-[18px] text-pretty text-discret">Fait partie du parcours {parcours.nom}.</p>}
     </div>
@@ -203,6 +228,7 @@ export function FicheConnectee({
   monetisation = null,
   acces = null,
   formateur = null,
+  groupe = null,
 }: {
   fiche: FicheFormation;
   /** Le lien compétence → monétisation (0048) : « À suivre d'abord », « Et ensuite ? Vendre cette compétence ». */
@@ -222,6 +248,8 @@ export function FicheConnectee({
   acces?: AccesFormation | null;
   /** Le formateur du cours (0070) ; null sans la migration : le bloc d'avant, d'après la fiche. */
   formateur?: ApercuFormateur | null;
+  /** Le groupe de discussion de la formation (0075) ; null sans la migration ou sans groupe. */
+  groupe?: GroupeDeFormation | null;
 }) {
   // La note vient des avis lus pour ce compte quand ils sont là : son avis masqué y compte pour lui seul, il ne doit
   // pas le voir disparaître de la note (spec des notifications, §5). Sinon, la note de la formation.
@@ -236,7 +264,7 @@ export function FicheConnectee({
       cote={
         <>
           <FormateurDuCours fiche={fiche} formateur={formateur} />
-          <CarteAcces fiche={fiche} progression={progression} favori={favori} acces={acces} />
+          <CarteAcces fiche={fiche} progression={progression} favori={favori} acces={acces} groupe={groupe} />
           <CarteInclus fiche={fiche} />
         </>
       }

@@ -18,6 +18,7 @@ import { renvoyerFormateur } from "@/lib/catalogue/garde-formateur";
 import { compteConnecte } from "@/lib/catalogue/visiteur";
 import { lireFavoris } from "@/lib/favoris/data";
 import { lireFormateurDeFiche } from "@/lib/formateurs/data";
+import { groupeDeLaFormation } from "@/lib/groupes/data";
 import { lireAccesFormation } from "@/lib/inscriptions/data";
 import { lireProgression } from "@/lib/progression/data";
 import { etatFormation } from "@/lib/progression/regles";
@@ -67,7 +68,7 @@ async function Fiche({ params }: Params) {
   const vue = peutLireBrouillons(compte.roles) ? await avecBrouillonFormation(fiche) : { fiche, brouillon: false };
   // Le meilleur score de chaque quiz, dans le programme (lot 3).
   const aDes = (type: string) => fiche.modules.some((m) => m.lecons.some((l) => l.type === type));
-  const [lignes, favoris, avis, lienModifier, scores, statuts, acces, formateur] = await Promise.all([
+  const [lignes, favoris, avis, lienModifier, scores, statuts, acces, formateur, groupe] = await Promise.all([
     lireProgression(),
     lireFavoris(),
     lireAvis(fiche.id),
@@ -78,6 +79,8 @@ async function Fiche({ params }: Params) {
     // L'inscription (0069) : « S’inscrire à ce cours ». Pas en aperçu (formation non publiée) : on ne s'y inscrit pas.
     apercu ? null : lireAccesFormation(fiche.id),
     lireFormateurDeFiche(fiche.formateur?.id),
+    // Le groupe de discussion de la formation (0075) : « Rejoindre le groupe de discussion ». Pas en aperçu.
+    apercu ? null : groupeDeLaFormation(fiche.id),
   ]);
   const page = (
     <FicheConnectee
@@ -91,6 +94,7 @@ async function Fiche({ params }: Params) {
       monetisation={monetisation}
       acces={acces}
       formateur={formateur}
+      groupe={groupe}
     />
   );
   const avecBrouillon = vue.brouillon ? (

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft02Icon, AssignmentsIcon, Certificate01Icon, CheckmarkCircle02Icon, Clock01Icon, PlayCircleIcon, Quiz01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft02Icon, AssignmentsIcon, Certificate01Icon, CheckmarkCircle02Icon, Clock01Icon, MessageMultiple02Icon, PlayCircleIcon, Quiz01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
 import { Couverture } from "@/components/ui/Couverture";
 import { Icon } from "@/components/ui/Icon";
@@ -27,7 +27,19 @@ type Props = {
   retour?: { href: string; libelle: string };
   /** La progression en bas ; par défaut pour un compte connecté. Jamais en aperçu : rien n'y est enregistré. */
   progression?: boolean;
+  /** Le groupe de discussion de la formation (0075), s'il est actif et que le compte en est membre. */
+  groupe?: string | null;
 };
+
+/** « Groupe de la formation » (0075) : un accès discret au groupe de discussion, pour qui y est membre. */
+function LienGroupe({ href, className }: { href: string; className?: string }) {
+  return (
+    <Link href={href} className={cn("focus-etudium flex items-center gap-1.5 self-start rounded-champ text-[13px] leading-5 font-medium text-bleu no-underline hover:underline", className)}>
+      <Icon icon={MessageMultiple02Icon} size={16} />
+      <span>Groupe de la formation</span>
+    </Link>
+  );
+}
 
 // Ligne du panneau : le style des entrées de la barre latérale (48 px, rayon 14, icône 20, texte 16).
 const LIGNE = "focus-etudium flex h-12 items-center gap-2.5 rounded-bouton px-3 text-base font-medium no-underline transition-colors";
@@ -127,7 +139,7 @@ export function ProgressionCours({ fiche, terminees }: { fiche: FicheFormation; 
  * formation, puis les modules, repliables (celui de la leçon en cours ouvert), avec la durée de chaque leçon. Il défile
  * seul ; la progression (compte connecté) reste en bas (refonte des formations, spec §1.4).
  */
-export function ProgrammeLecon({ fiche, leconId, connecte, terminees, scores = {}, statuts = {}, retour, progression = connecte }: Props) {
+export function ProgrammeLecon({ fiche, leconId, connecte, terminees, scores = {}, statuts = {}, retour, progression = connecte, groupe = null }: Props) {
   const enCours = fiche.modules.find((m) => m.lecons.some((l) => l.id === leconId)) ?? fiche.modules[0];
   const haut = retour ?? (connecte ? { href: "/mes-formations", libelle: "Mes formations" } : { href: "/formations", libelle: "Toutes les formations" });
   const partielle = formationPartielle(fiche);
@@ -143,6 +155,7 @@ export function ProgrammeLecon({ fiche, leconId, connecte, terminees, scores = {
           <Link href={`/formations/${fiche.slug}`} className="focus-etudium text-base leading-6 font-semibold text-encre no-underline hover:underline">
             {fiche.titre}
           </Link>
+          {groupe && <LienGroupe href={groupe} className="mt-1.5" />}
         </div>
         <ModulesRepliables
           ouverts={enCours ? [enCours.id] : []}

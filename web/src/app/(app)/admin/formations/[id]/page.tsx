@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { LivresRecommandes } from "@/components/admin/bibliotheque/LivresRecommandes";
 import { FormationInfosForm } from "@/components/admin/FormationInfosForm";
 import { FormationOnglets } from "@/components/admin/FormationOnglets";
+import { GroupeDeLaFormation, lireReglageGroupe } from "@/components/groupes/GroupeDeLaFormation";
 import { PageAdmin } from "@/components/admin/PageAdmin";
 import { ongletHistorique } from "@/components/editeur/historique-serveur";
 import { BoutonPublierModifications } from "@/components/editeur/FenetrePublication";
@@ -43,6 +44,8 @@ async function FicheFormation({ params, searchParams }: Params) {
     lireLivresRecommandes(formation.id).catch(() => undefined),
     listLivresPublies().catch(() => []),
   ]);
+  // Le réglage « Groupe de discussion » (0075).
+  const groupe = await lireReglageGroupe(formation.id);
   return (
     <PageAdmin
       titre={formation.titre}
@@ -65,13 +68,17 @@ async function FicheFormation({ params, searchParams }: Params) {
         }
         programme={<OngletLecons formation={formation} />}
         publication={
-          <PublicationPanel
-            id={formation.id}
-            formation={formation}
-            formateurNom={formateurs.find((f) => f.id === formation.formateurId)?.nom ?? null}
-            version={historique.version}
-            suiveurs={suiveurs}
-          />
+          <div className="flex flex-col gap-5">
+            <PublicationPanel
+              id={formation.id}
+              formation={formation}
+              formateurNom={formateurs.find((f) => f.id === formation.formateurId)?.nom ?? null}
+              version={historique.version}
+              suiveurs={suiveurs}
+            />
+            {/* Le groupe de discussion de la formation (0075) : un réglage, appliqué tout de suite. */}
+            <GroupeDeLaFormation formationId={formation.id} espace="admin" lu={groupe} />
+          </div>
         }
         historique={historique.onglet}
         apprenants={

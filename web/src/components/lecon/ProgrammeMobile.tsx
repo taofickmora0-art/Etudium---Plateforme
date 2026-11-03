@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AssignmentsIcon, PlayIcon, Quiz01Icon, SquareLock02Icon, Tick02Icon, Video01Icon } from "@hugeicons/core-free-icons";
+import { AssignmentsIcon, MessageMultiple02Icon, PlayIcon, Quiz01Icon, SquareLock02Icon, Tick02Icon, Video01Icon } from "@hugeicons/core-free-icons";
 import { adresseLecon } from "@/components/catalogue/ProgrammeFiche";
 import { Icon, type IconSvgElement } from "@/components/ui/Icon";
 import { Tag } from "@/components/ui/Tag";
@@ -21,6 +21,8 @@ type Props = {
   statuts?: Readonly<Record<string, StatutRendu>>;
   /** Les compteurs « 1/4 » des modules ; par défaut pour un compte connecté. Jamais en aperçu (tâche 12). */
   progression?: boolean;
+  /** Le groupe de discussion de la formation (0075), s'il est actif et que le compte en est membre. */
+  groupe?: string | null;
 };
 
 const TUILES: Record<EtatLigne, { classe: string; icone: IconSvgElement }> = {
@@ -35,10 +37,17 @@ const LIGNE = "flex min-h-12 items-center gap-3.5 px-1 py-3.5";
 /**
  * Onglet « Programme » du téléphone (NdMobLecon §3.5). Tous les modules : rien ne se verrouille (spec du lot 3, choix 2).
  */
-export function ProgrammeMobile({ fiche, leconId, connecte, terminees, scores = {}, statuts = {}, progression = connecte }: Props) {
+export function ProgrammeMobile({ fiche, leconId, connecte, terminees, scores = {}, statuts = {}, progression = connecte, groupe = null }: Props) {
   const partielle = formationPartielle(fiche);
   return (
     <div className="flex min-w-0 flex-col">
+      {/* « Groupe de la formation » (0075) : un accès discret au groupe de discussion. */}
+      {groupe && (
+        <Link href={groupe} className="focus-etudium mb-2 flex items-center gap-1.5 self-start rounded-champ px-1 text-[13px] leading-5 font-medium text-bleu no-underline hover:underline">
+          <Icon icon={MessageMultiple02Icon} size={16} />
+          <span>Groupe de la formation</span>
+        </Link>
+      )}
       {fiche.modules.map((module, index) => (
         <div key={module.id} className="flex min-w-0 flex-col">
           {index > 0 && <div aria-hidden="true" className="mt-1.5 mb-2.5 h-px bg-bordure-carte" />}

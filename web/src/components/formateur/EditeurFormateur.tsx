@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { FormationInfosForm } from "@/components/admin/FormationInfosForm";
 import { FormationOnglets } from "@/components/admin/FormationOnglets";
+import { GroupeDeLaFormation, lireReglageGroupe } from "@/components/groupes/GroupeDeLaFormation";
 import { PageAdmin } from "@/components/admin/PageAdmin";
 import { ongletHistorique } from "@/components/editeur/historique-serveur";
 import { BoutonPublierModifications } from "@/components/editeur/FenetrePublication";
@@ -36,7 +37,7 @@ export async function EditeurFormateur({ params, searchParams }: Params) {
   }
   const [formation, parcours, { competences, liees }] = donnees;
   if (!formation) notFound();
-  const historique = await ongletHistorique(formation.id);
+  const [historique, groupe] = await Promise.all([ongletHistorique(formation.id), lireReglageGroupe(formation.id)]);
   return (
     <PageAdmin
       titre={formation.titre}
@@ -53,7 +54,13 @@ export async function EditeurFormateur({ params, searchParams }: Params) {
         ongletInitial={onglet && ONGLETS.includes(onglet) ? onglet : "informations"}
         informations={<FormationInfosForm formation={formation} parcours={parcours} formateurs={[]} espace="formateur" competences={competences} liees={liees} />}
         programme={<OngletLecons formation={formation} base="/formateur/formations" />}
-        publication={<PublicationFormateur id={formation.id} formation={formation} version={historique.version} />}
+        publication={
+          <div className="flex flex-col gap-5">
+            <PublicationFormateur id={formation.id} formation={formation} version={historique.version} />
+            {/* Le groupe de discussion de la formation (0075) : il l'active lui-même, tout de suite. */}
+            <GroupeDeLaFormation formationId={formation.id} espace="formateur" lu={groupe} />
+          </div>
+        }
         historique={historique.onglet}
         apprenants={
           <Suspense fallback={<Skeleton className="h-64 rounded-carte" />}>
