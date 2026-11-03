@@ -1,6 +1,5 @@
 import { useId, type ReactNode } from "react";
 import { StatCard } from "@/components/ui/StatCard";
-import { Tag } from "@/components/ui/Tag";
 
 // Blocs des tableaux de bord (back-office, espace formateur) : tuiles de chiffres et cartes titrées.
 
@@ -21,8 +20,8 @@ export function Tuile(props: Parameters<typeof StatCard>[0] & { children?: React
   );
 }
 
-/** Un bloc titré ; `lot` : ce qu'il montrera arrive avec ce lot. */
-export function Carte({ titre, lot, className, children }: { titre: string; lot?: number; className?: string; children: ReactNode }) {
+/** Un bloc titré. */
+export function Carte({ titre, className, children }: { titre: string; className?: string; children: ReactNode }) {
   const id = useId();
   return (
     <section
@@ -30,12 +29,9 @@ export function Carte({ titre, lot, className, children }: { titre: string; lot?
       aria-labelledby={id}
       className={`box-border flex min-w-0 flex-col gap-3 rounded-carte border border-bordure-carte bg-panneau px-5 py-[18px] ${className ?? ""}`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id={id} className="m-0 text-base leading-6 font-semibold text-encre">
-          {titre}
-        </h2>
-        {lot && <Tag tone="enAttente">{`Disponible au lot ${lot}`}</Tag>}
-      </div>
+      <h2 id={id} className="m-0 text-base leading-6 font-semibold text-encre">
+        {titre}
+      </h2>
       {children}
     </section>
   );

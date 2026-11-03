@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { render, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TableauDeBordFormateur as Donnees } from "@/lib/formateur/suivi";
 
 // Tableau de bord du formateur (design NdFormateur ; spec « Étudiants » et tableau de bord du formateur, §4).
@@ -21,7 +21,20 @@ vi.mock("@/lib/certificats/data", () => ({ lireCertificatsFormateur: () => lireC
 const lireCorrections = vi.fn();
 vi.mock("@/lib/exercices/data", () => ({ lireCorrections: () => lireCorrections(), MIGRATION_EXERCICES: "Appliquez la migration 0032 (guide « Ce qui te revient », section 38)." }));
 
+// « Question récente » : les conversations du formateur (messagerie, migration 0035), la plus récente d'abord.
+const lireConversations = vi.fn();
+vi.mock("@/lib/messages/data", () => ({ lireConversations: (...a: unknown[]) => lireConversations(...a) }));
+
 const { TableauDeBordFormateur } = await import("@/components/formateur/TableauDeBordFormateur");
+
+type Conversation = import("@/lib/messages/types").ConversationResume;
+const conversation = (id: string, nom: string, dernier: Partial<NonNullable<Conversation["dernier"]>>, nonLu = false): Conversation => ({
+  id,
+  avec: { nom, photoUrl: null, role: "Étudiant·e", equipe: false },
+  formation: { titre: "Maîtriser Microsoft Excel", slug: "excel" },
+  dernier: { texte: "", fichier: null, deMoi: false, creeLe: "2026-11-03T08:30:00Z", ...dernier },
+  nonLu,
+});
 
 const DONNEES: Donnees = {
   prenom: "Mireille",
@@ -43,6 +56,7 @@ beforeEach(() => {
   lireSessionsAnimees.mockReset().mockResolvedValue({ migrationAbsente: true });
   lireSessionDetail.mockReset();
   lireCertificatsFormateur.mockReset().mockResolvedValue(12);
+  lireConversations.mockReset().mockResolvedValue({ migrationAbsente: false, donnees: [] });
   lireCorrections.mockReset().mockResolvedValue({
     migrationAbsente: false,
     donnees: [{ renduId: "r1", etudiant: "Aïcha Kpadé", exercice: "Tableau des ventes", formation: "Maîtriser Microsoft Excel", formationId: "f1", module: "Analyse", moduleRang: 3, version: 2, nomFichier: "v2.xlsx", deposeLe: "2026-10-15T08:00:00Z" }],
@@ -106,14 +120,100 @@ describe("Tableau de bord du formateur", () => {
     expect(within(lignes[1]).getAllByRole("cell").map((c) => c.textContent)).toEqual(["Power Query pour débutants", "0", "—", "—", "—", "Brouillon", "Modifier"]);
   });
 
-  it("exercices à corriger (les plus anciens, vers leur correction) ; session live et question récente : lot 5", async () => {
+  it("exercices à corriger : les plus anciens, vers leur correction", async () => {
     render(await TableauDeBordFormateur());
     const exercices = screen.getByRole("region", { name: "Exercices à corriger" });
     expect(within(exercices).getByRole("link", { name: /Aïcha Kpadé/ })).toHaveAttribute("href", "/formateur/corrections/r1");
     expect(within(exercices).getByRole("link", { name: /Aïcha Kpadé/ })).toHaveTextContent("Tableau des ventes · Maîtriser Microsoft Excel");
     expect(within(exercices).getByRole("link", { name: "Voir toutes les corrections" })).toHaveAttribute("href", "/formateur/corrections");
-    expect(screen.getByRole("region", { name: "Prochaine session live" })).toHaveTextContent("Disponible au lot 5");
-    expect(screen.getByRole("region", { name: "Question récente" })).toHaveTextContent("Disponible au lot 5");
+  });
+
+  it("aucune carte ne parle d'un lot du chantier, même quand les sessions ne se lisent pas", async () => {
+    render(await TableauDeBordFormateur());
+    expect(document.body).not.toHaveTextContent(/lot \d/i);
+    expect(screen.getByRole("region", { name: "Prochaine session live" })).toHaveTextContent("Vos sessions live et leurs inscrits apparaîtront ici.");
+  });
+
+  describe("question récente : le dernier message d'un étudiant dans la messagerie", () => {
+    const VIDE = "Aucune question pour le moment. Les messages de vos étudiants s’afficheront ici.";
+    const carte = () => screen.getByRole("region", { name: "Question récente" });
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-11-03T09:00:00Z"));
+    });
+    afterEach(() => vi.useRealTimers());
+
+    it("un message non lu : l'étudiant, l'extrait, le moment, « Non lu » et Répondre vers la conversation", async () => {
+      lireConversations.mockResolvedValue({
+        migrationAbsente: false,
+        donnees: [conversation("c1", "Aïcha Kpadé", { texte: "Bonjour,\n\nje n’arrive pas à ouvrir   le module 3." }, true)],
+      });
+      render(await TableauDeBordFormateur());
+      expect(lireConversations).toHaveBeenCalledWith("formateur");
+      expect(within(carte()).getByText("Aïcha Kpadé")).toBeInTheDocument();
+      expect(within(carte()).getByText("AK")).toBeInTheDocument();
+      expect(within(carte()).getByText("Bonjour, je n’arrive pas à ouvrir le module 3.")).toHaveClass("line-clamp-2");
+      expect(within(carte()).getByText("il y a 30 min")).toBeInTheDocument();
+      expect(within(carte()).getByText("Non lu")).toBeInTheDocument();
+      expect(within(carte()).getByRole("link", { name: "Répondre à Aïcha Kpadé" })).toHaveAttribute("href", "/formateur/messages?c=c1");
+      expect(carte()).not.toHaveTextContent(/Disponible au lot/);
+    });
+
+    it("un message lu, avec une pièce jointe seule : « Pièce jointe », sans « Non lu »", async () => {
+      lireConversations.mockResolvedValue({ migrationAbsente: false, donnees: [conversation("c1", "Koffi Mensah", { texte: "", fichier: "devoir.xlsx" })] });
+      render(await TableauDeBordFormateur());
+      expect(within(carte()).getByText("Pièce jointe")).toBeInTheDocument();
+      expect(within(carte()).queryByText("Non lu")).toBeNull();
+    });
+
+    it("la photo de l'étudiant quand il en a une", async () => {
+      const avecPhoto = conversation("c1", "Koffi Mensah", { texte: "Merci" });
+      avecPhoto.avec.photoUrl = "https://exemple.test/koffi.jpg";
+      lireConversations.mockResolvedValue({ migrationAbsente: false, donnees: [avecPhoto] });
+      render(await TableauDeBordFormateur());
+      expect(carte().querySelector("img")).toHaveAttribute("src", "https://exemple.test/koffi.jpg");
+    });
+
+    it("le formateur a répondu en dernier : la conversation suivante, où l'étudiant a écrit en dernier", async () => {
+      lireConversations.mockResolvedValue({
+        migrationAbsente: false,
+        donnees: [
+          conversation("c1", "Aïcha Kpadé", { texte: "Avec plaisir !", deMoi: true, creeLe: "2026-11-03T08:50:00Z" }),
+          conversation("c2", "Koffi Mensah", { texte: "Où trouver le corrigé ?", creeLe: "2026-11-02T08:00:00Z" }),
+        ],
+      });
+      render(await TableauDeBordFormateur());
+      expect(within(carte()).queryByText("Aïcha Kpadé")).toBeNull();
+      expect(within(carte()).getByText("Koffi Mensah")).toBeInTheDocument();
+      expect(within(carte()).getByText("Où trouver le corrigé ?")).toBeInTheDocument();
+      expect(within(carte()).getByText("hier")).toBeInTheDocument();
+      expect(within(carte()).getByRole("link", { name: "Répondre à Koffi Mensah" })).toHaveAttribute("href", "/formateur/messages?c=c2");
+    });
+
+    it("le formateur a répondu partout : le cas vide", async () => {
+      lireConversations.mockResolvedValue({ migrationAbsente: false, donnees: [conversation("c1", "Aïcha Kpadé", { texte: "Avec plaisir !", deMoi: true })] });
+      render(await TableauDeBordFormateur());
+      expect(within(carte()).getByText(VIDE)).toBeInTheDocument();
+      expect(within(carte()).queryByRole("link")).toBeNull();
+    });
+
+    it("aucun message : la phrase, sans étiquette", async () => {
+      render(await TableauDeBordFormateur());
+      expect(within(carte()).getByText(VIDE)).toBeInTheDocument();
+      expect(carte()).not.toHaveTextContent(/Disponible au lot/);
+    });
+
+    it("la lecture échoue, ou la messagerie manque : le même cas vide, sans parler de migration", async () => {
+      lireConversations.mockRejectedValue(new Error("réseau"));
+      const { unmount } = render(await TableauDeBordFormateur());
+      expect(within(carte()).getByText(VIDE)).toBeInTheDocument();
+      unmount();
+      lireConversations.mockResolvedValue({ migrationAbsente: true });
+      render(await TableauDeBordFormateur());
+      expect(within(carte()).getByText(VIDE)).toBeInTheDocument();
+      expect(carte()).not.toHaveTextContent(/migration/i);
+    });
   });
 
   it("prochaine session live : Dans 2 jours, titre, date, plateforme, initiales, Voir la session", async () => {

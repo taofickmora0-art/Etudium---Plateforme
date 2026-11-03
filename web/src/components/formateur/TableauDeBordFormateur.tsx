@@ -13,10 +13,12 @@ import { inactivite } from "@/lib/formateur/regles-suivi";
 import { lireTableauDeBordFormateur } from "@/lib/formateur/suivi";
 import { lireCertificatsFormateur } from "@/lib/certificats/data";
 import { lireCorrections, MIGRATION_EXERCICES } from "@/lib/exercices/data";
+import { lireConversations } from "@/lib/messages/data";
 import { lireSessionDetail, lireSessionsAnimees } from "@/lib/sessions/data";
 import type { LigneSessionEdition } from "@/lib/sessions/types";
 import { initialesCompte, nomAffiche } from "@/lib/utilisateurs/regles";
 import { MigrationFormateurAbsente, MigrationSuiviAbsente, SansFiche } from "./cadre";
+import { derniereQuestion, QuestionRecente } from "./QuestionRecente";
 
 const COLONNES = ["Formation", "Inscrits", "Progression moyenne", "Taux de complétion", "Note", "Statut", ""];
 const chiffre = (n: number) => n.toLocaleString("fr-FR");
@@ -43,7 +45,7 @@ async function prochaineSession(): Promise<{ ligne: LigneSessionEdition | null; 
   }
 }
 
-/** Une lecture du lot 3 qui ne doit jamais casser le tableau de bord : null si elle échoue. */
+/** Une lecture annexe qui ne doit jamais casser le tableau de bord : null si elle échoue. */
 async function sansEchec<T>(lecture: Promise<T>): Promise<T | null> {
   try {
     return await lecture;
@@ -55,8 +57,8 @@ async function sansEchec<T>(lecture: Promise<T>): Promise<T | null> {
 
 /**
  * Tableau de bord du formateur (design NdFormateur ; spec « Étudiants » et tableau de bord, §4) : ses chiffres, ses
- * étudiants à risque, ses exercices à corriger (0032), sa prochaine session live (0018), ses formations. Les questions
- * arrivent au lot 5.
+ * étudiants à risque, ses exercices à corriger (0032), sa prochaine session live (0018), la dernière question d'un étudiant
+ * dans sa messagerie (0035), ses formations.
  * La page vérifie le rôle avant (requireSpace).
  */
 export async function TableauDeBordFormateur() {
@@ -85,7 +87,13 @@ export async function TableauDeBordFormateur() {
     );
   }
   const t = lecture.donnees;
-  const [session, certificats, corrections] = await Promise.all([prochaineSession(), sansEchec(lireCertificatsFormateur()), sansEchec(lireCorrections())]);
+  const [session, certificats, corrections, conversations] = await Promise.all([
+    prochaineSession(),
+    sansEchec(lireCertificatsFormateur()),
+    sansEchec(lireCorrections()),
+    sansEchec(lireConversations("formateur")),
+  ]);
+  const question = conversations && !conversations.migrationAbsente ? derniereQuestion(conversations.donnees) : null;
 
   return (
     <PageAdmin {...cadre} description={`Bonjour ${t.prenom || "à vous"}. Voici ce qui demande votre attention aujourd’hui.`}>
@@ -162,7 +170,7 @@ export async function TableauDeBordFormateur() {
 
         <div className={RANGEE}>
           {session === undefined ? (
-            <Carte titre="Prochaine session live" lot={5} className="flex-[1_1_320px]">
+            <Carte titre="Prochaine session live" className="flex-[1_1_320px]">
               <div className={AVENIR}>Vos sessions live et leurs inscrits apparaîtront ici.</div>
             </Carte>
           ) : (
@@ -170,8 +178,8 @@ export async function TableauDeBordFormateur() {
               <CarteSessionFormateur session={session.ligne} inscrits={session.inscrits} />
             </Carte>
           )}
-          <Carte titre="Question récente" lot={5} className="flex-[1_1_320px]">
-            <div className={AVENIR}>Les questions de vos étudiants apparaîtront ici.</div>
+          <Carte titre="Question récente" className="flex-[1_1_320px]">
+            <QuestionRecente conversation={question} />
           </Carte>
         </div>
 
