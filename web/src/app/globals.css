@@ -221,3 +221,16 @@ input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+
+/* iPhone et iPad (demande du 3 novembre 2026) : Safari agrandit la page quand on touche un champ écrit en moins de
+   16 px, et ne la remet pas à sa taille quand le clavier se ferme ; la page semble alors ne plus s'adapter à l'écran.
+   Les champs y sont donc en 16 px : plus de zoom automatique, et le zoom des doigts reste possible. Ce réglage ne vise
+   que Safari sur iOS (seul à connaître -webkit-touch-callout). Les cases du code (22 px) gardent leur taille. */
+@supports (-webkit-touch-callout: none) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([data-taille-libre]),
+  textarea,
+  select,
+  [contenteditable="true"] {
+    font-size: 16px !important;
+  }
+}

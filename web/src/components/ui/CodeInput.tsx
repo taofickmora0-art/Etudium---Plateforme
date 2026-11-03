@@ -95,6 +95,8 @@ export function CodeInput({ label, value, onChange, onComplete, length = 6, hint
             }}
             type="text"
             inputMode="numeric"
+            // 22 px, au-dessus des 16 px exigés par Safari sur iPhone (globals.css) : garde sa taille.
+            data-taille-libre=""
             autoComplete={index === 0 ? "one-time-code" : "off"}
             aria-label={`Chiffre ${index + 1}`}
             aria-invalid={invalid || Boolean(error) || undefined}
