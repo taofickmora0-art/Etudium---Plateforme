@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assertNoSecretKey, assertSiteUrlEnProduction, EnvError, readPublicEnv } from "@/lib/env";
+import { urlCouverture } from "@/lib/couvertures/adresse";
 
 const b64url = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
 const fakeJwt = (payload: object) => `${b64url({ alg: "HS256", typ: "JWT" })}.${b64url(payload)}.signature`;
@@ -17,6 +18,14 @@ function readError(source: Record<string, string | undefined>): EnvError {
 }
 
 describe("readPublicEnv", () => {
+  it("l'adresse de l'API des données collée à la place de celle du projet (« …/rest/v1/ ») est ramenée au projet", () => {
+    // Mise en ligne du 3 novembre 2026 : l'inscription échouait sans rien laisser dans le journal de Supabase.
+    for (const saisie of ["https://abcd.supabase.co/rest/v1/", "https://abcd.supabase.co/rest/v1", " https://abcd.supabase.co/auth/v1/ ", "https://abcd.supabase.co/storage/v1"]) {
+      expect(readPublicEnv({ NEXT_PUBLIC_SUPABASE_URL: saisie, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_xyz" }).supabaseUrl).toBe("https://abcd.supabase.co");
+    }
+    expect(urlCouverture("f1/a.jpg", "https://abcd.supabase.co/rest/v1/")).toBe("https://abcd.supabase.co/storage/v1/object/public/couvertures/f1/a.jpg");
+  });
+
   it("accepte une URL et une clé publishable", () => {
     expect(
       readPublicEnv({

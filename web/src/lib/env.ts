@@ -1,3 +1,5 @@
+import { racineSupabase } from "./couvertures/adresse";
+
 export type PublicEnvVariable = "NEXT_PUBLIC_SUPABASE_URL" | "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" | "NEXT_PUBLIC_SITE_URL";
 
 export type PublicEnv = { supabaseUrl: string; supabaseKey: string };
@@ -56,7 +58,7 @@ function isPublicKey(key: string): boolean {
 }
 
 export function readPublicEnv(source: Record<string, string | undefined>): PublicEnv {
-  const url = (source.NEXT_PUBLIC_SUPABASE_URL ?? "").trim().replace(/\/+$/, "");
+  const url = racineSupabase(source.NEXT_PUBLIC_SUPABASE_URL);
   const key = cleanKey(source.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
 
   if (!url) throw new EnvError("NEXT_PUBLIC_SUPABASE_URL", MESSAGES.urlVide);
