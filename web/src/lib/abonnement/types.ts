@@ -77,7 +77,12 @@ export type MoyensDePaiement = { pays: PaysPaiement[]; repli: boolean };
 
 export type EssaiCode =
   | { ok: true; prixInitial: number; remise: number; montant: number; /** Les moyens de paiement pour le montant après remise. */ moyens?: MoyensDePaiement }
-  | { ok: false; message: string };
+  | {
+      ok: false;
+      message: string;
+      /** Refusé pour cet abonnement seulement (0073) : il peut valoir pour un autre, l'écran le réessaie au changement. */
+      autreAbonnement?: true;
+    };
 
 /** Où en est un paiement, pour l'écran de souscription. */
 export type EtapePaiement =

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ComponentPropsWithoutRef } from "react";
+import { useEffect, useRef, useState, type ComponentPropsWithoutRef } from "react";
 import Link from "next/link";
 import { CheckmarkCircle02Icon, SmartPhone01Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import { Banner } from "@/components/ui/Banner";
@@ -23,6 +23,8 @@ import { phraseActif, ResultatPaiement } from "./ResultatPaiement";
 // les abonnements et le paiement Mobile Money se voient ensemble, puis la confirmation. Pendant l'attente, l'état est redemandé toutes les 3 secondes (le serveur le relit chez Payiz), pendant
 // 3 minutes au plus. Depuis le 3 novembre 2026, le pays et les opérateurs viennent de Payiz : le Bénin par défaut,
 // l'indicatif du pays devant le numéro, l'opérateur proposé d'après le numéro, et ce que le payeur paiera dans sa monnaie.
+// Un code promo ne vaut que pour les abonnements choisis par l'équipe (0073) : changer d'abonnement revérifie le code, et
+// une remise ne s'affiche que pour l'abonnement où elle a été vérifiée.
 
 const SUIVI_MS = 3000;
 const CHAMP_NUMERO = "numero-mobile-money";
@@ -31,7 +33,8 @@ const INDICATIF = "indicatif-mobile-money";
 const CARTE = "rounded-carte border border-bordure-carte bg-panneau px-6 pt-[22px] pb-6 max-sm:px-4 max-sm:pt-4 max-sm:pb-5";
 const REPLI = "La liste des opérateurs n’a pas pu être chargée : seuls MTN et Moov, au Bénin, sont proposés pour le moment.";
 
-type CodeApplique = { code: string; remise: number; montant: number };
+/** Un code vérifié par la base, pour cet abonnement-là seulement. */
+type CodeApplique = { code: string; remise: number; montant: number; formuleId: string };
 
 type Props = {
   formules: Formule[];
@@ -105,7 +108,12 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
   // `operator_required` : les opérateurs que Payiz propose pour ce numéro.
   const [candidats, setCandidats] = useState<Operateur[] | null>(null);
   const [saisieCode, setSaisieCode] = useState("");
-  const [code, setCode] = useState<CodeApplique | null>(null);
+  const [applique, setApplique] = useState<CodeApplique | null>(null);
+  // Le code refusé pour cet abonnement seulement (0073) : il est réessayé sur le prochain abonnement choisi.
+  const [aReessayer, setAReessayer] = useState<string | null>(null);
+  const [verification, setVerification] = useState(false);
+  // Le rang de la dernière vérification : une réponse arrivée après un autre choix est ignorée.
+  const derniereVerification = useRef(0);
   const [moyensCode, setMoyensCode] = useState<Record<number, MoyensDePaiement>>({});
   const [erreurCode, setErreurCode] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -116,6 +124,7 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
   const [demande, setDemande] = useState<{ montant: number; texte: string } | null>(null);
 
   const formule = choisissables.find((f) => f.id === formuleId);
+  const code = applique?.formuleId === formuleId ? applique : null;
   const prix = formule?.prix ?? 0;
   const total = code ? code.montant : prix;
   const offert = code !== null && total === 0;
@@ -219,25 +228,46 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
     setOperateur(operateurPropose(telephone, nouveau));
   }
 
-  function changerFormule(id: string) {
-    setFormuleId(id);
-    setCode(null);
+  /** Vérifie le code pour cet abonnement ; « Payer » attend la réponse. */
+  async function verifierCode(id: string, saisie: string) {
+    const rang = ++derniereVerification.current;
     setErreurCode(null);
+    setVerification(true);
+    try {
+      const r = await essayerCode(id, saisie);
+      if (rang !== derniereVerification.current) return;
+      if (r.ok) {
+        setApplique({ code: saisie, remise: r.remise, montant: r.montant, formuleId: id });
+        setAReessayer(null);
+        const pourCeMontant = r.moyens;
+        if (pourCeMontant) setMoyensCode((avant) => ({ ...avant, [r.montant]: pourCeMontant }));
+      } else {
+        setApplique(null);
+        setErreurCode(r.message);
+        setAReessayer(r.autreAbonnement ? saisie : null);
+      }
+    } finally {
+      if (rang === derniereVerification.current) setVerification(false);
+    }
+  }
+
+  // Un code appliqué, ou refusé pour l'abonnement d'avant seulement, est revérifié pour le nouveau ; jusque-là, aucune
+  // remise. Un autre refus (code inconnu, expiré) s'efface sans nouvel essai : les essais sont comptés (0053).
+  function changerFormule(id: string) {
+    const aVerifier = applique?.code ?? aReessayer;
+    derniereVerification.current += 1;
+    setFormuleId(id);
+    setApplique(null);
+    setAReessayer(null);
+    setErreurCode(null);
+    setVerification(false);
+    if (aVerifier) void verifierCode(id, aVerifier);
   }
 
   async function appliquer() {
     const saisie = saisieCode.trim();
     if (!saisie) return;
-    setErreurCode(null);
-    const r = await essayerCode(formuleId, saisie);
-    if (r.ok) {
-      setCode({ code: saisie, remise: r.remise, montant: r.montant });
-      const pourCeMontant = r.moyens;
-      if (pourCeMontant) setMoyensCode((avant) => ({ ...avant, [r.montant]: pourCeMontant }));
-    } else {
-      setCode(null);
-      setErreurCode(r.message);
-    }
+    await verifierCode(formuleId, saisie);
   }
 
   return (
@@ -389,7 +419,7 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
                 Paiement sécurisé par Payiz. Étudium ne voit jamais votre code secret.
               </p>
               <div className="flex gap-2 max-sm:w-full max-sm:flex-col-reverse">
-                <Button onClick={() => void lancer()} loading={occupe} disabled={!offert && !ouverts}>
+                <Button onClick={() => void lancer()} loading={occupe} disabled={(!offert && !ouverts) || verification}>
                   {offert ? "Activer mon abonnement offert" : `Payer ${montantFcfa(total)}`}
                 </Button>
               </div>

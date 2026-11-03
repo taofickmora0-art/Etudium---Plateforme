@@ -13,7 +13,7 @@ vi.mock("@/lib/auth/current-user", () => ({ getShellUser: () => getShellUser(), 
 vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 
 const actions = await import("@/lib/admin/paiements/actions");
-const { lireEtatPaiements } = await import("@/lib/admin/paiements/data");
+const { lireCodesParAbonnement, lireEtatPaiements, versCodePromo } = await import("@/lib/admin/paiements/data");
 
 // Le jeton du serveur, tiré de la clé Payiz de test.
 const JETON = jetonServeur("sk_test_cle");
@@ -93,6 +93,65 @@ describe("Formules, codes promo, abonnements", () => {
       p_limite: null,
       p_actif: true,
     });
+  });
+
+  // Un code pour les abonnements choisis (0073) : la liste part avec le code ; vide, elle est refusée sans appel.
+  const CODE = { id: null, code: "BASIQUE10", type: "pourcentage" as const, valeur: "10", debut: "", fin: "", limite: "", actif: true };
+  const AUTRE = "22222222-2222-4222-8222-222222222222";
+
+  it("enregistrer un code avec ses abonnements (0073), sans doublon", async () => {
+    faux.repondre("rpc.enregistrer_code_promo", { data: ID });
+    expect(await actions.enregistrerCodePromo({ ...CODE, formules: [ID, AUTRE, ID] })).toEqual({ ok: true });
+    expect(faux.de("rpc", "enregistrer_code_promo")[0].valeurs).toMatchObject({ p_code: "BASIQUE10", p_formules: [ID, AUTRE] });
+  });
+
+  it("aucun abonnement coché : « Choisissez au moins un abonnement. », sans appel ; un identifiant illisible est refusé", async () => {
+    expect(await actions.enregistrerCodePromo({ ...CODE, formules: [] })).toEqual({ ok: false, message: "Choisissez au moins un abonnement." });
+    expect(await actions.enregistrerCodePromo({ ...CODE, formules: ["basique"] })).toEqual({ ok: false, message: "L’opération n’a pas abouti. Réessayez." });
+    expect(faux.de("rpc", "enregistrer_code_promo")).toEqual([]);
+  });
+
+  it("sans la liste (base sans la 0073) : l'appel d'avant, à 8 paramètres", async () => {
+    await actions.enregistrerCodePromo(CODE);
+    expect(faux.de("rpc", "enregistrer_code_promo")[0].valeurs).not.toHaveProperty("p_formules");
+  });
+
+  it("la liste envoyée à une base sans la 0073 : le guide de la migration 0073", async () => {
+    faux.repondre("rpc.enregistrer_code_promo", { error: { code: "PGRST202", message: "Could not find the function" } });
+    expect(await actions.enregistrerCodePromo({ ...CODE, formules: [ID] })).toEqual({
+      ok: false,
+      message: "Appliquez la migration 0073 (guide « Ce qui te revient », section 72).",
+    });
+  });
+
+  it("la lecture des codes garde leurs abonnements, dans l'ordre de la base", () => {
+    const code = versCodePromo({
+      id: ID,
+      code: "DEUX",
+      type: "montant",
+      valeur: 2000,
+      limite: null,
+      actif: true,
+      utilisations: 0,
+      cree_le: "2026-11-03T09:00:00Z",
+      formules: [
+        { id: ID, code: "basique", nom: "Basique", duree_mois: 3 },
+        { id: AUTRE, code: "premium", nom: "Premium", duree_mois: 12 },
+      ],
+    });
+    expect(code.formules).toEqual([
+      { id: ID, nom: "Basique" },
+      { id: AUTRE, nom: "Premium" },
+    ]);
+    // Une base sans la 0073 ne renvoie pas la clé.
+    expect(versCodePromo({ id: ID, code: "ANCIEN", type: "pourcentage", valeur: 10 }).formules).toEqual([]);
+  });
+
+  it("la 0073 est-elle appliquée ? La table des abonnements des codes répond, ou non", async () => {
+    expect(await lireCodesParAbonnement()).toBe(true);
+    expect(faux.de("codes_promo_formules", "select")).toHaveLength(1);
+    faux.repondre("codes_promo_formules.select", { error: { code: "PGRST205", message: "Could not find the table" } });
+    expect(await lireCodesParAbonnement()).toBe(false);
   });
 
   it("attribuer un abonnement à la main : montant lu sans espaces, 0 si offert, refus d'une saisie (0054)", async () => {

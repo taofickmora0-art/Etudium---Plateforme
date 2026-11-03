@@ -77,5 +77,6 @@ export function versCartePaiement(j: unknown): CartePaiement {
 export function versEssaiCode(j: unknown): EssaiCode {
   const o = objet(j);
   if (o.ok === true) return { ok: true, prixInitial: nombre(o.prix_initial), remise: nombre(o.remise), montant: nombre(o.montant) };
-  return { ok: false, message: texte(o.message) || "Ce code n’existe pas." };
+  const message = texte(o.message) || "Ce code n’existe pas.";
+  return o.motif === "abonnement" ? { ok: false, message, autreAbonnement: true } : { ok: false, message };
 }

@@ -17,17 +17,21 @@ const MIGRATION = "Appliquez les migrations 0049 à 0052 (guide « Ce qui te rev
 const GUIDE = "Ajoutez PAYIZ_CLE_SECRETE dans web/.env.local (guide « Ce qui te revient », section 56), puis relancez le serveur.";
 const STATUTS = ["reussi", "en_attente", "echoue", "expire"];
 
-function message(error: { code?: string; message?: string }): string {
-  if (estFonctionAbsente(error)) return MIGRATION;
+const MIGRATION_ABONNEMENTS_CODE = "Appliquez la migration 0073 (guide « Ce qui te revient », section 72).";
+const AU_MOINS_UN_ABONNEMENT = "Choisissez au moins un abonnement.";
+
+function message(error: { code?: string; message?: string }, migration = MIGRATION): string {
+  if (estFonctionAbsente(error)) return migration;
   if ((error.code === "P0001" || error.code === "42501") && error.message) return error.message.replace(/'/g, "’");
   return ECHEC;
 }
 
-async function appeler(fonction: string, args?: Record<string, unknown>): Promise<Resultat> {
+/** `migration` : le message d'une fonction absente (par défaut, les migrations 0049 à 0052). */
+async function appeler(fonction: string, args?: Record<string, unknown>, migration?: string): Promise<Resultat> {
   const garde = await exigerDomaine("paiements");
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   const { error } = await garde.supabase.rpc(fonction, args);
-  if (error) return { ok: false, message: message(error) };
+  if (error) return { ok: false, message: message(error, migration) };
   refresh();
   return { ok: true };
 }
@@ -71,21 +75,34 @@ export async function enregistrerCodePromo(e: {
   fin: string;
   limite: string;
   actif: boolean;
+  /**
+   * Les abonnements où le code vaut (identifiants des formules, 0073), au moins un. Absent quand la base n'a pas la
+   * 0073 : l'appel d'avant, à 8 paramètres (un nouveau code vaut pour tous les abonnements).
+   */
+  formules?: string[];
 }): Promise<Resultat> {
   const valeur = lireMontant(e.valeur);
   const limite = lireMontant(e.limite);
   if (valeur === null || Number.isNaN(valeur)) return { ok: false, message: "Saisissez la valeur de la remise, sans décimales." };
   if (Number.isNaN(limite)) return { ok: false, message: "Saisissez une limite en nombre d’utilisations." };
-  return appeler("enregistrer_code_promo", {
-    p_id: e.id && UUID.test(e.id) ? e.id : null,
-    p_code: e.code,
-    p_type: e.type,
-    p_valeur: valeur,
-    p_debut: jourBenin(e.debut, false),
-    p_fin: jourBenin(e.fin, true),
-    p_limite: limite,
-    p_actif: e.actif,
-  });
+  const formules = e.formules === undefined ? undefined : [...new Set(e.formules)];
+  if (formules?.length === 0) return { ok: false, message: AU_MOINS_UN_ABONNEMENT };
+  if (formules && !formules.every((id) => UUID.test(id))) return { ok: false, message: ECHEC };
+  return appeler(
+    "enregistrer_code_promo",
+    {
+      p_id: e.id && UUID.test(e.id) ? e.id : null,
+      p_code: e.code,
+      p_type: e.type,
+      p_valeur: valeur,
+      p_debut: jourBenin(e.debut, false),
+      p_fin: jourBenin(e.fin, true),
+      p_limite: limite,
+      p_actif: e.actif,
+      ...(formules ? { p_formules: formules } : {}),
+    },
+    formules ? MIGRATION_ABONNEMENTS_CODE : MIGRATION,
+  );
 }
 
 const MONTANT_RECU = "Indiquez le montant reçu, en FCFA, sans décimales.";

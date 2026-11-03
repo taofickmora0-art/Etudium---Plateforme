@@ -152,6 +152,16 @@ describe("Le paiement", () => {
     expect(screen.getByRole("button", { name: `Payer ${montantFcfa(15000)}` })).toBeInTheDocument();
   });
 
+  it("un code d'autres abonnements (0073) : son message, sans remise", async () => {
+    essayerCode.mockResolvedValue({ ok: false, message: "Ce code ne s’applique pas à l’abonnement Standard.", autreAbonnement: true });
+    afficher();
+    await user.type(screen.getByLabelText("Code promo (facultatif)"), "BASIQUE10");
+    await user.click(screen.getByRole("button", { name: "Appliquer" }));
+    expect(screen.getByText("Ce code ne s’applique pas à l’abonnement Standard.")).toBeInTheDocument();
+    expect(screen.queryByText(/Code appliqué/)).toBeNull();
+    expect(screen.getByRole("button", { name: `Payer ${montantFcfa(15000)}` })).toBeInTheDocument();
+  });
+
   it("le numéro propose l'opérateur", async () => {
     afficher();
     await allerAuPaiement("01 55 00 00 00");
@@ -171,6 +181,83 @@ describe("Le paiement", () => {
     await allerAuPaiement("01 40 00 00 00");
     await user.click(screen.getByRole("button", { name: `Payer ${montantFcfa(15000)}` }));
     expect(screen.getByRole("alert")).toHaveTextContent("Le paiement n’est pas proposé dans ce pays pour le moment. Choisissez un autre pays.");
+  });
+});
+
+// Un code promo ne vaut que pour les abonnements choisis par l'équipe (0073) : changer d'abonnement revérifie le code
+// appliqué, et jamais une remise ne s'affiche pour un abonnement où elle ne vaut pas.
+describe("Changer d'abonnement après un code", () => {
+  const appliquer = async (code = "promo20") => {
+    await user.type(screen.getByLabelText("Code promo (facultatif)"), code);
+    await user.click(screen.getByRole("button", { name: "Appliquer" }));
+  };
+
+  it("le code ne vaut pas pour le nouvel abonnement : la remise est retirée, avec le message", async () => {
+    essayerCode.mockResolvedValueOnce({ ok: true, prixInitial: 15000, remise: 3000, montant: 12000 });
+    essayerCode.mockResolvedValueOnce({ ok: false, message: "Ce code ne s’applique pas à l’abonnement Basique.", autreAbonnement: true });
+    afficher();
+    await appliquer();
+    expect(screen.getByRole("button", { name: `Payer ${montantFcfa(12000)}` })).toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: /Basique/ }));
+    expect(essayerCode).toHaveBeenLastCalledWith("f-basique", "promo20");
+    expect(await screen.findByText("Ce code ne s’applique pas à l’abonnement Basique.")).toBeInTheDocument();
+    expect(screen.queryByText(/Code appliqué/)).toBeNull();
+    expect(screen.queryByText("Code promo (PROMO20)")).toBeNull();
+    expect(screen.getByRole("button", { name: `Payer ${montantFcfa(9000)}` })).toBeInTheDocument();
+  });
+
+  it("le code vaut aussi pour le nouvel abonnement : la remise est recalculée", async () => {
+    essayerCode.mockResolvedValueOnce({ ok: true, prixInitial: 15000, remise: 3000, montant: 12000 });
+    essayerCode.mockResolvedValueOnce({ ok: true, prixInitial: 9000, remise: 1800, montant: 7200 });
+    afficher();
+    await appliquer();
+    await user.click(screen.getByRole("radio", { name: /Basique/ }));
+    expect(await screen.findByRole("button", { name: `Payer ${montantFcfa(7200)}` })).toBeInTheDocument();
+    expect(screen.getByText(texte(`Code appliqué : − ${montantFcfa(1800)} sur ce paiement.`))).toBeInTheDocument();
+  });
+
+  it("pendant la vérification : aucune remise affichée, et « Payer » attend", async () => {
+    let repondre: (r: Awaited<ReturnType<typeof essayerCode>>) => void = () => {};
+    essayerCode.mockResolvedValueOnce({ ok: true, prixInitial: 15000, remise: 3000, montant: 12000 });
+    essayerCode.mockImplementationOnce(() => new Promise((ok) => (repondre = ok)));
+    afficher();
+    await appliquer();
+    await user.click(screen.getByRole("radio", { name: /Basique/ }));
+    expect(screen.queryByText(/Code appliqué/)).toBeNull();
+    expect(screen.getByRole("button", { name: `Payer ${montantFcfa(9000)}` })).toBeDisabled();
+    await act(async () => repondre({ ok: false, message: "Ce code ne s’applique pas à l’abonnement Basique.", autreAbonnement: true }));
+    expect(screen.getByRole("button", { name: `Payer ${montantFcfa(9000)}` })).toBeEnabled();
+  });
+
+  it("un code refusé pour cet abonnement est réessayé sur le nouveau", async () => {
+    essayerCode.mockResolvedValueOnce({ ok: false, message: "Ce code ne s’applique pas à l’abonnement Standard.", autreAbonnement: true });
+    essayerCode.mockResolvedValueOnce({ ok: true, prixInitial: 9000, remise: 900, montant: 8100 });
+    afficher();
+    await appliquer("BASIQUE10");
+    await user.click(screen.getByRole("radio", { name: /Basique/ }));
+    expect(essayerCode).toHaveBeenLastCalledWith("f-basique", "BASIQUE10");
+    expect(await screen.findByRole("button", { name: `Payer ${montantFcfa(8100)}` })).toBeInTheDocument();
+    expect(screen.queryByText("Ce code ne s’applique pas à l’abonnement Standard.")).toBeNull();
+  });
+
+  it("un autre refus (code inconnu, expiré) : pas de nouvel essai, le message s'efface", async () => {
+    essayerCode.mockResolvedValueOnce({ ok: false, message: "Ce code n’existe pas." });
+    afficher();
+    await appliquer("INCONNU");
+    await user.click(screen.getByRole("radio", { name: /Basique/ }));
+    expect(essayerCode).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Ce code n’existe pas.")).toBeNull();
+  });
+
+  it("une réponse arrivée après un autre choix est ignorée", async () => {
+    let repondre: (r: Awaited<ReturnType<typeof essayerCode>>) => void = () => {};
+    essayerCode.mockImplementationOnce(() => new Promise((ok) => (repondre = ok)));
+    afficher();
+    await appliquer();
+    await user.click(screen.getByRole("radio", { name: /Basique/ }));
+    await act(async () => repondre({ ok: true, prixInitial: 15000, remise: 3000, montant: 12000 }));
+    expect(screen.queryByText(/Code appliqué/)).toBeNull();
+    expect(screen.getByRole("button", { name: `Payer ${montantFcfa(9000)}` })).toBeInTheDocument();
   });
 });
 

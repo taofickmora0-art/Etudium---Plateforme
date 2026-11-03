@@ -32,7 +32,7 @@ const FORMULES: Formule[] = [
   { id: "f3", code: "premium", nom: "Premium", dureeMois: 12, prix: null, recommandee: false, active: true },
 ];
 const CODES: CodePromo[] = [
-  { id: "c1", code: "PROMO20", type: "pourcentage", valeur: 20, debut: null, fin: null, limite: 50, actif: true, utilisations: 3, creeLe: "2026-11-01T09:00:00Z" },
+  { id: "c1", code: "PROMO20", type: "pourcentage", valeur: 20, debut: null, fin: null, limite: 50, actif: true, utilisations: 3, creeLe: "2026-11-01T09:00:00Z", formules: [] },
 ];
 const PAIEMENTS: Page = {
   total: 1,

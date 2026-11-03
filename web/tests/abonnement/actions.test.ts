@@ -66,6 +66,11 @@ describe("Essayer un code", () => {
     expect(await essayerCode(FORMULE_ID, "PROMO20")).toEqual({ ok: true, prixInitial: 15000, remise: 3000, montant: 12000 });
     expect(fetchPayiz).not.toHaveBeenCalled();
   });
+
+  it("un code d'autres abonnements (0073) : le message de la base, et l'indication qu'un autre abonnement peut convenir", async () => {
+    faux.repondre("rpc.essayer_code", { data: { ok: false, motif: "abonnement", message: "Ce code ne s’applique pas à l’abonnement Standard." } });
+    expect(await essayerCode(FORMULE_ID, "BASIQUE10")).toEqual({ ok: false, message: "Ce code ne s’applique pas à l’abonnement Standard.", autreAbonnement: true });
+  });
 });
 
 describe("Payer", () => {

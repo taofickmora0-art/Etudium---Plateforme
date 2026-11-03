@@ -14,6 +14,8 @@ export type CodePromo = {
   actif: boolean;
   utilisations: number;
   creeLe: string;
+  /** Les abonnements où il vaut, dans leur ordre (0073) ; [] sans la migration. */
+  formules: { id: string; nom: string }[];
 };
 export type ComptePaiement = { id: string | null; prenom: string; nom: string; email: string };
 export type LignePaiement = {

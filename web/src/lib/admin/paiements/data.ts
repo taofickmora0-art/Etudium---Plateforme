@@ -34,6 +34,9 @@ export function versCodePromo(l: Ligne): CodePromo {
     actif: l.actif !== false,
     utilisations: nombre(l.utilisations),
     creeLe: texte(l.cree_le),
+    formules: liste(l.formules)
+      .map((f) => ({ id: texte(f.id), nom: texte(f.nom) }))
+      .filter((f) => f.id !== ""),
   };
 }
 
@@ -91,6 +94,16 @@ export async function lireCodesPromo(): Promise<CodePromo[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("codes_promo_equipe");
   return error ? [] : liste(data).map(versCodePromo);
+}
+
+/**
+ * La migration 0073 (un code promo pour les abonnements choisis) est-elle appliquée ? Sa table répond. Sinon (ou si la
+ * lecture échoue), le back-office garde le formulaire d'avant, qui marche avec ou sans elle.
+ */
+export async function lireCodesParAbonnement(): Promise<boolean> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("codes_promo_formules").select("code_id").limit(1);
+  return !error;
 }
 
 export async function lirePaiementsEquipe(f: { statut: string | null; recherche: string; page: number }): Promise<PagePaiements> {

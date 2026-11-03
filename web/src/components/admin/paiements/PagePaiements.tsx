@@ -19,6 +19,8 @@ type Props = {
   etat: EtatReglage;
   formules: Formule[];
   codes: CodePromo[];
+  /** La migration 0073 est appliquée : un code promo vaut pour les abonnements choisis. */
+  codesParAbonnement?: boolean;
   paiements: Page;
   /** Le bloc « Envois (e-mails et notifications push) » (mise en ligne, 0071), sous le réglage des paiements. */
   envois?: EtatEnvois;
@@ -33,7 +35,7 @@ const chiffre = new Intl.NumberFormat("fr-FR");
  * du mois, le réglage des paiements et celui des envois (e-mails et push), puis les paiements, les prix des abonnements
  * et les codes promo.
  */
-export function PagePaiements({ resume, etat, formules, codes, paiements, envois, ecriture }: Props) {
+export function PagePaiements({ resume, etat, formules, codes, codesParAbonnement = false, paiements, envois, ecriture }: Props) {
   return (
     <div className="flex min-w-0 flex-col gap-5">
       <div className={GRILLE_CHIFFRES}>
@@ -55,7 +57,7 @@ export function PagePaiements({ resume, etat, formules, codes, paiements, envois
         items={[
           { value: "paiements", label: "Paiements", content: <OngletPaiements initial={paiements} ecriture={ecriture} /> },
           { value: "abonnements", label: "Abonnements", content: <OngletFormules formules={formules} ecriture={ecriture} /> },
-          { value: "codes", label: "Codes promo", content: <OngletCodesPromo codes={codes} ecriture={ecriture} /> },
+          { value: "codes", label: "Codes promo", content: <OngletCodesPromo codes={codes} formules={formules} parAbonnement={codesParAbonnement} ecriture={ecriture} /> },
         ]}
       />
     </div>
