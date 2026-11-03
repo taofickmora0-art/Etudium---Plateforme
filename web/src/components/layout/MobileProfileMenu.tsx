@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Home03Icon, Shield01Icon } from "@hugeicons/core-free-icons";
+import { LigneInstallation } from "@/components/installation/LigneInstallation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
 import { List, ListRow } from "@/components/ui/ListRow";
@@ -30,6 +31,7 @@ function Tuile({ glyph, valeur, legende, nom }: { glyph: ReactNode; valeur: stri
  * étudiant et Back-office), la déconnexion. Le reste (parcours, exercices, certificats…) est dans le menu ≡. La série
  * et les points de la semaine reviennent en tuiles (lot 6 B), maintenant qu'ils sont réels. Côté formateur
  * (restructuration R1) : son profil, sans abonnement ni changement d'espace (il n'a que le sien), ni série ni points.
+ * Pour tous, « Installer l'application » quand le navigateur le permet (demande du 3 novembre 2026).
  */
 export function MobileProfileMenu({ user, espace = "etudiant" }: { user: ShellUser; espace?: "etudiant" | "formateur" }) {
   const formateur = espace === "formateur";
@@ -59,6 +61,7 @@ export function MobileProfileMenu({ user, espace = "etudiant" }: { user: ShellUs
         {/* Deux espaces : l'équipe passe de l'un à l'autre (comme dans le menu du profil sur ordinateur). */}
         {equipe && <ListRow href="/accueil" leading={<Icon icon={Home03Icon} size={22} />} title="Espace étudiant" />}
         {equipe && <ListRow href="/admin" leading={<Icon icon={Shield01Icon} size={22} />} title="Back-office" />}
+        <LigneInstallation />
         <MenuLogout />
       </List>
     </div>

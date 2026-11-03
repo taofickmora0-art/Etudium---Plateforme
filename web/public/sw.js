@@ -1,5 +1,6 @@
 // Service worker d'Étudium (lot 5, étape B) : il affiche les notifications push et, au clic, ouvre la page concernée.
-// Il ne met rien en cache et n'intercepte aucune requête.
+// Il ne met rien en cache et n'intercepte aucune requête. Il est enregistré dès l'espace connecté : avec lui, Chrome
+// propose d'installer l'application (« Installer l'application », menu du profil).
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -9,6 +10,10 @@ self.addEventListener("activate", (event) => {
   // Prend la main sur les onglets déjà ouverts : au clic, ils peuvent changer de page.
   event.waitUntil(self.clients.claim());
 });
+
+// Chrome demande encore un gestionnaire « fetch » pour proposer l'installation. Vide : Chrome le reconnaît et ne
+// réveille pas le service worker pour lui ; chaque requête va au réseau comme avant, rien n'est mis en cache.
+self.addEventListener("fetch", () => {});
 
 /**
  * Un lien interne (« /… », comme les liens enregistrés par la base) ; tout autre lien mène à l'accueil. Ni espace, ni

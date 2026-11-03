@@ -1,6 +1,6 @@
 "use client";
 
-import { CreditCardIcon, Home03Icon, Logout03Icon, Shield01Icon, TeachingIcon, UserIcon } from "@hugeicons/core-free-icons";
+import { CreditCardIcon, Download01Icon, Home03Icon, Logout03Icon, Shield01Icon, TeachingIcon, UserIcon } from "@hugeicons/core-free-icons";
 import { DropdownMenu } from "radix-ui";
 import { canAccess, type Espace, type Role } from "@/lib/auth/permissions";
 import { cn } from "@/lib/cn";
@@ -17,10 +17,12 @@ type ProfileMenuProps = {
   /** Espace où l'on se trouve (coché dans le menu). */
   currentSpace?: Espace;
   onSignOut: () => void;
+  /** « Installer l'application » : seulement quand le navigateur le permet (Chrome, iPhone) et qu'elle ne l'est pas déjà. */
+  onInstall?: () => void;
 };
 
 /** Menu du profil, ouvert depuis le rond de profil de la barre du haut (planche « Menus », « Menu du profil »). */
-export function ProfileMenu({ user, roles, currentSpace = "etudiant", onSignOut }: ProfileMenuProps) {
+export function ProfileMenu({ user, roles, currentSpace = "etudiant", onSignOut, onInstall }: ProfileMenuProps) {
   // Un formateur n'a plus l'espace étudiant (restructuration R1) : ni lui, ni l'abonnement ; son profil est dans son espace.
   const apprenant = canAccess("etudiant", roles);
   const espaces: MenuEntry[] = apprenant ? [{ label: "Espace étudiant", icon: Home03Icon, href: "/accueil", current: currentSpace === "etudiant" }] : [];
@@ -33,6 +35,7 @@ export function ProfileMenu({ user, roles, currentSpace = "etudiant", onSignOut 
     ...(apprenant ? [{ label: "Mon abonnement", icon: CreditCardIcon, href: "/abonnement" }] : []),
     // Un seul espace : inutile de proposer d'en changer.
     ...(espaces.length > 1 ? espaces : []),
+    ...(onInstall ? [{ label: "Installer l’application", icon: Download01Icon, onSelect: onInstall }] : []),
     { separator: true },
     { label: "Se déconnecter", icon: Logout03Icon, danger: true, onSelect: onSignOut },
   ];

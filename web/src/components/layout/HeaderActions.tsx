@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { AideInstallationIos } from "@/components/installation/AideInstallationIos";
+import { useProposerInstallation } from "@/components/installation/useProposerInstallation";
 import { versPanneau } from "@/components/notifications/affichage";
 import { TempsReel } from "@/components/temps-reel/TempsReel";
 import { useTempsReel } from "@/components/temps-reel/evenements";
@@ -124,6 +126,7 @@ export function HeaderActions({ user }: { user: ShellUser }) {
   const [deconnexion, setDeconnexion] = useState(false);
   const profil = useRef<HTMLDivElement>(null);
   const { cloche, toutLire, lire } = useCloche();
+  const installation = useProposerInstallation();
   const maintenant = new Date();
   return (
     <>
@@ -144,10 +147,13 @@ export function HeaderActions({ user }: { user: ShellUser }) {
           roles={user.roles}
           currentSpace={spaceOf(usePathname())}
           onSignOut={() => setDeconnexion(true)}
+          onInstall={installation.proposee ? installation.lancer : undefined}
         />
       </div>
       {/* Le menu a disparu quand la fenêtre se ferme : le focus revient au rond de profil. */}
       <LogoutDialog open={deconnexion} onOpenChange={setDeconnexion} returnFocus={() => profil.current?.querySelector("button")} />
+      {/* iPhone, iPad : « Installer l'application » ouvre la marche à suivre (Partager › Sur l'écran d'accueil). */}
+      <AideInstallationIos open={installation.aideIos} onOpenChange={installation.setAideIos} returnFocus={() => profil.current?.querySelector("button")} />
     </>
   );
 }

@@ -22,6 +22,13 @@ describe("Appli installable", () => {
     });
   });
 
+  it("les conditions d'installation de Chrome : nom, adresse de départ, affichage en appli, pas d'appli native préférée", () => {
+    const m = manifest();
+    expect(m.name && m.short_name && m.start_url).toBeTruthy();
+    expect(["standalone", "fullscreen", "minimal-ui"]).toContain(m.display);
+    expect(m.prefer_related_applications).toBeUndefined();
+  });
+
   it("l'appli s'ouvre sur l'espace connecté, pas sur la future page publique", () => {
     expect(manifest()).toMatchObject({ id: "/", start_url: "/accueil" });
   });

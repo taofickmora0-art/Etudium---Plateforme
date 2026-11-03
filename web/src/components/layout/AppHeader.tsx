@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { CapterInstallation } from "@/components/installation/CapterInstallation";
 import { Icon } from "@/components/ui/Icon";
 import { CounterPill, LogoButton, SearchButton } from "@/components/ui/TopBarButtons";
 import type { ShellUser } from "@/lib/auth/current-user";
@@ -27,6 +28,8 @@ export function AppHeader({ account, espace }: { account?: ReactNode; espace?: E
       className="sticky top-0 z-30 flex flex-none items-center justify-between gap-2 bg-page px-4 py-3 print:hidden max-sm:gap-1.5 max-sm:px-3 max-sm:py-2.5 lg:flex-wrap lg:gap-3 lg:py-5 lg:pr-6 lg:pl-0"
     >
       <MesureEntete />
+      {/* Le service worker et la demande d'installation de Chrome, pour « Installer l'application » (menu du profil). */}
+      <CapterInstallation />
       <div className="flex min-w-0 flex-wrap items-center gap-2 lg:gap-3">
         {/* Grand écran : réduire la barre latérale à ses icônes, ou la rouvrir. */}
         <BoutonMenuLateral className="hidden lg:inline-flex" />
