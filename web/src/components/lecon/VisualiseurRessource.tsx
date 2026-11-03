@@ -32,13 +32,32 @@ const BOUTON_OUTIL =
 /**
  * Une page du PDF. Elle n'est dessinée qu'à moins d'un écran de la zone visible du document, et libérée (canvas vidé)
  * quand elle s'en éloigne : un document de 300 pages reste léger sur téléphone, et un zoom ne redessine que les pages
- * proches. Avant d'être dessinée, elle garde la taille d'une page du document (portrait ou paysage).
+ * proches. Avant d'être dessinée, elle garde la taille d'une page du document (portrait ou paysage). Le lecteur de la
+ * Bibliothèque s'en sert aussi : `surCadre` lui donne le cadre de chaque page (la page affichée, aller à une page).
  */
-function PagePdf({ document, numero, largeur, racine }: { document: DocumentPdf; numero: number; largeur: number; racine: HTMLElement | null }) {
+export function PagePdf({
+  document,
+  numero,
+  largeur,
+  racine,
+  surCadre,
+}: {
+  document: DocumentPdf;
+  numero: number;
+  largeur: number;
+  racine: HTMLElement | null;
+  surCadre?: (numero: number, cadre: HTMLDivElement | null) => void;
+}) {
   const cadre = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const sansObservateur = typeof IntersectionObserver === "undefined";
   const [dansZone, setDansZone] = useState(sansObservateur);
+
+  useEffect(() => {
+    if (!surCadre) return;
+    surCadre(numero, cadre.current);
+    return () => surCadre(numero, null);
+  }, [numero, surCadre]);
 
   useEffect(() => {
     if (sansObservateur || !racine || !cadre.current) return;
