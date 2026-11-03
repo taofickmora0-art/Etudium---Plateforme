@@ -40,8 +40,10 @@ export function AideInstallationIos({
   const navigateur = open ? navigateurIos() : "safari";
   const etapes = [
     { icon: Share03Icon, ...premiereEtape(navigateur, appareil) },
-    { icon: AddSquareIcon, texte: "Choisissez « Sur l’écran d’accueil ».", detail: "Faites défiler la liste si besoin." },
-    { icon: CheckmarkCircle02Icon, texte: "Touchez « Ajouter ».", detail: "En haut à droite." },
+    // La feuille de partage de l'iPhone (captures du 3 novembre 2026) : l'option est derrière « En voir plus », et le
+    // dernier écran a « Ouvrir comme app web », à laisser activé pour qu'Étudium s'ouvre comme une application.
+    { icon: AddSquareIcon, texte: "Choisissez « Sur l’écran d’accueil ».", detail: "Si elle n’apparaît pas, touchez d’abord « En voir plus »." },
+    { icon: CheckmarkCircle02Icon, texte: "Touchez « Ajouter », en haut à droite.", detail: "Laissez « Ouvrir comme app web » activé." },
   ];
   return (
     <Dialog

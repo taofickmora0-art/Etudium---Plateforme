@@ -163,7 +163,9 @@ describe("Installer l'application, page Profil du téléphone", () => {
     expect(etapes).toHaveLength(3);
     expect(etapes[0]).toContain("Touchez le bouton Partager, en bas de Safari.");
     expect(etapes[1]).toContain("Choisissez « Sur l’écran d’accueil ».");
-    expect(etapes[2]).toContain("Touchez « Ajouter ».");
+    expect(etapes[1]).toContain("Si elle n’apparaît pas, touchez d’abord « En voir plus ».");
+    expect(etapes[2]).toContain("Touchez « Ajouter », en haut à droite.");
+    expect(etapes[2]).toContain("Laissez « Ouvrir comme app web » activé.");
     expect(fenetre).toHaveTextContent("Chrome et les autres navigateurs de l’iPhone le permettent aussi, par leur bouton Partager.");
     await user.click(within(fenetre).getByRole("button", { name: "J’ai compris" }));
     expect(screen.queryByRole("dialog")).toBeNull();
