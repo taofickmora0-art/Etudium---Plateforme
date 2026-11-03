@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { unstable_rethrow } from "next/navigation";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { cartesFavorites } from "@/components/favoris/cartes";
 import { PageFavoris, type Favori } from "@/components/favoris/PageFavoris";
@@ -19,6 +20,8 @@ async function livresOuRien(): Promise<CarteLivre[]> {
   try {
     return await lireMesFavorisLivres();
   } catch (erreur) {
+    // Les signaux internes de Next (rendu à la demande) doivent passer : seule une vraie panne est ignorée.
+    unstable_rethrow(erreur);
     console.error("Lecture des livres en favori impossible :", erreur instanceof Error ? erreur.message : erreur);
     return [];
   }
