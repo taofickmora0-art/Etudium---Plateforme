@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { demoModeActive } from "@/lib/auth/current-user";
 import { estFonctionAbsente } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
@@ -96,16 +97,20 @@ export async function lireCatalogue(filtres: FiltresBibliotheque = {}): Promise<
   return versCatalogue(data);
 }
 
-/** La fiche d'un livre par son adresse ; null s'il n'existe pas, n'est pas publié, ou sans la 0074. */
-export async function lireFicheLivre(slug: string): Promise<FicheLivre | null> {
+/**
+ * La fiche d'un livre par son adresse ; null s'il n'existe pas ou n'est pas publié (un brouillon n'existe que pour
+ * l'équipe des contenus) ; « absente » sans la 0074 (la page le dit au lieu d'une page introuvable). Lue une fois par
+ * requête (React.cache) : les métadonnées et la page la partagent.
+ */
+export const lireFicheLivre = cache(async (slug: string): Promise<FicheLivre | "absente" | null> => {
   if (demoModeActive() || !/^[a-z0-9-]{1,90}$/.test(slug)) return null;
   const { data, error } = await (await createClient()).rpc("livre_fiche", { p_slug: slug });
   if (error) {
-    if (absente(error)) return null;
+    if (absente(error)) return "absente";
     throw new Error(`Lecture du livre impossible (${error.code ?? "?"}).`);
   }
   return versFicheLivre(data);
-}
+});
 
 async function lireCartes(fonction: string, args: Record<string, unknown> = {}): Promise<CarteLivre[]> {
   if (demoModeActive()) return [];

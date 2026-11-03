@@ -11,7 +11,50 @@ export type DocumentPdf = {
   dessiner(numero: number, canvas: HTMLCanvasElement, largeur: number): Promise<void>;
   /** Libère le document (mémoire, worker). */
   fermer(): void;
+  /** Les signets du PDF (sommaire du lecteur de la Bibliothèque) ; vide s'il n'en a pas. */
+  sommaire?(): Promise<EntreeSommaire[]>;
 };
+
+/** Une entrée du sommaire d'un PDF : son titre, sa page (à partir de 1 ; null sans destination) et ses sous-parties. */
+export type EntreeSommaire = { titre: string; page: number | null; enfants: EntreeSommaire[] };
+
+/** Un signet tel que pdf.js le donne (getOutline). */
+type SignetPdf = { title: string; dest: string | unknown[] | null; items?: SignetPdf[] };
+
+/** Trois niveaux au plus, 500 entrées au plus : un sommaire reste lisible, et un PDF piégé ne bloque pas le lecteur. */
+const PROFONDEUR_SOMMAIRE = 3;
+const ENTREES_SOMMAIRE = 500;
+
+/**
+ * Les signets d'un PDF → le sommaire : titres nettoyés, page de chaque entrée (`pageDe` lit sa destination), sous-parties.
+ * Une entrée sans page ni sous-partie (un lien vers un site) est écartée ; une destination illisible aussi, sans casser
+ * le reste.
+ */
+export async function versSommaire(signets: SignetPdf[] | null | undefined, pageDe: (dest: string | unknown[]) => Promise<number | null>): Promise<EntreeSommaire[]> {
+  let restantes = ENTREES_SOMMAIRE;
+  const niveau = async (liste: SignetPdf[] | null | undefined, profondeur: number): Promise<EntreeSommaire[]> => {
+    const entrees: EntreeSommaire[] = [];
+    for (const signet of liste ?? []) {
+      if (restantes <= 0) break;
+      restantes--;
+      // Les caractères de contrôle (fréquents dans les titres des PDF) sont retirés.
+      const titre = String(signet?.title ?? "").replace(/[\u0000-\u001f\u007f]/g, "").replace(/\s+/g, " ").trim();
+      let page: number | null = null;
+      if (signet?.dest) {
+        try {
+          page = await pageDe(signet.dest);
+        } catch {
+          page = null;
+        }
+      }
+      const enfants = profondeur + 1 < PROFONDEUR_SOMMAIRE ? await niveau(signet?.items, profondeur + 1) : [];
+      if (!titre || (page === null && enfants.length === 0)) continue;
+      entrees.push({ titre, page, enfants });
+    }
+    return entrees;
+  };
+  return niveau(signets, 0);
+}
 
 /**
  * Fichiers de décodage servis par le site (copiés depuis pdfjs-dist par `scripts/copier-pdfjs.mjs`) :
@@ -86,6 +129,22 @@ export async function ouvrirPdf(donnees: ArrayBuffer, ressources: RessourcesPdfj
     },
     fermer() {
       void chargement.destroy();
+    },
+    async sommaire() {
+      // La destination d'un signet : directe ([page, mode…]) ou nommée (à chercher dans le document) ; sa page est une
+      // référence (à convertir en numéro) ou, plus rarement, déjà un numéro (à partir de 0).
+      const pageDe = async (dest: string | unknown[]) => {
+        const tableau = typeof dest === "string" ? await document.getDestination(dest) : dest;
+        const cible: unknown = Array.isArray(tableau) ? tableau[0] : null;
+        if (typeof cible === "number") return cible + 1;
+        if (cible && typeof cible === "object") return (await document.getPageIndex(cible as Parameters<typeof document.getPageIndex>[0])) + 1;
+        return null;
+      };
+      try {
+        return await versSommaire((await document.getOutline()) as SignetPdf[] | null, pageDe);
+      } catch {
+        return [];
+      }
     },
   };
 }

@@ -5,7 +5,8 @@ import { exigerDomaine } from "@/lib/admin/garde";
 import { slugify } from "@/lib/admin/slug";
 import { authErrorMessage } from "@/lib/auth/messages";
 import { estFonctionAbsente } from "@/lib/contenus/lecture";
-import type { createClient } from "@/lib/supabase/server";
+import { INDISPONIBLE } from "@/lib/indisponible";
+import { createClient } from "@/lib/supabase/server";
 import {
   cheminCouvertureValide,
   cheminPdfValide,
@@ -353,4 +354,49 @@ export async function retirerLivreFormation(formationId: string, livreId: string
 export async function rangerLivreFormation(formationId: string, livreId: string, position: number): Promise<Resultat> {
   if (!estUuid(formationId) || !estUuid(livreId) || !Number.isInteger(position) || position < 1) return { ok: false, message: DEPLACEMENT_ECHOUE };
   return rpcRangement("ranger_livre_formation", { p_formation: formationId, p_livre: livreId, p_position: position });
+}
+
+// ─── Les favoris des étudiants (étape C ; favoris_livres) ───────────────────────────────────────────
+// Chacun les siens, sur un livre publié (règles de la 0074), comme les favoris des formations (src/lib/favoris).
+
+type ResultatFavori = { ok: true } | { ok: false; erreur: string };
+
+async function compteDuFavori() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  return { supabase, compte: error ? null : (data?.user ?? null) };
+}
+
+/** Met un livre en favori ; un double clic ne crée qu'un favori. Sans la 0074 : le message neutre. */
+export async function ajouterFavoriLivre(livreId: string): Promise<ResultatFavori> {
+  const echec = "Le favori n’a pas pu être enregistré. Réessayez.";
+  try {
+    const { supabase, compte } = await compteDuFavori();
+    if (!compte) return { ok: false, erreur: "Connectez-vous pour ajouter un favori." };
+    if (!estUuid(livreId)) return { ok: false, erreur: echec };
+    const { error } = await supabase
+      .from("favoris_livres")
+      .upsert({ profil_id: compte.id, livre_id: livreId }, { onConflict: "profil_id,livre_id", ignoreDuplicates: true });
+    if (error) return { ok: false, erreur: tableAbsente(error) ? INDISPONIBLE : echec };
+  } catch {
+    return { ok: false, erreur: echec };
+  }
+  refresh();
+  return { ok: true };
+}
+
+/** Retire un livre des favoris (sa lecture ne change pas). */
+export async function retirerFavoriLivre(livreId: string): Promise<ResultatFavori> {
+  const echec = "Le favori n’a pas pu être retiré. Réessayez.";
+  try {
+    const { supabase, compte } = await compteDuFavori();
+    if (!compte) return { ok: false, erreur: "Connectez-vous pour gérer vos favoris." };
+    if (!estUuid(livreId)) return { ok: false, erreur: echec };
+    const { error } = await supabase.from("favoris_livres").delete().eq("livre_id", livreId).eq("profil_id", compte.id);
+    if (error) return { ok: false, erreur: tableAbsente(error) ? INDISPONIBLE : echec };
+  } catch {
+    return { ok: false, erreur: echec };
+  }
+  refresh();
+  return { ok: true };
 }

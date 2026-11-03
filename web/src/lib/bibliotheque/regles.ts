@@ -1,5 +1,6 @@
 import type { TagTone } from "@/components/ui/Tag";
-import type { AccesLivre, ChampLivre, SaisieLivre, StatutLivre } from "./types";
+import { sansAccents } from "@/lib/catalogue/filtres";
+import type { AccesLivre, CarteLivre, ChampLivre, LectureLivre, SaisieLivre, StatutLivre } from "./types";
 
 // Les règles de la Bibliothèque communes au navigateur et au serveur (migration 0074 : la base revérifie tout).
 
@@ -133,4 +134,87 @@ export function saisieVersLigne(s: SaisieLivre): { ok: true; ligne: LigneLivre }
       droits_confirmes: s.droitsConfirmes === true,
     },
   };
+}
+
+// ─── Les pages des étudiants et des visiteurs (étapes B et C) ───────────────────────────────────────
+
+export const adresseLivre = (slug: string) => `/bibliotheque/${slug}`;
+/** Le lecteur ; `page` : l'ouvrir à cette page (« Relire » un livre terminé), sinon à la dernière page lue. */
+export const adresseLecture = (slug: string, page?: number) => `/bibliotheque/${slug}/lire${page ? `?page=${page}` : ""}`;
+
+/** Le bouton d'un livre ouvert : « Lire » la première fois, « Continuer, page N » ensuite, « Relire » un livre terminé. */
+export function boutonLecture(livre: Pick<CarteLivre, "slug" | "lecture">): { libelle: string; href: string } {
+  const lecture = livre.lecture;
+  if (lecture?.terminee) return { libelle: "Relire", href: adresseLecture(livre.slug, 1) };
+  if (lecture && lecture.dernierePage > 1) return { libelle: `Continuer, page ${lecture.dernierePage}`, href: adresseLecture(livre.slug) };
+  return { libelle: "Lire", href: adresseLecture(livre.slug) };
+}
+
+/** Sur la carte d'un livre commencé : « 42 % lus », ou « Terminé » ; null s'il n'a jamais été ouvert. */
+export function progressionLivre(lecture: LectureLivre | null): string | null {
+  if (!lecture) return null;
+  return lecture.terminee ? "Terminé" : `${lecture.pourcentage} % lus`;
+}
+
+/** Les filtres du catalogue tels qu'ils sont dans l'adresse (`?parcours=…&categorie=…&gratuits=1&q=…`). */
+export type FiltresAdresseBibliotheque = { q: string; parcours: string | null; categorie: string | null; gratuits: boolean };
+export const FILTRES_BIBLIOTHEQUE_VIDES: FiltresAdresseBibliotheque = { q: "", parcours: null, categorie: null, gratuits: false };
+
+type ParamsAdresse = Record<string, string | string[] | undefined>;
+const premiere = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+/** L'adresse d'un parcours ou d'une catégorie (minuscules, chiffres, tirets), sinon rien. */
+const adresseOuNull = (v: string) => (/^[a-z0-9]+(-[a-z0-9]+)*$/.test(v) && v.length <= 90 ? v : null);
+
+/** Les filtres de l'adresse ; une valeur mal formée est ignorée, la recherche coupée à 100 caractères. */
+export function lireFiltresBibliotheque(params: ParamsAdresse): FiltresAdresseBibliotheque {
+  return {
+    q: premiere(params.q).trim().slice(0, 100),
+    parcours: adresseOuNull(premiere(params.parcours)),
+    categorie: adresseOuNull(premiere(params.categorie)),
+    gratuits: premiere(params.gratuits) === "1",
+  };
+}
+
+/** « ?parcours=…&categorie=…&q=… » (ordre fixe) ; "" sans filtre. */
+export function ecrireFiltresBibliotheque(f: FiltresAdresseBibliotheque): string {
+  const params = new URLSearchParams();
+  if (f.parcours) params.set("parcours", f.parcours);
+  if (f.categorie) params.set("categorie", f.categorie);
+  if (f.gratuits) params.set("gratuits", "1");
+  if (f.q.trim()) params.set("q", f.q.trim());
+  const texte = params.toString();
+  return texte ? `?${texte}` : "";
+}
+
+export const filtresActifs = (f: FiltresAdresseBibliotheque) => Boolean(f.q.trim() || f.parcours || f.categorie || f.gratuits);
+
+/**
+ * Les livres qui répondent aux filtres, dans leur ordre (les plus récents d'abord) : le catalogue est lu une fois, puis
+ * filtré dans le navigateur, comme celui des formations. La recherche suit celle de la base (titre, auteur, mots-clés,
+ * sans accents ni majuscules), chaque mot devant y être.
+ */
+export function filtrerLivres(livres: CarteLivre[], f: FiltresAdresseBibliotheque): CarteLivre[] {
+  const mots = sansAccents(f.q).split(/\s+/).filter(Boolean);
+  return livres.filter((l) => {
+    if (f.gratuits && l.acces !== "gratuit") return false;
+    if (f.parcours && !l.parcours.some((p) => p.slug === f.parcours)) return false;
+    if (f.categorie && l.categorie?.slug !== f.categorie) return false;
+    if (mots.length === 0) return true;
+    const cible = sansAccents([l.titre, l.auteur, ...l.motsCles].join(" "));
+    return mots.every((mot) => cible.includes(mot));
+  });
+}
+
+// ─── Le lecteur ─────────────────────────────────────────────────────────────────────────────────────
+
+export const ZOOM_MIN = 0.5;
+export const ZOOM_MAX = 3;
+/** Les crans des boutons « Réduire » et « Agrandir » (1 : la page à la largeur de l'écran). */
+export const CRANS_ZOOM = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3];
+
+/** Le zoom après un pincement : celui du départ, multiplié par l'écart des doigts, au vingtième, entre 50 % et 300 %. */
+export function zoomApresPincement(zoomDepart: number, ecartDepart: number, ecart: number): number {
+  if (ecartDepart <= 0) return zoomDepart;
+  const zoom = Math.round(((zoomDepart * ecart) / ecartDepart) * 20) / 20;
+  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom));
 }
