@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { versPanneau } from "@/components/notifications/affichage";
 import { TempsReel } from "@/components/temps-reel/TempsReel";
 import { useTempsReel } from "@/components/temps-reel/evenements";
+import { jouerSonNotification } from "@/lib/notifications/son";
 import { NotificationsPanel } from "@/components/ui/NotificationsPanel";
 import { ProfileMenu } from "@/components/ui/ProfileMenu";
 import { useToastFacultatif } from "@/components/ui/Toast";
@@ -59,6 +60,9 @@ function useCloche() {
     const avant = vue.current;
     vue.current = Math.max(avant ?? 0, plusGrand(lu.lignes));
     const { router: routeur, toast: annoncer } = outils.current;
+    // Une notification arrivée depuis la dernière lecture : le son « Deux notes » (pas au premier chargement, ni quand
+    // une notification passe à « lue »).
+    if (avant !== null && lu.lignes.some((n) => !n.lue && Number(n.id) > avant)) jouerSonNotification();
     if (avant === null || !annoncer) return;
     const nouvelle = lu.lignes.find((n) => !n.lue && n.categorie === "sessions_live" && Number(n.id) > avant);
     if (nouvelle) {

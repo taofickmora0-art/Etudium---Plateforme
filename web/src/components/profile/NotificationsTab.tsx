@@ -3,6 +3,7 @@
 import { Fragment, useRef, useState } from "react";
 import { ChoixObjectif } from "@/components/profile/ChoixObjectif";
 import { InterrupteurPush } from "@/components/profile/InterrupteurPush";
+import { InterrupteurSon } from "@/components/profile/InterrupteurSon";
 import { Switch } from "@/components/ui/Switch";
 import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
@@ -97,6 +98,8 @@ export function NotificationsTab({ profile, objectif }: { profile: ProfileData; 
                 )}
               </Fragment>
             ))}
+            {SEPARATEUR}
+            <InterrupteurSon />
             {SEPARATEUR}
             <div className="flex min-h-11 items-center justify-between gap-3 py-2.5">
               <div className="flex min-w-0 flex-col gap-0.5">

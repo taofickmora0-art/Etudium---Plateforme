@@ -24,7 +24,9 @@ describe("Onglet Notifications", () => {
 
   it("les 9 catégories, les canaux et l'e-mail toujours actif", () => {
     afficher();
-    expect(screen.getAllByRole("switch")).toHaveLength(11);
+    // 9 catégories, 2 canaux, et le son des notifications (choix du 3 novembre 2026).
+    expect(screen.getAllByRole("switch")).toHaveLength(12);
+    expect(screen.getByRole("switch", { name: "Son des notifications" })).toBeChecked();
     expect(screen.getByRole("switch", { name: "Messages" })).toHaveAccessibleDescription("Messages de vos formateurs et de l’équipe");
     expect(screen.getByRole("switch", { name: "Sessions live" })).toHaveAccessibleDescription("Programmation et rappels 1 h avant");
     expect(screen.getByText("Toujours actif")).toBeInTheDocument();
