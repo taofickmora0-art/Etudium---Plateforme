@@ -1,6 +1,7 @@
 "use client";
 
 import { PrinterIcon } from "@hugeicons/core-free-icons";
+import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Heading } from "@/components/ui/Text";
@@ -26,7 +27,7 @@ export function Recu({ recu }: { recu: DonneesRecu }) {
     <article className="mx-auto flex w-full max-w-[640px] flex-col gap-6 rounded-carte border border-bordure-carte p-8 max-sm:p-5 print:max-w-none print:border-0 print:p-0">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="m-0 text-[17px] font-bold text-bleu">Étudium</p>
+          <Logo hauteur={28} />
           <Heading level="page" className="mt-3">
             Reçu de paiement
           </Heading>

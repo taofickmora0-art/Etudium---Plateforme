@@ -41,6 +41,9 @@ describe("Le reçu", () => {
     const imprimer = vi.spyOn(window, "print").mockImplementation(() => {});
     render(<Recu recu={RECU} />);
     expect(screen.getByRole("heading", { level: 1, name: "Reçu de paiement" })).toBeInTheDocument();
+    // Le vrai logo d'Étudium en tête, comme dans les e-mails (demande du 3 novembre 2026), et non le mot seul.
+    const logo = screen.getByRole("img", { name: "Étudium" });
+    expect(logo.querySelector("svg path")).not.toBeNull();
     for (const t of [
       "ET-R-2026-000001",
       "1er novembre 2026",
