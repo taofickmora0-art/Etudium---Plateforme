@@ -1327,3 +1327,21 @@ Les dix formations d'exemple (Excel, Word, Zotero, PowerPoint, Méthodologie du 
    - `amount_to_pay`, `min_amount` et `max_amount` sont-ils en unités mineures (321,50 GHS = 32150), comme le dit la documentation pour `min_amount` ?
    - quelle forme ont les éléments de `details.operators` dans l'erreur `operator_required` : des codes, ou des objets `{ code, name }` ? (Étudium accepte les deux.)
    - le format des `phone_prefixes` au Bénin depuis le passage à 10 chiffres : « 0197 » ou « 97 » ? (Étudium accepte les deux.)
+
+## 72. Un code promo pour les abonnements choisis (migration 0073), 10 minutes
+
+Un code promo ne vaut plus forcément pour tous les abonnements : tu choisis ceux qu'il concerne, en plus du type de remise, des dates, de la limite d'utilisations et du réglage « Actif ».
+- **Au back-office** (Abonnements et paiements › onglet « Codes promo ») : la fenêtre d'un code a une rubrique « Abonnements concernés », avec une case par abonnement (« Basique · 3 mois », « Standard · 6 mois », « Premium · 1 an »). Un nouveau code a toutes ses cases décochées : coches-en au moins une, sinon « Choisissez au moins un abonnement. » s'affiche sous la rubrique. « Modifier » coche les abonnements actuels du code. La liste a une colonne « Abonnements » : « Basique, Premium », ou « Tous » quand le code vaut pour les trois.
+- **Les codes existants** valent pour les trois abonnements : la migration les coche tous, rien ne change pour eux tant que tu ne les modifies pas.
+- **Côté étudiant** : un code appliqué à un abonnement qu'il ne concerne pas affiche « Ce code ne s'applique pas à l'abonnement Standard. » sous le champ, sans remise. Si l'étudiant change d'abonnement après avoir appliqué un code, le code est revérifié pour le nouvel abonnement : la remise est recalculée, ou retirée avec ce message ; « Payer » attend la réponse. Un code refusé pour un abonnement est aussi réessayé quand il en choisit un autre. Chaque vérification compte comme un essai de code (10 par 10 minutes, section 56).
+
+1. **La migration, sur la base de test** (etudium-dev) : Supabase › SQL Editor › New query, colle tout le fichier `web/supabase/migrations/0073_codes_promo_formules.sql`, après la 0072 (section 71), puis Run. Elle se relance sans risque : un code que tu as restreint le reste.
+2. **Sur la base de production** : si elle existe déjà, colle ce même fichier dans son éditeur SQL (SQL Editor › New query › Run), **avant** de mettre le code en ligne. L'ancien code marche avec la nouvelle base (un code qu'il crée vaut pour tous les abonnements, une modification garde ceux du code), pas l'inverse. Une base de production neuve l'a déjà : la 0073 est à la fin de `web/supabase/production/partie-5.sql`.
+3. **Sans la migration**, le back-office garde le formulaire d'avant, avec le bandeau « Appliquez la migration 0073 (guide « Ce qui te revient », section 72). », et la souscription marche comme avant.
+4. **À vérifier**, avec ton compte administrateur, puis un compte étudiant de test :
+   - onglet « Codes promo » : tes anciens codes affichent « Tous » dans la colonne « Abonnements » ;
+   - « Nouveau code » : `BASIQUE10` (pourcentage, 10), sans cocher d'abonnement ; « Enregistrer » affiche « Choisissez au moins un abonnement. » sous la rubrique. Coche Basique, puis « Enregistrer » : la liste affiche « Basique » ;
+   - « Modifier » sur `BASIQUE10` : seule la case Basique est cochée ; « Désactiver » puis « Activer » ne changent pas ses abonnements ;
+   - en étudiant, « S'abonner » : choisis Standard, saisis `BASIQUE10`, puis « Appliquer » : « Ce code ne s'applique pas à l'abonnement Standard. », et le total reste le prix de Standard ;
+   - clique sur Basique : le code est réessayé tout seul et la remise s'affiche ; reviens sur Standard : la remise disparaît, et le message revient ;
+   - un ancien code (`PROMO20`, par exemple) marche toujours sur les trois abonnements.

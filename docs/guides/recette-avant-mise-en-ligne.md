@@ -31,7 +31,7 @@ Une capture aide beaucoup. Note aussi l'appareil (ordinateur ou téléphone) qua
 - [ ] **Accueil** : le fil de la communauté, l'annonce épinglée (masquable), les nouvelles formations (sections 32, 46).
 - [ ] **Tableau de bord** : bonjour, indicateurs, « Commencez votre première formation », recommandations (section 62).
 - [ ] **Formations** : une formation gratuite se suit en entier ; une payante propose de s'abonner (sections 13, 56).
-- [ ] **Abonnement** : les trois formules ; le pays (Bénin d'abord), l'indicatif devant le numéro et les opérateurs de ton compte Payiz, Celtiis compris (migration 0072) ; le paiement de test Payiz ; le reçu, avec l'opérateur et le pays ; un code promo (sections 53, 56, 71).
+- [ ] **Abonnement** : les trois formules ; le pays (Bénin d'abord), l'indicatif devant le numéro et les opérateurs de ton compte Payiz, Celtiis compris (migration 0072) ; le paiement de test Payiz ; le reçu, avec l'opérateur et le pays ; un code promo limité aux abonnements cochés, migration 0073 (sections 53, 56, 71, 72).
 - [ ] **Profil** : informations, photo, préférences de notification, mot de passe, objectif de la semaine, carte « Gamification » (sections 45, 62).
 
 ## 3. L'étudiante abonnée, 45 minutes
