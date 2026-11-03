@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
-import { chargerFile, garderContenu, retablirPublication, supprimerContenu } from "@/lib/moderation/actions";
+import { chargerFile, garderContenu, retablirMessageGroupe, retablirPublication, supprimerContenu } from "@/lib/moderation/actions";
 import type { ElementFile, EtatModeration, OngletFile } from "@/lib/moderation/types";
 import { BlocAnalyse } from "./BlocAnalyse";
 import { ElementModeration } from "./ElementModeration";
@@ -64,8 +64,22 @@ export function PageModeration({
   }
 
   async function agir(e: ElementFile, action: "garder" | "supprimer" | "retablir"): Promise<string | null> {
-    const cible = e.type === "reponse" ? { reponseId: e.id } : e.type === "commentaire_lecon" ? { commentaireLeconId: e.id } : { publicationId: e.id };
-    const appel = action === "garder" ? garderContenu(cible) : action === "supprimer" ? supprimerContenu(cible) : retablirPublication(e.id);
+    const cible =
+      e.type === "reponse"
+        ? { reponseId: e.id }
+        : e.type === "commentaire_lecon"
+          ? { commentaireLeconId: e.id }
+          : e.type === "message_groupe"
+            ? { messageGroupeId: e.id }
+            : { publicationId: e.id };
+    const appel =
+      action === "garder"
+        ? garderContenu(cible)
+        : action === "supprimer"
+          ? supprimerContenu(cible)
+          : e.type === "message_groupe"
+            ? retablirMessageGroupe(e.id)
+            : retablirPublication(e.id);
     const reponse = await appel.catch(() => ({ ok: false as const, message: ECHEC }));
     if (!reponse.ok) {
       setErreur(reponse.message);
@@ -74,7 +88,7 @@ export function PageModeration({
     setErreur(null);
     setElements((liste) => liste.filter((x) => !(x.id === e.id && x.type === e.type)));
     if (onglet === "a_examiner") setAExaminer((n) => Math.max(0, n - 1));
-    toast({ tone: "reussite", title: MESSAGES[action] });
+    toast({ tone: "reussite", title: action === "retablir" && e.type === "message_groupe" ? "Message rétabli" : MESSAGES[action] });
     return null;
   }
 

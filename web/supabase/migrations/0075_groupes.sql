@@ -683,6 +683,8 @@ begin
     'membres', public.compter_membres_groupe(g.id),
     'coupe', exists (select 1 from public.groupes_coupes c where c.groupe_id = g.id and c.profil_id = (select auth.uid())),
     'peut_moderer', public.peut_moderer_groupe(g.id),
+    -- L'équipe modère depuis la file : elle ne signale pas.
+    'equipe', public.equipe_communaute(),
     'peut_ecrire', g.actif,
     'non_lus', public.non_lus_groupe(g.id, (select auth.uid())),
     'epingle', (
@@ -754,8 +756,8 @@ $$;
 
 -- ─── Écrire ─────────────────────────────────────────────────────────────────────────────────────────
 -- Un message : du texte, une image déposée dans son dossier de l'espace « groupes », ou les deux ; en réponse à un
--- message du même groupe, éventuellement. Rend le message, avec « analyser » (l'analyse automatique est attendue) et sa
--- version.
+-- message du même groupe, éventuellement. Rend le message, avec « analyser » (l'analyse automatique est attendue), sa
+-- version et le nom du groupe (pour l'analyse).
 create or replace function public.envoyer_message_groupe(p_groupe uuid, p_texte text, p_image text default null, p_reponse_a uuid default null)
 returns jsonb
 language plpgsql
@@ -828,7 +830,7 @@ begin
       false
     );
   end if;
-  return public.message_groupe_json(v_message) || jsonb_build_object('analyser', v_message.analyse_attendue, 'version', v_message.version);
+  return public.message_groupe_json(v_message) || jsonb_build_object('analyser', v_message.analyse_attendue, 'version', v_message.version, 'groupe_nom', v_groupe.nom);
 end;
 $$;
 
@@ -864,13 +866,13 @@ begin
     raise exception 'Écrivez un message ou ajoutez une image.';
   end if;
   if v_texte = v.texte then
-    return public.message_groupe_json(v) || jsonb_build_object('analyser', false, 'version', v.version);
+    return public.message_groupe_json(v) || jsonb_build_object('analyser', false, 'version', v.version, 'groupe_nom', (select g.nom from public.groupes g where g.id = v.groupe_id));
   end if;
   update public.messages_groupes
   set texte = v_texte, modifie_le = now(), version = version + 1, analyse_attendue = public.moderation_active()
   where id = p_message
   returning * into v;
-  return public.message_groupe_json(v) || jsonb_build_object('analyser', v.analyse_attendue, 'version', v.version);
+  return public.message_groupe_json(v) || jsonb_build_object('analyser', v.analyse_attendue, 'version', v.version, 'groupe_nom', (select g.nom from public.groupes g where g.id = v.groupe_id));
 end;
 $$;
 

@@ -15,6 +15,7 @@ import {
   Home03Icon,
   LibraryIcon,
   Megaphone01Icon,
+  MessageMultiple02Icon,
   Route01Icon,
   Search01Icon,
   Shield01Icon,
@@ -53,7 +54,11 @@ const ACCUEIL: NavEntry = { href: "/accueil", label: "Accueil", icon: Home03Icon
 export const NAV_PRINCIPALE: NavEntry[] = [
   ACCUEIL,
   FORMATIONS,
+  // La Bibliothèque numérique (0074) : une entrée à part entière, hors de « Formations » (spec du 3 novembre 2026, §7.6).
+  { href: "/bibliotheque", label: "Bibliothèque", icon: LibraryIcon },
   { href: "/messages", label: "Messages", icon: BubbleChatIcon },
+  // Les groupes de discussion en direct (0075) : le Général, ceux des parcours et des formations.
+  { href: "/groupes", label: "Groupes", icon: MessageMultiple02Icon },
   { href: "/evenements", label: "Événements", icon: Calendar03Icon },
 ];
 
@@ -158,6 +163,7 @@ export const MENUS: Record<Espace, { libelle: string; groupes: GroupeNav[] }> = 
           { href: "/formateur/sessions", label: "Sessions live", icon: Video01Icon },
           { href: "/formateur/etudiants", label: "Étudiants", icon: StudentsIcon },
           { href: "/formateur/messages", label: "Messages", icon: BubbleChatIcon },
+          { href: "/formateur/groupes", label: "Groupes", icon: MessageMultiple02Icon },
           COMMUNAUTE_FORMATEUR,
         ],
       },

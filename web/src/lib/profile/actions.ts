@@ -156,8 +156,18 @@ export async function deleteAccount(): Promise<void> {
   // échoue, le compte est supprimé quand même : la base garde les chemins notés (messages_fichiers_a_effacer).
   const messages = await supabase.rpc("fichiers_de_mes_messages");
   const cheminsMessages = messages.error ? [] : ((messages.data as string[] | null) ?? []).filter(Boolean);
+  // Les images de ses messages de groupe (0075), dans son dossier de l'espace « groupes » : listées avant, effacées
+  // après (ses messages partent avec le compte : plus rien ne les montre). Sans la 0075, la liste est vide.
+  const groupes = await supabase.storage
+    .from("groupes")
+    .list(user.id, { limit: 1000 })
+    .then(
+      (r) => (r.error ? [] : (r.data ?? []).map((f) => `${user.id}/${f.name}`)),
+      () => [] as string[],
+    );
   const { error } = await supabase.rpc("supprimer_mon_compte");
   if (error) throw new Error("Suppression refusée");
   if (cheminsMessages.length > 0) await supabase.storage.from("messages").remove(cheminsMessages).catch(() => undefined);
+  if (groupes.length > 0) await supabase.storage.from("groupes").remove(groupes).catch(() => undefined);
   await clearLocalSession();
 }

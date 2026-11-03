@@ -4,6 +4,7 @@ import { Suspense, useId, useState, type MouseEvent } from "react";
 import { usePathname } from "next/navigation";
 import { Cancel01Icon, Menu01Icon } from "@hugeicons/core-free-icons";
 import { Dialog } from "radix-ui";
+import { useGroupesNonLus } from "@/components/groupes/useGroupesNonLus";
 import { useMessagesNonLus } from "@/components/messages/useMessagesNonLus";
 import { IconButton } from "@/components/ui/IconButton";
 import { PastilleNombre } from "@/components/ui/PastilleNombre";
@@ -21,15 +22,26 @@ function EntreesActives() {
   return <SidebarNavLinks pathname={pathname} repliable={false} apresPremierGroupe={communaute ? <EspacesCommunaute pathname={pathname} /> : null} />;
 }
 
-/** Sur le bouton ≡ : le nombre de conversations non lues (l'entrée « Messages » est dans le tiroir), décrit par `id`. */
+/**
+ * Sur le bouton ≡ : les conversations non lues et les messages non lus des groupes (les entrées « Messages » et
+ * « Groupes » sont dans le tiroir), décrits par `id`.
+ */
 function PastilleMessages({ id }: { id: string }) {
   const actuel = spaceOf(usePathname());
   const nonLus = useMessagesNonLus(actuel === "admin" ? "equipe" : actuel);
+  const nonLusGroupes = useGroupesNonLus(actuel !== "admin");
+  const total = nonLus + nonLusGroupes;
+  const description = [
+    nonLus > 0 ? `${nonLus} conversation${nonLus > 1 ? "s" : ""} non lue${nonLus > 1 ? "s" : ""}` : "",
+    nonLusGroupes > 0 ? `${nonLusGroupes} message${nonLusGroupes > 1 ? "s" : ""} non lu${nonLusGroupes > 1 ? "s" : ""} dans les groupes` : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
   return (
     <>
-      {nonLus > 0 && <PastilleNombre nombre={nonLus} className="pointer-events-none absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] ring-2 ring-page" />}
+      {total > 0 && <PastilleNombre nombre={total} className="pointer-events-none absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] ring-2 ring-page" />}
       <span id={id} className="sr-only">
-        {nonLus > 0 ? `${nonLus} conversation${nonLus > 1 ? "s" : ""} non lue${nonLus > 1 ? "s" : ""}` : ""}
+        {description}
       </span>
     </>
   );

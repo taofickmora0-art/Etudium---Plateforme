@@ -3,6 +3,7 @@
 import { Fragment, Suspense, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { SidebarGroup } from "@/components/ui/SidebarGroup";
+import { useGroupesNonLus } from "@/components/groupes/useGroupesNonLus";
 import { useMessagesNonLus } from "@/components/messages/useMessagesNonLus";
 import { useNouvellesSessions } from "@/components/sessions/useNouvellesSessions";
 import { SidebarItem } from "@/components/ui/SidebarItem";
@@ -45,10 +46,15 @@ export function SidebarNavLinks({
   // Les conversations non lues, sur l'entrée « Messages » de l'espace (l'équipe : l'assistance).
   const espaceMessages = actuel === "admin" ? "equipe" : (actuel ?? null);
   const nonLus = useMessagesNonLus(espaceMessages, pathname !== null);
+  // Les messages non lus des groupes (0075), sur l'entrée « Groupes » de l'étudiant et du formateur.
+  const nonLusGroupes = useGroupesNonLus(pathname !== null && actuel !== "admin" && actuel !== undefined);
   const pastilleDe = (href: string) => {
     if (href === "/evenements" && nouvelles > 0) return { nombre: nouvelles, libelle: `${nouvelles} nouvelle${nouvelles > 1 ? "s" : ""} session${nouvelles > 1 ? "s" : ""}` };
     if ((href === "/messages" || href === "/formateur/messages" || href === "/admin/messages") && nonLus > 0) {
       return { nombre: nonLus, libelle: `${nonLus} conversation${nonLus > 1 ? "s" : ""} non lue${nonLus > 1 ? "s" : ""}` };
+    }
+    if ((href === "/groupes" || href === "/formateur/groupes") && nonLusGroupes > 0) {
+      return { nombre: nonLusGroupes, libelle: `${nonLusGroupes} message${nonLusGroupes > 1 ? "s" : ""} non lu${nonLusGroupes > 1 ? "s" : ""} dans les groupes` };
     }
     return undefined;
   };

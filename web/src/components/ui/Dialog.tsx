@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Dialog as RadixDialog } from "radix-ui";
 import { cn } from "@/lib/cn";
 import { Icon, type IconSvgElement } from "./Icon";
+import { useClavier } from "./useClavier";
 
 // Pastille d'icône de 48 px aux couleurs de l'état (planche « Modales »).
 const ICON_TONES = {
@@ -41,35 +42,6 @@ export type DialogProps = {
 };
 
 /**
- * Sur téléphone, la part de l'écran cachée par le clavier et la hauteur encore visible (null sans clavier). Le clavier
- * ne réduit que la zone visible (visualViewport) : une feuille collée en bas restait dessous (« Nouveau message » de la
- * messagerie, capture du 3 novembre 2026). On la remonte au-dessus, à la hauteur visible.
- */
-function useClavier(ouverte: boolean) {
-  const [clavier, setClavier] = useState<{ cache: number; visible: number } | null>(null);
-  useEffect(() => {
-    if (!ouverte) return;
-    const vue = window.visualViewport;
-    if (!vue || typeof window.matchMedia !== "function") return;
-    const telephone = window.matchMedia("(max-width: 639px)");
-    const mesurer = () => {
-      const cache = Math.round(window.innerHeight - vue.height - vue.offsetTop);
-      // Moins de 40 px : une barre du navigateur qui bouge, pas un clavier.
-      setClavier(telephone.matches && cache > 40 ? { cache, visible: Math.round(vue.height) } : null);
-    };
-    mesurer();
-    vue.addEventListener("resize", mesurer);
-    vue.addEventListener("scroll", mesurer);
-    return () => {
-      vue.removeEventListener("resize", mesurer);
-      vue.removeEventListener("scroll", mesurer);
-      setClavier(null);
-    };
-  }, [ouverte]);
-  return clavier;
-}
-
-/**
  * Fenêtre de dialogue (planche « Modales et confirmations ») : 420 px, rayon 24, croix en haut à droite.
  * Sous 640 px (NdMobDeconnexion), elle devient une feuille collée en bas : poignée, pas de croix,
  * boutons empilés pleine largeur, l'action au-dessus.
@@ -82,6 +54,7 @@ export function Dialog({ open, onOpenChange, title, description, icon, iconTone 
   // L'élément qui avait le focus à l'ouverture : sans déclencheur Radix (fenêtre ouverte par un état), Radix ne sait
   // pas où rendre le focus et le laisse retomber sur la page.
   const ouvreur = useRef<HTMLElement | null>(null);
+  // Sur téléphone, la feuille remonte au-dessus du clavier, à la hauteur encore visible.
   const clavier = useClavier(open);
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>

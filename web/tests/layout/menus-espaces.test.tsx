@@ -58,13 +58,15 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
       ["Sessions live", "/formateur/sessions"],
       ["Étudiants", "/formateur/etudiants"],
       ["Messages", "/formateur/messages"],
+      // Les groupes de discussion (0075).
+      ["Groupes", "/formateur/groupes"],
       ["Communauté", "/formateur/communaute"],
     ]);
     expect(within(nav).getByRole("group", { name: "Enseignement" })).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "Étudiants" })).toHaveAttribute("aria-current", "page");
   });
 
-  it("espace étudiant : un seul onglet Formations après Accueil, Événements après Messages", () => {
+  it("espace étudiant : un seul onglet Formations après Accueil, Groupes après Messages, puis Événements", () => {
     render(<SidebarNavLinks pathname="/mes-formations" />);
     const nav = screen.getByRole("navigation", { name: "Navigation principale" });
     const groupe = within(nav).getByRole("group", { name: "Mon espace" });
@@ -75,7 +77,9 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
     expect(principaux).toEqual([
       ["Accueil", "/accueil"],
       ["Formations", "/formations"],
+      ["Bibliothèque", "/bibliotheque"],
       ["Messages", "/messages"],
+      ["Groupes", "/groupes"],
       ["Événements", "/evenements"],
     ]);
     expect(within(groupe).getAllByRole("link").map((l) => l.textContent)).toEqual([

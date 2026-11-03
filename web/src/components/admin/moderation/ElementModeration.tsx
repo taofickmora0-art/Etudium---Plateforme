@@ -56,8 +56,9 @@ export function ElementModeration({
   const [suppression, setSuppression] = useState(false);
   const [erreurSuppression, setErreurSuppression] = useState<string>();
   const nom = `${e.auteur.prenom} ${e.auteur.nom}`.trim() || "Membre d’Étudium";
-  // Une publication, une réponse de la communauté, ou un commentaire sous une leçon (0028).
-  const genre = e.type === "reponse" ? "Réponse" : e.type === "commentaire_lecon" ? "Commentaire de leçon" : "Publication";
+  // Une publication, une réponse de la communauté, un commentaire sous une leçon (0028) ou un message de groupe (0075).
+  const genre = e.type === "reponse" ? "Réponse" : e.type === "commentaire_lecon" ? "Commentaire de leçon" : e.type === "message_groupe" ? "Message de groupe" : "Publication";
+  const lieu = e.type === "message_groupe" ? `Groupe ${e.espace.nom}` : nomEspace(e.espace);
 
   async function agir(action: "garder" | "retablir") {
     setOccupe(true);
@@ -84,7 +85,7 @@ export function ElementModeration({
         ) : (
           <span className="min-w-0 text-[15px] leading-[22px] font-semibold wrap-anywhere text-encre">{nom}</span>
         )}
-        <span className="text-[13px] leading-5 text-discret">{`${nomEspace(e.espace)} · ${moment(e.creeLe, maintenant)}`}</span>
+        <span className="text-[13px] leading-5 text-discret">{`${lieu} · ${moment(e.creeLe, maintenant)}`}</span>
       </div>
       {e.extrait && <p className="m-0 text-[13px] leading-5 wrap-anywhere text-discret">{e.type === "commentaire_lecon" ? `Sous la leçon « ${e.extrait} »` : `En réponse à « ${e.extrait} »`}</p>}
       <div className="flex min-w-0 flex-col gap-1.5">
@@ -138,6 +139,10 @@ export function ElementModeration({
           <Link href={e.lien ?? "#"} className={`${LIEN} ml-1`}>
             Ouvrir la leçon
           </Link>
+        ) : e.type === "message_groupe" ? (
+          <Link href={e.lien ?? "#"} className={`${LIEN} ml-1`}>
+            Ouvrir le groupe
+          </Link>
         ) : (
           <Link href={`/communaute/publications/${e.publicationId}`} className={`${LIEN} ml-1`}>
             Ouvrir la publication
@@ -150,7 +155,11 @@ export function ElementModeration({
         tone="danger"
         icon={Delete02Icon}
         title="Supprimer ce contenu ?"
-        description="Il disparaîtra de la communauté et son auteur sera prévenu."
+        description={
+          e.type === "message_groupe"
+            ? "« Message retiré par la modération » restera affiché à sa place, et son auteur sera prévenu."
+            : "Il disparaîtra de la communauté et son auteur sera prévenu."
+        }
         confirmLabel="Supprimer"
         errorMessage={erreurSuppression}
         onConfirm={supprimer}

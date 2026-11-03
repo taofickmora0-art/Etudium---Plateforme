@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { signalerTempsReel, type EvenementTempsReel } from "./evenements";
+import { TempsReelGroupes } from "./TempsReelGroupes";
 
 /**
  * Le temps réel (liste du 31 octobre 2026 ; migration 0044) : l'appli s'abonne, en privé, à « compte:<id> » (ses
@@ -11,6 +12,7 @@ import { signalerTempsReel, type EvenementTempsReel } from "./evenements";
  * page ; rien du contenu ne passe par là, chacun relit ce qui le concerne. Après une coupure, la reconnexion fait tout
  * relire. Sans configuration Supabase, sans session ou sans temps réel, rien ne casse : la relecture régulière continue.
  * Le compte vient de la session du navigateur ; Supabase revérifie, avec le jeton, le droit de s'abonner à son sujet.
+ * Les groupes de discussion (0075) ont leurs sujets, « groupe:<id> », suivis par <TempsReelGroupes>.
  */
 export function TempsReel() {
   useEffect(() => {
@@ -64,5 +66,5 @@ export function TempsReel() {
       for (const canal of canaux) void supabase.removeChannel(canal);
     };
   }, []);
-  return null;
+  return <TempsReelGroupes />;
 }

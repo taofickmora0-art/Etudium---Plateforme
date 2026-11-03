@@ -24,10 +24,10 @@ export function versElement(l: Ligne): ElementFile {
   const analyse = un(l.analyse);
   const signalements = un(l.signalements);
   return {
-    type: l.type === "reponse" || l.type === "commentaire_lecon" ? l.type : "publication",
+    type: l.type === "reponse" || l.type === "commentaire_lecon" || l.type === "message_groupe" ? l.type : "publication",
     id: texte(l.id),
     publicationId: texte(l.publication_id),
-    ...(l.type === "commentaire_lecon" ? { lien: texteOuNull(l.lien) } : {}),
+    ...(l.type === "commentaire_lecon" || l.type === "message_groupe" ? { lien: texteOuNull(l.lien) } : {}),
     espace: { id: texteOuNull(espace?.id), nom: texte(espace?.nom) },
     auteur: { id: texte(auteur?.id), prenom: texte(auteur?.prenom), nom: texte(auteur?.nom) },
     creeLe: texte(l.cree_le),
@@ -49,14 +49,19 @@ export function versElement(l: Ligne): ElementFile {
   };
 }
 
-/** Les liens temporaires des fichiers, en un seul appel ; un lien manquant reste null. */
+/** L'espace de stockage d'un fichier de la file : celui de la communauté, ou celui des groupes (images des messages, 0075). */
+const espaceDe = (e: ElementFile) => (e.type === "message_groupe" ? "groupes" : "communaute");
+
+/** Les liens temporaires des fichiers, en un appel par espace ; un lien manquant reste null. */
 export async function avecLiens(supabase: Client, elements: ElementFile[]): Promise<ElementFile[]> {
-  const chemins = elements.flatMap((e) => (e.pieceJointe ? [e.pieceJointe.chemin] : []));
-  if (chemins.length === 0) return elements;
-  const { data, error } = await supabase.storage.from("communaute").createSignedUrls(chemins, 3600);
   const liens = new Map<string, string>();
-  if (!error) for (const lien of data ?? []) if (lien.path && lien.signedUrl && !lien.error) liens.set(lien.path, lien.signedUrl);
-  return elements.map((e) => (e.pieceJointe ? { ...e, pieceJointe: { ...e.pieceJointe, url: liens.get(e.pieceJointe.chemin) ?? null } } : e));
+  for (const espace of ["communaute", "groupes"] as const) {
+    const chemins = elements.flatMap((e) => (e.pieceJointe && espaceDe(e) === espace ? [e.pieceJointe.chemin] : []));
+    if (chemins.length === 0) continue;
+    const { data, error } = await supabase.storage.from(espace).createSignedUrls(chemins, 3600);
+    if (!error) for (const lien of data ?? []) if (lien.path && lien.signedUrl && !lien.error) liens.set(`${espace}:${lien.path}`, lien.signedUrl);
+  }
+  return elements.map((e) => (e.pieceJointe ? { ...e, pieceJointe: { ...e.pieceJointe, url: liens.get(`${espaceDe(e)}:${e.pieceJointe.chemin}`) ?? null } } : e));
 }
 
 /** Rend migrationAbsente sans la 0020, et relance toute autre erreur. */

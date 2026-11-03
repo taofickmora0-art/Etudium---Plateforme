@@ -12,6 +12,8 @@ const EQUIVALENTS: Record<string, string> = {
 };
 
 const PUBLICATION = /^\/communaute\/publications\/([^/?#]+)$/;
+// Un groupe de discussion (0075) : le sien est dans son espace, avec le message visé (« ?message=… »).
+const GROUPE = /^\/groupes(\/[^/?#]+)?$/;
 
 /** Où va un formateur qui demande `chemin` (la recherche et l'ancre d'une adresse étudiante sont laissées). */
 export function cheminFormateur(chemin: string): string {
@@ -19,6 +21,8 @@ export function cheminFormateur(chemin: string): string {
   const page = chemin.split(/[?#]/)[0];
   const publication = PUBLICATION.exec(page);
   if (publication) return `/formateur/communaute/publications/${publication[1]}`;
+  const groupe = GROUPE.exec(page);
+  if (groupe) return `/formateur/groupes${groupe[1] ?? ""}${groupe[1] ? chemin.slice(page.length) : ""}`;
   return EQUIVALENTS[page] ?? "/formateur";
 }
 

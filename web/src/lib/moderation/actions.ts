@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { exigerEquipe } from "@/lib/admin/garde";
 import { estFonctionAbsente, liste } from "@/lib/contenus/lecture";
+import { MIGRATION_GROUPES } from "@/lib/groupes/regles";
 import { avecLiens, versElement } from "./data";
 import type { CibleModeration, ElementFile, OngletFile } from "./types";
 
@@ -22,9 +23,9 @@ function message(error: Erreur): string {
   return ECHEC;
 }
 
-/** Les paramètres d'une cible ; null si l'identifiant est mal formé (un commentaire de leçon a ses propres fonctions). */
+/** Les paramètres d'une cible ; null si l'identifiant est mal formé (un commentaire de leçon et un message de groupe ont leurs propres fonctions). */
 function cibler(cible: CibleModeration) {
-  if ("commentaireLeconId" in cible) return null;
+  if ("commentaireLeconId" in cible || "messageGroupeId" in cible) return null;
   const id = "publicationId" in cible ? cible.publicationId : cible.reponseId;
   if (!UUID.test(id)) return null;
   return { p_publication: "publicationId" in cible ? id : null, p_commentaire: "reponseId" in cible ? id : null };
@@ -45,6 +46,23 @@ async function actionCommentaireLecon(
   return { ok: true };
 }
 
+/**
+ * Garder, retirer ou rétablir un message de groupe (0075) : ses propres fonctions. Retiré, son image est effacée de
+ * l'espace « groupes » (la base l'a notée pour le membre de l'équipe qui l'a retiré).
+ */
+async function actionMessageGroupe(
+  supabase: Equipe["supabase"],
+  fonction: "garder_message_groupe" | "retirer_message_groupe" | "retablir_message_groupe",
+  id: string,
+): Promise<Resultat> {
+  if (!UUID.test(id)) return { ok: false, message: ECHEC };
+  const { data, error } = await supabase.rpc(fonction, { p_id: id });
+  if (error) return { ok: false, message: estFonctionAbsente(error) ? MIGRATION_GROUPES : message(error) };
+  if (fonction === "retirer_message_groupe" && typeof data === "string" && data) await supabase.storage.from("groupes").remove([data]).catch(() => undefined);
+  refresh();
+  return { ok: true };
+}
+
 /** Un onglet de la file. */
 export async function chargerFile(onglet: OngletFile): Promise<{ ok: true; elements: ElementFile[] } | Refus> {
   const garde = await exigerEquipe();
@@ -59,6 +77,7 @@ export async function garderContenu(cible: CibleModeration): Promise<Resultat> {
   const garde = await exigerEquipe();
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   if ("commentaireLeconId" in cible) return actionCommentaireLecon(garde.supabase, "garder_commentaire_lecon", cible.commentaireLeconId);
+  if ("messageGroupeId" in cible) return actionMessageGroupe(garde.supabase, "garder_message_groupe", cible.messageGroupeId);
   const parametres = cibler(cible);
   if (!parametres) return { ok: false, message: ECHEC };
   const { error } = await garde.supabase.rpc("garder_contenu", parametres);
@@ -72,6 +91,7 @@ export async function supprimerContenu(cible: CibleModeration): Promise<Resultat
   const garde = await exigerEquipe();
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   if ("commentaireLeconId" in cible) return actionCommentaireLecon(garde.supabase, "retirer_commentaire_lecon", cible.commentaireLeconId);
+  if ("messageGroupeId" in cible) return actionMessageGroupe(garde.supabase, "retirer_message_groupe", cible.messageGroupeId);
   const parametres = cibler(cible);
   if (!parametres) return { ok: false, message: ECHEC };
   // Les images d'un sondage (0026), lues avant la suppression ; rien pour un commentaire, ni avant la 0026.
@@ -87,6 +107,13 @@ export async function supprimerContenu(cible: CibleModeration): Promise<Resultat
   if (images.length > 0) await garde.supabase.storage.from("communaute").remove(images).catch(() => undefined);
   refresh();
   return { ok: true };
+}
+
+/** Rétablir un message de groupe retiré par l'analyse (0075) : il est de nouveau visible et son auteur est prévenu. */
+export async function retablirMessageGroupe(id: string): Promise<Resultat> {
+  const garde = await exigerEquipe();
+  if ("erreur" in garde) return { ok: false, message: garde.erreur };
+  return actionMessageGroupe(garde.supabase, "retablir_message_groupe", id);
 }
 
 /** Rétablir une publication bloquée par l'analyse : elle est mise en ligne et son auteur est prévenu. */

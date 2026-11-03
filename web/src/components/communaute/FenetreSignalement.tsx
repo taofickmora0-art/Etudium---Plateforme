@@ -14,8 +14,9 @@ import type { MotifSignalement } from "@/lib/moderation/types";
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 
 /**
- * « Signaler cette publication » ou « Signaler ce commentaire » (design NdCommunaute ; spec de la modération, §4) : un
- * motif, des précisions (obligatoires pour « Autre »), puis « Signalement envoyé ».
+ * « Signaler cette publication », « Signaler ce commentaire » (design NdCommunaute ; spec de la modération, §4) ou
+ * « Signaler ce message » (un message de groupe, 0075) : un motif, des précisions (obligatoires pour « Autre »), puis
+ * « Signalement envoyé ».
  */
 export function FenetreSignalement({
   cible,
@@ -23,10 +24,10 @@ export function FenetreSignalement({
   onOpenChange,
   envoi,
 }: {
-  cible: { publicationId: string } | { reponseId: string };
+  cible: { publicationId: string } | { reponseId: string } | { messageGroupeId: string };
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Un autre envoi que celui de la communauté (un commentaire de leçon, 0028). */
+  /** Un autre envoi que celui de la communauté (un commentaire de leçon, 0028 ; un message de groupe, 0075). */
   envoi?: (motif: MotifSignalement, precisions: string) => Promise<{ ok: true } | { ok: false; message: string }>;
 }) {
   const { toast } = useToast();
@@ -34,7 +35,8 @@ export function FenetreSignalement({
   const [precisions, setPrecisions] = useState("");
   const [erreur, setErreur] = useState<string>();
   const surUneReponse = "reponseId" in cible;
-  const champ = `precisions-${surUneReponse ? cible.reponseId : cible.publicationId}`;
+  const surUnMessage = "messageGroupeId" in cible;
+  const champ = `precisions-${"reponseId" in cible ? cible.reponseId : "messageGroupeId" in cible ? cible.messageGroupeId : cible.publicationId}`;
 
   function changer(ouvert: boolean) {
     if (!ouvert) {
@@ -49,7 +51,10 @@ export function FenetreSignalement({
     const refus = refusSignalement(motif, precisions);
     const reponse = refus
       ? { ok: false as const, message: refus }
-      : await (envoi ? envoi(motif, precisions) : signaler(cible, motif, precisions)).catch(() => ({ ok: false as const, message: ECHEC }));
+      : await (envoi ? envoi(motif, precisions) : "messageGroupeId" in cible ? Promise.resolve({ ok: false as const, message: ECHEC }) : signaler(cible, motif, precisions)).catch(() => ({
+          ok: false as const,
+          message: ECHEC,
+        }));
     if (!reponse.ok) {
       setErreur(reponse.message);
       // La fenêtre reste ouverte et affiche le message.
@@ -58,7 +63,11 @@ export function FenetreSignalement({
     toast({
       tone: "reussite",
       title: "Signalement envoyé",
-      description: surUneReponse ? "Merci, le commentaire a été signalé à la modération." : "Merci, la publication a été signalée à la modération.",
+      description: surUnMessage
+        ? "Merci, le message a été signalé à la modération."
+        : surUneReponse
+          ? "Merci, le commentaire a été signalé à la modération."
+          : "Merci, la publication a été signalée à la modération.",
     });
   }
 
@@ -68,7 +77,7 @@ export function FenetreSignalement({
       onOpenChange={changer}
       icon={Flag02Icon}
       iconTone="attention"
-      title={surUneReponse ? "Signaler ce commentaire" : "Signaler cette publication"}
+      title={surUnMessage ? "Signaler ce message" : surUneReponse ? "Signaler ce commentaire" : "Signaler cette publication"}
       description="L’équipe Étudium examinera votre signalement. L’auteur ne saura pas qui l’a envoyé."
       confirmLabel="Envoyer le signalement"
       errorMessage={erreur}

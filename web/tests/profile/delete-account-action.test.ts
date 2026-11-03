@@ -43,6 +43,8 @@ describe("Supprimer son compte", () => {
       "rpc oublier_mes_rendus",
       "rpc fichiers_de_mes_messages",
       "rpc supprimer_mon_compte",
+      // Les images de ses messages de groupe (0075), listées avant et effacées après.
+      "groupes u1/a.jpg",
       "cookie sb-projet-auth-token",
       "cookie etudium-souvenir",
     ]);
