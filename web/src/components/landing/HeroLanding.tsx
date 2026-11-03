@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
-import { ArrowRight02Icon, Certificate01Icon, CheckmarkCircle02Icon, Video01Icon } from "@hugeicons/core-free-icons";
-import { LienBlanc, LienContourBlanc, MOTIF_BLEU } from "@/components/catalogue/BlocsFiche";
+import { Certificate01Icon, CheckmarkCircle02Icon, Video01Icon } from "@hugeicons/core-free-icons";
+import { LienContourBlanc, MOTIF_BLEU } from "@/components/catalogue/BlocsFiche";
 import { Avatar, AvatarGroup } from "@/components/ui/Avatar";
 import { CourseIllustration } from "@/components/ui/CourseIllustration";
-import { Icon } from "@/components/ui/Icon";
 import { IconTile } from "@/components/ui/IconTile";
 import { ProgressBar, ProgressMeta } from "@/components/ui/Progress";
+import { BoutonCompteHero } from "./BoutonCompteHero";
 import { Tag } from "@/components/ui/Tag";
 import { cn } from "@/lib/cn";
 import { Pastille } from "./BlocsLanding";
@@ -109,10 +109,7 @@ export function HeroLanding() {
               apprenez, vous pratiquez, un formateur vous accompagne, et vous obtenez un certificat vérifiable.
             </p>
             <div className="mt-1.5 flex flex-wrap gap-3">
-              <LienBlanc href="/inscription">
-                <span>Créer mon compte gratuit</span>
-                <Icon icon={ArrowRight02Icon} size={18} />
-              </LienBlanc>
+              <BoutonCompteHero />
               <LienContourBlanc href="/formations" hauteur="min-h-[52px] px-[22px] py-3 text-base">
                 Découvrir les formations
               </LienContourBlanc>

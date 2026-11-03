@@ -7,6 +7,7 @@ import { Cancel01Icon, Menu01Icon } from "@hugeicons/core-free-icons";
 import { LogoComplet } from "@/components/brand/Logo";
 import { IconButton } from "@/components/ui/IconButton";
 import { cn } from "@/lib/cn";
+import { useConnecte } from "./useConnecte";
 
 /**
  * Liens du site (NdLanding §2). Les ancres sont écrites depuis la racine (« /#formules ») pour marcher aussi depuis le
@@ -31,6 +32,7 @@ const INSCRIPTION =
  */
 export function EnTetePublic() {
   const pathname = usePathname() ?? "";
+  const connecte = useConnecte();
   // Le menu est ouvert sur une page : l'en-tête reste monté d'une page à l'autre du catalogue (même mise en page),
   // un changement d'adresse le referme donc de lui-même.
   const [ouvertSur, setOuvertSur] = useState<string | null>(null);
@@ -71,15 +73,24 @@ export function EnTetePublic() {
         </nav>
       </div>
       <div className="flex flex-wrap items-center gap-3 max-sm:flex-nowrap max-sm:gap-2">
-        <Link
-          href="/connexion"
-          className="focus-etudium flex h-[49px] items-center gap-2 rounded-[14px] bg-coque px-4 text-base font-medium whitespace-nowrap text-texte no-underline transition-colors hover:bg-coque-survol max-sm:h-10 max-sm:px-3 max-sm:text-[15px]"
-        >
-          Se connecter
-        </Link>
-        <Link href="/inscription" className={cn(INSCRIPTION, "h-[49px] leading-none whitespace-nowrap max-sm:hidden")}>
-          Créer mon compte gratuit
-        </Link>
+        {connecte ? (
+          // Compte connecté : un seul bouton vers son espace (demande du 3 novembre 2026).
+          <Link href="/accueil" className={cn(INSCRIPTION, "h-[49px] leading-none whitespace-nowrap max-sm:h-10 max-sm:px-3 max-sm:text-[15px]")}>
+            Accéder à l’espace membre
+          </Link>
+        ) : (
+          <>
+            <Link
+              href="/connexion"
+              className="focus-etudium flex h-[49px] items-center gap-2 rounded-[14px] bg-coque px-4 text-base font-medium whitespace-nowrap text-texte no-underline transition-colors hover:bg-coque-survol max-sm:h-10 max-sm:px-3 max-sm:text-[15px]"
+            >
+              Se connecter
+            </Link>
+            <Link href="/inscription" className={cn(INSCRIPTION, "h-[49px] leading-none whitespace-nowrap max-sm:hidden")}>
+              Créer mon compte gratuit
+            </Link>
+          </>
+        )}
         <IconButton
           ref={bouton}
           icon={ouvert ? Cancel01Icon : Menu01Icon}
@@ -107,8 +118,12 @@ export function EnTetePublic() {
               {lien.label}
             </Link>
           ))}
-          <Link href="/inscription" onClick={fermer} className={cn(INSCRIPTION, "mt-1 min-h-12 py-3 text-center text-[15px] leading-tight")}>
-            Créer mon compte gratuit
+          <Link
+            href={connecte ? "/accueil" : "/inscription"}
+            onClick={fermer}
+            className={cn(INSCRIPTION, "mt-1 min-h-12 py-3 text-center text-[15px] leading-tight")}
+          >
+            {connecte ? "Accéder à l’espace membre" : "Créer mon compte gratuit"}
           </Link>
         </nav>
       )}

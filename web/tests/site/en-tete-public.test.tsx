@@ -114,3 +114,17 @@ describe("Pied de page public (NdLanding §16)", () => {
     expect(screen.queryByRole("link", { name: "Contact" })).toBeNull();
   });
 });
+
+describe("En-tête public, compte connecté (demande du 3 novembre 2026)", () => {
+  it("un seul bouton « Accéder à l'espace membre » à la place de la connexion et de l'inscription", () => {
+    document.cookie = "sb-abcd-auth-token=jeton; path=/";
+    try {
+      render(<EnTetePublic />);
+      expect(screen.getAllByRole("link", { name: "Accéder à l’espace membre" })[0]).toHaveAttribute("href", "/accueil");
+      expect(screen.queryByRole("link", { name: "Se connecter" })).toBeNull();
+      expect(screen.queryByRole("link", { name: "Créer mon compte gratuit" })).toBeNull();
+    } finally {
+      document.cookie = "sb-abcd-auth-token=; path=/; max-age=0";
+    }
+  });
+});

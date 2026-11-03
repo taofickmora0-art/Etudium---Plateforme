@@ -37,8 +37,9 @@ const API = "/api";
 
 export function routeFor({ pathname, signedIn, hadSession }: Situation): { redirect?: string } {
   if (dans(pathname, [API])) return {};
-  // La racine : la landing pour un visiteur (spec du lot 1, §2), l'accueil pour un compte connecté.
-  if (pathname === "/") return signedIn ? { redirect: "/accueil" } : {};
+  // La racine : la landing pour tous, compte connecté compris (demande du 3 novembre 2026) ; son en-tête propose
+  // alors « Accéder à l'espace membre ».
+  if (pathname === "/") return {};
   if (!dans(pathname, PAGES_PUBLIQUES) && !signedIn) {
     // Un cookie de session était là mais n'est plus valable : on l'annonce (fenêtre « Votre session a expiré »).
     const next = `next=${encodeURIComponent(pathname)}`;

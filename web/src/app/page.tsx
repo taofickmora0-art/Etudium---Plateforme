@@ -12,8 +12,8 @@ export const metadata: Metadata = {
 };
 
 /**
- * La racine : la landing publique pour un visiteur (spec du lot 1, §2 et §9). Un compte connecté n'arrive jamais ici,
- * le proxy l'envoie vers l'accueil. Les formations sont lues en base pendant que le reste s'affiche, leur place
+ * La racine : la landing publique (spec du lot 1, §2 et §9), pour tous : un compte connecté la voit aussi, avec
+ * « Accéder à l'espace membre » dans l'en-tête et en haut de page (demande du 3 novembre 2026). Les formations sont lues en base pendant que le reste s'affiche, leur place
  * réservée.
  */
 export default function Racine() {

@@ -97,8 +97,8 @@ describe("Pages protégées", () => {
     }
   });
 
-  it("la racine montre la landing au visiteur (même avec une session expirée) et l'accueil au compte connecté", () => {
-    expect(routeFor({ pathname: "/", signedIn: true, hadSession: true })).toEqual({ redirect: "/accueil" });
+  it("la racine montre la landing à tous, compte connecté compris (demande du 3 novembre 2026)", () => {
+    expect(routeFor({ pathname: "/", signedIn: true, hadSession: true })).toEqual({});
     expect(routeFor({ pathname: "/", signedIn: false, hadSession: false })).toEqual({});
     expect(routeFor({ pathname: "/", signedIn: false, hadSession: true })).toEqual({});
   });
