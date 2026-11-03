@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { LivresRecommandes } from "@/components/admin/bibliotheque/LivresRecommandes";
 import { FormationInfosForm } from "@/components/admin/FormationInfosForm";
 import { FormationOnglets } from "@/components/admin/FormationOnglets";
 import { PageAdmin } from "@/components/admin/PageAdmin";
@@ -15,6 +16,7 @@ import { Tag } from "@/components/ui/Tag";
 import { getFormationAdmin, listFormateurs, listParcours, nombreSuiveurs } from "@/lib/admin/data";
 import { competencesAVendre } from "@/lib/catalogue/data";
 import { requireDomaine } from "@/lib/auth/require-domaine";
+import { lireLivresRecommandes, listLivresPublies } from "@/lib/bibliotheque/data";
 import { ETATS, TON_ETAT } from "@/lib/contenus/etat";
 
 export const metadata: Metadata = { title: "Formation · Back-office · Étudium" };
@@ -34,9 +36,12 @@ async function FicheFormation({ params, searchParams }: Params) {
   }
   const [formation, parcours, formateurs, { competences, liees }] = donnees;
   if (!formation) notFound();
-  const [historique, suiveurs] = await Promise.all([
+  const [historique, suiveurs, recommandes, publies] = await Promise.all([
     ongletHistorique(formation.id),
     formation.statut === "publiee" ? nombreSuiveurs(formation.id) : Promise.resolve(null),
+    // Une carte annexe : si sa lecture échoue, elle n'est pas montrée, et la formation reste modifiable.
+    lireLivresRecommandes(formation.id).catch(() => undefined),
+    listLivresPublies().catch(() => []),
   ]);
   return (
     <PageAdmin
@@ -51,7 +56,13 @@ async function FicheFormation({ params, searchParams }: Params) {
     >
       <FormationOnglets
         ongletInitial={onglet && ONGLETS.includes(onglet) ? onglet : "informations"}
-        informations={<FormationInfosForm formation={formation} parcours={parcours} formateurs={formateurs} competences={competences} liees={liees} />}
+        informations={
+          <div className="flex flex-col gap-5">
+            <FormationInfosForm formation={formation} parcours={parcours} formateurs={formateurs} competences={competences} liees={liees} />
+            {/* « Pour aller plus loin » : les livres de la Bibliothèque recommandés aux apprenants (0074). */}
+            {recommandes !== undefined && <LivresRecommandes formationId={formation.id} recommandes={recommandes} publies={publies} />}
+          </div>
+        }
         programme={<OngletLecons formation={formation} />}
         publication={
           <PublicationPanel

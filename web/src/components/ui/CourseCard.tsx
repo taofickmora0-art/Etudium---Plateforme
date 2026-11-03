@@ -22,6 +22,7 @@ export function CardShell({
   sousTitre,
   horsLien,
   coinGaucheOccupe = false,
+  formatCouverture = "formation",
   children,
 }: {
   /** Sans adresse, la carte n'est pas un lien (formation verrouillée dont la fiche n'existe plus). */
@@ -49,6 +50,8 @@ export function CardShell({
    * droite, lui laissent sa place même quand elles remplissent la ligne.
    */
   coinGaucheOccupe?: boolean;
+  /** « livre » : la couverture d'un livre de la Bibliothèque, montrée entière (voir Couverture). */
+  formatCouverture?: "formation" | "livre";
   children: ReactNode;
 }) {
   const id = useId();
@@ -58,7 +61,7 @@ export function CardShell({
     <>
       {/* La couverture en haut, sur toute la largeur ; les étiquettes posées dessus (spec des couvertures). */}
       <div data-couverture="" className="relative">
-        <Couverture src={couverture} parcours={parcours} sizes="(max-width: 640px) 100vw, 360px" />
+        <Couverture src={couverture} parcours={parcours} sizes="(max-width: 640px) 100vw, 360px" format={formatCouverture} />
         {etiquettes.length > 0 && (
           <span id={`${id}-etiquette`} className={cn("absolute top-3 right-3 left-3 flex flex-wrap justify-end gap-1.5", coinGaucheOccupe && "left-[58px]")}>
             {/* Anneau blanc : le badge reste lisible sur une photo, ou sur la couverture par défaut de sa couleur. */}
