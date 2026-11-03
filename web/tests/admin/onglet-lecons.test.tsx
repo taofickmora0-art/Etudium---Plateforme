@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import type { FormationAdmin } from "@/lib/admin/types";
+import { choisirDansListe, optionsDeLaListe } from "../utilitaires/listes";
 
 // L'onglet « Leçons » (refonte des formations, étape A, spec §3.2) : sections et leçons, statut, rangement, ajout.
 vi.mock("@/lib/admin/actions", () => ({
@@ -106,8 +107,8 @@ describe("L'onglet Leçons", () => {
     expect(within(section(/Module 1/)).getAllByRole("listitem").map((l) => l.getAttribute("aria-label"))).toEqual(["Les formules", "Découvrir l’interface"]);
     await menuLecon(user, "Les formules", "Déplacer vers…");
     const fenetre = screen.getByRole("dialog", { name: "Déplacer « Les formules »" });
-    expect(within(fenetre).getAllByRole("option").map((o) => o.textContent)).toEqual(["Module 1 - Bases d’Excel", "Module 2 - Automatisation"]);
-    await user.selectOptions(within(fenetre).getByRole("combobox", { name: "Section" }), "m2");
+    expect(await optionsDeLaListe(within(fenetre).getByRole("combobox", { name: "Section" }), { user })).toEqual(["Module 1 - Bases d’Excel", "Module 2 - Automatisation"]);
+    await choisirDansListe("Section", "Module 2 - Automatisation", { dans: fenetre, user });
     await user.click(within(fenetre).getByRole("button", { name: "Déplacer" }));
     expect(actions.ranger).toHaveBeenLastCalledWith("lecons", "l2", "m2", 2);
     expect(within(section(/Module 2/)).getAllByRole("listitem").map((l) => l.getAttribute("aria-label"))).toEqual(["Les macros", "Les formules"]);

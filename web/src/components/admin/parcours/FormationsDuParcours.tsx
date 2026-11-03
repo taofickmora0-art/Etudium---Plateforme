@@ -247,8 +247,9 @@ export function FormationsDuParcours({ parcours, fiche, tousLesParcours }: { par
           <Select
             id={idAjout}
             value={aAjouter}
-            onChange={(e) => setAAjouter(e.target.value)}
-            options={[{ value: "", label: "Choisir une formation" }, ...fiche.aAjouter.map((f) => ({ value: f.id, label: f.statut === "publiee" ? f.titre : `${f.titre} (${STATUTS[f.statut].toLowerCase()})` }))]}
+            onValueChange={setAAjouter}
+            placeholder="Choisir une formation"
+            options={fiche.aAjouter.map((f) => ({ value: f.id, label: f.statut === "publiee" ? f.titre : `${f.titre} (${STATUTS[f.statut].toLowerCase()})` }))}
           />
         </Field>
         {erreur && (

@@ -81,9 +81,9 @@ export function ListeEtudiants({ initial, formations }: Props) {
             <Select
               id={idFormation}
               value={formation}
-              onChange={(ev) => {
-                setFormation(ev.target.value);
-                charger(recherche, ev.target.value, filtre, 1);
+              onValueChange={(v) => {
+                setFormation(v);
+                charger(recherche, v, filtre, 1);
               }}
               options={[{ value: "", label: "Toutes les formations" }, ...formations.map((f) => ({ value: f.id, label: f.titre }))]}
             />

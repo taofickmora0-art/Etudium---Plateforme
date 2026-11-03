@@ -15,7 +15,6 @@ import type { ProfileData } from "@/lib/profile/data";
 import { NIVEAUX, PAYS } from "@/lib/profile/options";
 import { PhotoPicker } from "./PhotoPicker";
 
-const CHOISIR = { value: "", label: "Choisir…" };
 const GRILLE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(220px,calc((100%-16px)/2))),1fr))] gap-4";
 
 /** Onglet Informations (NdProfil) : photo, coordonnées, études et objectifs ; « Enregistrer » (NdProfilEnregistre). */
@@ -55,10 +54,10 @@ export function InformationsTab({ profile }: { profile: ProfileData }) {
             <TextInput id="profil-telephone" name="telephone" type="tel" inputMode="tel" autoComplete="tel" defaultValue={valeur("telephone", profile.telephone)} />
           </Field>
           <Field label="Pays" htmlFor="profil-pays" error={e.pays}>
-            <Select id="profil-pays" name="pays" options={[CHOISIR, ...PAYS]} defaultValue={valeur("pays", profile.pays)} />
+            <Select id="profil-pays" name="pays" placeholder="Choisir…" options={PAYS} defaultValue={valeur("pays", profile.pays)} />
           </Field>
           <Field label="Niveau d’études" htmlFor="profil-niveau" error={e.niveau_etudes}>
-            <Select id="profil-niveau" name="niveau_etudes" options={[CHOISIR, ...NIVEAUX]} defaultValue={valeur("niveau_etudes", profile.niveauEtudes)} />
+            <Select id="profil-niveau" name="niveau_etudes" placeholder="Choisir…" options={NIVEAUX} defaultValue={valeur("niveau_etudes", profile.niveauEtudes)} />
           </Field>
           <Field label="Établissement" htmlFor="profil-etablissement" error={e.etablissement}>
             <TextInput id="profil-etablissement" name="etablissement" autoComplete="organization" defaultValue={valeur("etablissement", profile.etablissement)} />

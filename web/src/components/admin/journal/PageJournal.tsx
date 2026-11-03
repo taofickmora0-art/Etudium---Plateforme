@@ -66,7 +66,7 @@ export function PageJournal({ initial, filtres, auteurs }: { initial: Page; filt
           <Select
             id={idAuteur}
             value={filtres.auteur ?? ""}
-            onChange={(e) => changer({ auteur: e.target.value || null })}
+            onValueChange={(v) => changer({ auteur: v || null })}
             options={[{ value: "", label: "Tous" }, ...auteurs.map((a) => ({ value: a.id, label: a.nom }))]}
           />
         </Field>

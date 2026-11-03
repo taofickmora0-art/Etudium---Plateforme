@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MoiCommunaute } from "@/lib/communaute/types";
+import { choisirDansListe } from "../utilitaires/listes";
 
 // Le formulaire d'une session : visuel de promotion et aperçu dans la communauté (spec promotion des sessions live, §1).
 const push = vi.fn();
@@ -46,7 +47,7 @@ describe("Visuel de promotion et aperçu", () => {
     expect(within(apercu()).getByText(/Publié dans Général/)).toBeInTheDocument();
     await remplir(user);
     await user.type(screen.getByLabelText("Description"), "Tableaux croisés dynamiques.");
-    await user.selectOptions(screen.getByLabelText("Parcours"), P);
+    await choisirDansListe(screen.getByLabelText("Parcours"), "Académique", { user });
     expect(within(apercu()).getByRole("heading", { name: "Excel avancé" })).toBeInTheDocument();
     expect(within(apercu()).getByText("Tableaux croisés dynamiques.")).toBeInTheDocument();
     expect(within(apercu()).getByText(/Publié dans Académique/)).toBeInTheDocument();

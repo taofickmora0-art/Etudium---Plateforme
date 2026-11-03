@@ -6,6 +6,7 @@ import { versCartePaiement } from "@/lib/abonnement/conversion";
 import { montantFcfa } from "@/lib/abonnement/regles";
 import type { EtapePaiement, Formule, MoyensDePaiement, OperateurPaiement } from "@/lib/abonnement/types";
 import { MOYENS_REPLI } from "@/lib/paiements/regles";
+import { choisirDansListe, optionsDeLaListe } from "../utilitaires/listes";
 import { carteSql, PAIEMENT_ID } from "./fixtures";
 
 // L'écran de souscription (lot 2, spec §6) : l'abonnement, le paiement Mobile Money (pays, numéro, opérateur, code promo,
@@ -175,13 +176,13 @@ describe("Le paiement", () => {
 
 describe("Le pays et l'opérateur (Payiz, tous pays)", () => {
   const avecMoyens = (props: Partial<Parameters<typeof Souscription>[0]> = {}) => afficher({ moyens: { 15000: MOYENS, 9000: MOYENS }, ...props });
-  const champPays = () => screen.getByLabelText("Pays") as HTMLSelectElement;
+  const champPays = () => screen.getByRole("combobox", { name: "Pays" });
   const operateursProposes = () => within(screen.getByRole("radiogroup", { name: "Opérateur" })).getAllByRole("radio").map((r) => r.textContent);
 
-  it("le Bénin par défaut, son indicatif devant le numéro, ses opérateurs avec logo et nom, Celtiis compris", () => {
+  it("le Bénin par défaut, son indicatif devant le numéro, ses opérateurs avec logo et nom, Celtiis compris", async () => {
     avecMoyens();
-    expect(champPays().value).toBe("BEN");
-    expect(within(champPays()).getAllByRole("option").map((o) => o.textContent)).toEqual(["Bénin", "Ghana", "Togo"]);
+    expect(champPays()).toHaveTextContent("Bénin");
+    expect(await optionsDeLaListe(champPays(), { user })).toEqual(["Bénin", "Ghana", "Togo"]);
     expect(screen.getByText("+229")).toBeInTheDocument();
     expect(operateursProposes()).toEqual(["MTN Mobile Money", "Moov Money", "Celtiis Cash"]);
     const logo = screen.getByRole("radio", { name: /MTN Mobile Money/ }).querySelector("img");
@@ -192,14 +193,14 @@ describe("Le pays et l'opérateur (Payiz, tous pays)", () => {
 
   it("le premier pays proposé quand le Bénin ne l'est pas", () => {
     afficher({ moyens: { 15000: { repli: false, pays: MOYENS.pays.slice(1) } } });
-    expect(champPays().value).toBe("GHA");
+    expect(champPays()).toHaveTextContent("Ghana");
     expect(screen.getByText("+233")).toBeInTheDocument();
   });
 
   it("un autre pays : son indicatif et ses seuls opérateurs ; le paiement part avec le pays et l'opérateur", async () => {
     payer.mockResolvedValue({ etat: "erreur", message: "x" });
     avecMoyens();
-    await user.selectOptions(champPays(), "TGO");
+    await choisirDansListe(champPays(), "Togo", { user });
     expect(screen.getByText("+228")).toBeInTheDocument();
     expect(screen.queryByText("+229")).toBeNull();
     expect(operateursProposes()).toEqual(["Mixx by Yas", "Moov Africa"]);
@@ -225,13 +226,13 @@ describe("Le pays et l'opérateur (Payiz, tous pays)", () => {
     avecMoyens();
     await user.click(screen.getByRole("radio", { name: /MTN Mobile Money/ }));
     expect(screen.queryByText(/Vous paierez/)).toBeNull();
-    await user.selectOptions(champPays(), "GHA");
+    await choisirDansListe(champPays(), "Ghana", { user });
     expect(screen.getByText("Vous paierez 321,50 GHS (frais compris)")).toBeInTheDocument();
   });
 
   it("un pays à un seul opérateur : il est choisi d'office", async () => {
     avecMoyens();
-    await user.selectOptions(champPays(), "GHA");
+    await choisirDansListe(champPays(), "Ghana", { user });
     expect(screen.getByRole("radio", { name: /MTN MoMo/ })).toBeChecked();
   });
 
@@ -264,7 +265,7 @@ describe("Le pays et l'opérateur (Payiz, tous pays)", () => {
     essayerCode.mockResolvedValue({ ok: true, prixInitial: 15000, remise: 3000, montant: 12000, moyens: pour12000 });
     payer.mockResolvedValue(attente());
     avecMoyens();
-    await user.selectOptions(champPays(), "GHA");
+    await choisirDansListe(champPays(), "Ghana", { user });
     await user.type(screen.getByLabelText("Code promo (facultatif)"), "promo20");
     await user.click(screen.getByRole("button", { name: "Appliquer" }));
     expect(screen.getByText("Vous paierez 257,20 GHS (frais compris)")).toBeInTheDocument();
@@ -288,7 +289,7 @@ describe("Le pays et l'opérateur (Payiz, tous pays)", () => {
 
   it("Payiz muet : le repli (Bénin, MTN et Moov) et un message discret", () => {
     afficher({ moyens: { 15000: MOYENS_REPLI } });
-    expect(champPays().value).toBe("BEN");
+    expect(champPays()).toHaveTextContent("Bénin");
     expect(operateursProposes()).toEqual(["MTN Mobile Money", "Moov Money"]);
     expect(screen.getByText("La liste des opérateurs n’a pas pu être chargée : seuls MTN et Moov, au Bénin, sont proposés pour le moment.")).toBeInTheDocument();
   });

@@ -60,7 +60,7 @@ describe("Informations générales", () => {
     expect(within(carte).getByRole("textbox", { name: "Description" })).toHaveValue("Long");
     expect(within(carte).getByRole("textbox", { name: "Ce que vous allez apprendre" })).toHaveValue("Calculer");
     expect(within(carte).getByRole("textbox", { name: "Compétences acquises" })).toHaveValue("Excel");
-    expect(within(carte).getByRole("combobox", { name: "Niveau" })).toHaveValue("debutant");
+    expect(within(carte).getByRole("combobox", { name: "Niveau" })).toHaveTextContent("Débutant");
     expect(within(carte).getByText("Enregistré")).toHaveAttribute("role", "status");
     expect(within(carte).queryByRole("button", { name: "Enregistrer" })).toBeNull();
   });

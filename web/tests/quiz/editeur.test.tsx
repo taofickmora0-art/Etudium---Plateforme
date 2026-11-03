@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import type { FormationAdmin, LeconAdmin } from "@/lib/admin/types";
 import type { QuestionQuiz } from "@/lib/quiz/types";
+import { choisirDansListe } from "../utilitaires/listes";
 
 // Lot 3, étape A : le formateur écrit un quiz (quatre types de questions) et l'ajoute au programme.
 vi.mock("@/lib/editeur/actions", () => ({
@@ -96,7 +97,7 @@ describe("L'éditeur d'un quiz", () => {
     expect(screen.getByRole("textbox", { name: "Titre du quiz" })).toHaveValue("Quiz du module 1");
     expect(screen.getByRole("heading", { name: "Questions" })).toBeInTheDocument();
     expect(screen.getByText("2 questions")).toBeInTheDocument();
-    expect(within(question(1)).getByRole("combobox", { name: "Type de question" })).toHaveValue("unique");
+    expect(within(question(1)).getByRole("combobox", { name: "Type de question" })).toHaveTextContent("Choix unique");
     expect(within(question(1)).getByRole("textbox", { name: "Énoncé" })).toHaveValue("Quel outil gère les références ?");
     expect(within(question(1)).getByRole("textbox", { name: "Réponse 1" })).toHaveValue("Zotero");
     expect(within(question(1)).getByRole("radio", { name: "Bonne réponse : réponse 1" })).toBeChecked();
@@ -143,17 +144,17 @@ describe("L'éditeur d'un quiz", () => {
     await user.click(screen.getByRole("button", { name: "Ajouter une question" }));
     expect(screen.getByText("3 questions")).toBeInTheDocument();
     // Une nouvelle question : choix unique, deux réponses, la première cochée.
-    expect(within(question(3)).getByRole("combobox", { name: "Type de question" })).toHaveValue("unique");
+    expect(within(question(3)).getByRole("combobox", { name: "Type de question" })).toHaveTextContent("Choix unique");
     expect(within(question(3)).getAllByRole("textbox", { name: /^Réponse \d$/ })).toHaveLength(2);
     await saisir(within(question(3)).getByRole("textbox", { name: "Énoncé" }), "Un TCD modifie les données d’origine.");
-    await user.selectOptions(within(question(3)).getByRole("combobox", { name: "Type de question" }), "vrai_faux");
+    await choisirDansListe("Type de question", "Vrai ou faux", { dans: question(3), user });
     expect(within(question(3)).queryByRole("textbox", { name: "Réponse 1" })).toBeNull();
     await user.click(within(question(3)).getByRole("radio", { name: "Faux" }));
     await saisir(within(question(3)).getByRole("textbox", { name: "Explication (facultative)" }), "Il les résume.");
 
     await user.click(screen.getByRole("button", { name: "Ajouter une question" }));
     await saisir(within(question(4)).getByRole("textbox", { name: "Énoncé" }), "Que place-t-on dans un TCD ?");
-    await user.selectOptions(within(question(4)).getByRole("combobox", { name: "Type de question" }), "multiple");
+    await choisirDansListe("Type de question", "Réponses multiples", { dans: question(4), user });
     await saisir(within(question(4)).getByRole("textbox", { name: "Réponse 1" }), "Des lignes");
     await saisir(within(question(4)).getByRole("textbox", { name: "Réponse 2" }), "Des colonnes");
     await user.click(within(question(4)).getByRole("button", { name: "Ajouter une réponse" }));

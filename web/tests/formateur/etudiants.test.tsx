@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import type { PageSuivi, SuiviEtudiant } from "@/lib/formateur/suivi";
+import { choisirDansListe } from "../utilitaires/listes";
 
 // Espace formateur, page « Étudiants » (spec « Étudiants » et tableau de bord du formateur, §3).
 
@@ -106,7 +107,7 @@ describe("Page Étudiants", () => {
     avecToast(<ListeEtudiants initial={PAGE} formations={FORMATIONS} />);
     await user.click(screen.getByRole("button", { name: "À risque" }));
     await waitFor(() => expect(chercherSuivi).toHaveBeenLastCalledWith("", null, "a_risque", 1));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Formation" }), X);
+    await choisirDansListe("Formation", "Maîtriser Microsoft Excel", { user });
     await waitFor(() => expect(chercherSuivi).toHaveBeenLastCalledWith("", X, "a_risque", 1));
     await user.type(screen.getByRole("searchbox", { name: "Rechercher un étudiant" }), "fifa");
     await waitFor(() => expect(chercherSuivi).toHaveBeenLastCalledWith("fifa", X, "a_risque", 1));

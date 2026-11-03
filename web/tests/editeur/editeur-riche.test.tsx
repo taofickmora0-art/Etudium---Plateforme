@@ -6,6 +6,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { Editor } from "@tiptap/react";
 import { validerDocument, type DocumentLecon, type NoeudDoc } from "@/lib/lecon/document";
 import { extensionsLecon } from "@/lib/editeur/extensions";
+import { choisirDansListe } from "../utilitaires/listes";
 
 // L'éditeur riche des leçons (fin du lot 4, spec §1.2). jsdom ne simule pas la sélection d'un champ éditable : on
 // sélectionne tout au clavier (Ctrl+A), puis on agit par la barre. L'envoi des images est simulé.
@@ -52,8 +53,10 @@ describe("L'éditeur riche", () => {
     render(<Essai initial={doc(p("Bonjour"))} surChangement={vi.fn()} />);
     await champ();
     const barre = screen.getByRole("toolbar", { name: "Mise en forme" });
-    expect(within(barre).getByRole("combobox", { name: "Style du paragraphe" })).toHaveValue("texte");
+    expect(within(barre).getByRole("combobox", { name: "Style du paragraphe" })).toHaveTextContent("Texte");
+    // La liste du style est elle aussi un bouton (le déclencheur de la liste dessinée).
     expect([...barre.querySelectorAll("button")].map((b) => b.getAttribute("aria-label"))).toEqual([
+      "Style du paragraphe",
       "Gras",
       "Italique",
       "Souligné",
@@ -91,8 +94,17 @@ describe("L'éditeur riche", () => {
     await user.click(screen.getByRole("button", { name: "Gras" }));
     await waitFor(() => expect(dernier(surChangement).content[0]).toMatchObject({ content: [{ text: "Bonjour", marks: [{ type: "bold" }] }] }));
     expect(validerDocument(dernier(surChangement)).ok).toBe(true);
-    await user.selectOptions(screen.getByRole("combobox", { name: "Style du paragraphe" }), "titre");
+    await choisirDansListe("Style du paragraphe", "Titre", { user });
     await waitFor(() => expect(dernier(surChangement).content[0]).toMatchObject({ type: "heading", attrs: { level: 2 } }));
+    // La liste refermée rend le focus au texte, pas à elle-même : on continue d'écrire. Échap aussi y ramène.
+    await waitFor(async () => expect(await champ()).toHaveFocus());
+    const style = screen.getByRole("combobox", { name: "Style du paragraphe" });
+    expect(style).toHaveTextContent("Titre");
+    await user.click(style);
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await waitFor(async () => expect(await champ()).toHaveFocus());
+    expect(style).not.toHaveFocus();
   });
 
   it("Bloc d'information : un encadré Information, puis changé en Attention, puis retiré", async () => {
@@ -102,7 +114,7 @@ describe("L'éditeur riche", () => {
     await user.click(await champ());
     await user.click(screen.getByRole("button", { name: "Bloc d’information" }));
     await waitFor(() => expect(dernier(surChangement).content[0]).toMatchObject({ type: "encadre", attrs: { ton: "info" }, content: [{ type: "paragraph" }] }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Ton du bloc" }), "attention");
+    await choisirDansListe("Ton du bloc", "Attention", { user });
     await waitFor(() => expect(dernier(surChangement).content[0]).toMatchObject({ type: "encadre", attrs: { ton: "attention" } }));
     expect(validerDocument(dernier(surChangement)).ok).toBe(true);
     await user.click(screen.getByRole("button", { name: "Retirer le bloc" }));

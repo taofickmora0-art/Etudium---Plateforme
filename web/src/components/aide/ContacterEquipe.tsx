@@ -52,7 +52,7 @@ export function ContacterEquipe() {
           <Select
             id={`${id}-sujet`}
             value={sujet}
-            onChange={(e) => setSujet(e.target.value as SujetAssistance)}
+            onValueChange={(v) => setSujet(v as SujetAssistance)}
             options={SUJETS_ASSISTANCE.map((s) => ({ value: s, label: s }))}
           />
         </Field>

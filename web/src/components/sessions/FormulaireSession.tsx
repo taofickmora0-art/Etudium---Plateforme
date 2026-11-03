@@ -221,7 +221,7 @@ function Formulaire({ espace, parcours, formateurs, initial, moi = SANS_COMPTE, 
             <ChampHeure id={`${id}-heure`} value={heure} onChange={setHeure} />
           </Field>
           <Field label="Durée" htmlFor={`${id}-duree`} className="min-w-0 flex-[1_1_140px]">
-            <Select id={`${id}-duree`} value={duree} onChange={(e) => setDuree(e.target.value)} options={DUREES.map((m) => ({ value: String(m), label: dureeLisible(m) }))} />
+            <Select id={`${id}-duree`} value={duree} onValueChange={setDuree} options={DUREES.map((m) => ({ value: String(m), label: dureeLisible(m) }))} />
           </Field>
         </div>
         <Field label="Lien du live" htmlFor={`${id}-lien`} hint="Google Meet, Zoom… Les participants le rejoignent à l’heure du début.">
@@ -231,7 +231,7 @@ function Formulaire({ espace, parcours, formateurs, initial, moi = SANS_COMPTE, 
           <Select
             id={`${id}-parcours`}
             value={parcoursId}
-            onChange={(e) => setParcoursId(e.target.value)}
+            onValueChange={setParcoursId}
             options={[{ value: "", label: "Tous les parcours" }, ...parcours.map((p) => ({ value: p.id, label: p.nomCourt }))]}
           />
         </Field>
@@ -240,7 +240,7 @@ function Formulaire({ espace, parcours, formateurs, initial, moi = SANS_COMPTE, 
             <Select
               id={`${id}-animateur`}
               value={formateurId}
-              onChange={(e) => setFormateurId(e.target.value)}
+              onValueChange={setFormateurId}
               options={[{ value: "", label: "Équipe Étudium" }, ...(formateurs ?? []).map((f) => ({ value: f.id, label: f.nom }))]}
             />
           </Field>

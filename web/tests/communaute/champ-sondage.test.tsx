@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import type { Espace, MoiCommunaute } from "@/lib/communaute/types";
+import { choisirDansListe } from "../utilitaires/listes";
 
 // Le champ de publication façon capture (spec sondages, quiz et programmation, §1 à §5) : la rangée d'options, le sondage
 // avec texte, le sondage avec images, le quiz, « Publier ▾ Programmer… » et un seul ajout par publication.
@@ -56,7 +57,7 @@ describe("Le champ de publication : options, sondages, quiz", () => {
     await user.click(screen.getByRole("button", { name: "Ajouter une option" }));
     await user.type(screen.getByRole("textbox", { name: "Option 3" }), "La nuit");
     await user.click(screen.getByRole("checkbox", { name: "Plusieurs réponses possibles" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Fin du sondage" }), "3");
+    await choisirDansListe("Fin du sondage", "3 jours", { user });
     await user.click(screen.getByRole("button", { name: "Publier" }));
     await waitFor(() => expect(publierPublication).toHaveBeenCalled());
     expect(publierPublication.mock.calls[0].slice(0, 5)).toEqual([null, "", "Votre avis ?", null, null]);

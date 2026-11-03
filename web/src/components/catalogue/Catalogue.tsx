@@ -2,13 +2,13 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown01Icon, Search01Icon } from "@hugeicons/core-free-icons";
+import { Search01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { GRILLE_CATALOGUE_CONNECTEE, GRILLE_CATALOGUE_PUBLIQUE } from "@/components/ui/grilles";
-import { Icon } from "@/components/ui/Icon";
 import { SearchInput } from "@/components/ui/SearchInput";
+import { Select } from "@/components/ui/Select";
 import { SortMenu } from "@/components/ui/SortMenu";
 import { Heading, Lead } from "@/components/ui/Text";
 import { appliquerFiltres, ecrireFiltres, FILTRES_PAR_DEFAUT, type Acces, type Filtres, type Tri } from "@/lib/catalogue/filtres";
@@ -114,24 +114,12 @@ export function Catalogue({ cartes, parcours, filtresInitiaux, variante, chemin,
                 <label htmlFor="catalogue-niveau" className="text-sm leading-5 font-medium text-encre">
                   Niveau
                 </label>
-                <span className="relative block">
-                  <select
-                    id="catalogue-niveau"
-                    value={filtres.niveau}
-                    onChange={(e) => changer({ niveau: e.target.value as Filtres["niveau"] })}
-                    className="focus-etudium box-border h-12 w-full cursor-pointer appearance-none rounded-champ border border-bordure-champ bg-panneau pr-10 pl-3.5 text-[15px] text-texte"
-                  >
-                    <option value="tous">Tous les niveaux</option>
-                    {niveaux.map((n) => (
-                      <option key={n.value} value={n.value}>
-                        {n.label}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="pointer-events-none absolute top-[15px] right-3.5 text-discret">
-                    <Icon icon={ArrowDown01Icon} size={18} />
-                  </span>
-                </span>
+                <Select
+                  id="catalogue-niveau"
+                  value={filtres.niveau}
+                  onValueChange={(v) => changer({ niveau: v as Filtres["niveau"] })}
+                  options={[{ value: "tous", label: "Tous les niveaux" }, ...niveaux]}
+                />
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3.5">

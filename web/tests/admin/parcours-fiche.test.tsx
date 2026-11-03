@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import type { ParcoursAdmin } from "@/lib/admin/types";
+import { choisirDansListe } from "../utilitaires/listes";
 
 // La fiche d'un parcours au back-office (demande du 2 novembre 2026) : ses chiffres, ses formations (ranger, changer de
 // parcours, ajouter), ses apprenants, et ses réglages.
@@ -97,7 +98,7 @@ describe("La fiche d'un parcours", () => {
     afficher("formations");
     await userEvent.click(screen.getByRole("button", { name: "Ajouter une formation" }));
     const fenetre = await screen.findByRole("dialog", { name: "Ajouter une formation au parcours" });
-    await userEvent.selectOptions(within(fenetre).getByRole("combobox", { name: "Formation" }), "f4");
+    await choisirDansListe("Formation", "Canva", { dans: fenetre });
     await userEvent.click(within(fenetre).getByRole("button", { name: "Ajouter" }));
     expect(ajouterFormationParcours).toHaveBeenCalledWith("p1", "f4");
   });

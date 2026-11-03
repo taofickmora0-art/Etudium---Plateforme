@@ -242,8 +242,9 @@ export function FormulaireAnnonceCommunaute({ initial, parcours, compteId }: { i
               <Select
                 id={ids.parcours}
                 value={r.parcoursId}
-                onChange={(e) => setR({ ...r, parcoursId: e.target.value })}
-                options={[{ value: "", label: "Choisissez un parcours" }, ...parcours.map((p) => ({ value: p.id, label: p.nom }))]}
+                onValueChange={(v) => setR({ ...r, parcoursId: v })}
+                placeholder="Choisissez un parcours"
+                options={parcours.map((p) => ({ value: p.id, label: p.nom }))}
               />
             </Field>
           )}

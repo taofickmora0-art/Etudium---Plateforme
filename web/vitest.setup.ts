@@ -8,7 +8,9 @@ import { afterEach } from "vitest";
 
 afterEach(() => cleanup());
 
-// jsdom n'a pas ces API du navigateur, dont se servent les menus Radix (position, défilement, capture du pointeur).
+// jsdom n'a pas ces API du navigateur, dont se servent les menus et les listes déroulantes Radix (position, défilement,
+// capture du pointeur). PointerEvent, lui, existe dans jsdom : user-event s'en sert pour ouvrir les listes à la souris.
+// Pour choisir dans une liste d'Étudium : `choisirDansListe` (tests/utilitaires/listes.ts).
 if (typeof window !== "undefined") {
   window.ResizeObserver ??= class {
     observe() {}

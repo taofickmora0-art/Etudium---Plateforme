@@ -206,7 +206,7 @@ export function ChampSondage({
               aria-label="Fin du sondage"
               value={etat.duree}
               disabled={desactive}
-              onChange={(e) => onChange({ ...etat, duree: e.target.value })}
+              onValueChange={(v) => onChange({ ...etat, duree: v })}
               options={DUREES_SONDAGE}
               className="h-9 w-[150px] text-sm"
             />

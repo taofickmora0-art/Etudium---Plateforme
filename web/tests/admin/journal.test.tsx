@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { choisirDansListe } from "../utilitaires/listes";
 import { fauxSupabase } from "./faux-supabase";
 
 // La page « Journal des actions » (lot 6 A, spec §2.3) : le super admin lit ce que l'équipe a fait, filtre par
@@ -61,7 +62,7 @@ describe("Le journal des actions", () => {
     expect(replace).toHaveBeenLastCalledWith("/admin/journal?categorie=paiements&auteur=a2&periode=30", { scroll: false });
     await user.click(within(screen.getByRole("group", { name: "Filtrer par période" })).getByRole("button", { name: "Tout" }));
     expect(replace).toHaveBeenLastCalledWith("/admin/journal?auteur=a2&periode=tout", { scroll: false });
-    await user.selectOptions(screen.getByLabelText("Auteur"), "a1");
+    await choisirDansListe(screen.getByLabelText("Auteur"), "Aïcha Kpadé", { user });
     expect(replace).toHaveBeenLastCalledWith("/admin/journal?auteur=a1&periode=30", { scroll: false });
   });
 

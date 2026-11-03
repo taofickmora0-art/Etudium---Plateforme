@@ -292,7 +292,7 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
                       <Select
                         id={CHAMP_PAYS}
                         value={pays.code}
-                        onChange={(e) => changerPays(e.target.value)}
+                        onValueChange={changerPays}
                         options={moyens.pays.map((p) => ({ value: p.code, label: p.nom }))}
                       />
                     </Field>

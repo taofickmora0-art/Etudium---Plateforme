@@ -6,6 +6,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { FILTRES_PAR_DEFAUT } from "@/lib/catalogue/filtres";
 import type { EtatsCartes } from "@/lib/catalogue/types";
 import { CARTES_DESIGN, PARCOURS_DESIGN } from "./cartes-design";
+import { choisirDansListe, optionsDeLaListe } from "../utilitaires/listes";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace: vi.fn(), refresh: vi.fn() }), usePathname: () => "/formations" }));
@@ -55,9 +56,10 @@ describe("Catalogue des formations", () => {
 
   it("le niveau filtre, et seuls les niveaux présents sont proposés", async () => {
     afficher("public");
-    const niveau = screen.getByLabelText("Niveau");
-    expect(within(niveau).getAllByRole("option").map((o) => o.textContent)).toEqual(["Tous les niveaux", "Débutant", "Intermédiaire"]);
-    await userEvent.selectOptions(niveau, "intermediaire");
+    const niveau = screen.getByRole("combobox", { name: "Niveau" });
+    expect(niveau).toHaveTextContent("Tous les niveaux");
+    expect(await optionsDeLaListe(niveau)).toEqual(["Tous les niveaux", "Débutant", "Intermédiaire"]);
+    await choisirDansListe(niveau, "Intermédiaire");
     expect(screen.getByText("4 formations")).toBeInTheDocument();
   });
 

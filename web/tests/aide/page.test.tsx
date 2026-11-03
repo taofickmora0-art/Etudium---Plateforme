@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import { PAGES_A_VENIR } from "@/lib/pages-a-venir";
+import { choisirDansListe, optionsDeLaListe } from "../utilitaires/listes";
 
 // La page Aide selon le design (NdAide, lot 5 étape A) : les questions fréquentes, celles sur les formules, une
 // recherche, et « Contacter l’équipe », dont la réponse arrive dans les messages (l'assistance).
@@ -62,8 +63,9 @@ describe("Page Aide (NdAide)", () => {
     const carte = screen.getByRole("region", { name: "Contacter l’équipe" });
     expect(carte).toHaveTextContent("Vous ne trouvez pas la réponse ? Écrivez-nous.");
     const sujet = within(carte).getByRole("combobox", { name: "Sujet" });
-    expect(within(sujet).getAllByRole("option").map((o) => o.textContent)).toEqual(["Paiement et abonnement", "Accès à une formation", "Certificat", "Problème technique", "Autre"]);
-    await user.selectOptions(sujet, "Certificat");
+    expect(await optionsDeLaListe(sujet, { user })).toEqual(["Paiement et abonnement", "Accès à une formation", "Certificat", "Problème technique", "Autre"]);
+    await choisirDansListe(sujet, "Certificat", { user });
+    expect(sujet).toHaveTextContent("Certificat");
     const message = within(carte).getByRole("textbox", { name: "Message" });
     expect(message).toHaveAttribute("placeholder", "Décrivez votre question en quelques lignes");
     await user.type(message, "Mon certificat ne s’affiche pas.");

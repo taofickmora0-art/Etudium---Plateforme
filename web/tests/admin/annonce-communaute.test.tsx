@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import type { AnnonceEquipe } from "@/lib/communaute/types";
+import { choisirDansListe, optionsDeLaListe } from "../utilitaires/listes";
 
 // L'annonce épinglée au back-office (spec du fil « Actualités », §2 ; design NdAdminAnnonceCommunaute).
 
@@ -131,8 +132,10 @@ describe("L'annonce de la communauté au back-office", () => {
     expect(screen.queryByRole("combobox", { name: "Parcours" })).toBeNull();
     await user.click(within(groupe).getByRole("radio", { name: /Les membres d’un parcours/ }));
     const liste = screen.getByRole("combobox", { name: "Parcours" });
-    expect(within(liste).getAllByRole("option").map((o) => o.textContent)).toEqual(["Choisissez un parcours", "Réussite académique"]);
-    await user.selectOptions(liste, P);
+    // « Choisissez un parcours » est l'indication de la liste, pas une option.
+    expect(liste).toHaveTextContent("Choisissez un parcours");
+    expect(await optionsDeLaListe(liste, { user })).toEqual(["Réussite académique"]);
+    await choisirDansListe(liste, "Réussite académique", { user });
     vi.mocked(enregistrerAnnonce).mockResolvedValueOnce({ ok: true });
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
     // Sans vidéo ni affiche : pas de média.

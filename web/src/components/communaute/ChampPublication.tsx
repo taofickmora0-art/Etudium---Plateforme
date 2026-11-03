@@ -392,7 +392,7 @@ export function ChampPublication({
             id={idEspace}
             value={destination}
             disabled={envoi}
-            onChange={(e) => setDestination(e.target.value)}
+            onValueChange={setDestination}
             options={choix.map((e) => ({ value: e.id ?? "general", label: e.id ? e.nomCourt : "Général" }))}
             className="h-10 text-sm"
           />

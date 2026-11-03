@@ -118,7 +118,7 @@ function Carte({ formationId, edition, surEnregistre }: { formationId: string; e
         <Textarea id={`${id}-c`} rows={4} value={competences} onChange={(ev) => setCompetences(ev.target.value)} onBlur={quitter} />
       </Field>
       <Field label="Niveau" htmlFor={`${id}-n`} error={e.niveau} className="max-w-[320px]">
-        <Select id={`${id}-n`} options={NIVEAUX} value={niveau} onChange={(ev) => setNiveau(ev.target.value as SaisieInfos["niveau"])} onBlur={quitter} />
+        <Select id={`${id}-n`} options={NIVEAUX} value={niveau} onValueChange={(v) => setNiveau(v as SaisieInfos["niveau"])} onBlur={quitter} />
       </Field>
     </section>
   );

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import type { LigneSessionEdition, SessionDetail } from "@/lib/sessions/types";
+import { choisirDansListe, optionsDeLaListe } from "../utilitaires/listes";
 
 // Programmer et suivre ses sessions : espace formateur et back-office (spec des sessions live, §4).
 
@@ -147,9 +148,9 @@ describe("Le formulaire", () => {
     const user = userEvent.setup({ delay: null });
     render(<FormulaireSession espace="formateur" parcours={PARCOURS} />);
     expect(screen.queryByLabelText("Animateur")).toBeNull();
-    expect(screen.getByLabelText("Durée")).toHaveValue("60");
+    expect(screen.getByLabelText("Durée")).toHaveTextContent(/^1 h$/);
     await remplir(user);
-    await user.selectOptions(screen.getByLabelText("Parcours"), P);
+    await choisirDansListe(screen.getByLabelText("Parcours"), "Académique", { user });
     await user.click(screen.getByRole("button", { name: "Programmer la session" }));
     expect(creerSession).toHaveBeenCalledWith({
       titre: "Excel avancé",
@@ -189,9 +190,10 @@ describe("Le formulaire", () => {
     const user = userEvent.setup({ delay: null });
     render(<FormulaireSession espace="admin" parcours={PARCOURS} formateurs={[{ id: FICHE, nom: "Mireille Akpo" }]} />);
     const animateur = screen.getByLabelText("Animateur");
-    expect(within(animateur).getAllByRole("option").map((o) => o.textContent)).toEqual(["Équipe Étudium", "Mireille Akpo"]);
+    expect(await optionsDeLaListe(animateur, { user })).toEqual(["Équipe Étudium", "Mireille Akpo"]);
+    expect(animateur).toHaveTextContent("Équipe Étudium");
     await remplir(user);
-    await user.selectOptions(animateur, FICHE);
+    await choisirDansListe(animateur, "Mireille Akpo", { user });
     await user.click(screen.getByRole("button", { name: "Programmer la session" }));
     expect(creerSession).toHaveBeenCalledWith(expect.objectContaining({ formateurId: FICHE, parcoursId: null }));
     expect(routeur.push).toHaveBeenCalledWith(`/admin/sessions/${ID}`);
@@ -202,8 +204,8 @@ describe("Le formulaire", () => {
     render(<FormulaireSession espace="formateur" parcours={PARCOURS} initial={DETAIL} />);
     expect(screen.getByLabelText("Date")).toHaveValue("24/10/2026");
     expect(screen.getByLabelText("Heure")).toHaveValue("15:00");
-    expect(screen.getByLabelText("Durée")).toHaveValue("90");
-    expect(screen.getByLabelText("Parcours")).toHaveValue(P);
+    expect(screen.getByLabelText("Durée")).toHaveTextContent("1 h 30");
+    expect(screen.getByLabelText("Parcours")).toHaveTextContent("Académique");
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
     expect(modifierSession).toHaveBeenCalledWith(ID, expect.objectContaining({ titre: "Excel avancé", date: "2026-10-24", heure: "15:00", dureeMinutes: 90 }));
     expect(routeur.push).toHaveBeenCalledWith(`/formateur/sessions/${ID}`);

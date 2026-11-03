@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import type { ShellUser } from "@/lib/auth/current-user";
 import type { Annonce, Espace, LotPublications, MoiCommunaute, Publication } from "@/lib/communaute/types";
+import { choisirDansListe, optionsDeLaListe } from "../utilitaires/listes";
 
 // Le fil « Actualités » (spec du 14 octobre 2026, §1 à §5 ; design NdCommunaute v6) : l'annonce épinglée, les liens et
 // leurs aperçus, la vidéo YouTube au clic, le tri, le signet, les initiales des J’aime, le champ fermé.
@@ -427,9 +428,9 @@ describe("La vidéo jointe", () => {
     page(lot([]));
     await user.click(screen.getByRole("button", { name: "Quoi de neuf, Koffi ?" }));
     const choix = await screen.findByRole("combobox", { name: "Publication dans" });
-    expect(within(choix).getAllByRole("option").map((o) => o.textContent)).toEqual(["Général", "Académique"]);
-    expect(choix).toHaveValue("general");
-    await user.selectOptions(choix, P);
+    expect(await optionsDeLaListe(choix, { user })).toEqual(["Général", "Académique"]);
+    expect(choix).toHaveTextContent("Général");
+    await choisirDansListe(choix, "Académique", { user });
     expect(screen.getByRole("textbox", { name: "Nouvelle publication" })).toHaveAttribute("placeholder", "Partagez une question ou une réussite dans l’espace Académique…");
     vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n1", statut: "publiee", apercu: null, video: null });
     await user.type(screen.getByRole("textbox", { name: "Nouvelle publication" }), "Pour les académiques");
@@ -439,8 +440,8 @@ describe("La vidéo jointe", () => {
 
     await user.click(onglet("Général"));
     await user.click(screen.getByRole("button", { name: "Quoi de neuf, Koffi ?" }));
-    expect(await screen.findByRole("combobox", { name: "Publication dans" })).toHaveValue("general");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Publication dans" }), P);
+    expect(await screen.findByRole("combobox", { name: "Publication dans" })).toHaveTextContent("Général");
+    await choisirDansListe("Publication dans", "Académique", { user });
     vi.mocked(actions.publierPublication).mockResolvedValueOnce({ ok: true, id: "n2", statut: "publiee", apercu: null, video: null });
     await user.type(screen.getByRole("textbox", { name: "Nouvelle publication" }), "Encore");
     await user.click(screen.getByRole("button", { name: "Publier" }));

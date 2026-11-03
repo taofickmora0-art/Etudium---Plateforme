@@ -165,7 +165,7 @@ function CarteQuestion({
         </span>
       </div>
       <Field label="Type de question" htmlFor={`${id}-type`}>
-        <Select id={`${id}-type`} options={TYPES} value={q.genre} onChange={(e) => onChange((actuelle) => changerGenre(actuelle, e.target.value as GenreQuestion))} />
+        <Select id={`${id}-type`} options={TYPES} value={q.genre} onValueChange={(v) => onChange((actuelle) => changerGenre(actuelle, v as GenreQuestion))} />
       </Field>
       <Field label="Énoncé" htmlFor={`${id}-enonce`}>
         <Textarea id={`${id}-enonce`} rows={2} maxLength={1000} value={q.enonce} onChange={(e) => onChange((actuelle) => ({ ...actuelle, enonce: e.target.value }))} />

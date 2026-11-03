@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import type { Espace, MoiCommunaute } from "@/lib/communaute/types";
 import type { SessionCarte, SessionPublication } from "@/lib/sessions/types";
+import { optionsDeLaListe } from "../utilitaires/listes";
 
 // L'espace « Replays de live » (migration 0046, liste du 31 octobre 2026, tâche 11) : un onglet de plus ; seuls l'équipe
 // et les formateurs y publient ; un live terminé mène à ses replays (« Voir le replay »).
@@ -30,9 +31,7 @@ const afficher = (espaces: Espace[], ongletInitial = "tous") =>
 /** Ouvre le champ de publication, puis lit les choix de « Publication dans ». */
 const destinations = async () => {
   await userEvent.setup().click(screen.getByRole("button", { name: "Quoi de neuf, Koffi ?" }));
-  return within(screen.getByRole("combobox", { name: "Publication dans" }))
-    .getAllByRole("option")
-    .map((o) => o.textContent);
+  return optionsDeLaListe(screen.getByRole("combobox", { name: "Publication dans" }));
 };
 
 describe("L'espace « Replays de live »", () => {
@@ -52,7 +51,7 @@ describe("L'espace « Replays de live »", () => {
   it("l'équipe ou un formateur : « Replays » dans « Publication dans », choisi d'office dans son onglet", async () => {
     afficher([GENERAL, DIGITAL, REPLAYS], "replays");
     expect(await destinations()).toEqual(["Général", "Digital", "Replays"]);
-    expect(screen.getByRole("combobox", { name: "Publication dans" })).toHaveValue("replays");
+    expect(screen.getByRole("combobox", { name: "Publication dans" })).toHaveTextContent("Replays");
   });
 });
 

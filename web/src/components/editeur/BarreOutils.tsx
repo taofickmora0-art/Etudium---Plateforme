@@ -22,6 +22,7 @@ import { useEditorState, type Editor } from "@tiptap/react";
 import { BoutonLien } from "@/components/communaute/EditeurTexte";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
+import { Select } from "@/components/ui/Select";
 import { TextInput } from "@/components/ui/TextInput";
 import type { IconSvgElement } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
@@ -53,17 +54,22 @@ const FIN: Bouton[] = [
   { nom: "Annuler", icone: Undo02Icon, agir: (e) => e.chain().focus().undo().run() },
   { nom: "Rétablir", icone: Redo02Icon, agir: (e) => e.chain().focus().redo().run() },
 ];
-const TONS: { ton: TonEncadre; nom: string }[] = [
-  { ton: "info", nom: "Information" },
-  { ton: "astuce", nom: "Astuce" },
-  { ton: "attention", nom: "Attention" },
-  { ton: "retenir", nom: "À retenir" },
+const STYLES = [
+  { value: "texte", label: "Texte" },
+  { value: "titre", label: "Titre" },
+  { value: "sous-titre", label: "Sous-titre" },
+];
+const TONS: { value: TonEncadre; label: string }[] = [
+  { value: "info", label: "Information" },
+  { value: "astuce", label: "Astuce" },
+  { value: "attention", label: "Attention" },
+  { value: "retenir", label: "À retenir" },
 ];
 
 const FENETRE = "z-50 rounded-carte border border-bordure-carte bg-panneau p-3 shadow-menu outline-none";
 const ACTIF = "bg-bleu-clair text-bleu enabled:hover:bg-bleu-clair";
-const SELECT =
-  "focus-etudium h-8 rounded-puce border border-bordure-champ bg-panneau px-2 text-[13px] leading-5 text-encre outline-none disabled:opacity-50";
+// Les listes de la barre : compactes (32 px, texte 13 px), largeur fixe pour que la barre ne bouge pas d'un choix à l'autre.
+const LISTE = "h-8 gap-1 rounded-puce px-2 text-[13px] leading-5 text-encre disabled:bg-panneau disabled:opacity-50";
 const Separation = () => <span aria-hidden className="mx-1 h-5 w-px flex-none bg-bordure-champ" />;
 
 function Boutons({ editor, liste, etats }: { editor: Editor | null; liste: Bouton[]; etats: Record<string, boolean> }) {
@@ -165,27 +171,32 @@ export function BarreOutils({ editor, onImage, envoiEnCours }: Props) {
   });
   const actifs = etat?.actifs ?? {};
   const action = (agir: (e: Editor) => boolean) => () => editor && agir(editor);
+  // Une liste de la barre, refermée (choix ou Échap), rend le focus au texte et non à elle-même : l'éditeur reprend
+  // la sélection qu'il a gardée (comme avec les boutons, qui ne la lui prennent pas).
+  const rendreAuTexte = () => {
+    if (!editor) return true;
+    editor.commands.focus();
+    return false;
+  };
 
   return (
     <div className="flex flex-col border-b border-bordure-champ">
       <div role="toolbar" aria-label="Mise en forme" className="flex items-center gap-0.5 overflow-x-auto px-1.5 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <select
+        <Select
           aria-label="Style du paragraphe"
-          className={cn(SELECT, "mr-1 flex-none")}
+          className={cn(LISTE, "mr-1 w-[108px] flex-none")}
           disabled={!editor}
           value={etat?.style ?? "texte"}
-          onChange={(e) => {
+          options={STYLES}
+          rendreLeFocus={rendreAuTexte}
+          onValueChange={(style) => {
             if (!editor) return;
             const chaine = editor.chain().focus();
-            if (e.target.value === "titre") chaine.setHeading({ level: 2 }).run();
-            else if (e.target.value === "sous-titre") chaine.setHeading({ level: 3 }).run();
+            if (style === "titre") chaine.setHeading({ level: 2 }).run();
+            else if (style === "sous-titre") chaine.setHeading({ level: 3 }).run();
             else chaine.setParagraph().run();
           }}
-        >
-          <option value="texte">Texte</option>
-          <option value="titre">Titre</option>
-          <option value="sous-titre">Sous-titre</option>
-        </select>
+        />
         <Separation />
         <Boutons editor={editor} liste={MARQUES} etats={actifs} />
         <span className="flex flex-none">
@@ -247,18 +258,14 @@ export function BarreOutils({ editor, onImage, envoiEnCours }: Props) {
 
       {etat?.encadre && (
         <div role="toolbar" aria-label="Bloc d’information" className="flex flex-wrap items-center gap-1.5 border-t border-bordure-champ bg-page px-2 py-1.5">
-          <select
+          <Select
             aria-label="Ton du bloc"
-            className={SELECT}
+            className={cn(LISTE, "w-[124px]")}
             value={etat.ton}
-            onChange={(e) => editor?.chain().focus().changerTonEncadre(e.target.value as TonEncadre).run()}
-          >
-            {TONS.map((t) => (
-              <option key={t.ton} value={t.ton}>
-                {t.nom}
-              </option>
-            ))}
-          </select>
+            options={TONS}
+            rendreLeFocus={rendreAuTexte}
+            onValueChange={(ton) => editor?.chain().focus().changerTonEncadre(ton as TonEncadre).run()}
+          />
           <Button size="sm" variant="contour" onMouseDown={(e) => e.preventDefault()} onClick={action((e) => e.chain().focus().retirerEncadre().run())}>
             Retirer le bloc
           </Button>

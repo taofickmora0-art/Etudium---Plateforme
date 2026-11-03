@@ -532,7 +532,7 @@ export function OngletLecons({ formation, base = "/admin/formations" }: OngletLe
         }
       >
         <Field label="Section" htmlFor="deplacer-section">
-          <Select id="deplacer-section" aria-label="Section" value={cible} onChange={(e) => setCible(e.target.value)} options={programme.map((m, i) => ({ value: m.id, label: titreModule(i + 1, m.titre) }))} />
+          <Select id="deplacer-section" aria-label="Section" value={cible} onValueChange={setCible} options={programme.map((m, i) => ({ value: m.id, label: titreModule(i + 1, m.titre) }))} />
         </Field>
         <p className="m-0 mt-2 text-[13px] leading-5 text-discret">La leçon va à la fin de cette section.</p>
       </Dialog>

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import type { FormState } from "@/lib/auth/schemas";
 import type { FormationAdmin, LeconAdmin } from "@/lib/admin/types";
+import { choisirDansListe } from "../utilitaires/listes";
 
 // Une action réussie rend la saisie, comme les vraies actions du back-office.
 const reussite = async (_prev: FormState, fd: FormData): Promise<FormState> => ({
@@ -86,10 +87,10 @@ describe("Après un enregistrement, le formulaire montre ce qui est enregistré"
     vi.mocked(saveFormationInfos).mockImplementation(reussite);
     avecNotifications(<FormationInfosForm formation={FORMATION} parcours={[]} formateurs={[]} />);
     // Le niveau a rejoint les informations générales, enregistrées seules (fin du lot 4) : le badge, ici.
-    await userEvent.selectOptions(screen.getByLabelText("Badge"), "populaire");
+    await choisirDansListe("Badge", "Populaire");
     await userEvent.click(screen.getByRole("switch", { name: "Formation gratuite" }));
     await enregistrer();
-    expect(screen.getByLabelText("Badge")).toHaveValue("populaire");
+    expect(screen.getByLabelText("Badge")).toHaveTextContent("Populaire");
     expect(screen.getByRole("switch", { name: "Formation gratuite" })).toHaveAttribute("aria-checked", "true");
     await enregistrer();
     const second = vi.mocked(saveFormationInfos).mock.calls[1][1];
