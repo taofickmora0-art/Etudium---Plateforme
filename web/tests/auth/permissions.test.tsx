@@ -4,7 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HeaderActions } from "@/components/layout/HeaderActions";
 import { MobileProfileMenu } from "@/components/layout/MobileProfileMenu";
-import { ReservedComingSoon } from "@/components/layout/ReservedComingSoon";
 import type { Role } from "@/lib/auth/permissions";
 import { getShellUser } from "@/lib/auth/current-user";
 import { canAccess, spaceOf } from "@/lib/auth/permissions";
@@ -76,10 +75,9 @@ describe("Pages réservées", () => {
   });
 
   it("un administrateur ouvre le back-office", async () => {
-    vi.mocked(getShellUser).mockResolvedValue(compte(["etudiant", "admin"]));
-    render(await ReservedComingSoon({ espace: "admin", page: "admin" }));
-    expect(screen.getByRole("heading", { name: "Back-office" })).toBeInTheDocument();
-    expect(screen.getByText(/Bientôt disponible/)).toBeInTheDocument();
+    const admin = compte(["etudiant", "admin"]);
+    vi.mocked(getShellUser).mockResolvedValue(admin);
+    await expect(requireSpace("admin")).resolves.toEqual(admin);
   });
 });
 

@@ -146,9 +146,8 @@ export function FormulaireAnnonceCommunaute({ initial, parcours, compteId }: { i
   }
 
   const choixPublic = [
-    { valeur: "tous", libelle: "Tous les membres", precision: null, desactive: false },
-    { valeur: "parcours", libelle: "Les membres d’un parcours", precision: "Ceux qui ont commencé une formation du parcours choisi.", desactive: false },
-    { valeur: "formule", libelle: "Une formule d’abonnement", precision: "Avec les abonnements (lot 2).", desactive: true },
+    { valeur: "tous", libelle: "Tous les membres", precision: null },
+    { valeur: "parcours", libelle: "Les membres d’un parcours", precision: "Ceux qui ont commencé une formation du parcours choisi." },
   ];
 
   return (
@@ -228,7 +227,6 @@ export function FormulaireAnnonceCommunaute({ initial, parcours, compteId }: { i
                 value={c.valeur}
                 className={choiceInputClasses}
                 checked={r.public === c.valeur}
-                disabled={c.desactive}
                 onChange={() => setR({ ...r, public: c.valeur as "tous" | "parcours" })}
               />
               <span className="flex min-w-0 flex-col">

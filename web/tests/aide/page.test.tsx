@@ -3,7 +3,6 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
-import { PAGES_A_VENIR } from "@/lib/pages-a-venir";
 import { choisirDansListe, optionsDeLaListe } from "../utilitaires/listes";
 
 // La page Aide selon le design (NdAide, lot 5 étape A) : les questions fréquentes, celles sur les formules, une
@@ -40,7 +39,6 @@ describe("Page Aide (NdAide)", () => {
     expect(screen.getByRole("button", { name: "Le compte gratuit est-il vraiment gratuit ?" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("button", { name: "Quels moyens de paiement ?" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("Bientôt disponible")).toBeNull();
-    expect(PAGES_A_VENIR).not.toHaveProperty("aide");
   });
 
   it("la recherche garde les questions qui correspondent (sans tenir compte des accents) ; sinon, un message", async () => {

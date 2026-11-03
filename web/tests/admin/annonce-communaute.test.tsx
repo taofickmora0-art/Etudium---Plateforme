@@ -121,14 +121,15 @@ describe("L'annonce de la communauté au back-office", () => {
     expect(enregistrerAnnonce).toHaveBeenCalledWith(expect.objectContaining({ active: true, titre: "Rentrée", media: "image", imageChemin: chemin, youtube: "" }));
   });
 
-  it("qui la voit : tous les membres, ou ceux d'un parcours actif ; la formule d'abonnement attend le lot 2", async () => {
+  it("qui la voit : tous les membres, ou ceux d'un parcours actif ; aucun choix grisé", async () => {
     const user = userEvent.setup({ delay: null });
     vi.mocked(lireAnnonceEquipe).mockResolvedValue({ migrationAbsente: false, donnees: { ...VIDE, titre: "Pour les académiques" } });
     afficher(await PageAnnonceCommunaute());
     const groupe = screen.getByRole("group", { name: "Qui la voit" });
     expect(within(groupe).getByRole("radio", { name: /Tous les membres/ })).toBeChecked();
-    expect(within(groupe).getByRole("radio", { name: /Une formule d’abonnement/ })).toBeDisabled();
-    expect(within(groupe).getByText("Avec les abonnements (lot 2).")).toBeInTheDocument();
+    expect(within(groupe).getAllByRole("radio")).toHaveLength(2);
+    expect(within(groupe).queryByRole("radio", { name: /formule d’abonnement/ })).toBeNull();
+    expect(groupe).not.toHaveTextContent(/lot \d/);
     expect(screen.queryByRole("combobox", { name: "Parcours" })).toBeNull();
     await user.click(within(groupe).getByRole("radio", { name: /Les membres d’un parcours/ }));
     const liste = screen.getByRole("combobox", { name: "Parcours" });

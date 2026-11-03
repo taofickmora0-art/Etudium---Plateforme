@@ -1,8 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { isValidElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ComingSoon } from "@/components/layout/ComingSoon";
 import { SessionGuard } from "@/components/layout/SessionGuard";
 import { getShellUser } from "@/lib/auth/current-user";
 import { DEMO_USER } from "@/lib/demo-user";
@@ -23,13 +21,6 @@ const pages = (dossier: string): string[] =>
     const chemin = join(dossier, nom);
     return statSync(chemin).isDirectory() ? pages(chemin) : nom === "page.tsx" ? [chemin] : [];
   });
-
-const contient = (noeud: ReactNode, type: unknown): boolean => {
-  if (Array.isArray(noeud)) return noeud.some((n) => contient(n, type));
-  if (!isValidElement(noeud)) return false;
-  if (noeud.type === type) return true;
-  return contient((noeud.props as { children?: ReactNode }).children, type);
-};
 
 describe("Session vérifiée à chaque page", () => {
   beforeEach(() => {
@@ -63,14 +54,10 @@ describe("Session vérifiée à chaque page", () => {
     await expect(SessionGuard()).resolves.toBeNull();
   });
 
-  it("les pages « Bientôt disponible » vérifient la session", () => {
-    expect(contient(ComingSoon({ page: "admin" }), SessionGuard)).toBe(true);
-  });
-
   it("chaque page de l'espace connecté vérifie la session", () => {
     const sansVerification = pages(join(process.cwd(), "src/app/(app)")).filter((p) => {
       const code = readFileSync(p, "utf8");
-      return !["<SessionGuard", "<ComingSoon", "<ReservedComingSoon", "redirectToSortie()", "requireSpace(\"", "requireDomaine(\""].some((m) => code.includes(m));
+      return !["<SessionGuard", "redirectToSortie()", "requireSpace(\"", "requireDomaine(\""].some((m) => code.includes(m));
     });
     expect(sansVerification).toEqual([]);
   });
@@ -81,7 +68,7 @@ describe("Session vérifiée à chaque page", () => {
       const sansRole = pages(join(process.cwd(), "src/app/(app)", espace)).filter((p) => {
         const code = readFileSync(p, "utf8");
         // Lot 6 A : une page du back-office demande son domaine (requireDomaine passe par requireSpace("admin")).
-        const marques = [`requireSpace("${espace}")`, `<ReservedComingSoon espace="${espace}"`, ...(espace === "admin" ? ['requireDomaine("'] : [])];
+        const marques = [`requireSpace("${espace}")`, ...(espace === "admin" ? ['requireDomaine("'] : [])];
         return !marques.some((m) => code.includes(m));
       });
       expect(sansRole, espace).toEqual([]);

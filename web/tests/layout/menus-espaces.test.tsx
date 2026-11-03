@@ -8,7 +8,6 @@ vi.mock("next/navigation", () => ({ usePathname: () => chemin, useRouter: () => 
 const { SidebarNavLinks } = await import("@/components/layout/SidebarNav");
 const { BottomNavLinks } = await import("@/components/layout/MobileNav");
 const { BoutonAjouterFormation } = await import("@/components/layout/BoutonAjouterFormation");
-const { PAGES_A_VENIR } = await import("@/lib/pages-a-venir");
 const { fixerDomaines } = await import("@/lib/auth/domaines-du-compte");
 
 // Le menu du back-office d'un admin (lot 6 A : le menu suit les domaines du compte).
@@ -137,10 +136,5 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
     chemin = "/accueil";
     render(<BoutonAjouterFormation />);
     expect(screen.getByRole("link", { name: "Ajouter une formation" })).toHaveAttribute("href", "/formations");
-  });
-
-  it("le back-office et l'espace formateur n'ont plus de page à venir", () => {
-    // « Abonnements et paiements » est arrivé avec le lot 2 ; l'espace formateur, avec la messagerie (lot 5, étape A).
-    expect(Object.keys(PAGES_A_VENIR).filter((page) => page.startsWith("admin/") || page.startsWith("formateur/"))).toEqual([]);
   });
 });

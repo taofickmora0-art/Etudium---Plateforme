@@ -3,7 +3,6 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ComingSoonView } from "@/components/layout/ComingSoon";
 import { MobileProfileMenu } from "@/components/layout/MobileProfileMenu";
 import { DEMO_USER } from "@/lib/demo-user";
 import { MENUS, NAV_BAS_PAR_ESPACE, NAV_MENU_TELEPHONE } from "@/lib/navigation";
@@ -27,13 +26,6 @@ describe("Pages de l'espace connecté", () => {
     const existe = (href: string) => ["(app)", "(app)/(etudiant)", "(catalogue)"].some((groupe) => existsSync(join(process.cwd(), "src/app", groupe, href, "page.tsx")));
     const manquantes = [...hrefs].filter((href) => !existe(href));
     expect(manquantes).toEqual([]);
-  });
-
-  it("la page à venir dit quand elle arrive", () => {
-    render(<ComingSoonView page="admin" />);
-    expect(screen.getByRole("heading", { level: 1, name: "Back-office" })).toBeInTheDocument();
-    expect(screen.getByText(/au lot 1/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Retour à l’accueil" })).toHaveAttribute("href", "/accueil");
   });
 
   it("la page Profil du téléphone coupe un nom trop long", () => {

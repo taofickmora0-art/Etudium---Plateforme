@@ -30,7 +30,6 @@ vi.mock("@/lib/sessions/nouvelles", () => ({ compterNouvellesSessions: async () 
 const { PageMessages } = await import("@/components/messages/PageMessages");
 const { SidebarNavLinks } = await import("@/components/layout/SidebarNav");
 const { reinitialiserMessagesNonLus } = await import("@/components/messages/useMessagesNonLus");
-const { PAGES_A_VENIR } = await import("@/lib/pages-a-venir");
 const { MENUS } = await import("@/lib/navigation");
 
 const lire = (chemin: string) => readFileSync(join(process.cwd(), chemin), "utf8");
@@ -62,8 +61,6 @@ describe("Les pages Messages", () => {
     expect(lire("src/app/(app)/formateur/messages/page.tsx")).toContain('<PageMessages espace="formateur" base="/formateur/messages"');
     expect(lire("src/app/(app)/admin/messages/page.tsx")).toContain('requireDomaine("communaute")');
     expect(lire("src/app/(app)/admin/messages/page.tsx")).toContain('<PageMessages espace="equipe" base="/admin/messages"');
-    expect(PAGES_A_VENIR).not.toHaveProperty("messages");
-    expect(PAGES_A_VENIR).not.toHaveProperty("formateur/messages");
   });
 
   it("l'équipe a « Messages » dans son menu", () => {

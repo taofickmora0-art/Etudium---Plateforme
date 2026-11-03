@@ -182,8 +182,6 @@ export const NAV_BAS_PAR_ESPACE: Record<Espace, NavEntry[]> = {
   ],
 };
 
-export { PAGES_A_VENIR, type PageAVenir } from "./pages-a-venir";
-
 /** Une entrée est active sur sa propre page et sur ses sous-pages (« /mes-formations/excel ») ; `exact` : sa page seule. */
 export function isActive(pathname: string, href: string, exact = false): boolean {
   return pathname === href || (!exact && pathname.startsWith(`${href}/`));
