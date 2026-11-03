@@ -5,6 +5,8 @@ import { cartesFavorites } from "@/components/favoris/cartes";
 import { PageFavoris, type Favori } from "@/components/favoris/PageFavoris";
 import { SessionGuard } from "@/components/layout/SessionGuard";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { lireMesFavorisLivres } from "@/lib/bibliotheque/data";
+import type { CarteLivre } from "@/lib/bibliotheque/types";
 import { listFiches } from "@/lib/catalogue/data";
 import { lireFavoris } from "@/lib/favoris/data";
 import { lireInscriptions } from "@/lib/inscriptions/data";
@@ -12,19 +14,31 @@ import { lireProgression } from "@/lib/progression/data";
 
 export const metadata: Metadata = { title: "Favoris · Étudium" };
 
+/** Les livres en favori (0074 ; [] sans elle) : une lecture impossible ne doit pas cacher les formations. */
+async function livresOuRien(): Promise<CarteLivre[]> {
+  try {
+    return await lireMesFavorisLivres();
+  } catch (erreur) {
+    console.error("Lecture des livres en favori impossible :", erreur instanceof Error ? erreur.message : erreur);
+    return [];
+  }
+}
+
 async function Contenu() {
   let favoris: Favori[];
+  let livres: CarteLivre[];
   try {
-    const [lus, lignes, inscriptions] = await Promise.all([lireFavoris(), lireProgression(), lireInscriptions()]);
+    const [lus, lignes, inscriptions, enFavori] = await Promise.all([lireFavoris(), lireProgression(), lireInscriptions(), livresOuRien()]);
+    livres = enFavori;
     const ids = (lus ?? []).map((f) => f.formationId);
     favoris = cartesFavorites(ids, await listFiches(ids), lignes ?? [], inscriptions);
   } catch (erreur) {
     return siTablesAbsentes(erreur);
   }
-  return <PageFavoris favoris={favoris} />;
+  return <PageFavoris favoris={favoris} livres={livres} />;
 }
 
-/** Favoris (spec du lot 1, §8) : les formations mises de côté depuis leur fiche. */
+/** Favoris (spec du lot 1, §8) : les formations mises de côté depuis leur fiche, et les livres de la Bibliothèque. */
 export default function Page() {
   return (
     <>

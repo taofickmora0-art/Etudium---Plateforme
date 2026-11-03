@@ -6,6 +6,8 @@ import { FicheConnectee } from "@/components/catalogue/FicheConnectee";
 import { FichePublique } from "@/components/catalogue/FichePublique";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { lireAvis } from "@/lib/avis/data";
+import { lireLivresFormation } from "@/lib/bibliotheque/data";
+import type { CarteLivre } from "@/lib/bibliotheque/types";
 import { BandeauApercu } from "@/components/lecon/BandeauApercu";
 import { ficheApercu, lienModifierLecons } from "@/lib/catalogue/apercu";
 import { avecBrouillonFormation, peutLireBrouillons } from "@/lib/editeur/apercu";
@@ -26,6 +28,16 @@ import { lireMesScores } from "@/lib/quiz/data";
 import { lireStatutsExercices } from "@/lib/exercices/data";
 
 type Params = { params: Promise<{ slug: string }> };
+
+/** « Pour aller plus loin » (0074 ; [] sans elle) : une lecture impossible ne doit pas empêcher la fiche de s'afficher. */
+async function livresOuRien(formationId: string): Promise<CarteLivre[]> {
+  try {
+    return await lireLivresFormation(formationId);
+  } catch (erreur) {
+    console.error("Lecture des livres recommandés impossible :", erreur instanceof Error ? erreur.message : erreur);
+    return [];
+  }
+}
 
 /** Titre, description et image du lien partagé (spec du lot 1, §9). */
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -56,13 +68,14 @@ async function Fiche({ params }: Params) {
   // Un formateur ne lit que ses formations (restructuration R1) : l'éditeur de la sienne, sinon son tableau de bord.
   await renvoyerFormateur(compte, fiche.id);
   // Le lien compétence → monétisation (0048 ; restructuration, §5.3) : « À suivre d'abord », « Et ensuite ? ».
-  const [liens, cartes] = await Promise.all([lireMonetisation(), listCatalogue()]);
+  // Et les livres de la Bibliothèque qu'elle recommande (« Pour aller plus loin », 0074).
+  const [liens, cartes, livres] = await Promise.all([lireMonetisation(), listCatalogue(), livresOuRien(fiche.id)]);
   const monetisation = monetisationDe(fiche.id, liens, cartes);
   // Avis (1.11), progression (1.7) et favoris (1.9) : absents tant que leurs migrations ne sont pas appliquées. Le formateur
   // du cours (0070) : le bloc d'avant sans la migration.
   if (!compte) {
     const [avis, formateur] = await Promise.all([lireAvis(fiche.id), lireFormateurDeFiche(fiche.formateur?.id)]);
-    return <FichePublique fiche={fiche} avis={avis} monetisation={monetisation} formateur={formateur} />;
+    return <FichePublique fiche={fiche} avis={avis} monetisation={monetisation} formateur={formateur} livres={livres} />;
   }
   // L'équipe ou le formateur voit les informations générales du brouillon (fin du lot 4).
   const vue = peutLireBrouillons(compte.roles) ? await avecBrouillonFormation(fiche) : { fiche, brouillon: false };
@@ -95,6 +108,7 @@ async function Fiche({ params }: Params) {
       acces={acces}
       formateur={formateur}
       groupe={groupe}
+      livres={livres}
     />
   );
   const avecBrouillon = vue.brouillon ? (

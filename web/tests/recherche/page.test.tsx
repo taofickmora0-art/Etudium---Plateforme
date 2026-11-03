@@ -44,7 +44,7 @@ describe("Page Recherche", () => {
   it("le formulaire : champ nommé avec la requête, bouton, effacer", () => {
     monter("excel");
     const formulaire = screen.getByRole("search");
-    expect(within(formulaire).getByRole("searchbox", { name: "Rechercher une formation, un parcours ou une leçon" })).toHaveValue("excel");
+    expect(within(formulaire).getByRole("searchbox", { name: "Rechercher une formation, un parcours, une leçon ou un livre" })).toHaveValue("excel");
     expect(within(formulaire).getByRole("button", { name: "Rechercher" })).toBeInTheDocument();
     expect(within(formulaire).getByRole("link", { name: "Effacer la recherche" })).toHaveAttribute("href", "/recherche");
   });

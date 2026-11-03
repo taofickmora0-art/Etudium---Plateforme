@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight02Icon, Certificate01Icon, Clock01Icon, MessageMultiple02Icon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import { SectionAvis } from "@/components/avis/SectionAvis";
+import { PourAllerPlusLoin } from "@/components/bibliotheque/PourAllerPlusLoin";
 import { BoutonFavori } from "@/components/favoris/BoutonFavori";
 import { BoutonInscription } from "@/components/inscriptions/BoutonInscription";
 import { Button } from "@/components/ui/Button";
@@ -9,6 +10,7 @@ import { MetaDot, ProgressBar } from "@/components/ui/Progress";
 import { formatDuree } from "@/lib/admin/duree";
 import { peutDonnerAvis } from "@/lib/avis/regles";
 import type { AvisFormation } from "@/lib/avis/types";
+import type { CarteLivre } from "@/lib/bibliotheque/types";
 import type { Monetisation } from "@/lib/catalogue/monetisation";
 import { actionFiche, dureeLisible, estLeconDeContenu, etatAcces, leconsApercu, toutOuvert, type ActionFiche } from "@/lib/catalogue/regles";
 import type { FicheFormation } from "@/lib/catalogue/types";
@@ -229,6 +231,7 @@ export function FicheConnectee({
   acces = null,
   formateur = null,
   groupe = null,
+  livres = [],
 }: {
   fiche: FicheFormation;
   /** Le lien compétence → monétisation (0048) : « À suivre d'abord », « Et ensuite ? Vendre cette compétence ». */
@@ -250,6 +253,8 @@ export function FicheConnectee({
   formateur?: ApercuFormateur | null;
   /** Le groupe de discussion de la formation (0075) ; null sans la migration ou sans groupe. */
   groupe?: GroupeDeFormation | null;
+  /** « Pour aller plus loin » : les livres de la Bibliothèque recommandés par la formation (0074) ; [] sans eux. */
+  livres?: CarteLivre[];
 }) {
   // La note vient des avis lus pour ce compte quand ils sont là : son avis masqué y compte pour lui seul, il ne doit
   // pas le voir disparaître de la note (spec des notifications, §5). Sinon, la note de la formation.
@@ -275,6 +280,7 @@ export function FicheConnectee({
       </section>
       <ApprentissagesFiche fiche={fiche} />
       <BlocMonetisation monetisation={monetisation} />
+      <PourAllerPlusLoin livres={livres} />
       <SectionAvis variante="connecte" formation={{ id: fiche.id, titre: fiche.titre }} donnees={avis} peutNoter={progression ? peutDonnerAvis(progression) : false} />
     </MiseEnPageFiche>
   );

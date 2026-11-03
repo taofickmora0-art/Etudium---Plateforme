@@ -1,8 +1,10 @@
+import type { CarteLivre } from "@/lib/bibliotheque/types";
 import { sansAccents } from "@/lib/catalogue/filtres";
 import type { CarteCatalogue, ParcoursCatalogue } from "@/lib/catalogue/types";
 
-// Recherche (spec du lot 1, §8) : formations, parcours et leçons publiés ; sans accents ni majuscules
-// (« zotéro » trouve « Zotero »). La recherche se fait en mémoire : rien de la requête n'atteint la base.
+// Recherche (spec du lot 1, §8) : formations, parcours et leçons publiés, et les livres de la Bibliothèque (0074) ;
+// sans accents ni majuscules (« zotéro » trouve « Zotero »). La recherche se fait en mémoire : rien de la requête
+// n'atteint la base.
 
 export type LeconTrouvable = {
   id: string;
@@ -13,7 +15,7 @@ export type LeconTrouvable = {
   module: { numero: number; titre: string };
 };
 
-export type Resultats = { formations: CarteCatalogue[]; parcours: ParcoursCatalogue[]; lecons: LeconTrouvable[]; total: number };
+export type Resultats = { formations: CarteCatalogue[]; parcours: ParcoursCatalogue[]; lecons: LeconTrouvable[]; livres: CarteLivre[]; total: number };
 
 /** Tous les mots de la requête apparaissent dans le texte (sans accents ni majuscules) ; une requête vide ne trouve rien. */
 export function correspond(texte: string, requete: string): boolean {
@@ -25,19 +27,27 @@ export function correspond(texte: string, requete: string): boolean {
 
 /**
  * Un parcours se trouve par ses noms et sa description, ou par une formation trouvée qu'il contient (« excel » → Réussite
- * académique, comme dans la maquette). Une leçon se trouve par son titre ou celui de son module (« Bases d’Excel »).
+ * académique, comme dans la maquette). Une leçon se trouve par son titre ou celui de son module (« Bases d’Excel »). Un
+ * livre, par son titre, son auteur ou ses mots-clés (comme dans la Bibliothèque).
  */
 export function rechercher(
-  { cartes, parcours, lecons }: { cartes: CarteCatalogue[]; parcours: ParcoursCatalogue[]; lecons: LeconTrouvable[] },
+  { cartes, parcours, lecons, livres = [] }: { cartes: CarteCatalogue[]; parcours: ParcoursCatalogue[]; lecons: LeconTrouvable[]; livres?: CarteLivre[] },
   q: string,
 ): Resultats {
-  if (!q.trim()) return { formations: [], parcours: [], lecons: [], total: 0 };
+  if (!q.trim()) return { formations: [], parcours: [], lecons: [], livres: [], total: 0 };
   const formations = cartes.filter((c) => correspond(`${c.titre} ${c.resume}`, q));
   const trouves = parcours.filter(
     (p) => correspond(`${p.nom} ${p.nomCourt} ${p.description ?? ""}`, q) || formations.some((c) => c.parcours.some((x) => x.slug === p.slug)),
   );
   const lecs = lecons.filter((l) => correspond(`${l.titre} ${l.module.titre}`, q));
-  return { formations, parcours: trouves, lecons: lecs, total: formations.length + trouves.length + lecs.length };
+  const livresTrouves = livres.filter((l) => correspond([l.titre, l.auteur, ...l.motsCles].join(" "), q));
+  return {
+    formations,
+    parcours: trouves,
+    lecons: lecs,
+    livres: livresTrouves,
+    total: formations.length + trouves.length + lecs.length + livresTrouves.length,
+  };
 }
 
 /** « Recommandé pour vous » : des formations pas encore commencées ; « Populaire », puis « Nouveau », puis gratuites. */

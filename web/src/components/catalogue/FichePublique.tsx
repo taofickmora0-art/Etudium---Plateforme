@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { SectionAvis } from "@/components/avis/SectionAvis";
+import { PourAllerPlusLoin } from "@/components/bibliotheque/PourAllerPlusLoin";
 import { Button } from "@/components/ui/Button";
 import type { AvisFormation } from "@/lib/avis/types";
+import type { CarteLivre } from "@/lib/bibliotheque/types";
 import type { Monetisation } from "@/lib/catalogue/monetisation";
 import { leconsApercu } from "@/lib/catalogue/regles";
 import type { FicheFormation } from "@/lib/catalogue/types";
@@ -73,6 +75,7 @@ export function FichePublique({
   avis = null,
   monetisation = null,
   formateur = null,
+  livres = [],
 }: {
   fiche: FicheFormation;
   /** Null sans la migration 0010. */
@@ -81,6 +84,8 @@ export function FichePublique({
   monetisation?: Monetisation | null;
   /** Le formateur du cours (0070) ; null sans la migration : le bloc d'avant, d'après la fiche. */
   formateur?: ApercuFormateur | null;
+  /** « Pour aller plus loin » : les livres de la Bibliothèque recommandés par la formation (0074) ; [] sans eux. */
+  livres?: CarteLivre[];
 }) {
   // Après la création du compte, retour à la fiche (le champ « next » de l'inscription) ; rien de personnel dans l'adresse.
   const inscription = `/inscription?next=${encodeURIComponent(`/formations/${fiche.slug}`)}`;
@@ -113,6 +118,7 @@ export function FichePublique({
           </section>
           <ApprentissagesFiche fiche={fiche} />
           <BlocMonetisation monetisation={monetisation} />
+          <PourAllerPlusLoin livres={livres} />
           <section aria-labelledby="avis-titre" className="flex min-w-0 flex-col gap-4">
             <TitreSection id="avis-titre">Avis des étudiants</TitreSection>
             <SectionAvis variante="public" formation={{ id: fiche.id, titre: fiche.titre }} donnees={avis} peutNoter={false} />

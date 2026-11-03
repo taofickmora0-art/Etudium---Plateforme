@@ -31,7 +31,7 @@ describe("Recherche", () => {
     const r = rechercher({ cartes: CARTES_DESIGN, parcours: PARCOURS, lecons: LECONS }, "excel");
     expect(r.formations.map((c) => c.slug)).toEqual(["maitriser-microsoft-excel"]);
     expect(r.lecons.map((l) => l.id)).toEqual(["l1"]);
-    expect(r.total).toBe(r.formations.length + r.parcours.length + r.lecons.length);
+    expect(r.total).toBe(r.formations.length + r.parcours.length + r.lecons.length + r.livres.length);
   });
 
   it("un parcours se trouve aussi par une formation qu'il contient (« excel » → Réussite académique)", () => {
@@ -45,7 +45,7 @@ describe("Recherche", () => {
   });
 
   it("une requête vide ne cherche rien", () => {
-    expect(rechercher({ cartes: CARTES_DESIGN, parcours: PARCOURS, lecons: LECONS }, "  ")).toEqual({ formations: [], parcours: [], lecons: [], total: 0 });
+    expect(rechercher({ cartes: CARTES_DESIGN, parcours: PARCOURS, lecons: LECONS }, "  ")).toEqual({ formations: [], parcours: [], lecons: [], livres: [], total: 0 });
   });
 
   it("recommandations : non commencées, « Populaire » puis « Nouveau » d'abord, trois au plus", () => {

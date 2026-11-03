@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight01Icon, Cancel01Icon, PlayCircleIcon, Route01Icon, Search01Icon } from "@hugeicons/core-free-icons";
+import { CarteDeLivre } from "@/components/bibliotheque/CarteDeLivre";
 import { CarteFormation } from "@/components/catalogue/CarteFormation";
 import { CarteSuivie, type VueCarteSuivie } from "@/components/mes-formations/CarteSuivie";
 import { Button } from "@/components/ui/Button";
@@ -84,7 +85,8 @@ function LigneLecon({ lecon, terminee }: { lecon: LeconTrouvable; terminee: bool
 }
 
 /**
- * Recherche (NdRecherche, NdRechercheVide) : formations, parcours et leçons publiés, sans accents ni majuscules.
+ * Recherche (NdRecherche, NdRechercheVide) : formations, parcours, leçons publiés et livres de la Bibliothèque, sans
+ * accents ni majuscules.
  * Les sessions live arriveront avec leur lot (5). Sans requête ou sans résultat : « Recommandé pour vous ».
  */
 export function PageRecherche({ q, resultats, cartes, recommandees, suivies, terminees }: Props) {
@@ -104,11 +106,18 @@ export function PageRecherche({ q, resultats, cartes, recommandees, suivies, ter
     <div className="flex flex-col">
       <div className="min-w-0">
         <Heading level="page">Recherche</Heading>
-        <Lead className="mt-2.5">Formations, parcours et leçons.</Lead>
+        <Lead className="mt-2.5">Formations, parcours, leçons et livres.</Lead>
       </div>
       <form role="search" action="/recherche" method="get" className="mt-[21px] flex max-w-[720px] flex-wrap gap-2">
         <div className="relative min-w-0 flex-[1_1_280px]">
-          <SearchInput name="q" defaultValue={q} maxLength={100} aria-label="Rechercher une formation, un parcours ou une leçon" placeholder="Une formation, un parcours, une leçon…" className="pr-12" />
+          <SearchInput
+            name="q"
+            defaultValue={q}
+            maxLength={100}
+            aria-label="Rechercher une formation, un parcours, une leçon ou un livre"
+            placeholder="Une formation, une leçon, un livre…"
+            className="pr-12"
+          />
           {q && (
             <Link
               href="/recherche"
@@ -161,6 +170,15 @@ export function PageRecherche({ q, resultats, cartes, recommandees, suivies, ter
                 {lecons.length > LECONS_MAX && (
                   <p className="m-0 text-sm leading-[22px] text-discret">{`Et ${pluriel(lecons.length - LECONS_MAX, "autre leçon")} : précisez votre recherche.`}</p>
                 )}
+              </Groupe>
+            )}
+            {resultats.livres.length > 0 && (
+              <Groupe titre="Livres" etiquette={String(resultats.livres.length)} lien={{ href: "/bibliotheque", libelle: "Toute la bibliothèque" }}>
+                <div className={GRILLE_CARTES}>
+                  {resultats.livres.map((livre) => (
+                    <CarteDeLivre key={livre.id} livre={livre} titleAs="h3" />
+                  ))}
+                </div>
               </Groupe>
             )}
           </>
