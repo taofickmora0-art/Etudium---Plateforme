@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
@@ -50,7 +51,12 @@ export function VerifyCodeForm({ email }: { email: string }) {
           label="Code reçu par e-mail"
           value={code}
           onChange={setCode}
-          onComplete={() => formulaire.current?.requestSubmit()}
+          onComplete={(complet) => {
+            // Le champ caché doit porter les 6 chiffres avant l'envoi : sans cela, le code partait incomplet
+            // (« Saisissez les 6 chiffres du code. » en rouge sur téléphone, alors que le code était juste).
+            flushSync(() => setCode(complet));
+            formulaire.current?.requestSubmit();
+          }}
           hint="Le code expire dans 10 minutes."
           error={state.status === "error" ? erreur : undefined}
           disabled={pending}
