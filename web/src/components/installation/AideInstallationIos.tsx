@@ -4,12 +4,27 @@ import { AddSquareIcon, CheckmarkCircle02Icon, Share03Icon, SmartPhone01Icon } f
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogClose } from "@/components/ui/Dialog";
 import { IconTile } from "@/components/ui/IconTile";
-import { surIpad } from "@/lib/pwa/installation";
+import { navigateurIos, surIpad } from "@/lib/pwa/installation";
 
 /**
- * Sur iPhone et iPad, pas de fenêtre d'installation : Safari passe par Partager › Sur l'écran d'accueil. Trois gestes,
- * avec les icônes que l'on retrouve dans Safari.
+ * Sur iPhone et iPad, pas de fenêtre d'installation : on passe par Partager › Sur l'écran d'accueil. Trois gestes,
+ * avec les icônes que l'on retrouve dans le navigateur. Le premier dépend du navigateur (Safari, Chrome ou un autre,
+ * demande du 3 novembre 2026) : le bouton Partager n'y est pas au même endroit.
  */
+function premiereEtape(navigateur: "safari" | "chrome" | "autre", appareil: "iPhone" | "iPad") {
+  if (navigateur === "chrome") {
+    // La barre d'adresse de Chrome est en haut ou en bas, selon les réglages de chacun (capture du 3 novembre 2026).
+    return {
+      texte: "Touchez le bouton Partager, dans la barre d’adresse de Chrome, à droite.",
+      detail: "Un carré avec une flèche vers le haut. La barre d’adresse est en bas ou en haut de l’écran.",
+    };
+  }
+  if (navigateur === "autre") {
+    return { texte: "Ouvrez le menu de votre navigateur, puis touchez « Partager ».", detail: "Le menu est souvent « ··· » ou « ≡ »." };
+  }
+  return { texte: `Touchez le bouton Partager, en ${appareil === "iPad" ? "haut" : "bas"} de Safari.`, detail: "S’il n’apparaît pas, touchez d’abord « ··· »." };
+}
+
 export function AideInstallationIos({
   open,
   onOpenChange,
@@ -22,12 +37,9 @@ export function AideInstallationIos({
 }) {
   // Lu à l'ouverture seulement (après un clic), jamais au rendu du serveur.
   const appareil = open && surIpad() ? "iPad" : "iPhone";
+  const navigateur = open ? navigateurIos() : "safari";
   const etapes = [
-    {
-      icon: Share03Icon,
-      texte: `Touchez le bouton Partager, en ${appareil === "iPad" ? "haut" : "bas"} de Safari.`,
-      detail: "S’il n’apparaît pas, touchez d’abord « ··· ».",
-    },
+    { icon: Share03Icon, ...premiereEtape(navigateur, appareil) },
     { icon: AddSquareIcon, texte: "Choisissez « Sur l’écran d’accueil ».", detail: "Faites défiler la liste si besoin." },
     { icon: CheckmarkCircle02Icon, texte: "Touchez « Ajouter ».", detail: "En haut à droite." },
   ];
@@ -60,7 +72,9 @@ export function AideInstallationIos({
         ))}
       </ol>
       <p className="mt-4 mb-0 text-sm leading-[22px] text-pretty text-discret">
-        Sur {appareil}, l’installation passe par Safari. Dans Chrome sur {appareil}, c’est le même bouton Partager, en haut à droite.
+        {navigateur === "safari"
+          ? `Chrome et les autres navigateurs de l’${appareil} le permettent aussi, par leur bouton Partager.`
+          : "Si « Sur l’écran d’accueil » n’apparaît pas, ouvrez etudium.online dans Safari et recommencez."}
       </p>
     </Dialog>
   );

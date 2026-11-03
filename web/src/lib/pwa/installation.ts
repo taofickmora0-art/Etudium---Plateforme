@@ -33,6 +33,17 @@ function surIos(): boolean {
   return /iPhone|iPad|iPod/.test(n.userAgent) || (/Macintosh/.test(n.userAgent) && n.maxTouchPoints > 1);
 }
 
+/**
+ * Le navigateur sur iPhone ou iPad (demande du 3 novembre 2026) : Safari, Chrome (« CriOS ») ou un autre (Edge, Firefox…).
+ * Tous ajoutent à l'écran d'accueil par leur bouton Partager, mais il n'est pas au même endroit.
+ */
+export function navigateurIos(): "safari" | "chrome" | "autre" {
+  const ua = window.navigator.userAgent;
+  if (/CriOS\//.test(ua)) return "chrome";
+  if (/(FxiOS|EdgiOS|OPiOS|OPT|GSA|YaBrowser|DuckDuckGo)\//.test(ua)) return "autre";
+  return "safari";
+}
+
 /** Un iPad (sinon : iPhone ou iPod). */
 export function surIpad(): boolean {
   const n = window.navigator;

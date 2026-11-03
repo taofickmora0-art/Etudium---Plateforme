@@ -164,10 +164,24 @@ describe("Installer l'application, page Profil du téléphone", () => {
     expect(etapes[0]).toContain("Touchez le bouton Partager, en bas de Safari.");
     expect(etapes[1]).toContain("Choisissez « Sur l’écran d’accueil ».");
     expect(etapes[2]).toContain("Touchez « Ajouter ».");
-    expect(fenetre).toHaveTextContent("Sur iPhone, l’installation passe par Safari. Dans Chrome sur iPhone, c’est le même bouton Partager, en haut à droite.");
+    expect(fenetre).toHaveTextContent("Chrome et les autres navigateurs de l’iPhone le permettent aussi, par leur bouton Partager.");
     await user.click(within(fenetre).getByRole("button", { name: "J’ai compris" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(ligne).toHaveFocus();
+  });
+
+  it("Chrome sur iPhone (demande du 3 novembre 2026) : les gestes de Chrome, bouton Partager dans la barre d'adresse", async () => {
+    simulerNavigateur({ ua: NAVIGATEURS.chromeIphone, toucher: 5 });
+    const user = userEvent.setup();
+    await telephone();
+    await user.click(screen.getByRole("button", { name: INSTALLER }));
+    const fenetre = screen.getByRole("dialog", { name: "Installer Étudium sur votre iPhone" });
+    const etapes = within(fenetre).getAllByRole("listitem").map((e) => e.textContent);
+    expect(etapes[0]).toContain("Touchez le bouton Partager, dans la barre d’adresse de Chrome, à droite.");
+    expect(etapes[0]).toContain("La barre d’adresse est en bas ou en haut de l’écran.");
+    expect(etapes[1]).toContain("Choisissez « Sur l’écran d’accueil ».");
+    expect(fenetre).toHaveTextContent("Si « Sur l’écran d’accueil » n’apparaît pas, ouvrez etudium.online dans Safari et recommencez.");
+    expect(fenetre).not.toHaveTextContent("en bas de Safari");
   });
 
   it("iPhone déjà ajouté à l'écran d'accueil : pas de ligne", async () => {
