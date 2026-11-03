@@ -4,8 +4,9 @@ import { getShellUser } from "@/lib/auth/current-user";
 import { sansAccents } from "@/lib/catalogue/filtres";
 import { estFonctionAbsente, liste, texte, un } from "@/lib/contenus/lecture";
 import { viderFileApres } from "@/lib/envois/declencher";
+import { INDISPONIBLE } from "@/lib/indisponible";
 import { createClient } from "@/lib/supabase/server";
-import { CONTACT_EQUIPE, MIGRATION_MESSAGES, versContact, versConversation, versFil, versMessage } from "./conversion";
+import { CONTACT_EQUIPE, versContact, versConversation, versFil, versMessage } from "./conversion";
 import { ESPACES_MESSAGES, SUJETS_ASSISTANCE, type Contact, type ConversationResume, type EspaceMessages, type Fil, type Message } from "./types";
 
 // Écrire et relire (migration 0035) : la base vérifie le droit d'écrire, le fichier et la cadence, et prévient l'autre
@@ -24,7 +25,7 @@ const estEspace = (valeur: unknown): valeur is EspaceMessages => ESPACES_MESSAGE
 
 /** Le refus de la base (P0001, 42501) tel quel, la migration manquante, ou le message d'échec. */
 function refus(error: { code?: string; message?: string }, echec: string): Refus {
-  if (estFonctionAbsente(error)) return { ok: false, message: MIGRATION_MESSAGES };
+  if (estFonctionAbsente(error)) return { ok: false, message: INDISPONIBLE };
   if ((error.code === "P0001" || error.code === "42501") && error.message) return { ok: false, message: error.message.replace(/'/g, "’") };
   return { ok: false, message: echec };
 }

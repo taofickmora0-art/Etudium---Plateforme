@@ -1,5 +1,6 @@
 import { RACINE_FORMATEUR } from "@/components/formateur/cadre";
 import { Banner } from "@/components/ui/Banner";
+import { BandeauIndisponible } from "@/components/ui/BandeauIndisponible";
 import type { EspaceEdition } from "@/lib/admin/espace";
 
 // Pièces communes des pages « Sessions live » de l'espace formateur et du back-office (spec des sessions live, §4).
@@ -11,8 +12,12 @@ export const racineSessions = (espace: EspaceEdition) => (espace === "formateur"
 
 export const filSessions = (espace: EspaceEdition) => ({ label: "Sessions live", href: baseSessions(espace) });
 
-/** La migration 0018 n'est pas encore appliquée : on le dit au lieu d'afficher une erreur. */
-export function MigrationSessionsAbsente() {
+/**
+ * La migration 0018 n'est pas encore appliquée : on le dit au lieu d'afficher une erreur. L'équipe (back-office) lit la
+ * migration à appliquer ; l'étudiant et le formateur, un message neutre.
+ */
+export function MigrationSessionsAbsente({ espace }: { espace?: EspaceEdition }) {
+  if (espace !== "admin") return <BandeauIndisponible />;
   return (
     <Banner tone="attention" title="Les sessions live ne sont pas encore dans la base.">
       Appliquez la migration 0018 (guide « Ce qui te revient », section 23).

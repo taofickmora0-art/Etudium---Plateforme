@@ -6,6 +6,7 @@ import { Note01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { cn } from "@/lib/cn";
+import { INDISPONIBLE } from "@/lib/indisponible";
 import { enregistrerNote } from "@/lib/lecon/actions";
 import { NOTE_ECHEC, NOTE_MAX } from "@/lib/lecon/regles";
 
@@ -53,7 +54,7 @@ export function NotesLecon({ leconId, noteInitiale, connecte, disponible }: Prop
       </div>
     );
   }
-  if (!disponible) return <p className={TEXTE_DISCRET}>Les notes seront disponibles quand la base sera à jour (fichier 0006).</p>;
+  if (!disponible) return <p className={TEXTE_DISCRET}>{INDISPONIBLE}</p>;
 
   return (
     <form

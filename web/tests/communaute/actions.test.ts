@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Une fonction absente de la base : un message neutre, sans migration ni guide.
+const INDISPONIBLE = "Cette fonction n’est pas disponible pour le moment.";
 import { SESSION_EXPIREE } from "@/lib/admin/garde";
 import { fauxSupabase } from "../admin/faux-supabase";
 
@@ -56,12 +59,12 @@ describe("Publier", () => {
     expect(refresh).toHaveBeenCalled();
   });
 
-  it("un replay (0046) : sans parcours, avec p_replay ; avant la 0046, la migration à appliquer", async () => {
+  it("un replay (0046) : sans parcours, avec p_replay ; avant la 0046, le message neutre", async () => {
     faux.repondre("rpc.publier", { data: ID });
     expect(await publierPublication("replays", "", "Le replay du live Excel", null)).toMatchObject({ ok: true, id: ID });
     expect(faux.de("rpc", "publier")[0].valeurs).toEqual({ p_parcours: null, p_titre: "", p_texte: "Le replay du live Excel", p_piece: null, p_analyse: null, p_replay: true });
     faux.repondre("rpc.publier", { error: { code: "PGRST202", message: "Could not find the function" } });
-    expect(await publierPublication("replays", "", "Le replay", null)).toEqual({ ok: false, message: "Appliquez la migration 0046 (guide « Ce qui te revient », section 51)." });
+    expect(await publierPublication("replays", "", "Le replay", null)).toEqual({ ok: false, message: "Cette fonction n’est pas disponible pour le moment." });
   });
 
   it("refusée par la base après l'envoi du fichier : le fichier est retiré, le message affiché", async () => {
@@ -369,7 +372,7 @@ describe("Les espaces du menu ≡", () => {
     faux.repondre("rpc.espaces_communaute", { data: [{ id: null, nom: "Général", nom_court: "Général", couleur: null, slug: null, ouvert: true }] });
     expect(await chargerEspaces()).toEqual({ ok: true, espaces: [{ id: null, nom: "Général", nomCourt: "Général", couleur: null, slug: null, ouvert: true }] });
     faux.repondre("rpc.espaces_communaute", { error: { code: "PGRST202" } });
-    expect(await chargerEspaces()).toEqual({ ok: false, message: "Appliquez la migration 0019 (guide « Ce qui te revient », section 24)." });
+    expect(await chargerEspaces()).toEqual({ ok: false, message: "Cette fonction n’est pas disponible pour le moment." });
     faux.vider();
     getShellUser.mockResolvedValueOnce(null);
     expect(await chargerEspaces()).toEqual({ ok: false, message: SESSION_EXPIREE });
@@ -388,7 +391,7 @@ describe("Mise en forme et vidéo (0022)", () => {
     faux.repondre("rpc.publier", { error: { code: "PGRST202" } });
     expect(await publierPublication(null, "", "Le live", null, "https://youtu.be/dQw4w9WgXcQ")).toEqual({
       ok: false,
-      message: "Appliquez la migration 0022 (guide « Ce qui te revient », section 27).",
+      message: "Cette fonction n’est pas disponible pour le moment.",
     });
     faux.vider();
     expect(await publierPublication(null, "", "Le live", null, "youtube point com")).toEqual({ ok: false, message: "Collez l’adresse complète de la vidéo (https://…)." });
@@ -435,7 +438,6 @@ describe("Mise en forme et vidéo (0022)", () => {
 
 
 describe("Les commentaires (communauté v3, étape 2)", () => {
-  const MIGRATION_COMMENTAIRES = "Appliquez la migration 0025 (guide « Ce qui te revient », section 30).";
 
   it("répondre à un commentaire : le parent est transmis et rendu ; sans parent, rien (la base d'avant la 0025 suffit)", async () => {
     faux.repondre("rpc.commenter", { data: "r2" });
@@ -445,7 +447,7 @@ describe("Les commentaires (communauté v3, étape 2)", () => {
     await repondre(ID, "Bonjour");
     expect(faux.de("rpc", "commenter")[1].valeurs).toEqual({ p_publication: ID, p_texte: "Bonjour" });
     faux.repondre("rpc.commenter", { error: { code: "PGRST202" } });
-    expect(await repondre(ID, "Merci", R)).toEqual({ ok: false, message: MIGRATION_COMMENTAIRES });
+    expect(await repondre(ID, "Merci", R)).toEqual({ ok: false, message: INDISPONIBLE });
   });
 
   it("modifier un commentaire : le texte nettoyé ; vide refusé sans appel ; refus et migration absente", async () => {
@@ -457,7 +459,7 @@ describe("Les commentaires (communauté v3, étape 2)", () => {
     faux.repondre("rpc.modifier_commentaire", { error: { code: "42501", message: "Ce commentaire n’est pas le vôtre." } });
     expect(await modifierReponse(R, "x")).toEqual({ ok: false, message: "Ce commentaire n’est pas le vôtre." });
     faux.repondre("rpc.modifier_commentaire", { error: { code: "PGRST202" } });
-    expect(await modifierReponse(R, "x")).toEqual({ ok: false, message: MIGRATION_COMMENTAIRES });
+    expect(await modifierReponse(R, "x")).toEqual({ ok: false, message: INDISPONIBLE });
   });
 
   it("aimer un commentaire : l'état et le nombre", async () => {
@@ -465,12 +467,11 @@ describe("Les commentaires (communauté v3, étape 2)", () => {
     expect(await aimerReponse(R)).toEqual({ ok: true, jAime: true, reactions: 3 });
     expect(faux.de("rpc", "basculer_reaction_commentaire")[0].valeurs).toEqual({ p_id: R });
     faux.repondre("rpc.basculer_reaction_commentaire", { error: { code: "PGRST202" } });
-    expect(await aimerReponse(R)).toEqual({ ok: false, message: MIGRATION_COMMENTAIRES });
+    expect(await aimerReponse(R)).toEqual({ ok: false, message: INDISPONIBLE });
   });
 });
 
 describe("Sondages, quiz et programmation (0026)", () => {
-  const MIGRATION_SONDAGES = "Appliquez la migration 0026 (guide « Ce qui te revient », section 31).";
   const SONDAGE = { type: "texte" as const, choixMultiples: false, dureeJours: 7 as const, explication: "", options: [{ texte: "Oui" }, { texte: "Non" }] };
   const BLOC = { type: "texte", choix_multiples: false, fin_le: null, ferme: false, a_repondu: false, votants: null, options: [{ id: "o1", texte: "Oui", image: null, votes: null, moi: false }] };
 
@@ -498,7 +499,7 @@ describe("Sondages, quiz et programmation (0026)", () => {
     });
     expect(faux.appels.filter((a) => a.op === "publier")).toEqual([]);
     faux.repondre("rpc.publier", { error: { code: "PGRST202" } });
-    expect(await publierPublication(null, "", "x", null, null, { sondage: SONDAGE })).toEqual({ ok: false, message: MIGRATION_SONDAGES });
+    expect(await publierPublication(null, "", "x", null, null, { sondage: SONDAGE })).toEqual({ ok: false, message: INDISPONIBLE });
   });
 
   it("voter : les options transmises, le bloc rendu ; reprogrammer ; le fil « programmees »", async () => {

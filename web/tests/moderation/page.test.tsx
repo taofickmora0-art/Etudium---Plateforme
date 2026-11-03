@@ -85,7 +85,7 @@ describe("Le bloc « Analyse automatique »", () => {
     expect(within(bloc()).getByText("Inactive : les publications paraissent sans vérification.")).toBeInTheDocument();
     expect(within(bloc()).getByText("Clé de l’IA : absente")).toBeInTheDocument();
     expect(within(bloc()).getByText("Jeton de modération : absent")).toBeInTheDocument();
-    expect(within(bloc()).getByText("Suivez la section 25 du guide « Ce qui te revient ».")).toBeInTheDocument();
+    expect(within(bloc()).getByText("Pour l’activer : ajoutez la clé de l’IA et le jeton de modération aux variables d’environnement du site.")).toBeInTheDocument();
     expect(within(bloc()).queryByRole("button", { name: "Activer l’analyse automatique" })).toBeNull();
     unmount();
     const deux = page([], { active: false, cle: true, jeton: "non_reconnu", derniereAnalyse: null, enAttente: 0 });
@@ -122,7 +122,7 @@ describe("Le bloc actif mal configuré", () => {
   it("clé absente ou jeton non reconnu : l'avertissement, les publications attendent l'équipe", () => {
     const { unmount } = page([], { ...ETAT, cle: false });
     expect(within(bloc()).getByText("Clé de l’IA : absente")).toBeInTheDocument();
-    expect(within(bloc()).getByText("L’analyse ne peut pas fonctionner : les nouvelles publications attendent l’équipe. Suivez la section 25 du guide « Ce qui te revient ».")).toBeInTheDocument();
+    expect(within(bloc()).getByText("L’analyse ne peut pas fonctionner : les nouvelles publications attendent l’équipe. Vérifiez la clé de l’IA et le jeton de modération.")).toBeInTheDocument();
     unmount();
     page([], { ...ETAT, jeton: "non_reconnu" });
     expect(within(bloc()).getByText("Jeton de modération : non reconnu")).toBeInTheDocument();

@@ -6,7 +6,7 @@ import type { AppareilNavigateur } from "./actions";
 export type EtatPush = "sans_cle" | "non_pris_en_charge" | "iphone_a_installer" | "refuse" | "possible";
 
 export const MESSAGES_PUSH: Record<Exclude<EtatPush, "possible">, string> = {
-  sans_cle: "Bientôt disponible",
+  sans_cle: "Non disponible pour le moment",
   non_pris_en_charge: "Votre navigateur ne reçoit pas les notifications push.",
   iphone_a_installer: "Sur iPhone, ajoutez d’abord Étudium à l’écran d’accueil (Partager › Sur l’écran d’accueil).",
   refuse: "Autorisez les notifications pour Étudium dans les réglages du navigateur.",

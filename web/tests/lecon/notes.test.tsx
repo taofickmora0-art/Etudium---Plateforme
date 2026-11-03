@@ -122,9 +122,9 @@ describe("Notes privées d'une leçon", () => {
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 
-  it("sans la table des notes, un message le dit", () => {
+  it("sans la table des notes, un message neutre le dit", () => {
     render(<NotesLecon leconId={id(2)} noteInitiale={null} connecte disponible={false} />);
-    expect(screen.getByText("Les notes seront disponibles quand la base sera à jour (fichier 0006).")).toBeInTheDocument();
+    expect(screen.getByText("Cette fonction n’est pas disponible pour le moment.")).toBeInTheDocument();
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 });

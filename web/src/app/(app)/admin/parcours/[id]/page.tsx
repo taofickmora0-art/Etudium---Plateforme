@@ -29,7 +29,7 @@ async function FicheDuParcours({ params, searchParams }: Params) {
   try {
     [parcours, fiche, tous] = await Promise.all([getParcours(id), lireFicheParcours(id), listParcours()]);
   } catch (erreur) {
-    return siTablesAbsentes(erreur);
+    return siTablesAbsentes(erreur, { equipe: true });
   }
   if (!parcours) notFound();
   return (

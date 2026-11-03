@@ -14,7 +14,7 @@ type Resultat = { ok: true } | { ok: false; message: string };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 const MIGRATION = "Appliquez les migrations 0049 à 0052 (guide « Ce qui te revient », section 56).";
-const GUIDE = "Ajoutez PAYIZ_CLE_SECRETE dans web/.env.local (guide « Ce qui te revient », section 56), puis relancez le serveur.";
+const AJOUTER_CLE = "Ajoutez PAYIZ_CLE_SECRETE aux variables d’environnement du site, puis redéployez-le.";
 const STATUTS = ["reussi", "en_attente", "echoue", "expire"];
 
 const MIGRATION_ABONNEMENTS_CODE = "Appliquez la migration 0073 (guide « Ce qui te revient », section 72).";
@@ -41,7 +41,7 @@ export async function activerPaiements(): Promise<Resultat> {
   const garde = await exigerDomaine("paiements");
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   const config = configurationPaiement();
-  if (!config) return { ok: false, message: GUIDE };
+  if (!config) return { ok: false, message: AJOUTER_CLE };
   return appeler("activer_paiements", { p_jeton: config.jeton });
 }
 

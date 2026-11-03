@@ -32,10 +32,10 @@ describe("Onglet Notifications", () => {
     expect(screen.getByText("Toujours actif")).toBeInTheDocument();
   });
 
-  it("« Notifications push » est l'interrupteur de cet appareil : sans clé publique, « Bientôt disponible » et désactivé", () => {
+  it("« Notifications push » est l'interrupteur de cet appareil : sans clé publique, « Non disponible pour le moment » et désactivé", () => {
     afficher();
     const push = screen.getByRole("switch", { name: "Notifications push" });
-    expect(push).toHaveAccessibleDescription("Bientôt disponible");
+    expect(push).toHaveAccessibleDescription("Non disponible pour le moment");
     expect(push).toBeDisabled();
   });
 

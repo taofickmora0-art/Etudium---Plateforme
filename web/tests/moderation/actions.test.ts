@@ -63,10 +63,10 @@ describe("Actions de modération", () => {
     expect(faux.de("rpc", "images_sondage")).toEqual([]);
   });
 
-  it("régler l'analyse : le jeton du serveur ; sans configuration, le guide", async () => {
+  it("régler l'analyse : le jeton du serveur ; sans configuration, où l'ajouter", async () => {
     vi.stubEnv("ANTHROPIC_API_KEY", "");
     vi.stubEnv("MODERATION_JETON", "J");
-    expect(await reglerAnalyse(true)).toEqual({ ok: false, message: "Ajoutez la clé de l’IA et le jeton de modération (guide, section 25)." });
+    expect(await reglerAnalyse(true)).toEqual({ ok: false, message: "Ajoutez la clé de l’IA et le jeton de modération aux variables d’environnement du site." });
     expect(faux.appels).toEqual([]);
     vi.stubEnv("ANTHROPIC_API_KEY", "k");
     expect(await reglerAnalyse(true)).toEqual({ ok: true });

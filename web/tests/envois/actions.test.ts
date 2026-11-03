@@ -37,9 +37,9 @@ describe("Les appareils du push", () => {
     expect(faux.appels).toEqual([]);
   });
 
-  it("migration absente : le dire ; autre erreur : le message d'échec", async () => {
+  it("migration absente : le message neutre ; autre erreur : le message d'échec", async () => {
     faux.repondre("rpc.enregistrer_appareil", { error: { code: "PGRST202", message: "absent" } });
-    expect(await enregistrerAppareil(APPAREIL)).toEqual({ ok: false, message: "Appliquez la migration 0058 (guide « Ce qui te revient », section 59)." });
+    expect(await enregistrerAppareil(APPAREIL)).toEqual({ ok: false, message: "Cette fonction n’est pas disponible pour le moment." });
     faux.repondre("rpc.enregistrer_appareil", { error: { code: "500", message: "panne" } });
     expect(await enregistrerAppareil(APPAREIL)).toEqual({ ok: false, message: ECHEC });
   });

@@ -128,7 +128,8 @@ describe("La liste des sessions", () => {
   it("avant la 0018 et sans fiche formateur : les bandeaux", async () => {
     lireSessionsAnimees.mockResolvedValue({ migrationAbsente: true });
     const { unmount } = render(await PageSessionsEdition({ espace: "formateur" }));
-    expect(screen.getByText("Appliquez la migration 0018 (guide « Ce qui te revient », section 23).")).toBeInTheDocument();
+    expect(screen.getByText("Cette fonction n’est pas disponible pour le moment.")).toBeInTheDocument();
+    expect(screen.queryByText(/Appliquez la migration/)).toBeNull();
     unmount();
     lireMaFiche.mockResolvedValue({ migrationAbsente: false, fiche: null });
     render(await PageSessionsEdition({ espace: "formateur" }));

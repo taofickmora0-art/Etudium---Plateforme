@@ -232,9 +232,10 @@ describe("Le tableau de bord", () => {
     expect(within(recos).queryByText("Vous avez déjà commencé toutes les formations disponibles.")).toBeNull();
   });
 
-  it("migration 0063 absente : le bandeau, et la page tient (sans objectif ni activité)", () => {
+  it("migration 0063 absente : un bandeau neutre, sans migration, et la page tient (sans objectif ni activité)", () => {
     render(<TableauDeBord donnees={{ ...PLEIN, base: null }} />);
-    expect(screen.getByText("Appliquez la migration 0063 (guide « Ce qui te revient », section 62).")).toBeInTheDocument();
+    expect(screen.getByText("Cette fonction n’est pas disponible pour le moment.")).toBeInTheDocument();
+    expect(screen.queryByText(/migration|pas encore complet/i)).toBeNull();
     expect(section("Continuer l’apprentissage")).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Objectif de la semaine" })).toBeNull();
     expect(screen.queryByRole("region", { name: "Activité récente" })).toBeNull();

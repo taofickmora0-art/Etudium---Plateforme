@@ -129,7 +129,8 @@ describe("Page Étudiants", () => {
     lireMaFiche.mockResolvedValue({ migrationAbsente: false, fiche: "fa" });
     lireSuivi.mockResolvedValue({ migrationAbsente: true });
     avecToast(await PageEtudiants());
-    expect(screen.getByText(/Appliquez la migration 0015/)).toBeInTheDocument();
+    expect(screen.getByText("Cette fonction n’est pas disponible pour le moment.")).toBeInTheDocument();
+    expect(screen.queryByText(/migration|dans la base/i)).toBeNull();
   });
 });
 

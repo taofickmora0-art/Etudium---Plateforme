@@ -6,6 +6,7 @@ import { exigerAnimateur, SESSION_EXPIREE } from "@/lib/admin/garde";
 import { getShellUser } from "@/lib/auth/current-user";
 import { reconnaitreVideo } from "@/lib/communaute/video";
 import { estFonctionAbsente, liste, un } from "@/lib/contenus/lecture";
+import { INDISPONIBLE, messageAbsente } from "@/lib/indisponible";
 import { createClient } from "@/lib/supabase/server";
 import { versCarte } from "./data";
 import { debutDepuis, plateformeDepuisLien, refusSession } from "./regles";
@@ -25,8 +26,9 @@ const VUES: VueSessions[] = ["a_venir", "inscriptions", "passees"];
 type Erreur = { code?: string; message?: string };
 type Resultat = { ok: boolean; message?: string };
 
-function message(error: Erreur, avecVisuel = false): string {
-  if (estFonctionAbsente(error)) return avecVisuel ? MIGRATION_PROMOTION : MIGRATION;
+/** Le message d'un refus de la base ; une fonction absente : la migration pour l'équipe, le message neutre sinon. */
+function message(error: Erreur, equipe = false, avecVisuel = false): string {
+  if (estFonctionAbsente(error)) return messageAbsente(equipe, avecVisuel ? MIGRATION_PROMOTION : MIGRATION);
   if (error.code === "P0001" && error.message) return error.message.replace(/'/g, "’");
   if (error.code === "42501" && error.message) return error.message;
   return ECHEC;
@@ -39,7 +41,7 @@ export async function chargerSessions(vue: VueSessions): Promise<{ ok: true; ses
   if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("sessions_live", { p_vue: VUES.includes(vue) ? vue : "a_venir" });
-  if (error) return { ok: false, message: estFonctionAbsente(error) ? MIGRATION : "Les sessions n’ont pas pu être chargées. Réessayez." };
+  if (error) return { ok: false, message: estFonctionAbsente(error) ? INDISPONIBLE : "Les sessions n’ont pas pu être chargées. Réessayez." };
   return { ok: true, sessions: liste(data).map(versCarte) };
 }
 
@@ -105,7 +107,7 @@ export async function creerSession(d: DonneesSession): Promise<{ ok: true; id: s
   if (error) {
     // L'affiche déposée pour cette session refusée ne reste pas dans le stockage (le formulaire la redéposera).
     if (promo.p_image) await garde.supabase.storage.from("communaute").remove([promo.p_image.chemin]).catch(() => undefined);
-    return { ok: false, message: message(error, Object.keys(promo).length > 0) };
+    return { ok: false, message: message(error, garde.equipe, Object.keys(promo).length > 0) };
   }
   refresh();
   return { ok: true, id: String(data) };
@@ -126,7 +128,7 @@ export async function modifierSession(id: string, d: DonneesSession): Promise<Re
   if (error) {
     // Une nouvelle affiche refusée quitte le stockage ; celle de la session reste.
     if (promo.p_image && promo.p_image.chemin !== avant) await garde.supabase.storage.from("communaute").remove([promo.p_image.chemin]).catch(() => undefined);
-    return { ok: false, message: message(error, Object.keys(promo).length > 0) };
+    return { ok: false, message: message(error, garde.equipe, Object.keys(promo).length > 0) };
   }
   if (avant && avant !== promo.p_image?.chemin) await garde.supabase.storage.from("communaute").remove([avant]).catch(() => undefined);
   refresh();
@@ -149,7 +151,7 @@ export async function annulerSession(id: string): Promise<Resultat> {
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   if (!UUID.test(id)) return { ok: false, message: ECHEC };
   const { error } = await garde.supabase.rpc("annuler_session", { p_session: id });
-  if (error) return { ok: false, message: message(error) };
+  if (error) return { ok: false, message: message(error, garde.equipe) };
   refresh();
   return { ok: true };
 }

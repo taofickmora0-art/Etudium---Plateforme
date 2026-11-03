@@ -75,11 +75,11 @@ afterEach(() => {
 });
 
 describe("L'interrupteur des notifications push", () => {
-  it("sans clé publique : « Bientôt disponible », désactivé", async () => {
+  it("sans clé publique : « Non disponible pour le moment », désactivé", async () => {
     vi.stubEnv("NEXT_PUBLIC_VAPID_PUBLIC_KEY", "");
     navigateur();
     render(<InterrupteurPush actif onChange={vi.fn()} />);
-    await waitFor(() => expect(interrupteur()).toHaveAccessibleDescription("Bientôt disponible"));
+    await waitFor(() => expect(interrupteur()).toHaveAccessibleDescription("Non disponible pour le moment"));
     expect(interrupteur()).toBeDisabled();
   });
 
@@ -163,13 +163,13 @@ describe("L'interrupteur des notifications push", () => {
 
   it("l'enregistrement échoue : l'appareil est désabonné, le message s'affiche, l'interrupteur reste éteint", async () => {
     const n = navigateur();
-    vi.mocked(enregistrerAppareil).mockResolvedValue({ ok: false, message: "Appliquez la migration 0058." });
+    vi.mocked(enregistrerAppareil).mockResolvedValue({ ok: false, message: "Cette fonction n’est pas disponible pour le moment." });
     const onChange = vi.fn();
     const user = userEvent.setup();
     render(<InterrupteurPush actif={false} onChange={onChange} />);
     await waitFor(() => expect(interrupteur()).toBeEnabled());
     await user.click(interrupteur());
-    expect(await screen.findByRole("alert")).toHaveTextContent("Appliquez la migration 0058.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Cette fonction n’est pas disponible pour le moment.");
     expect(n.courant()?.unsubscribe).toHaveBeenCalled();
     expect(onChange).not.toHaveBeenCalled();
     expect(interrupteur()).not.toBeChecked();

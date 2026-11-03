@@ -36,7 +36,7 @@ async function ListeParcours() {
   try {
     [parcours, stats] = await Promise.all([listParcours(), lireStatistiquesParcours()]);
   } catch (erreur) {
-    return <PageAdmin titre="Parcours" fil={[{ label: "Parcours" }]}>{siTablesAbsentes(erreur)}</PageAdmin>;
+    return <PageAdmin titre="Parcours" fil={[{ label: "Parcours" }]}>{siTablesAbsentes(erreur, { equipe: true })}</PageAdmin>;
   }
   return (
     <PageAdmin

@@ -159,7 +159,7 @@ describe("Le réglage « Exercices obligatoires »", () => {
     );
     expect(await saveFormationInfos(IDLE, form({ ...INFOS, certification: "1", exercices_obligatoires: "on" }))).toMatchObject({
       status: "error",
-      fieldErrors: { exercices_obligatoires: MIGRATION_CERTIFICATS },
+      fieldErrors: { exercices_obligatoires: "Cette fonction n’est pas disponible pour le moment." },
     });
   });
 

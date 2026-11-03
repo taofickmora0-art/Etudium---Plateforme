@@ -2,21 +2,17 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { ListeExercices } from "@/components/exercices/ListeExercices";
 import { SessionGuard } from "@/components/layout/SessionGuard";
-import { Banner } from "@/components/ui/Banner";
+import { BandeauIndisponible } from "@/components/ui/BandeauIndisponible";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Heading, Lead } from "@/components/ui/Text";
-import { lireMesExercices, MIGRATION_EXERCICES } from "@/lib/exercices/data";
+import { lireMesExercices } from "@/lib/exercices/data";
 
 export const metadata: Metadata = { title: "Exercices · Étudium" };
 
 async function Contenu() {
   const lecture = await lireMesExercices();
   if (lecture.migrationAbsente) {
-    return (
-      <Banner tone="attention" title="Les exercices ne sont pas encore dans la base.">
-        {MIGRATION_EXERCICES}
-      </Banner>
-    );
+    return <BandeauIndisponible />;
   }
   return <ListeExercices exercices={lecture.donnees} />;
 }

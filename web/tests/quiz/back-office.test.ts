@@ -15,7 +15,8 @@ const { IDLE } = await import("@/lib/auth/schemas");
 const F = "11111111-1111-4111-8111-111111111111";
 const M = "22222222-2222-4222-8222-222222222222";
 const L = "33333333-3333-4333-8333-333333333333";
-const MIGRATION = "Appliquez la migration 0031 (guide « Ce qui te revient », section 37).";
+// Le formateur ne lit pas la migration : un message neutre.
+const INDISPONIBLE = "Cette fonction n’est pas disponible pour le moment.";
 const form = (valeurs: Record<string, string>) => {
   const fd = new FormData();
   for (const [k, v] of Object.entries(valeurs)) fd.set(k, v);
@@ -41,10 +42,10 @@ describe("Créer un quiz", () => {
     expect(faux.de("lecons", "insert")[0].valeurs).not.toHaveProperty("type");
   });
 
-  it("avant la 0031, un quiz ne peut pas être créé : le message de la migration", async () => {
+  it("avant la 0031, un quiz ne peut pas être créé : le message neutre au formateur", async () => {
     faux.repondre("modules.select", { data: { formation_id: F, formations: { publiee_le: null } } });
     faux.repondre("lecons.insert", { error: { code: "PGRST204", message: "Could not find the 'type' column of 'lecons'" } });
-    expect(await addLecon(IDLE, form({ module_id: M, titre: "Quiz", type: "quiz" }))).toMatchObject({ status: "error", message: MIGRATION });
+    expect(await addLecon(IDLE, form({ module_id: M, titre: "Quiz", type: "quiz" }))).toMatchObject({ status: "error", message: INDISPONIBLE });
   });
 });
 
@@ -81,11 +82,11 @@ describe("Le score minimal aux quiz", () => {
     expect(faux.de("formations", "update")[0].valeurs).not.toHaveProperty("score_quiz");
   });
 
-  it("avant la 0031 : le reste est enregistré, et le champ dit d'appliquer la migration", async () => {
+  it("avant la 0031 : le reste est enregistré, et le champ le dit (au formateur, le message neutre)", async () => {
     faux.repondre("formations.update", (appel) =>
       JSON.stringify(appel.valeurs).includes("score_quiz") ? { error: { code: "PGRST204", message: "Could not find the 'score_quiz' column of 'formations'" } } : {},
     );
-    expect(await saveFormationInfos(IDLE, form({ ...INFOS, score_quiz: "80" }))).toMatchObject({ status: "error", fieldErrors: { score_quiz: MIGRATION } });
+    expect(await saveFormationInfos(IDLE, form({ ...INFOS, score_quiz: "80" }))).toMatchObject({ status: "error", fieldErrors: { score_quiz: INDISPONIBLE } });
     expect(faux.de("formations", "update").map((a) => a.valeurs)).toEqual([expect.objectContaining({ score_quiz: 80 }), expect.not.objectContaining({ score_quiz: expect.anything() })]);
   });
 });

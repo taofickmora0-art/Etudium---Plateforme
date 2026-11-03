@@ -36,7 +36,7 @@ async function ListeFormateurs() {
   try {
     [formateurs, chiffres] = await Promise.all([listFormateurs(), lireChiffresFormateurs()]);
   } catch (erreur) {
-    return <PageAdmin titre="Formateurs" fil={[{ label: "Formateurs" }]}>{siTablesAbsentes(erreur)}</PageAdmin>;
+    return <PageAdmin titre="Formateurs" fil={[{ label: "Formateurs" }]}>{siTablesAbsentes(erreur, { equipe: true })}</PageAdmin>;
   }
   const note = chiffres?.totaux.noteMoyenne;
   return (

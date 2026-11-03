@@ -18,7 +18,8 @@ const { versElement } = await import("@/lib/moderation/data");
 
 const L = "11111111-1111-4111-8111-111111111111";
 const C = "22222222-2222-4222-8222-222222222222";
-const MIGRATION = "Appliquez la migration 0028 (guide « Ce qui te revient », section 34).";
+// Avant la 0028 : un message neutre, sans migration ni guide.
+const INDISPONIBLE = "Cette fonction n’est pas disponible pour le moment.";
 const CARTE = {
   id: C,
   auteur: { prenom: "Mireille", nom_court: "Mireille A." },
@@ -52,7 +53,7 @@ describe("Les discussions d'une leçon", () => {
     expect(await lireDiscussion(L)).toBeNull();
     faux.repondre("rpc.discussion_lecon", { error: { code: "PGRST202" } });
     expect(await lireDiscussion(L)).toBeNull();
-    expect(await chargerDiscussion(L)).toEqual({ ok: false, message: MIGRATION });
+    expect(await chargerDiscussion(L)).toEqual({ ok: false, message: INDISPONIBLE });
   });
 
   it("commenter et répondre : le texte nettoyé, la carte rendue ; vide ou mal formé : refusé sans appel", async () => {

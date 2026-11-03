@@ -80,10 +80,12 @@ describe("Enregistrer une leçon", () => {
     expect(await enregistrerLecon(L, SAISIE, 3)).toEqual({ ok: false, code: "conflit", par: "Aïcha Kpadé" });
   });
 
-  it("un refus de la base (règle ou droits) se montre ; une migration absente le dit ; une panne se réessaie", async () => {
+  it("un refus de la base (règle ou droits) se montre ; une migration absente : neutre au formateur, dite à l'équipe ; une panne se réessaie", async () => {
     faux.repondre("rpc.enregistrer_lecon", { error: { code: "42501", message: "Vous ne pouvez pas modifier cette leçon." } });
     expect(await enregistrerLecon(L, SAISIE, 3)).toEqual({ ok: false, code: "invalide", erreurs: { formulaire: "Vous ne pouvez pas modifier cette leçon." } });
     faux.repondre("rpc.enregistrer_lecon", { error: { code: "PGRST202", message: "absent" } });
+    expect(await enregistrerLecon(L, SAISIE, 3)).toEqual({ ok: false, code: "echec", message: "Cette fonction n’est pas disponible pour le moment." });
+    getShellUser.mockResolvedValueOnce({ roles: ["admin"] });
     expect(await enregistrerLecon(L, SAISIE, 3)).toMatchObject({ ok: false, code: "echec", message: expect.stringContaining("migration 0056") });
     faux.repondre("rpc.enregistrer_lecon", { error: { code: "08006", message: "connexion" } });
     expect(await enregistrerLecon(L, SAISIE, 3)).toMatchObject({ ok: false, code: "echec" });
@@ -108,17 +110,19 @@ describe("Les informations générales, les réglages, la publication", () => {
     expect(await enregistrerInfosFormation(F, { ...INFOS, titre: "" }, 0)).toMatchObject({ code: "invalide", erreurs: { titre: "Entrez le titre de la formation." } });
   });
 
-  it("les questions d'un quiz partent à la base ; un refus donne son message ; avant la 0031, le message de la migration", async () => {
+  it("les questions d'un quiz partent à la base ; un refus donne son message ; avant la 0031, neutre au formateur, la migration à l'équipe", async () => {
     const QUESTIONS = [{ id: "q", genre: "vrai_faux", enonce: "Vrai ?", choix: [], reponses: [], explication: "" }];
     expect(await enregistrerQuestions(L, QUESTIONS)).toEqual({ ok: true });
     expect(faux.de("rpc", "enregistrer_quiz")[0].valeurs).toEqual({ p_lecon: L, p_questions: QUESTIONS });
     faux.repondre("rpc.enregistrer_quiz", { error: { code: "P0001", message: "La question 1 doit avoir une seule bonne réponse." } });
     expect(await enregistrerQuestions(L, QUESTIONS)).toEqual({ ok: false, message: "La question 1 doit avoir une seule bonne réponse." });
     faux.repondre("rpc.enregistrer_quiz", { error: { code: "PGRST202", message: "absente" } });
+    expect(await enregistrerQuestions(L, QUESTIONS)).toEqual({ ok: false, message: "Cette fonction n’est pas disponible pour le moment." });
+    getShellUser.mockResolvedValue({ roles: ["admin"] });
     expect(await enregistrerQuestions(L, QUESTIONS)).toEqual({ ok: false, message: "Appliquez la migration 0031 (guide « Ce qui te revient », section 37)." });
   });
 
-  it("restaurer une version : le RPC, le message de ce qui revient ; avant la 0057, la migration", async () => {
+  it("restaurer une version : le RPC, le message de ce qui revient ; avant la 0057, neutre au formateur, la migration à l'équipe", async () => {
     const V = "55555555-5555-4555-8555-555555555555";
     faux.repondre("rpc.restaurer_version", { data: { numero: 5, infos: true, lecons_modifiees: 2, lecons_recreees: 1 } });
     expect(await restaurerVersion(V)).toEqual({
@@ -128,6 +132,8 @@ describe("Les informations générales, les réglages, la publication", () => {
     expect(faux.de("rpc", "restaurer_version")[0].valeurs).toEqual({ p_version: V });
     expect(refresh).toHaveBeenCalled();
     faux.repondre("rpc.restaurer_version", { error: { code: "PGRST202", message: "absente" } });
+    expect(await restaurerVersion(V)).toEqual({ ok: false, message: "Cette fonction n’est pas disponible pour le moment." });
+    getShellUser.mockResolvedValueOnce({ roles: ["admin"] });
     expect(await restaurerVersion(V)).toMatchObject({ ok: false, message: expect.stringContaining("migration 0057") });
   });
 

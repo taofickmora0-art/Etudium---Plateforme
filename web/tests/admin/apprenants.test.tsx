@@ -88,15 +88,18 @@ describe("L'onglet « Apprenants »", () => {
     expect(await screen.findByText("La liste n’a pas pu être chargée. Réessayez.")).toBeInTheDocument();
   });
 
-  it("l'onglet lit la première page ; avant la 0029, le bandeau de la migration", async () => {
+  it("l'onglet lit la première page ; avant la 0029, la migration au back-office, neutre au formateur", async () => {
     faux.repondre("rpc.apprenants_formation", { data: { resume: { apprenants: 1, progression_moyenne: 25, terminees: 0, a_risque: 0 }, total: 1, lignes: [] } });
     const { unmount } = render(await OngletApprenants({ formationId: X, espace: "formateur" }));
     expect(screen.getByRole("list", { name: "En bref" })).toHaveTextContent("Progression moyenne25 %");
     unmount();
     faux.vider();
     faux.repondre("rpc.apprenants_formation", { error: { code: "PGRST202", message: "Could not find the function" } });
-    render(await OngletApprenants({ formationId: X, espace: "admin" }));
+    const equipe = render(await OngletApprenants({ formationId: X, espace: "admin" }));
     expect(screen.getByText("Appliquez la migration 0029 (guide « Ce qui te revient », section 35).")).toBeInTheDocument();
+    equipe.unmount();
+    render(await OngletApprenants({ formationId: X, espace: "formateur" }));
+    expect(screen.getByText("Cette fonction n’est pas disponible pour le moment.")).toBeInTheDocument();
   });
 
   it("une erreur de lecture reste dans l'onglet : l'éditeur et ses saisies ne sont pas remplacés par la page d'erreur (revue)", async () => {

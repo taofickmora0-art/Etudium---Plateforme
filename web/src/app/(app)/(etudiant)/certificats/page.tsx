@@ -3,22 +3,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ListeCertificats } from "@/components/certificats/ListeCertificats";
 import { SessionGuard } from "@/components/layout/SessionGuard";
-import { Banner } from "@/components/ui/Banner";
+import { BandeauIndisponible } from "@/components/ui/BandeauIndisponible";
 import { buttonVariants } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Heading, Lead } from "@/components/ui/Text";
-import { lireMesCertificats, MIGRATION_CERTIFICATS } from "@/lib/certificats/data";
+import { lireMesCertificats } from "@/lib/certificats/data";
 
 export const metadata: Metadata = { title: "Certificats · Étudium" };
 
 async function Contenu() {
   const lecture = await lireMesCertificats();
   if (lecture.migrationAbsente) {
-    return (
-      <Banner tone="attention" title="Les certificats ne sont pas encore dans la base.">
-        {MIGRATION_CERTIFICATS}
-      </Banner>
-    );
+    return <BandeauIndisponible />;
   }
   return <ListeCertificats page={lecture.donnees} />;
 }

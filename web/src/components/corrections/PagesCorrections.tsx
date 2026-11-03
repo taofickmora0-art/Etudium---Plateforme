@@ -6,6 +6,7 @@ import { PageAdmin } from "@/components/admin/PageAdmin";
 import { RACINE_FORMATEUR } from "@/components/formateur/cadre";
 import { GRILLE_CHIFFRES, Tuile } from "@/components/tableau/Blocs";
 import { Banner } from "@/components/ui/Banner";
+import { BandeauIndisponible } from "@/components/ui/BandeauIndisponible";
 import { buttonVariants } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { chiffresCorrections } from "@/lib/admin/chiffres-pages";
@@ -49,9 +50,13 @@ export async function PageCorrections({ espace }: { espace: Espace }) {
       fil={[{ label: "Corrections" }]}
     >
       {lecture.migrationAbsente ? (
-        <Banner tone="attention" title="Les exercices ne sont pas encore dans la base.">
-          {MIGRATION_EXERCICES}
-        </Banner>
+        espace === "admin" ? (
+          <Banner tone="attention" title="Les exercices ne sont pas encore dans la base.">
+            {MIGRATION_EXERCICES}
+          </Banner>
+        ) : (
+          <BandeauIndisponible />
+        )
       ) : (
         <div className="flex min-w-0 flex-col gap-6">
           {espace === "admin" && <ChiffresCorrections corrections={lecture.donnees} />}

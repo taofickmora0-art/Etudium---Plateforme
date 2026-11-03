@@ -3,6 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { estFonctionAbsente } from "@/lib/contenus/lecture";
 import { viderFileApres } from "@/lib/envois/declencher";
+import { INDISPONIBLE as FONCTION_INDISPONIBLE } from "@/lib/indisponible";
 import { configurationPaiement, type ConfigPaiement } from "@/lib/paiements/config";
 import { lireMoyensDePaiement } from "@/lib/paiements/moyens";
 import { codePaysValide, indicatifDuPays } from "@/lib/paiements/pays";
@@ -36,7 +37,6 @@ const NUMERO_VIDE = "Saisissez votre numéro Mobile Money.";
 const INTROUVABLE = "Paiement introuvable.";
 const CHOISIR = "Choisissez un abonnement.";
 const ECHEC = "Le paiement n’a pas pu être lancé. Réessayez.";
-const MIGRATION = "Les abonnements ne sont pas encore installés (migration 0049, guide « Ce qui te revient », section 56).";
 const INDISPONIBLE_POUR_LE_MOMENT = "Le paiement est indisponible pour le moment. Réessayez plus tard.";
 /** Le refus du jeton du serveur : une affaire de configuration, pas un message pour l'étudiant. */
 const JETON_REFUSE = "Jeton de paiement non reconnu.";
@@ -47,7 +47,7 @@ const erreur = (message: string): EtapePaiement => ({ etat: "erreur", message })
 
 /** Les refus de la base (P0001, 42501) sont faits pour être affichés tels quels. */
 function messageBase(e: Erreur): string {
-  if (estFonctionAbsente(e)) return MIGRATION;
+  if (estFonctionAbsente(e)) return FONCTION_INDISPONIBLE;
   if (e.message === JETON_REFUSE) return INDISPONIBLE_POUR_LE_MOMENT;
   if ((e.code === "P0001" || e.code === "42501") && e.message) return e.message.replace(/'/g, "’");
   return ECHEC;

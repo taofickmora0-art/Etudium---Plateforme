@@ -20,7 +20,7 @@ async function FicheLecon({ params }: Params) {
   try {
     lecon = await getLeconAdmin(leconId);
   } catch (erreur) {
-    return siTablesAbsentes(erreur);
+    return siTablesAbsentes(erreur, { equipe: true });
   }
   // Une leçon n'est ouverte que sous sa propre formation.
   if (!lecon || lecon.formationId !== id) notFound();

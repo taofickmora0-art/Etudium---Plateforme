@@ -20,7 +20,7 @@ async function FicheFormateur({ params }: Params) {
   try {
     formateur = await getFormateur(id);
   } catch (erreur) {
-    return siTablesAbsentes(erreur);
+    return siTablesAbsentes(erreur, { equipe: true });
   }
   if (!formateur) notFound();
   return (

@@ -10,7 +10,7 @@ import { Heading } from "@/components/ui/Text";
 import { activerPaiements, desactiverPaiements } from "@/lib/admin/paiements/actions";
 import type { EtatReglage } from "@/lib/admin/paiements/types";
 
-const GUIDE = "Ajoutez PAYIZ_CLE_SECRETE dans web/.env.local (guide « Ce qui te revient », section 56), puis relancez le serveur.";
+const AJOUTER_CLE = "Ajoutez PAYIZ_CLE_SECRETE aux variables d’environnement du site, puis redéployez-le.";
 const NOTE = "m-0 text-sm leading-[22px] text-discret";
 
 /**
@@ -47,7 +47,7 @@ export function ReglagePaiements({ etat, ecriture }: { etat: EtatReglage; ecritu
           </div>
           <p className={NOTE}>{etat.cle === "absente" ? "Clé Payiz : absente" : `Clé Payiz : mode ${etat.cle === "reel" ? "réel" : "test"}`}</p>
           {!etat.ouverts && <p className={NOTE}>Les étudiants voient « Les paiements ouvrent bientôt. ».</p>}
-          {!etat.webhook && <p className={NOTE}>Notifications Payiz : à brancher une fois le site en ligne.</p>}
+          {!etat.webhook && <p className={NOTE}>Notifications Payiz : non configurées.</p>}
         </div>
         {ecriture && !etat.ouverts && (
           <Button onClick={() => void activer()} disabled={!pret} loading={occupe}>
@@ -73,7 +73,7 @@ export function ReglagePaiements({ etat, ecriture }: { etat: EtatReglage; ecritu
           }
         />
       )}
-      {!pret && <p className={NOTE}>{GUIDE}</p>}
+      {!pret && <p className={NOTE}>{AJOUTER_CLE}</p>}
       {erreur && (
         <p role="alert" className="m-0 text-sm leading-5 text-erreur-texte">
           {erreur}

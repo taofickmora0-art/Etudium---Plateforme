@@ -91,14 +91,14 @@ export function BlocAnalyse({ etat, maintenant }: { etat: EtatModeration; mainte
         <div className="flex flex-col gap-1 text-sm leading-[22px]">
           <p className="m-0 text-texte">Inactive : les publications paraissent sans vérification.</p>
           {configuration}
-          {!activable && <p className="m-0 text-discret">Suivez la section 25 du guide « Ce qui te revient ».</p>}
+          {!activable && <p className="m-0 text-discret">Pour l’activer : ajoutez la clé de l’IA et le jeton de modération aux variables d’environnement du site.</p>}
         </div>
       )}
       {/* Active mais sans clé ou sans le bon jeton : le serveur ne transmet aucun verdict, tout attend l'équipe. */}
       {active && !activable && (
         <Banner
           tone="attention"
-          title="L’analyse ne peut pas fonctionner : les nouvelles publications attendent l’équipe. Suivez la section 25 du guide « Ce qui te revient »."
+          title="L’analyse ne peut pas fonctionner : les nouvelles publications attendent l’équipe. Vérifiez la clé de l’IA et le jeton de modération."
         />
       )}
       {active && etat.enAttente > 0 && (

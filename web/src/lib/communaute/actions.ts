@@ -8,6 +8,7 @@ import { formatDe } from "@/lib/admin/fichiers";
 import { analyserPublication, configurationModeration } from "@/lib/moderation/analyse";
 import { messageBloquee, refusSignalement } from "@/lib/moderation/regles";
 import { MOTIFS, type ContenuAnalyse, type MotifSignalement, type Verdict } from "@/lib/moderation/types";
+import { INDISPONIBLE } from "@/lib/indisponible";
 import { createClient } from "@/lib/supabase/server";
 import { lireApercu } from "./apercu";
 import { avecLiens, lireLot, UUID, versApercu, versEspace, versPublication, versReponse, versSondage } from "./data";
@@ -19,14 +20,9 @@ import { refusProgrammation, refusSondage, TOLERANCE_PROGRAMMATION, versBase, ty
 import { REPLAYS, type Apercu, type Espace, type FiltreFil, type LotPublications, type PieceEnvoyee, type Reponse, type Sondage, type SuiteFil, type TriFil } from "./types";
 
 // Actions de la communauté (spec, §2 à §4). La base revérifie tout (migration 0019) et ses messages (P0001, 42501)
-// sont faits pour être affichés tels quels.
+// sont faits pour être affichés tels quels. Une fonction absente de la base (migration non appliquée) : le message
+// neutre, la communauté étant celle des étudiants et des formateurs.
 
-const MIGRATION = "Appliquez la migration 0019 (guide « Ce qui te revient », section 24).";
-const MIGRATION_ACTUALITES = "Appliquez la migration 0021 (guide « Ce qui te revient », section 26).";
-const MIGRATION_VIDEO = "Appliquez la migration 0022 (guide « Ce qui te revient », section 27).";
-const MIGRATION_COMMENTAIRES = "Appliquez la migration 0025 (guide « Ce qui te revient », section 30).";
-const MIGRATION_SONDAGES = "Appliquez la migration 0026 (guide « Ce qui te revient », section 31).";
-const MIGRATION_REPLAYS = "Appliquez la migration 0046 (guide « Ce qui te revient », section 51).";
 const UN_SEUL_AJOUT = "Une publication porte un seul ajout : une image, un fichier, une vidéo, un sondage ou un quiz.";
 const ADRESSE_VIDEO = "Collez l’adresse complète de la vidéo (https://…).";
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
@@ -40,7 +36,7 @@ const FAUX_FICHIER = "Ce fichier n’est pas une image ou un PDF valide.";
 const texteOuNull = (valeur: unknown) => (typeof valeur === "string" && valeur ? valeur : null);
 
 function message(error: Erreur): string {
-  if (estFonctionAbsente(error)) return MIGRATION;
+  if (estFonctionAbsente(error)) return INDISPONIBLE;
   if (error.code === "P0001" && error.message) return error.message.replace(/'/g, "’");
   if (error.code === "42501" && error.message) return error.message;
   return ECHEC;
@@ -60,7 +56,7 @@ export async function chargerFil(espace: FiltreFil, tri: TriFil = "recentes", su
   if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
   const resultat = await lireLot(await createClient(), espace, tri, suite);
   if ("error" in resultat) {
-    return { ok: false, message: resultat.error && estFonctionAbsente(resultat.error) ? MIGRATION : "Les publications n’ont pas pu être chargées. Réessayez." };
+    return { ok: false, message: resultat.error && estFonctionAbsente(resultat.error) ? INDISPONIBLE : "Les publications n’ont pas pu être chargées. Réessayez." };
   }
   return { ok: true, lot: resultat.lot };
 }
@@ -290,9 +286,7 @@ export async function publierPublication(
     : await avecApercu(supabase, "publier", parametres, apercuLu);
   if (error) {
     await retirer();
-    if (estFonctionAbsente(error) && replay) return { ok: false, message: MIGRATION_REPLAYS };
-    if (estFonctionAbsente(error) && (sondage || publieLe)) return { ok: false, message: MIGRATION_SONDAGES };
-    return { ok: false, message: video && estFonctionAbsente(error) ? MIGRATION_VIDEO : message(error) };
+    return { ok: false, message: message(error) };
   }
   const resultat = lireResultat(data);
   if (resultat.statut === "bloquee") return { ok: false, message: messageBloquee(resultat.categorie) };
@@ -363,7 +357,7 @@ export async function signaler(cible: { publicationId: string } | { reponseId: s
     p_motif: motif,
     p_precisions: precisions.trim(),
   });
-  if (error) return { ok: false, message: estFonctionAbsente(error) ? "Appliquez la migration 0020 (guide « Ce qui te revient », section 25)." : message(error) };
+  if (error) return { ok: false, message: message(error) };
   return { ok: true };
 }
 
@@ -400,7 +394,7 @@ export async function repondre(publicationId: string, texte: string, parentId: s
   if (refus) return { ok: false, message: refus };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("commenter", { p_publication: publicationId, p_texte: texte.trim(), ...(parentId ? { p_parent: parentId } : {}) });
-  if (error) return { ok: false, message: parentId && estFonctionAbsente(error) ? MIGRATION_COMMENTAIRES : message(error) };
+  if (error) return { ok: false, message: message(error) };
   refresh();
   return {
     ok: true,
@@ -429,7 +423,7 @@ export async function modifierReponse(id: string, texte: string): Promise<Result
   if (refus) return { ok: false, message: refus };
   const supabase = await createClient();
   const { error } = await supabase.rpc("modifier_commentaire", { p_id: id, p_texte: texte.trim() });
-  if (error) return { ok: false, message: estFonctionAbsente(error) ? MIGRATION_COMMENTAIRES : message(error) };
+  if (error) return { ok: false, message: message(error) };
   refresh();
   return { ok: true };
 }
@@ -440,7 +434,7 @@ export async function aimerReponse(id: string): Promise<{ ok: true; jAime: boole
   if (!UUID.test(id)) return { ok: false, message: ECHEC };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("basculer_reaction_commentaire", { p_id: id });
-  if (error) return { ok: false, message: estFonctionAbsente(error) ? MIGRATION_COMMENTAIRES : message(error) };
+  if (error) return { ok: false, message: message(error) };
   const r = un(data);
   return { ok: true, jAime: r?.j_aime === true, reactions: Number(r?.reactions) || 0 };
 }
@@ -474,18 +468,16 @@ export async function basculerEnregistrement(publicationId: string): Promise<{ o
   if (!UUID.test(publicationId)) return { ok: false, message: ECHEC };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("basculer_enregistrement", { p_publication: publicationId });
-  if (error) return { ok: false, message: estFonctionAbsente(error) ? MIGRATION_ACTUALITES : message(error) };
+  if (error) return { ok: false, message: message(error) };
   return { ok: true, enregistree: data === true };
 }
-
-const MIGRATION_ANNONCE = "Appliquez la migration 0039 (guide « Ce qui te revient », section 46).";
 
 /** Masquer l'annonce de l'Accueil pour soi (0039), si l'équipe l'a permis ; elle revient si l'équipe la modifie. */
 export async function masquerAnnonce(): Promise<Resultat> {
   if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
   const supabase = await createClient();
   const { error } = await supabase.rpc("masquer_annonce");
-  if (error) return { ok: false, message: estFonctionAbsente(error) ? MIGRATION_ANNONCE : message(error) };
+  if (error) return { ok: false, message: message(error) };
   return { ok: true };
 }
 
@@ -501,7 +493,7 @@ export async function voter(publicationId: string, optionIds: string[]): Promise
   if (!UUID.test(publicationId) || optionIds.length === 0 || optionIds.some((o) => !UUID.test(o))) return { ok: false, message: ECHEC };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("voter", { p_publication: publicationId, p_options: optionIds });
-  if (error) return { ok: false, message: estFonctionAbsente(error) ? MIGRATION_SONDAGES : message(error) };
+  if (error) return { ok: false, message: message(error) };
   const sondage = versSondage(data);
   return sondage ? { ok: true, sondage } : { ok: false, message: ECHEC };
 }
@@ -514,7 +506,7 @@ export async function reprogrammer(publicationId: string, publieLe: string | nul
   if (refus) return { ok: false, message: refus };
   const supabase = await createClient();
   const { error } = await supabase.rpc("reprogrammer", { p_publication: publicationId, p_publie_le: publieLe });
-  if (error) return { ok: false, message: estFonctionAbsente(error) ? MIGRATION_SONDAGES : message(error) };
+  if (error) return { ok: false, message: message(error) };
   refresh();
   return { ok: true };
 }

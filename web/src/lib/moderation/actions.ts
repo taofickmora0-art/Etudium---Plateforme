@@ -106,7 +106,7 @@ export async function reglerAnalyse(active: boolean): Promise<Resultat> {
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
   const jeton = process.env.MODERATION_JETON?.trim();
   if (active && (!jeton || !process.env.ANTHROPIC_API_KEY?.trim())) {
-    return { ok: false, message: "Ajoutez la clé de l’IA et le jeton de modération (guide, section 25)." };
+    return { ok: false, message: "Ajoutez la clé de l’IA et le jeton de modération aux variables d’environnement du site." };
   }
   const { error } = await garde.supabase.rpc("regler_analyse", { p_active: active, p_jeton: active ? jeton : null });
   if (error) return { ok: false, message: message(error) };

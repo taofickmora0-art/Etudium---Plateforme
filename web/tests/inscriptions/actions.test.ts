@@ -38,11 +38,11 @@ describe("sInscrireFormation", () => {
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("sans la migration 0069 : « Appliquez la migration 0069 », avec la section du guide ; une autre erreur : un message clair", async () => {
+  it("sans la migration 0069 : le message neutre, sans migration ni guide ; une autre erreur : un message clair", async () => {
     faux.repondre("rpc.s_inscrire_formation", { error: { code: "PGRST202", message: "Could not find the function" } });
-    expect(await sInscrireFormation(FORMATION)).toEqual({ ok: false, message: "Appliquez la migration 0069 (guide « Ce qui te revient », section 68)." });
+    expect(await sInscrireFormation(FORMATION)).toEqual({ ok: false, message: "Cette fonction n’est pas disponible pour le moment." });
     faux.repondre("rpc.s_inscrire_formation", { error: { code: "42883", message: "function does not exist" } });
-    expect(await sInscrireFormation(FORMATION)).toEqual({ ok: false, message: "Appliquez la migration 0069 (guide « Ce qui te revient », section 68)." });
+    expect(await sInscrireFormation(FORMATION)).toEqual({ ok: false, message: "Cette fonction n’est pas disponible pour le moment." });
     faux.repondre("rpc.s_inscrire_formation", { error: { code: "57014", message: "canceling statement due to statement timeout" } });
     expect(await sInscrireFormation(FORMATION)).toEqual({ ok: false, message: "L’inscription n’a pas abouti. Réessayez." });
   });

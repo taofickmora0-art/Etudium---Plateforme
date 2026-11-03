@@ -127,10 +127,11 @@ describe("Mes formations", () => {
     expect(listFormations).not.toHaveBeenCalled();
   });
 
-  it("avant la migration 0014 : le bandeau", async () => {
+  it("avant la migration 0014 : un bandeau neutre, sans migration", async () => {
     lireMaFiche.mockResolvedValue({ migrationAbsente: true });
     avecToast(await MesFormations());
-    expect(screen.getByText(/Appliquez la migration 0014/)).toBeInTheDocument();
+    expect(screen.getByText("Cette fonction n’est pas disponible pour le moment.")).toBeInTheDocument();
+    expect(screen.queryByText(/migration|dans la base/i)).toBeNull();
   });
 
   it("nouvelle formation : le formulaire de l'espace formateur ; sans fiche, le message", async () => {

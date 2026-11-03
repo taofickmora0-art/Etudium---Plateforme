@@ -30,7 +30,7 @@ async function FicheFormation({ params, searchParams }: Params) {
   try {
     donnees = await Promise.all([getFormationAdmin(id), listParcours(), listFormateurs(), competencesAVendre(id)]);
   } catch (erreur) {
-    return siTablesAbsentes(erreur);
+    return siTablesAbsentes(erreur, { equipe: true });
   }
   const [formation, parcours, formateurs, { competences, liees }] = donnees;
   if (!formation) notFound();

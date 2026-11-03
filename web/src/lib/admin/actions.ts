@@ -15,6 +15,7 @@ import { slugify } from "./slug";
 import { MIGRATION_QUIZ } from "@/lib/quiz/conversion";
 import { MIGRATION_EXERCICES } from "@/lib/exercices/conversion";
 import { MIGRATION_CERTIFICATS } from "@/lib/certificats/conversion";
+import { messageAbsente } from "@/lib/indisponible";
 import { estLeconDeContenu } from "@/lib/catalogue/regles";
 import { viderFileApres } from "@/lib/envois/declencher";
 
@@ -242,7 +243,7 @@ export async function ranger(table: "modules" | "lecons", id: string, parent: st
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { error } = await garde.supabase.rpc("ranger", { p_table: table, p_id: id, p_parent: parent, p_position: position });
     if (error) {
-      if (estFonctionAbsente(error)) return { ok: false, message: MIGRATION_LECONS };
+      if (estFonctionAbsente(error)) return { ok: false, message: messageAbsente(garde.equipe, MIGRATION_LECONS) };
       return { ok: false, message: error.code === "P0001" && error.message ? typographie(error.message) : DEPLACEMENT_ECHOUE };
     }
   } catch {
@@ -397,7 +398,10 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
   if (scoreAbsent || obligatoiresAbsent) {
     return {
       status: "error",
-      fieldErrors: { ...(scoreAbsent ? { score_quiz: MIGRATION_QUIZ } : {}), ...(obligatoiresAbsent ? { exercices_obligatoires: MIGRATION_CERTIFICATS } : {}) },
+      fieldErrors: {
+        ...(scoreAbsent ? { score_quiz: messageAbsente(garde.equipe, MIGRATION_QUIZ) } : {}),
+        ...(obligatoiresAbsent ? { exercices_obligatoires: messageAbsente(garde.equipe, MIGRATION_CERTIFICATS) } : {}),
+      },
       values,
     };
   }
@@ -601,8 +605,8 @@ export async function addLecon(_prev: FormState, fd: FormData): Promise<FormStat
     let reponse = await supabase.from("lecons").insert({ ...nouvelle, publiee: type ? false : !formation?.publiee_le }).select("id").single();
     if (colonneAbsente(reponse.error)) {
       // Un quiz demande la 0031 ; une leçon, avant la 0027, s'ajoute sans statut (visible comme avant).
-      if (type === "exercice") return { status: "error", message: MIGRATION_EXERCICES, values };
-      if (type) return { status: "error", message: MIGRATION_QUIZ, values };
+      if (type === "exercice") return { status: "error", message: messageAbsente(garde.equipe, MIGRATION_EXERCICES), values };
+      if (type) return { status: "error", message: messageAbsente(garde.equipe, MIGRATION_QUIZ), values };
       reponse = await supabase.from("lecons").insert(nouvelle).select("id").single();
     }
     const { data, error } = reponse;
@@ -624,7 +628,7 @@ export async function changerStatutLecon(id: string, publiee: boolean): Promise<
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { error } = await garde.supabase.from("lecons").update({ publiee }).eq("id", id);
     // « Ajoutez au moins une question avant de publier ce quiz. » (0031)
-    if (error) return { ok: false, message: colonneAbsente(error) ? MIGRATION_LECONS : error.code === "P0001" && error.message ? typographie(error.message) : ECHEC };
+    if (error) return { ok: false, message: colonneAbsente(error) ? messageAbsente(garde.equipe, MIGRATION_LECONS) : error.code === "P0001" && error.message ? typographie(error.message) : ECHEC };
   } catch {
     return { ok: false, message: ECHEC };
   }

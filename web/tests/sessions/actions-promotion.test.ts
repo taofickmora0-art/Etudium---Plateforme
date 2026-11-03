@@ -27,7 +27,8 @@ const D: DonneesSession = {
   formateurId: null,
 };
 const AFFICHE = { chemin: `${MOI}/a.png`, nom: "affiche.png", type: "image/png", taille: 2048 };
-const MIGRATION_PROMOTION = "Appliquez la migration 0024 (guide « Ce qui te revient », section 29).";
+// Avant la 0024 : le formateur lit un message neutre (l'équipe, la migration à appliquer).
+const INDISPONIBLE = "Cette fonction n’est pas disponible pour le moment.";
 
 beforeEach(() => {
   faux.vider();
@@ -63,9 +64,9 @@ describe("Le visuel de promotion", () => {
     expect(faux.de("storage.communaute", "remove")[0].valeurs).toEqual([[AFFICHE.chemin]]);
   });
 
-  it("avant la 0024, avec un visuel : le message de la migration", async () => {
+  it("avant la 0024, avec un visuel : le message neutre au formateur", async () => {
     faux.repondre("rpc.creer_session", { error: { code: "PGRST202" } });
-    expect(await creerSession({ ...D, image: AFFICHE })).toEqual({ ok: false, message: MIGRATION_PROMOTION });
+    expect(await creerSession({ ...D, image: AFFICHE })).toEqual({ ok: false, message: INDISPONIBLE });
   });
 
   it("modifier en remplaçant l'affiche : l'ancienne est retirée du stockage ; la même : rien n'est retiré", async () => {

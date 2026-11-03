@@ -68,10 +68,13 @@ const QUESTIONS: QuestionQuiz[] = [
 // Envoyées avec leur identifiant : la base les met à jour sans en changer (une tentative en cours reste valable).
 const ENVOYEES = QUESTIONS.map(({ id, genre, enonce, choix, reponses, explication }) => ({ id, genre, enonce, choix, reponses, explication }));
 
-function afficher(quiz: { migrationAbsente: true } | { migrationAbsente: false; donnees: QuestionQuiz[] } = { migrationAbsente: false, donnees: QUESTIONS }) {
+function afficher(
+  quiz: { migrationAbsente: true } | { migrationAbsente: false; donnees: QuestionQuiz[] } = { migrationAbsente: false, donnees: QUESTIONS },
+  base?: "/admin/formations" | "/formateur/formations",
+) {
   return render(
     <ToastProvider>
-      <EditeurLecon lecon={QUIZ} quiz={quiz} />
+      <EditeurLecon lecon={QUIZ} quiz={quiz} base={base} />
     </ToastProvider>,
   );
 }
@@ -224,9 +227,14 @@ describe("L'éditeur d'un quiz", () => {
     expect(screen.getByRole("button", { name: "Ajouter une question" })).toBeInTheDocument();
     vide.unmount();
 
-    afficher({ migrationAbsente: true });
+    const equipe = afficher({ migrationAbsente: true });
     expect(screen.getByText("Appliquez la migration 0031 (guide « Ce qui te revient », section 37).")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ajouter une question" })).toBeNull();
+    equipe.unmount();
+
+    afficher({ migrationAbsente: true }, "/formateur/formations");
+    expect(screen.getByText("Cette fonction n’est pas disponible pour le moment.")).toBeInTheDocument();
+    expect(screen.queryByText(/Appliquez la migration/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Enregistrer les questions" })).toBeNull();
   });
 });

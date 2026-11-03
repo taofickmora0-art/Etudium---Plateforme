@@ -71,6 +71,8 @@ describe("Filtres et pages des apprenants", () => {
     expect(await chercherApprenants(X, "", "tous", 1)).toEqual({ ok: false, message: "Cette formation n’est pas l’une de vos formations." });
     faux.vider();
     faux.repondre("rpc.apprenants_formation", { error: { code: "PGRST202", message: "Could not find the function" } });
+    expect(await chercherApprenants(X, "", "tous", 1)).toEqual({ ok: false, message: "Cette fonction n’est pas disponible pour le moment." });
+    getShellUser.mockResolvedValue({ roles: ["etudiant", "admin"] });
     expect(await chercherApprenants(X, "", "tous", 1)).toEqual({ ok: false, message: "Appliquez la migration 0029 (guide « Ce qui te revient », section 35)." });
   });
 });

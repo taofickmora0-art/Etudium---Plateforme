@@ -19,7 +19,7 @@ vi.mock("@/lib/sessions/data", () => ({ lireSessionsAnimees: () => lireSessionsA
 const lireCertificatsFormateur = vi.fn();
 vi.mock("@/lib/certificats/data", () => ({ lireCertificatsFormateur: () => lireCertificatsFormateur() }));
 const lireCorrections = vi.fn();
-vi.mock("@/lib/exercices/data", () => ({ lireCorrections: () => lireCorrections(), MIGRATION_EXERCICES: "Appliquez la migration 0032 (guide « Ce qui te revient », section 38)." }));
+vi.mock("@/lib/exercices/data", () => ({ lireCorrections: () => lireCorrections() }));
 
 // « Question récente » : les conversations du formateur (messagerie, migration 0035), la plus récente d'abord.
 const lireConversations = vi.fn();
@@ -80,11 +80,19 @@ describe("Tableau de bord du formateur", () => {
     expect(texte).toMatch(/Certificats délivrés\s*12\s*Dans vos formations/);
   });
 
-  it("avant la 0033, les certificats délivrés disent la migration", async () => {
+  it("avant la 0033 (ou si la lecture échoue), les certificats délivrés : un tiret, sans parler de migration", async () => {
     lireCertificatsFormateur.mockResolvedValue(null);
     render(await TableauDeBordFormateur());
     const texte = [...document.querySelectorAll("[data-tuile]")].map((t) => t.textContent).join(" | ");
-    expect(texte).toMatch(/Certificats délivrés\s*—\s*Migration 0033 à appliquer/);
+    expect(texte).toMatch(/Certificats délivrés\s*—\s*Non disponible pour le moment/);
+    expect(texte).not.toMatch(/migration/i);
+  });
+
+  it("avant la 0032, les exercices à corriger : le message neutre, sans migration", async () => {
+    lireCorrections.mockResolvedValue({ migrationAbsente: true });
+    render(await TableauDeBordFormateur());
+    expect(screen.getByRole("region", { name: "Exercices à corriger" })).toHaveTextContent("Cette fonction n’est pas disponible pour le moment.");
+    expect(document.body).not.toHaveTextContent(/migration/i);
   });
 
   it("étudiants à risque : l'inactivité, la formation, la progression, et le lien vers le suivi", async () => {
@@ -241,7 +249,7 @@ describe("Tableau de bord du formateur", () => {
     expect(within(carte).getByRole("link", { name: "Nouvelle session" })).toHaveAttribute("href", "/formateur/sessions/nouvelle");
   });
 
-  it("sans fiche, avant la 0014 ou la 0015 : les bandeaux", async () => {
+  it("sans fiche, avant la 0014 ou la 0015 : les bandeaux, neutres", async () => {
     lireMaFiche.mockResolvedValue({ migrationAbsente: false, fiche: null });
     const { unmount } = render(await TableauDeBordFormateur());
     expect(screen.getByText(/pas encore relié à une fiche formateur/)).toBeInTheDocument();
@@ -249,6 +257,7 @@ describe("Tableau de bord du formateur", () => {
     lireMaFiche.mockResolvedValue({ migrationAbsente: false, fiche: "fa" });
     lireTableauDeBordFormateur.mockResolvedValue({ migrationAbsente: true });
     render(await TableauDeBordFormateur());
-    expect(screen.getByText(/Appliquez la migration 0015/)).toBeInTheDocument();
+    expect(screen.getByText("Cette fonction n’est pas disponible pour le moment.")).toBeInTheDocument();
+    expect(screen.queryByText(/migration|dans la base/i)).toBeNull();
   });
 });

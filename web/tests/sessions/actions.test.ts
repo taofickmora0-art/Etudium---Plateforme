@@ -17,6 +17,7 @@ const { annulerSession, chargerSessions, creerSession, modifierSession, seDesins
 const ID = "11111111-1111-4111-8111-111111111111";
 const FICHE = "33333333-3333-4333-8333-333333333333";
 const MIGRATION = "Appliquez la migration 0018 (guide « Ce qui te revient », section 23).";
+const INDISPONIBLE = "Cette fonction n’est pas disponible pour le moment.";
 // Toujours dans le futur, quelle que soit la date du jour : dans 30 jours.
 const dans30 = new Date(Date.now() + 30 * 86_400_000);
 const D: DonneesSession = {
@@ -42,7 +43,7 @@ describe("Onglets et inscription", () => {
     expect(await chargerSessions("passees")).toEqual({ ok: true, sessions: [] });
     expect(faux.de("rpc", "sessions_live")[0].valeurs).toEqual({ p_vue: "passees" });
     faux.repondre("rpc.sessions_live", { error: { code: "PGRST202" } });
-    expect(await chargerSessions("a_venir")).toEqual({ ok: false, message: MIGRATION });
+    expect(await chargerSessions("a_venir")).toEqual({ ok: false, message: INDISPONIBLE });
     getShellUser.mockResolvedValue(null);
     expect(await chargerSessions("a_venir")).toEqual({ ok: false, message: SESSION_EXPIREE });
   });
@@ -115,6 +116,8 @@ describe("Programmer, modifier, annuler", () => {
     faux.repondre("rpc.annuler_session", { error: { code: "P0001", message: "Une session terminée ne se modifie plus." } });
     expect(await annulerSession(ID)).toEqual({ ok: false, message: "Une session terminée ne se modifie plus." });
     faux.repondre("rpc.creer_session", { error: { code: "PGRST202" } });
+    expect(await creerSession(D)).toEqual({ ok: false, message: INDISPONIBLE });
+    getShellUser.mockResolvedValue({ roles: ["etudiant", "moderateur"] });
     expect(await creerSession(D)).toEqual({ ok: false, message: MIGRATION });
   });
 });

@@ -2,8 +2,8 @@
 
 import { getShellUser } from "@/lib/auth/current-user";
 import { estFonctionAbsente, texte } from "@/lib/contenus/lecture";
+import { INDISPONIBLE } from "@/lib/indisponible";
 import { createClient } from "@/lib/supabase/server";
-import { MIGRATION_FORMATEURS } from "./conversion";
 
 // « Message » sur la fiche d'une formation ou le profil d'un formateur (migration 0070) : la base trouve le compte relié
 // à la fiche et vérifie le droit d'écrire (inscription à une de ses formations, compte formateur), puis ouvre ou
@@ -20,7 +20,7 @@ export async function ecrireAuFormateur(formateurId: string): Promise<{ ok: true
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("ouvrir_conversation_formateur", { p_formateur: formateurId });
   if (error) {
-    if (estFonctionAbsente(error)) return { ok: false, message: MIGRATION_FORMATEURS };
+    if (estFonctionAbsente(error)) return { ok: false, message: INDISPONIBLE };
     // Le refus de la base (P0001, 42501) est écrit pour l'étudiant.
     if ((error.code === "P0001" || error.code === "42501") && error.message) return { ok: false, message: error.message.replace(/'/g, "’") };
     return { ok: false, message: OUVERTURE_ECHEC };

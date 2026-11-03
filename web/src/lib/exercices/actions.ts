@@ -3,8 +3,8 @@
 import { refresh } from "next/cache";
 import { getShellUser } from "@/lib/auth/current-user";
 import { estFonctionAbsente, texte, un } from "@/lib/contenus/lecture";
+import { INDISPONIBLE } from "@/lib/indisponible";
 import { createClient } from "@/lib/supabase/server";
-import { MIGRATION_EXERCICES } from "./conversion";
 
 // Rendre, terminer et corriger un exercice (migration 0032) : la base vérifie l'accès, le fichier et le statut, et
 // prévient le formateur ou l'étudiant.
@@ -21,7 +21,7 @@ type Refus = { ok: false; message: string };
 
 /** Le refus de la base (P0001, 42501) tel quel, la migration manquante, ou le message d'échec. */
 function refus(error: { code?: string; message?: string }, echec: string): Refus {
-  if (estFonctionAbsente(error)) return { ok: false, message: MIGRATION_EXERCICES };
+  if (estFonctionAbsente(error)) return { ok: false, message: INDISPONIBLE };
   if ((error.code === "P0001" || error.code === "42501") && error.message) return { ok: false, message: error.message.replace(/'/g, "’") };
   return { ok: false, message: echec };
 }

@@ -43,6 +43,8 @@ describe("Le statut d'une leçon", () => {
     getShellUser.mockResolvedValue({ roles: ["admin"] });
     faux.repondre("lecons.update", { error: COLONNE_ABSENTE });
     expect(await changerStatutLecon(L, false)).toEqual({ ok: false, message: MIGRATION });
+    getShellUser.mockResolvedValue({ roles: ["etudiant", "formateur"] });
+    expect(await changerStatutLecon(L, false)).toEqual({ ok: false, message: "Cette fonction n’est pas disponible pour le moment." });
   });
 
   it("une nouvelle leçon : publiée dans une formation jamais publiée, brouillon sinon ; avant la 0027, sans la colonne", async () => {
@@ -87,6 +89,8 @@ describe("Ranger", () => {
     expect(faux.de("rpc", "ranger")).toHaveLength(2);
     faux.repondre("rpc.ranger", { error: { code: "PGRST202" } });
     expect(await ranger("lecons", L, M2, 1)).toEqual({ ok: false, message: MIGRATION });
+    getShellUser.mockResolvedValueOnce({ roles: ["etudiant", "formateur"] });
+    expect(await ranger("lecons", L, M2, 1)).toEqual({ ok: false, message: "Cette fonction n’est pas disponible pour le moment." });
     faux.repondre("rpc.ranger", { error: { code: "P0001", message: "Cette section n'est pas dans la même formation." } });
     expect(await ranger("lecons", L, M2, 1)).toEqual({ ok: false, message: "Cette section n’est pas dans la même formation." });
   });

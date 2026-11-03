@@ -2,6 +2,7 @@
 
 import { exigerEditeur } from "@/lib/admin/garde";
 import { estFonctionAbsente } from "@/lib/contenus/lecture";
+import { messageAbsente } from "@/lib/indisponible";
 import { MIGRATION_APPRENANTS, versApprenants, type PageApprenants } from "./apprenants";
 import { estFiltreSuivi } from "./regles-suivi";
 import type { FiltreSuivi } from "./suivi";
@@ -29,7 +30,7 @@ export async function chercherApprenants(
     p_page: Math.max(1, Math.trunc(Number(page)) || 1),
   });
   if (error) {
-    if (estFonctionAbsente(error)) return { ok: false, message: MIGRATION_APPRENANTS };
+    if (estFonctionAbsente(error)) return { ok: false, message: messageAbsente(garde.equipe, MIGRATION_APPRENANTS) };
     if (error.code === "42501" && error.message) return { ok: false, message: error.message.replace(/'/g, "’") };
     return { ok: false, message: ECHEC };
   }

@@ -1,14 +1,12 @@
-import { Banner } from "@/components/ui/Banner";
+import { BandeauIndisponible } from "@/components/ui/BandeauIndisponible";
 import { Heading } from "@/components/ui/Text";
 
-/** La migration 0019 n'est pas encore appliquée : on le dit au lieu d'afficher une erreur. */
+/** La migration 0019 n'est pas encore appliquée : un message neutre au lieu d'une erreur (étudiants et formateurs). */
 export function MigrationCommunauteAbsente() {
   return (
     <div className="flex flex-col gap-5">
       <Heading level="page">Communauté</Heading>
-      <Banner tone="attention" title="La communauté n’est pas encore dans la base.">
-        Appliquez la migration 0019 (guide « Ce qui te revient », section 24).
-      </Banner>
+      <BandeauIndisponible />
     </div>
   );
 }

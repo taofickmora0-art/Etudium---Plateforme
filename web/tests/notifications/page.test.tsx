@@ -159,10 +159,11 @@ describe("La page Notifications", () => {
     conteneur.remove();
   });
 
-  it("avant la 0016 : le bandeau", async () => {
+  it("avant la 0016 : un bandeau neutre, sans migration", async () => {
     vi.mocked(lireNotifications).mockResolvedValue({ migrationAbsente: true });
     render(await ContenuNotifications());
-    expect(screen.getByText("Les notifications ne sont pas encore dans la base.")).toBeInTheDocument();
-    expect(screen.getByText("Appliquez la migration 0016 (guide « Ce qui te revient », section 21).")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Notifications" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Cette fonction n’est pas disponible pour le moment.");
+    expect(document.body).not.toHaveTextContent(/migration|dans la base/i);
   });
 });

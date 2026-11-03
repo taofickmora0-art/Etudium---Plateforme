@@ -32,7 +32,7 @@ export async function PageSessionsEdition({ espace }: { espace: EspaceEdition })
   const bandeau = await bandeauFormateur(espace);
   if (bandeau) return <PageAdmin {...cadre}>{bandeau}</PageAdmin>;
   const lecture = espace === "formateur" ? await lireSessionsAnimees() : await lireSessionsEquipe();
-  return <PageAdmin {...cadre}>{lecture.migrationAbsente ? <MigrationSessionsAbsente /> : <ListeSessionsEdition espace={espace} liste={lecture.donnees} />}</PageAdmin>;
+  return <PageAdmin {...cadre}>{lecture.migrationAbsente ? <MigrationSessionsAbsente espace={espace} /> : <ListeSessionsEdition espace={espace} liste={lecture.donnees} />}</PageAdmin>;
 }
 
 /** Programmer une session, ou modifier celle-ci (`id`). La page vérifie le rôle avant. */
@@ -56,7 +56,7 @@ export async function PageFormulaireSession({ espace, id }: { espace: EspaceEdit
   if (detail?.migrationAbsente) {
     return (
       <PageAdmin {...cadre}>
-        <MigrationSessionsAbsente />
+        <MigrationSessionsAbsente espace={espace} />
       </PageAdmin>
     );
   }

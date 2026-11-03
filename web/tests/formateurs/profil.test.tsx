@@ -191,11 +191,11 @@ describe("Le profil d'un formateur : cas limites", () => {
     expect(lireFormateurPublic).toHaveBeenCalledWith("pas-un-identifiant");
   });
 
-  it("sans la migration 0070 : le bandeau, avec la section du guide", async () => {
+  it("sans la migration 0070 : un bandeau neutre, sans migration ni guide", async () => {
     lireFormateurPublic.mockResolvedValue("absente");
     await afficher();
-    const bandeau = screen.getByText(/Le profil des formateurs/).closest('[role="status"]');
-    expect(bandeau).toHaveTextContent("Appliquez la migration 0070 (guide « Ce qui te revient », section 69).");
+    expect(screen.getByText("Cette fonction n’est pas disponible pour le moment.")).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/migration|guide/i);
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
   });
 

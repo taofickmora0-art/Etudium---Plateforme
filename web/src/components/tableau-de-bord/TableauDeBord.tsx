@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { CarteFormation } from "@/components/catalogue/CarteFormation";
-import { Banner } from "@/components/ui/Banner";
+import { BandeauIndisponible } from "@/components/ui/BandeauIndisponible";
 import { Button } from "@/components/ui/Button";
 import { Heading, Lead } from "@/components/ui/Text";
 import type { DonneesTableau } from "@/lib/tableau-de-bord/types";
@@ -31,11 +31,7 @@ export function TableauDeBord({ donnees: d, bandeau }: { donnees: DonneesTableau
       <div className="mt-8 flex min-w-0 flex-col gap-8 max-sm:mt-6 max-sm:gap-7">
         <div className="flex min-w-0 flex-col gap-5">
           {bandeau}
-          {d.base === null && (
-            <Banner tone="attention" title="Le tableau de bord n’est pas encore complet">
-              Appliquez la migration 0063 (guide « Ce qui te revient », section 62).
-            </Banner>
-          )}
+          {d.base === null && <BandeauIndisponible />}
           <Indicateurs indicateurs={d.indicateurs} base={d.base} />
         </div>
         <div className="flex flex-wrap items-start gap-6">

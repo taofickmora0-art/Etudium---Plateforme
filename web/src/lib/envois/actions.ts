@@ -3,6 +3,7 @@
 import { SESSION_EXPIREE } from "@/lib/admin/garde";
 import { getShellUser } from "@/lib/auth/current-user";
 import { estFonctionAbsente } from "@/lib/contenus/lecture";
+import { INDISPONIBLE } from "@/lib/indisponible";
 import { createClient } from "@/lib/supabase/server";
 import { adresseDePush } from "./appareils";
 
@@ -13,7 +14,6 @@ export type AppareilNavigateur = { adresse: string; p256dh: string; auth: string
 type Resultat = { ok: true } | { ok: false; message: string };
 
 const ECHEC = "Cet appareil n’a pas pu être enregistré. Réessayez.";
-const MIGRATION = "Appliquez la migration 0058 (guide « Ce qui te revient », section 59).";
 
 const cle = (v: unknown) => typeof v === "string" && v.length > 0 && v.length <= 200;
 
@@ -21,7 +21,7 @@ export async function enregistrerAppareil(a: AppareilNavigateur): Promise<Result
   if (!adresseDePush(a?.adresse) || !cle(a.p256dh) || !cle(a.auth)) return { ok: false, message: ECHEC };
   if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
   const { error } = await (await createClient()).rpc("enregistrer_appareil", { p_adresse: a.adresse, p_p256dh: a.p256dh, p_auth: a.auth });
-  if (error) return { ok: false, message: estFonctionAbsente(error) ? MIGRATION : ECHEC };
+  if (error) return { ok: false, message: estFonctionAbsente(error) ? INDISPONIBLE : ECHEC };
   return { ok: true };
 }
 

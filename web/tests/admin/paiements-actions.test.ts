@@ -17,7 +17,7 @@ const { lireCodesParAbonnement, lireEtatPaiements, versCodePromo } = await impor
 
 // Le jeton du serveur, tiré de la clé Payiz de test.
 const JETON = jetonServeur("sk_test_cle");
-const GUIDE = "Ajoutez PAYIZ_CLE_SECRETE dans web/.env.local (guide « Ce qui te revient », section 56), puis relancez le serveur.";
+const GUIDE = "Ajoutez PAYIZ_CLE_SECRETE aux variables d’environnement du site, puis redéployez-le.";
 const ID = "11111111-1111-4111-8111-111111111111";
 
 beforeEach(() => {
@@ -35,7 +35,7 @@ describe("Le réglage « Paiements activés »", () => {
     expect(faux.appels).toEqual([]);
   });
 
-  it("sans la clé Payiz : le guide, sans appel", async () => {
+  it("sans la clé Payiz : où l'ajouter, sans appel", async () => {
     vi.stubEnv("PAYIZ_CLE_SECRETE", "");
     expect(await actions.activerPaiements()).toEqual({ ok: false, message: GUIDE });
     expect(faux.appels).toEqual([]);

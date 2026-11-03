@@ -3,10 +3,11 @@ import type { Metadata } from "next";
 import { FormulaireVerification } from "@/components/certificats/FormulaireVerification";
 import { ResultatVerification } from "@/components/certificats/ResultatVerification";
 import { Banner } from "@/components/ui/Banner";
+import { BandeauIndisponible } from "@/components/ui/BandeauIndisponible";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Heading, Lead } from "@/components/ui/Text";
 import { identifiantDeLAdresse } from "@/lib/certificats/adresse";
-import { MIGRATION_CERTIFICATS, verifierCertificat } from "@/lib/certificats/data";
+import { verifierCertificat } from "@/lib/certificats/data";
 
 // La page du résultat ne s'indexe pas : un identifiant n'a rien à faire dans un moteur de recherche.
 export const metadata: Metadata = { title: "Vérification d’un certificat · Étudium", robots: { index: false, follow: false } };
@@ -23,11 +24,7 @@ async function Resultat({ params }: Params) {
     return <Banner tone="erreur" title="La vérification n’a pas pu se faire. Réessayez dans un instant." />;
   }
   if (lecture.migrationAbsente) {
-    return (
-      <Banner tone="attention" title="Les certificats ne sont pas encore dans la base.">
-        {MIGRATION_CERTIFICATS}
-      </Banner>
-    );
+    return <BandeauIndisponible />;
   }
   return (
     <>

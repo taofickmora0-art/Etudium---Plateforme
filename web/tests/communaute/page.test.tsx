@@ -558,15 +558,15 @@ describe("La page Communauté", () => {
     expect(screen.queryByRole("region", { name: "Formations disponibles" })).toBeNull();
   });
 
-  it("avant la 0019 : le bandeau, sur les deux pages", async () => {
+  it("avant la 0019 : un bandeau neutre, sans migration, sur les deux pages", async () => {
     vi.mocked(lireEspaces).mockResolvedValue({ migrationAbsente: true });
     const { unmount } = afficher(await ContenuCommunaute());
     expect(screen.getByRole("heading", { level: 1, name: "Communauté" })).toBeInTheDocument();
-    expect(screen.getByText("La communauté n’est pas encore dans la base.")).toBeInTheDocument();
-    expect(screen.getByText("Appliquez la migration 0019 (guide « Ce qui te revient », section 24).")).toBeInTheDocument();
+    expect(screen.getByText("Cette fonction n’est pas disponible pour le moment.")).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/migration|dans la base/i);
     unmount();
     vi.mocked(lirePublication).mockResolvedValue({ migrationAbsente: true });
     afficher(await PagePublication({ id: "p1" }));
-    expect(screen.getByText("La communauté n’est pas encore dans la base.")).toBeInTheDocument();
+    expect(screen.getByText("Cette fonction n’est pas disponible pour le moment.")).toBeInTheDocument();
   });
 });

@@ -16,7 +16,8 @@ const { IDLE } = await import("@/lib/auth/schemas");
 const F = "11111111-1111-4111-8111-111111111111";
 const M = "22222222-2222-4222-8222-222222222222";
 const L = "33333333-3333-4333-8333-333333333333";
-const MIGRATION = "Appliquez la migration 0032 (guide « Ce qui te revient », section 38).";
+// Le formateur ne lit pas la migration : un message neutre.
+const INDISPONIBLE = "Cette fonction n’est pas disponible pour le moment.";
 const form = (valeurs: Record<string, string>) => {
   const fd = new FormData();
   for (const [k, v] of Object.entries(valeurs)) fd.set(k, v);
@@ -29,7 +30,7 @@ beforeEach(() => {
 });
 
 describe("Créer un exercice", () => {
-  it("« Nouvelle leçon » de type exercice : créé en brouillon, « avec rendu » ; avant la 0032, le message de la migration", async () => {
+  it("« Nouvelle leçon » de type exercice : créé en brouillon, « avec rendu » ; avant la 0032, le message neutre au formateur", async () => {
     faux.repondre("modules.select", { data: { formation_id: F, formations: { publiee_le: null } } });
     faux.repondre("lecons.insert", { data: { id: L } });
     expect(await addLecon(IDLE, form({ module_id: M, titre: "Tableau des ventes", type: "exercice", espace: "formateur" }))).toMatchObject({ status: "success" });
@@ -37,7 +38,7 @@ describe("Créer un exercice", () => {
     faux.vider();
     faux.repondre("modules.select", { data: { formation_id: F, formations: { publiee_le: null } } });
     faux.repondre("lecons.insert", { error: { code: "PGRST204", message: "Could not find the 'genre_exercice' column of 'lecons'" } });
-    expect(await addLecon(IDLE, form({ module_id: M, titre: "Exercice", type: "exercice" }))).toMatchObject({ status: "error", message: MIGRATION });
+    expect(await addLecon(IDLE, form({ module_id: M, titre: "Exercice", type: "exercice" }))).toMatchObject({ status: "error", message: INDISPONIBLE });
   });
 
 });

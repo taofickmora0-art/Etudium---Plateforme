@@ -50,6 +50,16 @@ describe("Publier les modifications", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
+  it("avant la 0056 : la fenêtre dit seulement que la fonction n'est pas disponible, sans numéro de migration", async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.lireModificationsEnAttente).mockResolvedValue({ migrationAbsente: true });
+    afficher(<BoutonPublierModifications formationId={F} />);
+    await user.click(screen.getByRole("button", { name: "Publier les modifications" }));
+    const fenetre = await screen.findByRole("dialog", { name: "Publier les modifications ?" });
+    expect(await within(fenetre).findByText("Cette fonction n’est pas disponible pour le moment.")).toBeInTheDocument();
+    expect(fenetre).not.toHaveTextContent(/migration/i);
+  });
+
   it("point reporté du lot 4 : une modification pas encore enregistrée sur la page est signalée avant de publier", async () => {
     const user = userEvent.setup();
     noterAttente("lecon:l1", true);

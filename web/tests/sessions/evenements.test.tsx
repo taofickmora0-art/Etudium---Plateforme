@@ -275,10 +275,10 @@ describe("La page Événements", () => {
     expect(screen.queryByRole("button", { name: "Rejoindre" })).toBeNull();
   });
 
-  it("avant la 0018 : le bandeau", async () => {
+  it("avant la 0018 : un bandeau neutre, sans migration", async () => {
     vi.mocked(lireSessions).mockResolvedValue({ migrationAbsente: true });
     render(await ContenuEvenements());
-    expect(screen.getByText("Les sessions live ne sont pas encore dans la base.")).toBeInTheDocument();
-    expect(screen.getByText("Appliquez la migration 0018 (guide « Ce qui te revient », section 23).")).toBeInTheDocument();
+    expect(screen.getByText("Cette fonction n’est pas disponible pour le moment.")).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/migration|dans la base/i);
   });
 });

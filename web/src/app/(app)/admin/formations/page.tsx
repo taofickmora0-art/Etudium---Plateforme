@@ -44,7 +44,7 @@ async function ListeFormations({ searchParams }: Recherche) {
   try {
     [formations, chiffres] = await Promise.all([listFormations(), lireChiffresFormations()]);
   } catch (erreur) {
-    return <PageAdmin titre="Formations" fil={[{ label: "Formations" }]}>{siTablesAbsentes(erreur)}</PageAdmin>;
+    return <PageAdmin titre="Formations" fil={[{ label: "Formations" }]}>{siTablesAbsentes(erreur, { equipe: true })}</PageAdmin>;
   }
   const affichees = filtre ? formations.filter((f) => correspondAuFiltre(f.etat, filtre)) : formations;
   const etats = chiffresDesEtats(formations);

@@ -66,14 +66,14 @@ describe("Le réglage « Paiements activés »", () => {
     expect(screen.getByText("Paiements activés")).toBeInTheDocument();
     expect(screen.getByText("Clé Payiz : mode test")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Désactiver les paiements" })).toBeInTheDocument();
-    expect(screen.getByText("Notifications Payiz : à brancher une fois le site en ligne.")).toBeInTheDocument();
+    expect(screen.getByText("Notifications Payiz : non configurées.")).toBeInTheDocument();
   });
 
-  it("désactivés, sans jeton : bouton bloqué et le guide", () => {
+  it("désactivés, sans jeton : bouton bloqué, et où ajouter la clé", () => {
     afficher({ etat: { ouverts: false, jeton: "absent", cle: "absente", webhook: false } });
     expect(screen.getByText("Paiements désactivés")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Activer les paiements" })).toBeDisabled();
-    expect(screen.getByText(/Ajoutez PAYIZ_CLE_SECRETE dans web\/\.env\.local/)).toBeInTheDocument();
+    expect(screen.getByText("Ajoutez PAYIZ_CLE_SECRETE aux variables d’environnement du site, puis redéployez-le.")).toBeInTheDocument();
   });
 
   it("la clé Payiz a changé (jeton plus reconnu) : l'alerte et « Réactiver »", async () => {

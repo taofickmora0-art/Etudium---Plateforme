@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/Toast";
 import { lireModificationsEnAttente, publierModifications } from "@/lib/editeur/actions";
 import { useEnregistrementsEnAttente } from "@/lib/editeur/en-attente";
 import type { ModificationEnAttente } from "@/lib/editeur/types";
+import { INDISPONIBLE } from "@/lib/indisponible";
 
 // « Publier les modifications » (fin du lot 4, spec §2.3) : la fenêtre liste ce qui part (informations générales,
 // leçons), avec qui l'a modifié et quand ; un clic publie tout d'un coup et crée une version.
@@ -31,7 +32,7 @@ function Contenu({ formationId, onFermer }: { formationId: string; onFermer: () 
     lireModificationsEnAttente(formationId)
       .then((r) => {
         if (!actif) return;
-        if (r.migrationAbsente) setErreur("La publication des modifications n’est pas encore installée (migration 0056).");
+        if (r.migrationAbsente) setErreur(INDISPONIBLE);
         else setListe(r.donnees);
       })
       .catch(() => actif && setErreur(ECHEC));

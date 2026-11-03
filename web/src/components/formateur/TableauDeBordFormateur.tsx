@@ -12,7 +12,8 @@ import { lireMaFiche } from "@/lib/formateur/data";
 import { inactivite } from "@/lib/formateur/regles-suivi";
 import { lireTableauDeBordFormateur } from "@/lib/formateur/suivi";
 import { lireCertificatsFormateur } from "@/lib/certificats/data";
-import { lireCorrections, MIGRATION_EXERCICES } from "@/lib/exercices/data";
+import { lireCorrections } from "@/lib/exercices/data";
+import { INDISPONIBLE } from "@/lib/indisponible";
 import { lireConversations } from "@/lib/messages/data";
 import { lireSessionDetail, lireSessionsAnimees } from "@/lib/sessions/data";
 import type { LigneSessionEdition } from "@/lib/sessions/types";
@@ -107,14 +108,14 @@ export async function TableauDeBordFormateur() {
             tone="attention"
             label="Certificats délivrés"
             value={certificats === null ? "—" : chiffre(certificats)}
-            hint={certificats === null ? "Migration 0033 à appliquer" : "Dans vos formations"}
+            hint={certificats === null ? "Non disponible pour le moment" : "Dans vos formations"}
           />
         </div>
 
         <div className={RANGEE}>
           <Carte titre="Exercices à corriger" className="flex-[1_1_320px]">
             {!corrections || corrections.migrationAbsente ? (
-              <div className={AVENIR}>{corrections ? MIGRATION_EXERCICES : "Les exercices rendus par vos étudiants apparaîtront ici."}</div>
+              <div className={AVENIR}>{corrections ? INDISPONIBLE : "Les exercices rendus par vos étudiants apparaîtront ici."}</div>
             ) : corrections.donnees.length === 0 ? (
               <p className="m-0 text-sm leading-[22px] text-discret">Aucun travail à corriger.</p>
             ) : (

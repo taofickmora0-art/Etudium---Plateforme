@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { authErrorMessage } from "@/lib/auth/messages";
 import { exigerEditeur } from "@/lib/admin/garde";
 import { estFonctionAbsente } from "@/lib/contenus/lecture";
+import { messageAbsente } from "@/lib/indisponible";
 import { MIGRATION_QUIZ } from "@/lib/quiz/conversion";
 import type { Lecture, Resultat } from "@/lib/utilisateurs/types";
 import { messageRestauration } from "./historique";
@@ -22,9 +23,12 @@ const typographie = (message: string) => message.replace(/'/g, "’");
 
 type ErreurBase = { code?: string; message?: string } | null;
 
-/** Un refus de la base : un message à montrer (règle, droits), une migration absente, ou un échec à réessayer. */
-function refusSauvegarde(erreur: NonNullable<ErreurBase>): ResultatSauvegarde {
-  if (estFonctionAbsente(erreur)) return { ok: false, code: "echec", message: MIGRATION_EDITEUR };
+/**
+ * Un refus de la base : un message à montrer (règle, droits), une migration absente (dite à l'équipe, neutre pour le
+ * formateur), ou un échec à réessayer.
+ */
+function refusSauvegarde(erreur: NonNullable<ErreurBase>, equipe: boolean): ResultatSauvegarde {
+  if (estFonctionAbsente(erreur)) return { ok: false, code: "echec", message: messageAbsente(equipe, MIGRATION_EDITEUR) };
   if ((erreur.code === "P0001" || erreur.code === "42501") && erreur.message) return { ok: false, code: "invalide", erreurs: { formulaire: typographie(erreur.message) } };
   return { ok: false, code: "echec", message: ECHEC };
 }
@@ -36,8 +40,8 @@ function versResultat(data: unknown): ResultatSauvegarde {
   return { ok: true, revision: Number(r.revision ?? 0), brouillon: r.brouillon === true, enregistreLe: typeof r.enregistre_le === "string" ? r.enregistre_le : new Date().toISOString() };
 }
 
-const messageResultat = (erreur: NonNullable<ErreurBase>, absente = MIGRATION_EDITEUR) =>
-  estFonctionAbsente(erreur) ? absente : (erreur.code === "P0001" || erreur.code === "42501") && erreur.message ? typographie(erreur.message) : ECHEC;
+const messageResultat = (erreur: NonNullable<ErreurBase>, equipe: boolean, absente = MIGRATION_EDITEUR) =>
+  estFonctionAbsente(erreur) ? messageAbsente(equipe, absente) : (erreur.code === "P0001" || erreur.code === "42501") && erreur.message ? typographie(erreur.message) : ECHEC;
 
 /** La sauvegarde automatique d'une leçon : `revision`, celle que l'éditeur a vue. */
 export async function enregistrerLecon(leconId: string, saisie: SaisieLecon, revision: number): Promise<ResultatSauvegarde> {
@@ -48,7 +52,7 @@ export async function enregistrerLecon(leconId: string, saisie: SaisieLecon, rev
     const garde = await exigerEditeur();
     if ("erreur" in garde) return { ok: false, code: "invalide", erreurs: { formulaire: garde.erreur } };
     const { data, error } = await garde.supabase.rpc("enregistrer_lecon", { p_lecon: leconId, p_donnees: normalise.donnees, p_revision: revision });
-    if (error) return refusSauvegarde(error);
+    if (error) return refusSauvegarde(error, garde.equipe);
     return versResultat(data);
   } catch {
     return { ok: false, code: "echec", message: ECHEC };
@@ -64,7 +68,7 @@ export async function enregistrerInfosFormation(formationId: string, saisie: Sai
     const garde = await exigerEditeur();
     if ("erreur" in garde) return { ok: false, code: "invalide", erreurs: { formulaire: garde.erreur } };
     const { data, error } = await garde.supabase.rpc("enregistrer_infos_formation", { p_formation: formationId, p_donnees: normalise.donnees, p_revision: revision });
-    if (error) return refusSauvegarde(error);
+    if (error) return refusSauvegarde(error, garde.equipe);
     return versResultat(data);
   } catch {
     return { ok: false, code: "echec", message: ECHEC };
@@ -97,7 +101,7 @@ export async function enregistrerQuestions(leconId: string, questions: unknown):
     const garde = await exigerEditeur();
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { error } = await garde.supabase.rpc("enregistrer_quiz", { p_lecon: leconId, p_questions: questions });
-    if (error) return { ok: false, message: messageResultat(error, MIGRATION_QUIZ) };
+    if (error) return { ok: false, message: messageResultat(error, garde.equipe, MIGRATION_QUIZ) };
   } catch {
     return { ok: false, message: ECHEC };
   }
@@ -136,7 +140,7 @@ export async function publierModifications(formationId: string): Promise<Resulta
     const garde = await exigerEditeur();
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { data, error } = await garde.supabase.rpc("publier_modifications", { p_formation: formationId });
-    if (error) return { ok: false, message: messageResultat(error) };
+    if (error) return { ok: false, message: messageResultat(error, garde.equipe) };
     const r = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
     refresh();
     return { ok: true, publiees: Number(r.publiees ?? 0), version: typeof r.version === "number" ? r.version : null };
@@ -152,7 +156,7 @@ export async function restaurerVersion(versionId: string): Promise<Resultat> {
     const garde = await exigerEditeur();
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { data, error } = await garde.supabase.rpc("restaurer_version", { p_version: versionId });
-    if (error) return { ok: false, message: messageResultat(error, MIGRATION_HISTORIQUE) };
+    if (error) return { ok: false, message: messageResultat(error, garde.equipe, MIGRATION_HISTORIQUE) };
     const r = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
     refresh();
     return {
@@ -177,7 +181,7 @@ export async function abandonnerModifications(formationId: string, leconId?: str
     const garde = await exigerEditeur();
     if ("erreur" in garde) return { ok: false, message: garde.erreur };
     const { error } = await garde.supabase.rpc("abandonner_modifications", { p_formation: formationId, p_lecon: leconId ?? null });
-    if (error) return { ok: false, message: messageResultat(error) };
+    if (error) return { ok: false, message: messageResultat(error, garde.equipe) };
   } catch {
     return { ok: false, message: ECHEC };
   }

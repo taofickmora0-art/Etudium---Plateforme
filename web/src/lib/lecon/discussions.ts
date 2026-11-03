@@ -7,6 +7,7 @@ import { refusReponse } from "@/lib/communaute/regles";
 import type { Reponse } from "@/lib/communaute/types";
 import { estFonctionAbsente, liste, un } from "@/lib/contenus/lecture";
 import type { MotifSignalement } from "@/lib/moderation/types";
+import { INDISPONIBLE } from "@/lib/indisponible";
 import { createClient } from "@/lib/supabase/server";
 
 // Les discussions d'une leçon (refonte des formations, étape B, migration 0028) : les mêmes réponses que les actions des
@@ -18,12 +19,11 @@ type Resultat = { ok: true } | Refus;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ECHEC = "L’opération n’a pas abouti. Réessayez.";
 const SESSION_EXPIREE = "Votre session a expiré. Reconnectez-vous.";
-const MIGRATION = "Appliquez la migration 0028 (guide « Ce qui te revient », section 34).";
 const MOTIFS: MotifSignalement[] = ["inapproprie", "spam", "harcelement", "autre"];
 
 type Erreur = { code?: string; message?: string };
 function message(erreur: Erreur): string {
-  if (estFonctionAbsente(erreur)) return MIGRATION;
+  if (estFonctionAbsente(erreur)) return INDISPONIBLE;
   if ((erreur.code === "P0001" || erreur.code === "42501") && erreur.message) return erreur.message.replace(/'/g, "’");
   return ECHEC;
 }

@@ -3,11 +3,11 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { ValidationFormation } from "@/components/certificats/ValidationFormation";
-import { Banner } from "@/components/ui/Banner";
+import { BandeauIndisponible } from "@/components/ui/BandeauIndisponible";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Heading, Lead } from "@/components/ui/Text";
-import { lireValidation, MIGRATION_CERTIFICATS } from "@/lib/certificats/data";
+import { lireValidation } from "@/lib/certificats/data";
 import { ficheApercu } from "@/lib/catalogue/apercu";
 import { getFiche, lireMonetisation, listCatalogue } from "@/lib/catalogue/data";
 import { monetisationDe } from "@/lib/catalogue/monetisation";
@@ -51,9 +51,7 @@ async function Validation({ params }: Params) {
     return (
       <div className="flex flex-col gap-6">
         {entete}
-        <Banner tone="attention" title="Les certificats ne sont pas encore dans la base.">
-          {MIGRATION_CERTIFICATS}
-        </Banner>
+        <BandeauIndisponible />
       </div>
     );
   }

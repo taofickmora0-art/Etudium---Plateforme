@@ -242,9 +242,9 @@ describe("Le tri, le signet, les J’aime", () => {
     expect(actions.basculerEnregistrement).toHaveBeenCalledWith("p1");
     expect(await within(carte()).findByRole("button", { name: "Retirer la publication de Mireille Adjovi des enregistrements" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Publication enregistrée")).toBeInTheDocument();
-    vi.mocked(actions.basculerEnregistrement).mockResolvedValueOnce({ ok: false, message: "Appliquez la migration 0021 (guide « Ce qui te revient », section 26)." });
+    vi.mocked(actions.basculerEnregistrement).mockResolvedValueOnce({ ok: false, message: "Cette fonction n’est pas disponible pour le moment." });
     await user.click(within(carte()).getByRole("button", { name: "Retirer la publication de Mireille Adjovi des enregistrements" }));
-    expect(await within(carte()).findByRole("alert")).toHaveTextContent("Appliquez la migration 0021");
+    expect(await within(carte()).findByRole("alert")).toHaveTextContent("Cette fonction n’est pas disponible pour le moment.");
   });
 
   it("les initiales des derniers qui aiment ; mon J’aime ajoute les miennes", async () => {

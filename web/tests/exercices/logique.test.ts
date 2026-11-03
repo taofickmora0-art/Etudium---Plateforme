@@ -167,7 +167,7 @@ describe("Déposer, terminer, corriger, télécharger", () => {
     expect(await rendreExercice(L, "x", "x", "")).toEqual({ ok: false, message: "Votre travail attend déjà sa correction." });
     faux.vider();
     faux.repondre("rpc.rendre_exercice", ABSENTE);
-    expect(await rendreExercice(L, "x", "x", "")).toEqual({ ok: false, message: MIGRATION_EXERCICES });
+    expect(await rendreExercice(L, "x", "x", "")).toEqual({ ok: false, message: "Cette fonction n’est pas disponible pour le moment." });
     faux.vider();
     expect(await rendreExercice("pas-un-id", "x", "x", "")).toEqual({ ok: false, message: "Votre travail n’a pas pu être envoyé. Réessayez." });
     getShellUser.mockResolvedValue(null);

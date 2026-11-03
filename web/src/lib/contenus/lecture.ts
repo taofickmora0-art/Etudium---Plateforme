@@ -3,7 +3,7 @@
 /** Les tables du lot 1 ne sont pas encore dans la base : la migration 0004 n'a pas été appliquée. */
 export class TablesAbsentesError extends Error {
   constructor() {
-    super("Tables du lot 1 absentes : migration 0004 à appliquer.");
+    super("Tables des formations absentes : migration 0004 à appliquer.");
     this.name = "TablesAbsentesError";
   }
 }

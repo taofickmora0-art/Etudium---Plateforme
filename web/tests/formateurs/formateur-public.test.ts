@@ -239,7 +239,7 @@ describe("ecrireAuFormateur", () => {
 
   it("sans la migration, sur une autre erreur ou une réponse inattendue : un message clair", async () => {
     faux.repondre("rpc.ouvrir_conversation_formateur", ABSENTE);
-    expect(await ecrireAuFormateur(ID)).toEqual({ ok: false, message: MIGRATION_FORMATEURS });
+    expect(await ecrireAuFormateur(ID)).toEqual({ ok: false, message: "Cette fonction n’est pas disponible pour le moment." });
     faux.repondre("rpc.ouvrir_conversation_formateur", { error: { code: "57014", message: "canceling statement due to statement timeout" } });
     expect(await ecrireAuFormateur(ID)).toEqual({ ok: false, message: "La conversation n’a pas pu s’ouvrir. Réessayez." });
     faux.repondre("rpc.ouvrir_conversation_formateur", { data: null });

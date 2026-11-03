@@ -11,6 +11,7 @@ import { IndicateurSauvegarde } from "@/components/editeur/IndicateurSauvegarde"
 import { useSauvegardeAuto } from "@/components/editeur/useSauvegardeAuto";
 import { SondeDureeVideo } from "./SondeDureeVideo";
 import { Banner } from "@/components/ui/Banner";
+import { BandeauIndisponible } from "@/components/ui/BandeauIndisponible";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Field } from "@/components/ui/Field";
@@ -464,7 +465,11 @@ function Editeur({ lecon, base = "/admin/formations", quiz, surEnregistre }: Edi
           )}
           {estQuiz ? (
             quiz?.migrationAbsente ? (
-              <Banner tone="attention" title={MIGRATION_QUIZ} />
+              espace === "admin" ? (
+                <Banner tone="attention" title={MIGRATION_QUIZ} />
+              ) : (
+                <BandeauIndisponible />
+              )
             ) : (
               <form id={formQuestions} onSubmit={(ev) => void enregistrerLesQuestions(ev)} noValidate className="flex min-w-0 flex-col gap-3">
                 <EditeurQuiz questions={quiz?.donnees ?? []} form={formQuestions} erreur={erreurQuestions ?? undefined} onChange={() => setQuestionsModifiees(true)} />

@@ -112,7 +112,7 @@ describe("Envoyer un quiz", () => {
     expect(await envoyerQuiz(L, {})).toEqual({ ok: false, message: "Trop de tentatives en peu de temps : réessayez dans quelques minutes." });
     faux.vider();
     faux.repondre("rpc.envoyer_quiz", ABSENTE);
-    expect(await envoyerQuiz(L, {})).toEqual({ ok: false, message: "Appliquez la migration 0031 (guide « Ce qui te revient », section 37)." });
+    expect(await envoyerQuiz(L, {})).toEqual({ ok: false, message: "Cette fonction n’est pas disponible pour le moment." });
   });
 });
 

@@ -48,9 +48,15 @@ describe("Les pages Messages", () => {
     expect(screen.getByText("Aucune conversation")).toBeInTheDocument();
   });
 
-  it("avant la 0035 : le bandeau de la migration", async () => {
+  it("avant la 0035 : un bandeau neutre pour l'étudiant et le formateur, la migration pour l'équipe", async () => {
     lireConversations.mockResolvedValue({ migrationAbsente: true });
-    render(await PageMessages({ espace: "formateur", base: "/formateur/messages", c: null }));
+    for (const espace of ["etudiant", "formateur"] as const) {
+      const { unmount } = render(await PageMessages({ espace, base: "/messages", c: null }));
+      expect(screen.getByRole("status")).toHaveTextContent("Cette fonction n’est pas disponible pour le moment.");
+      expect(document.body).not.toHaveTextContent(/migration|dans la base/i);
+      unmount();
+    }
+    render(await PageMessages({ espace: "equipe", base: "/admin/messages", c: null }));
     expect(screen.getByText("Appliquez la migration 0035 (guide « Ce qui te revient », section 42).")).toBeInTheDocument();
   });
 

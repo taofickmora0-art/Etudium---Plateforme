@@ -31,7 +31,7 @@ export async function FicheSession({ espace, id }: { espace: EspaceEdition; id: 
   if (lecture.migrationAbsente) {
     return (
       <PageAdmin titre="Session live" racine={racine} fil={[filSessions(espace), { label: "Session live" }]}>
-        <MigrationSessionsAbsente />
+        <MigrationSessionsAbsente espace={espace} />
       </PageAdmin>
     );
   }
