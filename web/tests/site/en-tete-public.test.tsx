@@ -121,6 +121,9 @@ describe("En-tête public, compte connecté (demande du 3 novembre 2026)", () =>
     try {
       render(<EnTetePublic />);
       expect(screen.getAllByRole("link", { name: "Accéder à l’espace membre" })[0]).toHaveAttribute("href", "/accueil");
+      // Sur téléphone, un libellé court pour tenir sur la ligne du logo (capture du 3 novembre 2026).
+      expect(screen.getAllByRole("link", { name: "Accéder à l’espace membre" })[0]).toHaveTextContent("Espace membre");
+      expect(screen.getByText("Espace membre")).toHaveClass("sm:hidden");
       expect(screen.queryByRole("link", { name: "Se connecter" })).toBeNull();
       expect(screen.queryByRole("link", { name: "Créer mon compte gratuit" })).toBeNull();
     } finally {

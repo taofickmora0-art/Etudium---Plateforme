@@ -75,8 +75,14 @@ export function EnTetePublic() {
       <div className="flex flex-wrap items-center gap-3 max-sm:flex-nowrap max-sm:gap-2">
         {connecte ? (
           // Compte connecté : un seul bouton vers son espace (demande du 3 novembre 2026).
-          <Link href="/accueil" className={cn(INSCRIPTION, "h-[49px] leading-none whitespace-nowrap max-sm:h-10 max-sm:px-3 max-sm:text-[15px]")}>
-            Accéder à l’espace membre
+          // Sur téléphone, un libellé court pour tenir sur la ligne du logo (capture du 3 novembre 2026).
+          <Link
+            href="/accueil"
+            aria-label="Accéder à l’espace membre"
+            className={cn(INSCRIPTION, "h-[49px] leading-none whitespace-nowrap max-sm:h-10 max-sm:px-3 max-sm:text-sm")}
+          >
+            <span className="max-sm:hidden">Accéder à l’espace membre</span>
+            <span className="sm:hidden">Espace membre</span>
           </Link>
         ) : (
           <>
