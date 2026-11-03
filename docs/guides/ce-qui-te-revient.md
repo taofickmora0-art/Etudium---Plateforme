@@ -1352,3 +1352,39 @@ Un code promo ne vaut plus forcément pour tous les abonnements : tu choisis ceu
    - un ancien code (`PROMO20`, par exemple) marche toujours sur les trois abonnements ;
    - après un paiement de test réussi (section 56), ton compte admin a « Nouvel abonnement : … » dans la cloche, avec le son, et un clic ouvre la fiche du compte ; l'e-mail « Nouvel abonnement : … » arrive avec le détail, si les envois sont actifs ;
    - un abonnement attribué à la main depuis une fiche de compte ne crée ni notification ni e-mail « Nouvel abonnement ».
+
+## 73. La Bibliothèque numérique, étape A : la base et le back-office (migration 0074), 20 minutes
+
+Le back-office a une nouvelle entrée, **Contenus › Bibliothèque** (juste après Formations), réservée aux admins et au super admin (pas aux modérateurs). L'équipe y dépose des livres numériques et des documents de référence, indépendants des formations.
+- **La page Bibliothèque** : en haut, les livres publiés, les brouillons, les lectures et les téléchargements ; puis un filtre (tous, publiés, brouillons, archivés) et une carte par livre, avec sa couverture, son titre, son auteur, son état, son accès (« Gratuit » ou « Inclus dans l'abonnement »), son nombre de pages et ses lectures. Un brouillon dit ce qui lui manque pour être publié (« PDF à déposer », « Droits à confirmer »). Le menu ⋮ d'une carte propose Modifier, Publier, Archiver, Republier, et Supprimer le brouillon, chacun avec sa fenêtre de confirmation.
+- **« Ajouter un livre »** : le PDF (50 Mo au plus) ; son nombre de pages est lu tout seul, et le titre prend le nom du fichier s'il est vide. La couverture : une image (JPG, PNG ou WebP, 5 Mo au plus, en portrait), ou « Fabriquer à partir de la 1re page ». Puis le titre, l'auteur, le résumé, la langue, l'année, les mots-clés, la catégorie (avec « Créer une catégorie »), les parcours (aucun, un ou plusieurs), et les réglages. Les fichiers partent vers Supabase quand tu cliques sur « Ajouter le livre » (le bouton affiche la progression) ; le livre naît en brouillon.
+- **Par défaut** : un nouveau livre est « Inclus dans l'abonnement » (lu par les abonnés) et non téléchargeable (lu dans le site seulement). « Gratuit » le rend lisible par tout compte connecté. Un visiteur sans compte verra les fiches, mais lira après connexion.
+- **La case « J'ai le droit de diffuser ce livre »** est obligatoire pour publier : sans elle, « Publier » répond « Cochez « J'ai le droit de diffuser ce livre » avant de le publier. ». Un livre publié la garde cochée.
+- **« Catégories »**, en haut de la page : créer, renommer, ranger et supprimer les catégories libres (« Modèles de mémoire », « Guides pratiques »…). Supprimer une catégorie laisse ses livres dans la Bibliothèque, sans catégorie.
+- **Dans la fiche d'une formation** (onglet Informations, en bas) : la carte « Livres recommandés », pour choisir des livres publiés, les ranger et les retirer. Les apprenants les verront dans « Pour aller plus loin » à l'étape C.
+- **Une fois publié**, un livre ne se supprime plus : il s'archive (il disparaît de la Bibliothèque, ses lecteurs gardent leur page) et se republie. Son adresse ne change plus.
+- **Côté étudiants**, rien ne change encore : la page Bibliothèque, la fiche d'un livre et le lecteur viennent à l'étape B. Tu peux donc déposer et publier tes premiers livres dès maintenant.
+
+1. **La migration, sur la base de test** (etudium-dev) : Supabase › SQL Editor › New query, colle tout le fichier `web/supabase/migrations/0074_bibliotheque.sql`, après la 0073 (section 72), puis Run. Elle se relance sans risque. Elle contient déjà tout ce dont les étapes B et C auront besoin : tu n'auras pas d'autre migration à appliquer pour la Bibliothèque.
+2. **Sur la base de production** : colle ce même fichier dans son éditeur SQL (SQL Editor › New query › Run), **avant** de mettre le code en ligne. L'ancien code ignore les nouvelles tables, pas l'inverse. Une base de production neuve l'a déjà : la 0074 est à la fin de `web/supabase/production/partie-5.sql`.
+3. **Sans la migration**, la page Bibliothèque du back-office et la carte « Livres recommandés » affichent le bandeau « Appliquez la migration 0074 (guide « Ce qui te revient », section 73). », et le reste du site marche comme avant.
+4. **Les droits d'auteur**, à ne pas négliger : ne dépose que des livres dont Étudium a le droit de diffuser le contenu :
+   - ceux que tu écris, toi ou tes formateurs ;
+   - ceux dont l'auteur a donné son accord **écrit** (garde ce document : e-mail, lettre signée) ;
+   - les livres libres de droits ou sous licence libre (en vérifiant la licence : certaines interdisent l'usage commercial, or l'abonnement est payant).
+
+   Un livre du commerce, ou un PDF trouvé sur Internet, déposé sans accord expose la plateforme à des poursuites, même s'il n'est pas téléchargeable. La case obligatoire est là pour y penser à chaque livre. Pense aussi à ajouter une ligne aux Conditions d'utilisation sur les contenus de la Bibliothèque : je peux la rédiger quand tu veux.
+5. **L'espace de fichiers** : l'offre gratuite de Supabase n'offre que **1 Go de fichiers pour tout le site** (vidéos d'exercices, images, ressources, couvertures, et maintenant les livres). Quelques dizaines de PDF suffisent à le remplir ; au-delà, les dépôts échouent. Regarde où tu en es dans Supabase › Project Settings › Usage (ligne « Storage size »). Avant de déposer beaucoup de livres, le passage à **Supabase Pro** (100 Go de fichiers, et des sauvegardes) est conseillé : Supabase › Organization › Billing. Garde aussi des PDF légers : un livre de 300 pages bien exporté pèse souvent moins de 10 Mo ; un PDF scanné, bien plus (réduis-le avant de le déposer).
+6. **À vérifier**, avec ton compte administrateur sur la base de test :
+   - le menu du back-office a « Bibliothèque » sous « Formations » ; un compte modérateur ne le voit pas ;
+   - « Ajouter un livre » : dépose un PDF ; « Nombre de pages » se remplit seul ; un fichier Word, ou un PDF de plus de 50 Mo, est refusé avec un message clair ;
+   - « Fabriquer à partir de la 1re page » : l'aperçu de la couverture montre la première page ; « Choisir une image » la remplace ;
+   - « Créer une catégorie » : la catégorie créée est aussitôt choisie ;
+   - « Ajouter le livre » : le bouton affiche « Envoi du PDF… N % », puis la fiche du livre s'ouvre, en brouillon ;
+   - « Publier » sans la case des droits : le refus s'affiche dans la fenêtre ; coche la case, « Enregistrer », puis « Publier » : le livre passe en « Publié » ;
+   - la carte du livre dans la page Bibliothèque : sa couverture entière, son auteur, « Publié », « Inclus dans l'abonnement », ses pages ;
+   - remplacer le PDF : dépose un autre PDF dans la fiche, puis « Enregistrer » : l'ancien fichier est supprimé de Supabase › Storage › `bibliotheque` ;
+   - « Archiver », puis « Republier » ; et « Supprimer le brouillon » sur un brouillon : son dossier disparaît de Storage › `bibliotheque` et de `couvertures/livres` ;
+   - Supabase › Storage : l'espace `bibliotheque` existe et n'est **pas** public (pas de cadenas ouvert) ; les PDF sont dans un dossier par livre ;
+   - la fiche d'une formation › Informations › « Livres recommandés » : ajoute un livre publié, range-le, retire-le ;
+   - avec le compte super admin, Journal : « Livre « … » : Brouillon → Publié », puis « Publié → Archivé ».
