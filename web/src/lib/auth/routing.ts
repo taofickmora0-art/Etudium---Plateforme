@@ -19,6 +19,9 @@ export const PAGES_PUBLIQUES = [
   "/formations",
   // Le profil public d'un formateur (spec du 2 novembre 2026, §6). « /formateur » (son espace) reste fermé.
   "/formateurs",
+  // La Bibliothèque : le catalogue et la fiche des livres, comme les formations. Le lecteur (« /lire ») renvoie lui-même
+  // à la fiche un compte qui n'a pas l'accès, visiteur compris.
+  "/bibliotheque",
   // La vérification d'un certificat, sans compte (lot 3, R23) : la page du formulaire et celle du QR Code.
   "/verifier",
   "/c",

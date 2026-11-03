@@ -64,6 +64,13 @@ describe("Pages protégées", () => {
     }
   });
 
+  it("la Bibliothèque (catalogue, fiches) est ouverte sans compte : le lecteur renvoie lui-même à la fiche", () => {
+    for (const pathname of ["/bibliotheque", "/bibliotheque/reussir-son-memoire", "/bibliotheque/reussir-son-memoire/lire"]) {
+      expect(routeFor({ pathname, signedIn: false, hadSession: false }), pathname).toEqual({});
+    }
+    expect(routeFor({ pathname: "/bibliotheques", signedIn: false, hadSession: false })).not.toEqual({});
+  });
+
   it("la vérification d'un certificat est ouverte sans compte (QR Code) ; la page Certificats ne l'est pas", () => {
     for (const pathname of ["/verifier", "/c/ET-2026-K7Q2-M9XD"]) expect(routeFor({ pathname, signedIn: false, hadSession: false }), pathname).toEqual({});
     expect(routeFor({ pathname: "/certificats", signedIn: false, hadSession: false })).not.toEqual({});

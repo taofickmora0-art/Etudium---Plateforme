@@ -5,8 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // robots.txt et sitemap.xml (spec de la mise en ligne, §1.2) : les moteurs voient le site public, jamais l'espace
 // connecté, le back-office, l'espace formateur, les routes d'API ni les pages de compte.
 const listFormationsDuPlan = vi.hoisted(() => vi.fn());
+const listLivresDuPlan = vi.hoisted(() => vi.fn());
 const connection = vi.hoisted(() => vi.fn(async () => {}));
-vi.mock("@/lib/catalogue/plan-du-site", () => ({ listFormationsDuPlan }));
+vi.mock("@/lib/catalogue/plan-du-site", () => ({ listFormationsDuPlan, listLivresDuPlan }));
 // connection() : le plan du site est rendu à la requête ; hors d'une requête de Next (ici), elle lèverait.
 vi.mock("next/server", async (original) => ({ ...(await original<typeof import("next/server")>()), connection }));
 
@@ -19,6 +20,7 @@ const FORMATEUR = "a1b2c3d4-0000-4000-8000-000000000001";
 beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_SITE_URL", `${SITE}/`);
   listFormationsDuPlan.mockReset();
+  listLivresDuPlan.mockReset().mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -89,19 +91,41 @@ describe("robots.txt", () => {
       "/auth/callback",
       "/formations/excel/lecons/123",
       "/formations/excel/validation",
+      // Le lecteur d'un livre (réservé aux comptes qui ont l'accès) : la fiche est la page à référencer.
+      "/bibliotheque/reussir-son-memoire/lire",
     ]) {
       expect(bloque(chemin), chemin).toBe(true);
     }
   });
 
   it("laisse ouvertes les pages publiques (dont le profil des formateurs, malgré « /formateur »)", () => {
-    for (const chemin of ["/", "/formations", "/formations/maitriser-excel", `/formateurs/${FORMATEUR}`, "/verifier", "/conditions", "/confidentialite"]) {
+    for (const chemin of [
+      "/",
+      "/formations",
+      "/formations/maitriser-excel",
+      `/formateurs/${FORMATEUR}`,
+      "/bibliotheque",
+      "/bibliotheque/reussir-son-memoire",
+      "/verifier",
+      "/conditions",
+      "/confidentialite",
+    ]) {
       expect(bloque(chemin), chemin).toBe(false);
     }
   });
 
   it("chaque page de l'appli est rangée : publique et ouverte, ou fermée aux moteurs", () => {
-    const OUVERTES = new Set(["/", "/formations", "/formations/exemple", "/formateurs/exemple", "/verifier", "/conditions", "/confidentialite"]);
+    const OUVERTES = new Set([
+      "/",
+      "/formations",
+      "/formations/exemple",
+      "/formateurs/exemple",
+      "/bibliotheque",
+      "/bibliotheque/exemple",
+      "/verifier",
+      "/conditions",
+      "/confidentialite",
+    ]);
     const adresses = adressesDeLAppli();
     expect(adresses.length).toBeGreaterThan(50);
     for (const adresse of adresses) {
@@ -124,6 +148,7 @@ describe("sitemap.xml", () => {
     expect(plan.map((e) => e.url)).toEqual([
       SITE,
       `${SITE}/formations`,
+      `${SITE}/bibliotheque`,
       `${SITE}/formations/maitriser-excel`,
       `${SITE}/formations/python-debutant`,
       `${SITE}/formations/prise-de-parole`,
@@ -144,13 +169,48 @@ describe("sitemap.xml", () => {
 
   it("sans base (démonstration) : seulement les pages fixes", async () => {
     listFormationsDuPlan.mockResolvedValue([]);
-    expect((await sitemap()).map((e) => e.url)).toEqual([SITE, `${SITE}/formations`]);
+    expect((await sitemap()).map((e) => e.url)).toEqual([SITE, `${SITE}/formations`, `${SITE}/bibliotheque`]);
   });
 
   it("si la lecture échoue : seulement les pages fixes", async () => {
     listFormationsDuPlan.mockRejectedValue(new Error("Base injoignable"));
     const erreur = vi.spyOn(console, "error").mockImplementation(() => {});
-    expect((await sitemap()).map((e) => e.url)).toEqual([SITE, `${SITE}/formations`]);
+    expect((await sitemap()).map((e) => e.url)).toEqual([SITE, `${SITE}/formations`, `${SITE}/bibliotheque`]);
+    erreur.mockRestore();
+  });
+
+  it("les fiches des livres publiés, datées de leur publication ; « /bibliotheque » prend la plus récente", async () => {
+    listFormationsDuPlan.mockResolvedValue(FORMATIONS);
+    listLivresDuPlan.mockResolvedValue([
+      { slug: "reussir-son-memoire", publieLe: "2026-11-02T08:00:00Z" },
+      { slug: "guide-excel", publieLe: null },
+    ]);
+    const plan = await sitemap();
+    expect(plan.map((e) => e.url)).toEqual([
+      SITE,
+      `${SITE}/formations`,
+      `${SITE}/bibliotheque`,
+      `${SITE}/formations/maitriser-excel`,
+      `${SITE}/formations/python-debutant`,
+      `${SITE}/formations/prise-de-parole`,
+      `${SITE}/formateurs/${FORMATEUR}`,
+      `${SITE}/bibliotheque/reussir-son-memoire`,
+      `${SITE}/bibliotheque/guide-excel`,
+    ]);
+    const date = (url: string) => plan.find((e) => e.url === url)?.lastModified;
+    expect(date(`${SITE}/bibliotheque/reussir-son-memoire`)).toBe("2026-11-02T08:00:00Z");
+    expect(date(`${SITE}/bibliotheque/guide-excel`)).toBeUndefined();
+    expect(date(`${SITE}/bibliotheque`)).toBe("2026-11-02T08:00:00Z");
+    for (const { url } of plan) expect(bloque(new URL(url).pathname), url).toBe(false);
+  });
+
+  it("des livres illisibles n'empêchent pas les formations d'être dans le plan", async () => {
+    listFormationsDuPlan.mockResolvedValue(FORMATIONS);
+    listLivresDuPlan.mockRejectedValue(new Error("Base injoignable"));
+    const erreur = vi.spyOn(console, "error").mockImplementation(() => {});
+    const urls = (await sitemap()).map((e) => e.url);
+    expect(urls).toContain(`${SITE}/formations/maitriser-excel`);
+    expect(urls.filter((u) => u.includes("/bibliotheque/"))).toEqual([]);
     erreur.mockRestore();
   });
 
