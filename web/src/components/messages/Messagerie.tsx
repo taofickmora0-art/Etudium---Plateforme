@@ -4,9 +4,9 @@ import { useEffect, useEffectEvent, useState } from "react";
 import { BubbleChatIcon, PencilEdit02Icon } from "@hugeicons/core-free-icons";
 import { useTempsReel } from "@/components/temps-reel/evenements";
 import { Button } from "@/components/ui/Button";
+import { correspond, DeuxVolets, EnteteVolet, VoletVide } from "@/components/ui/DeuxVolets";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Heading, Lead } from "@/components/ui/Text";
-import { cn } from "@/lib/cn";
+import { IconButton } from "@/components/ui/IconButton";
 import { relireConversations } from "@/lib/messages/actions";
 import type { Contact, ConversationResume, EspaceMessages, Fil, Message } from "@/lib/messages/types";
 import { FilConversation } from "./FilConversation";
@@ -15,12 +15,6 @@ import { NouveauMessage } from "./NouveauMessage";
 
 const LISTE_MS = 60_000;
 
-const SOUS_TITRES: Record<EspaceMessages, string> = {
-  etudiant: "Une question sur une leçon ? Écrivez directement à votre formateur.",
-  formateur: "Les messages de vos étudiants.",
-  equipe: "Les demandes d’assistance des étudiants.",
-};
-
 const VIDES: Record<EspaceMessages, string> = {
   etudiant: "Écrivez au formateur d’une formation que vous suivez, ou à l’équipe Étudium.",
   formateur: "Les messages de vos étudiants s’afficheront ici. Vous pouvez aussi leur écrire.",
@@ -28,8 +22,9 @@ const VIDES: Record<EspaceMessages, string> = {
 };
 
 /**
- * La page Messages (NdMessages), la même pour l'étudiant, le formateur et l'équipe : à gauche les conversations, à
- * droite celle choisie (`?c=`). Au téléphone, l'une ou l'autre : la conversation s'ouvre en plein écran avec un retour.
+ * La page Messages (NdMessages), la même pour l'étudiant, le formateur et l'équipe, en deux volets comme WhatsApp
+ * (demande du 4 novembre 2026) : à gauche les conversations (avec une recherche), à droite celle choisie (`?c=`). Au
+ * téléphone, l'une ou l'autre : la conversation s'ouvre en plein écran avec un retour.
  */
 export function Messagerie({
   espace,
@@ -47,7 +42,14 @@ export function Messagerie({
   contacts: Contact[];
 }) {
   const [conversations, setConversations] = useState(initiales);
+  // Le serveur relit la liste à chaque conversation ouverte : sa version l'emporte (la conversation ouverte est lue).
+  const [vues, setVues] = useState(initiales);
+  if (initiales !== vues) {
+    setVues(initiales);
+    setConversations(initiales);
+  }
   const [nouveau, setNouveau] = useState(false);
+  const [recherche, setRecherche] = useState("");
   const ecrire = espace !== "equipe";
 
   // La liste se relit aussitôt qu'un message arrive ou qu'une conversation est lue ailleurs (temps réel, 0044), et chaque
@@ -70,64 +72,62 @@ export function Messagerie({
     if (!fil) return;
     const resume: ConversationResume = {
       ...fil.conversation,
-      dernier: { texte: message.texte, fichier: message.fichier?.nom ?? null, deMoi: true, creeLe: message.creeLe },
+      dernier: { texte: message.texte, fichier: message.fichier?.nom ?? null, vocal: message.vocal?.dureeMs ?? null, deMoi: true, creeLe: message.creeLe },
       nonLu: false,
     };
     setConversations((avant) => [resume, ...avant.filter((c) => c.id !== resume.id)]);
   }
 
-  const vide = conversations.length === 0 && !choisie;
-  return (
-    <div className="flex min-w-0 flex-col">
-      <div className={cn("flex flex-wrap items-end justify-between gap-4", choisie && "max-sm:hidden")}>
-        <div className="min-w-0 flex-[1_1_320px]">
-          <Heading level="page">Messages</Heading>
-          <Lead className="mt-2.5">{SOUS_TITRES[espace]}</Lead>
-        </div>
-        {ecrire && !vide && (
-          <Button variant="gris" iconLeft={PencilEdit02Icon} onClick={() => setNouveau(true)}>
-            Nouveau message
-          </Button>
+  const affichees = recherche.trim() ? conversations.filter((c) => correspond(c.avec.nom, recherche)) : conversations;
+  const liste = (
+    <>
+      <EnteteVolet
+        titre="Messages"
+        recherche={recherche}
+        onRecherche={setRecherche}
+        placeholder="Rechercher une conversation"
+        action={ecrire ? <IconButton icon={PencilEdit02Icon} label="Nouveau message" title="Nouveau message" variant="discret" onClick={() => setNouveau(true)} /> : undefined}
+      />
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
+        {conversations.length === 0 ? (
+          <EmptyState
+            className="mt-4"
+            icon={BubbleChatIcon}
+            title="Aucune conversation"
+            description={VIDES[espace]}
+            action={
+              ecrire ? (
+                <Button iconLeft={PencilEdit02Icon} onClick={() => setNouveau(true)}>
+                  Nouveau message
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : affichees.length === 0 ? (
+          <p className="m-0 px-3 py-6 text-center text-sm leading-[22px] text-discret">Aucune conversation ne correspond à « {recherche.trim()} ».</p>
+        ) : (
+          <ListeConversations conversations={affichees} choisie={choisie} base={base} />
         )}
       </div>
-      <div className={cn("mt-5 h-px bg-separateur", choisie && "max-sm:hidden")} />
-      {vide ? (
-        <EmptyState
-          className="mt-8"
-          icon={BubbleChatIcon}
-          title="Aucune conversation"
-          description={VIDES[espace]}
-          action={
-            ecrire ? (
-              <Button iconLeft={PencilEdit02Icon} onClick={() => setNouveau(true)}>
-                Nouveau message
-              </Button>
-            ) : undefined
-          }
-        />
-      ) : (
-        <div className="mt-8 flex flex-wrap items-start gap-6 max-sm:mt-5">
-          {conversations.length > 0 && (
-            <div className={cn("min-w-0 flex-[1_1_300px]", choisie && "max-sm:hidden")}>
-              <ListeConversations conversations={conversations} choisie={choisie} base={base} />
-            </div>
-          )}
-          <div className={cn("min-w-0 flex-[999_1_420px]", !choisie && "max-sm:hidden")}>
-            {fil ? (
-              <FilConversation key={fil.conversation.id} espace={espace} base={base} filInitial={fil} onEnvoye={envoye} />
-            ) : choisie ? (
-              <EmptyState icon={BubbleChatIcon} title="Conversation introuvable" description="Elle n’existe pas, ou vous n’y participez pas." />
-            ) : (
-              <EmptyState
-                icon={BubbleChatIcon}
-                title="Choisissez une conversation"
-                description={ecrire ? "Ou écrivez un nouveau message." : "Les demandes non lues sont marquées d’un point bleu."}
-              />
-            )}
-          </div>
-        </div>
-      )}
+    </>
+  );
+  return (
+    <>
+      {/* Une adresse inconnue : au téléphone, la liste reste (sur ordinateur, le volet de droite dit pourquoi). */}
+      <DeuxVolets liste={liste} ouvert={fil !== null}>
+        {fil ? (
+          <FilConversation key={fil.conversation.id} espace={espace} base={base} filInitial={fil} onEnvoye={envoye} />
+        ) : choisie ? (
+          <VoletVide icon={BubbleChatIcon} titre="Conversation introuvable" description="Elle n’existe pas, ou vous n’y participez pas." />
+        ) : (
+          <VoletVide
+            icon={BubbleChatIcon}
+            titre="Choisissez une conversation"
+            description={ecrire ? "Ouvrez une conversation à gauche, ou écrivez un nouveau message." : "Les demandes non lues sont marquées d’un point bleu."}
+          />
+        )}
+      </DeuxVolets>
       {ecrire && <NouveauMessage espace={espace} base={base} contactsInitiaux={contacts} open={nouveau} onOpenChange={setNouveau} />}
-    </div>
+    </>
   );
 }

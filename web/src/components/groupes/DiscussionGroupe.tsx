@@ -29,6 +29,7 @@ import {
 } from "@/lib/groupes/actions";
 import { CHEMINS_GROUPES, extrait, grouperFil, nomAuteur } from "@/lib/groupes/regles";
 import type { EspaceGroupes, FilGroupe, GroupeOuvert, MessageGroupe } from "@/lib/groupes/types";
+import { libelleVocal, type NoteVocale } from "@/lib/vocal/regles";
 import { ChampGroupe } from "./ChampGroupe";
 import { MessageDuFil, type ActionMessage } from "./MessageDuFil";
 import { TuileGroupe } from "./TuileGroupe";
@@ -274,8 +275,8 @@ export function DiscussionGroupe({
     setMessages((liste) => liste.map((m) => (m.id === id ? changer(m) : m)));
   }
 
-  async function envoyer(texte: string, cheminImage: string | null): Promise<string | null> {
-    const r = await envoyerMessageGroupe(groupe.id, texte, cheminImage, reponse?.id ?? null).catch(() => ({ ok: false as const, message: "Votre message n’a pas pu être envoyé. Réessayez." }));
+  async function envoyer(texte: string, chemin: string | null, vocal: NoteVocale | null = null): Promise<string | null> {
+    const r = await envoyerMessageGroupe(groupe.id, texte, chemin, reponse?.id ?? null, ...(vocal ? [vocal] : [])).catch(() => ({ ok: false as const, message: "Votre message n’a pas pu être envoyé. Réessayez." }));
     if (!r.ok) return r.message;
     setReponse(null);
     const suivants = courants.current.some((m) => m.id === r.message.id) ? courants.current : [...courants.current, r.message];
@@ -371,10 +372,10 @@ export function DiscussionGroupe({
     <section
       aria-labelledby={titreId}
       style={styleClavier}
-      className="box-border flex h-[calc(100dvh-var(--entete-app)-112px)] min-h-[360px] min-w-0 flex-col overflow-hidden rounded-carte border border-bordure-carte bg-panneau max-sm:-mx-1.5 max-sm:h-[calc(100dvh-var(--entete-app)-104px)] lg:h-[calc(100dvh-var(--entete-app)-120px)]"
+      className="box-border flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-panneau"
     >
       <header className="flex min-w-0 items-center gap-3 px-5 py-3.5 max-sm:gap-2.5 max-sm:px-3 max-sm:py-2.5">
-        <Link href={chemins.liste} aria-label="Tous les groupes" className={cn(buttonVariants({ variant: "discret", size: "sm" }), "-ml-1.5 px-1.5")}>
+        <Link href={chemins.liste} aria-label="Tous les groupes" className={cn(buttonVariants({ variant: "discret", size: "sm" }), "-ml-1.5 px-1.5 md:hidden")}>
           <Icon icon={ArrowLeft01Icon} size={20} />
         </Link>
         <TuileGroupe type={groupe.type} couleur={groupe.couleur} className="size-11 max-sm:size-9 max-sm:[&_svg]:size-[18px]" />
@@ -408,7 +409,7 @@ export function DiscussionGroupe({
             <span className="flex min-w-0 flex-col">
               <span className="text-xs leading-[18px] font-semibold text-bleu">Message épinglé</span>
               <span className="truncate text-[13px] leading-5 text-texte">
-                {`${nomAuteur(groupe.epingle.auteur)} : ${groupe.epingle.texte ? extrait(groupe.epingle.texte, 140) : groupe.epingle.image ? "Image" : ""}`}
+                {`${nomAuteur(groupe.epingle.auteur)} : ${groupe.epingle.texte ? extrait(groupe.epingle.texte, 140) : groupe.epingle.vocal ? libelleVocal(groupe.epingle.vocal.dureeMs) : groupe.epingle.image ? "Image" : ""}`}
               </span>
             </span>
           </button>
@@ -424,7 +425,7 @@ export function DiscussionGroupe({
           aria-label={`Messages du groupe ${groupe.nom}`}
           tabIndex={0}
           onScroll={surDefilement}
-          className="focus-etudium flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-5 pt-3 pb-4 max-sm:px-3"
+          className="focus-etudium flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-page px-5 pt-3 pb-4 max-sm:px-3"
         >
           {plusAnciens && (
             <Button variant="discret" size="sm" className="self-center" loading={chargement} onClick={() => void precedents()}>
@@ -439,7 +440,7 @@ export function DiscussionGroupe({
           {jours.map((j) => (
             <div key={j.cle} className="flex flex-col">
               <div className="sticky top-0 z-[1] mt-3 mb-1 flex justify-center">
-                <span className="rounded-full bg-coque px-3 py-1 text-xs leading-[18px] font-medium text-texte shadow-pastille">{j.libelle}</span>
+                <span className="rounded-full bg-panneau px-3 py-1 text-xs leading-[18px] font-medium text-texte shadow-pastille">{j.libelle}</span>
               </div>
               {j.blocs.map((b) =>
                 b.messages.map((m, i) => (

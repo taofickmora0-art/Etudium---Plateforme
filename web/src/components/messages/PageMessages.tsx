@@ -7,7 +7,8 @@ import { Messagerie } from "./Messagerie";
 
 /**
  * La page Messages d'un espace (lot 5, étape A) : les conversations, celle choisie par `?c=` (l'ouvrir la marque lue),
- * et à qui écrire. Avant la 0035, le bandeau de la migration pour l'équipe, un message neutre pour les autres.
+ * et à qui écrire. Les deux volets restent montés d'une conversation à l'autre (la liste garde sa place et sa
+ * recherche). Avant la 0035, le bandeau de la migration pour l'équipe, un message neutre pour les autres.
  */
 export async function PageMessages({ espace, base, c }: { espace: EspaceMessages; base: string; c: string | null }) {
   const [conversations, fil, contacts] = await Promise.all([
@@ -31,7 +32,6 @@ export async function PageMessages({ espace, base, c }: { espace: EspaceMessages
   }
   return (
     <Messagerie
-      key={c ?? "liste"}
       espace={espace}
       base={base}
       conversations={conversations.donnees}

@@ -1,6 +1,6 @@
 import { Banner } from "@/components/ui/Banner";
 import { BandeauIndisponible } from "@/components/ui/BandeauIndisponible";
-import { Heading } from "@/components/ui/Text";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { getShellUser } from "@/lib/auth/current-user";
 import type { Role } from "@/lib/auth/permissions";
 import { lireMesGroupes } from "@/lib/groupes/data";
@@ -16,20 +16,32 @@ export function GroupesIndisponibles({ equipe }: { equipe: boolean }) {
   return equipe ? <Banner tone="attention" title={MIGRATION_GROUPES} /> : <BandeauIndisponible />;
 }
 
-/** La page « Groupes » d'un espace (spec des groupes, §2) : mes groupes, en direct. */
-export async function PageGroupes({ espace }: { espace: EspaceGroupes }) {
-  const [user, lu] = await Promise.all([getShellUser(), lireMesGroupes()]);
+/** Le volet de gauche pendant la lecture des groupes. */
+export function ListeEnAttente() {
   return (
-    <div className="flex max-w-[760px] min-w-0 flex-col gap-6 max-sm:gap-5">
-      <div className="flex flex-col gap-1.5">
-        <Heading level="page">Groupes</Heading>
-        <p className="m-0 text-base leading-6 text-pretty text-discret max-sm:text-[15px] max-sm:leading-[22px]">
-          {espace === "formateur"
-            ? "Échangez en direct avec les étudiants de vos parcours et de vos formations."
-            : "Échangez en direct avec les étudiants et les formateurs de vos parcours et de vos formations."}
-        </p>
-      </div>
-      {lu.migrationAbsente ? <GroupesIndisponibles equipe={estEquipe(user?.roles)} /> : <ListeGroupes espace={espace} initiaux={lu.donnees} />}
+    <div className="flex flex-col gap-3 p-4">
+      <Skeleton className="h-7 w-32 rounded-puce" />
+      <Skeleton className="h-12 rounded-champ" />
+      {[0, 1, 2, 3].map((i) => (
+        <Skeleton key={i} className="h-16 rounded-carte" />
+      ))}
     </div>
   );
+}
+
+/**
+ * Le volet de gauche des « Groupes » d'un espace (spec des groupes, §2 ; deux volets, 4 novembre 2026) : le titre, la
+ * recherche et mes groupes, en direct. Avant la 0075 : le titre et le bandeau.
+ */
+export async function PageGroupes({ espace }: { espace: EspaceGroupes }) {
+  const [user, lu] = await Promise.all([getShellUser(), lireMesGroupes()]);
+  if (lu.migrationAbsente) {
+    return (
+      <div className="flex flex-col gap-3 p-4">
+        <h1 className="m-0 text-xl leading-7 font-semibold text-encre">Groupes</h1>
+        <GroupesIndisponibles equipe={estEquipe(user?.roles)} />
+      </div>
+    );
+  }
+  return <ListeGroupes espace={espace} initiaux={lu.donnees} />;
 }

@@ -17,7 +17,7 @@ async function Contenu({ params, searchParams }: Props) {
 /** Un groupe de discussion, dans l'espace formateur : réservé à l'espace, rien n'est rendu avant la vérification. */
 export default function Page(props: Props) {
   return (
-    <Suspense fallback={<Skeleton className="h-[70dvh] rounded-carte" />}>
+    <Suspense fallback={<Skeleton className="m-4 flex-1 rounded-carte" />}>
       <Contenu {...props} />
     </Suspense>
   );

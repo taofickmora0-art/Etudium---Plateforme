@@ -12,7 +12,7 @@ import type { EspaceGroupes, GroupeFerme as Ferme } from "@/lib/groupes/types";
 import { DiscussionGroupe } from "./DiscussionGroupe";
 import { estEquipe, GroupesIndisponibles } from "./PageGroupes";
 
-const LIEN = "focus-etudium flex items-center gap-1.5 self-start rounded-champ text-sm leading-[22px] font-medium text-texte no-underline hover:text-bleu";
+const LIEN = "focus-etudium flex items-center gap-1.5 self-start rounded-champ text-sm leading-[22px] font-medium text-texte no-underline hover:text-bleu md:hidden";
 
 /** Pourquoi le groupe est fermé, et où aller : les abonnements, les parcours, la formation. */
 function GroupeFerme({ groupe: g, espace }: { groupe: Ferme; espace: EspaceGroupes }) {
@@ -40,7 +40,7 @@ function GroupeFerme({ groupe: g, espace }: { groupe: Ferme; espace: EspaceGroup
       </Button>
     ) : null;
   return (
-    <div className="flex max-w-[760px] min-w-0 flex-col gap-5">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto bg-page p-6 max-sm:p-4">
       <Link href={CHEMINS_GROUPES[espace].liste} className={LIEN}>
         <Icon icon={ArrowLeft01Icon} size={18} />
         <span>Tous les groupes</span>
@@ -60,7 +60,7 @@ export async function PageGroupe({ espace, slug, message }: { espace: EspaceGrou
   const [user, lu] = await Promise.all([getShellUser(), lireGroupe(slug, message)]);
   if (lu.migrationAbsente) {
     return (
-      <div className="flex max-w-[760px] min-w-0 flex-col gap-6">
+      <div className="flex min-w-0 flex-col gap-6 p-6 max-sm:p-4">
         <Heading level="page">Groupes</Heading>
         <GroupesIndisponibles equipe={estEquipe(user?.roles)} />
       </div>
