@@ -7,7 +7,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // bouton rond « Discussions » au milieu, avec la pastille des non-lus (messages + groupes). Un appui ouvre l'éventail :
 // « Messages » et « Groupes » sortent du bouton, chacun avec ses non-lus. Le même bouton reste devant l'écran sombre :
 // son icône devient une croix, et le retoucher referme (retour du 4 novembre 2026 : pas de seconde croix posée dessus).
-// L'écran sombre ou Échap referment aussi. « Événements » reste dans le menu ≡.
+// L'écran sombre ou Échap referment aussi. « Événements » passe ensuite à la place de « Certificats » (même jour :
+// beaucoup n'ont pas encore de formation) ; « Certificats » reste dans le menu ≡.
 
 let chemin = "/accueil";
 vi.mock("next/navigation", () => ({ usePathname: () => chemin, useRouter: () => ({ push: vi.fn() }) }));
@@ -17,7 +18,7 @@ vi.mock("@/components/messages/useMessagesNonLus", () => ({ useMessagesNonLus: (
 vi.mock("@/components/groupes/useGroupesNonLus", () => ({ useGroupesNonLus: () => groupes }));
 
 const { BottomNavLinks } = await import("@/components/layout/MobileNav");
-const { NAV_PRINCIPALE } = await import("@/lib/navigation");
+const { NAV_MON_ESPACE } = await import("@/lib/navigation");
 
 beforeEach(() => {
   chemin = "/accueil";
@@ -26,17 +27,17 @@ beforeEach(() => {
 });
 
 describe("La barre du bas de l'étudiant", () => {
-  it("Accueil, Formations, le bouton Discussions au milieu, Certificats, Profil ; plus d'« Événements » (il reste dans le menu ≡)", () => {
+  it("Accueil, Formations, le bouton Discussions au milieu, Événements, Profil ; « Certificats » est dans le menu ≡", () => {
     render(<BottomNavLinks pathname="/accueil" />);
     const barre = screen.getByRole("navigation", { name: "Navigation" });
     const elements = within(barre).getAllByRole("link").map((l) => l.textContent);
-    expect(elements).toEqual(["Accueil", "Formations", "Certificats", "Profil"]);
+    expect(elements).toEqual(["Accueil", "Formations", "Événements", "Profil"]);
     const bouton = within(barre).getByRole("button", { name: "Discussions" });
     expect(bouton).toHaveAttribute("aria-expanded", "false");
-    // Au milieu : après Formations, avant Certificats.
+    // Au milieu : après Formations, avant Événements.
     const ordre = [...barre.querySelectorAll("a, button")].map((e) => e.textContent);
     expect(ordre.indexOf("Discussions")).toBe(2);
-    expect(NAV_PRINCIPALE.map((e) => e.href)).toContain("/evenements");
+    expect(NAV_MON_ESPACE.map((e) => e.href)).toContain("/certificats");
   });
 
   it("la pastille additionne les messages et les groupes non lus ; rien sans non-lus", () => {

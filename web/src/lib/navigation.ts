@@ -76,12 +76,13 @@ export const NAV_MON_ESPACE: NavEntry[] = [
 
 /**
  * Barre du bas du téléphone. « Profil » ouvre la page de menu du téléphone. Au milieu, le bouton « Discussions »
- * (Messages et Groupes, 4 novembre 2026) a pris la place d'« Événements », resté dans le menu ≡.
+ * (Messages et Groupes, 4 novembre 2026) ; « Événements » a pris la place de « Certificats » (beaucoup n'ont pas encore
+ * commencé de formation, alors qu'il y a des événements chaque semaine), resté dans le menu ≡ (« Mon espace »).
  */
 export const NAV_BAS: NavEntry[] = [
   ACCUEIL,
   FORMATIONS,
-  { href: "/certificats", label: "Certificats", icon: Certificate01Icon },
+  { href: "/evenements", label: "Événements", icon: Calendar03Icon },
   { href: "/menu", label: "Profil", icon: UserIcon },
 ];
 

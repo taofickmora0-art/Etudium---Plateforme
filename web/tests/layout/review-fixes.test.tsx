@@ -53,11 +53,11 @@ describe("Corrections de la relecture de la coque", () => {
     expect(screen.queryByRole("link", { name: "Espace formateur" })).not.toBeInTheDocument();
   });
 
-  it("chaque onglet de la barre du bas prend la largeur de son libellé : « Certificats » ne déborde pas de sa pastille", () => {
+  it("chaque onglet de la barre du bas prend la largeur de son libellé : « Événements » ne déborde pas de sa pastille", () => {
     render(<BottomNavLinks pathname="/accueil" />);
-    const onglet = screen.getByRole("link", { name: "Certificats" });
+    const onglet = screen.getByRole("link", { name: "Événements" });
     expect(onglet).toHaveClass("flex-auto", "px-1");
     expect(onglet).not.toHaveClass("flex-1");
-    expect(within(onglet).getByText("Certificats")).toHaveClass("max-w-full", "truncate");
+    expect(within(onglet).getByText("Événements")).toHaveClass("max-w-full", "truncate");
   });
 });
