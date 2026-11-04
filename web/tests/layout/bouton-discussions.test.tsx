@@ -5,8 +5,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // La barre du bas de l'étudiant (demande du 4 novembre 2026, maquette validée) : « Événements » laisse sa place à un
 // bouton rond « Discussions » au milieu, avec la pastille des non-lus (messages + groupes). Un appui ouvre l'éventail :
-// « Messages » et « Groupes » sortent du bouton, chacun avec ses non-lus ; la croix, l'écran sombre ou Échap referment.
-// « Événements » reste dans le menu ≡.
+// « Messages » et « Groupes » sortent du bouton, chacun avec ses non-lus. Le même bouton reste devant l'écran sombre :
+// son icône devient une croix, et le retoucher referme (retour du 4 novembre 2026 : pas de seconde croix posée dessus).
+// L'écran sombre ou Échap referment aussi. « Événements » reste dans le menu ≡.
 
 let chemin = "/accueil";
 vi.mock("next/navigation", () => ({ usePathname: () => chemin, useRouter: () => ({ push: vi.fn() }) }));
@@ -50,17 +51,23 @@ describe("La barre du bas de l'étudiant", () => {
     expect(screen.getByRole("button", { name: "Discussions" })).not.toHaveTextContent(/\d/);
   });
 
-  it("un appui ouvre l'éventail : Messages et Groupes, avec leurs non-lus ; la croix referme", async () => {
+  it("un appui ouvre l'éventail : Messages et Groupes, avec leurs non-lus ; le même bouton devient la croix et referme", async () => {
     const user = userEvent.setup();
     messages = 1;
     groupes = 2;
     render(<BottomNavLinks pathname="/accueil" />);
-    await user.click(screen.getByRole("button", { name: "Discussions, 3 non lus" }));
+    const bouton = screen.getByRole("button", { name: "Discussions, 3 non lus" });
+    await user.click(bouton);
     const eventail = screen.getByRole("dialog", { name: "Discussions" });
     expect(within(eventail).getByRole("link", { name: "Messages, 1 non lu" })).toHaveAttribute("href", "/messages");
     expect(within(eventail).getByRole("link", { name: "Groupes, 2 non lus" })).toHaveAttribute("href", "/groupes");
-    await user.click(within(eventail).getByRole("button", { name: "Fermer" }));
+    // Une seule croix : le bouton Discussions lui-même, ouvert.
+    expect(screen.getAllByRole("button", { name: /Fermer/ })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Fermer les discussions" })).toBe(bouton);
+    expect(bouton).toHaveAttribute("aria-expanded", "true");
+    await user.click(bouton);
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Discussions" })).toBeNull());
+    expect(bouton).toHaveAttribute("aria-expanded", "false");
   });
 
   it("Échap ou l'écran sombre referment ; choisir un lien referme aussi", async () => {
