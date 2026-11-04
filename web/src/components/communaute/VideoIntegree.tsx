@@ -67,7 +67,8 @@ export function VideoIntegree({
   }
   const lecteur = lecteurVideo(video);
   if (video.plateforme === "autre" || !lecteur) return <CarteVideo video={video} className={className} />;
-  const cadre = cn("relative overflow-hidden bg-encre", verticale(video) ? "mx-auto aspect-[9/16] w-full max-w-[340px]" : "aspect-video", className);
+  // Le fil a la largeur de la page (4 novembre 2026) : une vidéo horizontale ne dépasse pas 720 px de large.
+  const cadre = cn("relative overflow-hidden bg-encre", verticale(video) ? "mx-auto aspect-[9/16] w-full max-w-[340px]" : "aspect-video w-full max-w-[720px]", className);
   if (lecture) {
     return (
       <div className={cadre}>
