@@ -35,7 +35,8 @@ describe("L'entrée « Bibliothèque » des menus", () => {
     render(<SidebarNavLinks pathname="/accueil" repliable={false} />);
     expect(screen.getByRole("link", { name: "Bibliothèque" })).toHaveAttribute("href", "/bibliotheque");
     expect(NAV_BAS_PAR_ESPACE.etudiant.map((e) => e.href)).not.toContain("/bibliotheque");
-    expect(NAV_BAS_PAR_ESPACE.etudiant).toHaveLength(5);
+    // Quatre liens et, au milieu, le bouton « Discussions » (barre du bas du 4 novembre 2026).
+    expect(NAV_BAS_PAR_ESPACE.etudiant).toHaveLength(4);
     const formateur = [...MENUS.formateur.groupes.flatMap((g) => g.entrees), ...NAV_BAS_PAR_ESPACE.formateur].map((e) => e.href);
     expect(formateur.filter((h) => h.includes("bibliotheque"))).toEqual([]);
   });

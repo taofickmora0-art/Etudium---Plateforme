@@ -74,7 +74,8 @@ export function Button({
       {...props}
     >
       {loading ? <Spinner size={iconSize} /> : iconLeft && <Icon icon={iconLeft} size={iconSize} />}
-      <span>{children}</span>
+      {/* « contents » : un texte caché (sr-only, sur téléphone) n'ajoute pas d'écart, l'icône reste au centre. */}
+      <span className="contents">{children}</span>
       {!loading && iconRight && <Icon icon={iconRight} size={iconSize} />}
     </button>
   );

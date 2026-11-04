@@ -21,6 +21,18 @@ describe("Button", () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 
+  it("un texte caché (« sr-only », le micro et « Envoyer » sur téléphone) ne décale pas l'icône : l'enveloppe du texte ne prend pas de place", () => {
+    render(
+      <Button iconLeft={Cancel01Icon}>
+        <span className="sr-only">Note vocale</span>
+      </Button>,
+    );
+    const enveloppe = screen.getByText("Note vocale").parentElement;
+    expect(enveloppe?.tagName).toBe("SPAN");
+    // display: contents : le texte est directement un élément du bouton ; caché, il n'ajoute pas d'écart (gap) à l'icône.
+    expect(enveloppe).toHaveClass("contents");
+  });
+
   it("asChild rend un lien stylé", () => {
     render(
       <Button asChild>
