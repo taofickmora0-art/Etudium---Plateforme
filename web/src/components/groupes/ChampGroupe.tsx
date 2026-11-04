@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { IconButton } from "@/components/ui/IconButton";
 import { menuSurfaceClasses } from "@/components/ui/Menu";
+import { BarreEnregistrement, BoutonMicro, useVocalPossible } from "@/components/vocal/Enregistrement";
+import { useEnregistreurVocal, type NoteEnregistree } from "@/components/vocal/useEnregistreurVocal";
 import { formatDe } from "@/lib/admin/fichiers";
 import { tailleLisible } from "@/lib/admin/fichiers";
 import { cn } from "@/lib/cn";
@@ -15,6 +17,8 @@ import { ACCEPT_IMAGE, extrait, nomAuteur, refusImage, TEXTE_MAX } from "@/lib/g
 import type { MessageGroupe } from "@/lib/groupes/types";
 import { identifiantAleatoire } from "@/lib/identifiant";
 import { createClient } from "@/lib/supabase/client";
+import { deposerNoteVocale } from "@/lib/vocal/depot";
+import { libelleVocal, type NoteVocale } from "@/lib/vocal/regles";
 
 const SESSION_EXPIREE = "Votre session a expiré. Reconnectez-vous.";
 const ENVOI_ECHEC = "Votre message n’a pas pu être envoyé. Réessayez.";
@@ -28,7 +32,8 @@ type Choisie = { fichier: File; type: string; apercu: string | null };
  * Le champ d'écriture d'un groupe (spec des groupes, §2) : il grandit avec le texte (2 000 caractères au plus) ;
  * « Entrée » envoie sur ordinateur, « Maj+Entrée » va à la ligne (sur un écran tactile, Entrée va à la ligne et l'on
  * envoie avec le bouton) ; un bouton image (JPEG, PNG ou WebP, 5 Mo au plus) et un bouton emoji. Au-dessus : la réponse
- * en cours (« Réponse à … ») ou la modification d'un message. Échap annule l'une ou l'autre.
+ * en cours (« Réponse à … ») ou la modification d'un message. Échap annule l'une ou l'autre. Le champ vide, le micro
+ * remplace « Envoyer » : la note vocale (0076) s'enregistre, se réécoute et part, en réponse s'il y en a une.
  */
 export function ChampGroupe({
   nomGroupe,
@@ -43,8 +48,8 @@ export function ChampGroupe({
   edition: MessageGroupe | null;
   /** Annule la réponse ou la modification en cours. */
   onAnnuler: () => void;
-  /** Rend le message d'erreur, ou null quand le message est parti. */
-  onEnvoyer: (texte: string, image: string | null) => Promise<string | null>;
+  /** Rend le message d'erreur, ou null quand le message est parti (`vocal` : le fichier est une note vocale). */
+  onEnvoyer: (texte: string, fichier: string | null, vocal?: NoteVocale | null) => Promise<string | null>;
   onModifier: (id: string, texte: string) => Promise<string | null>;
 }) {
   const [texte, setTexte] = useState("");
@@ -53,6 +58,8 @@ export function ChampGroupe({
   const [envoi, setEnvoi] = useState(false);
   const [emojis, setEmojis] = useState(false);
   const champ = useRef<HTMLTextAreaElement>(null);
+  const vocalPossible = useVocalPossible();
+  const enregistreur = useEnregistreurVocal();
   // Le texte en cours, gardé quand on modifie un message : il revient après l'enregistrement ou l'annulation.
   const [brouillon, setBrouillon] = useState("");
 
@@ -124,6 +131,25 @@ export function ChampGroupe({
     }
   }
 
+  /** La note vocale : déposée (dossier du compte), puis envoyée ; un refus retire le fichier et garde la note. */
+  async function envoyerNote(note: NoteEnregistree) {
+    if (envoi) return;
+    setEnvoi(true);
+    setErreur(null);
+    try {
+      const depot = await deposerNoteVocale("groupes", null, note);
+      if (!depot.ok) return setErreur(depot.message);
+      const refus = await onEnvoyer("", depot.chemin, { dureeMs: note.dureeMs, ondes: note.ondes });
+      if (refus) {
+        await depot.retirer();
+        return setErreur(refus);
+      }
+      enregistreur.terminer();
+    } finally {
+      setEnvoi(false);
+    }
+  }
+
   function touche(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Escape" && (reponse || edition)) {
       event.preventDefault();
@@ -162,7 +188,11 @@ export function ChampGroupe({
           <Icon icon={edition ? Edit02Icon : ArrowTurnBackwardIcon} size={16} className="flex-none text-bleu" />
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="text-xs leading-[18px] font-semibold text-encre">{edition ? "Modifier votre message" : `Réponse à ${reponse!.deMoi ? "vous-même" : nomAuteur(reponse!.auteur)}`}</span>
-            {!edition && <span className="truncate text-xs leading-[18px] text-discret">{reponse!.texte ? extrait(reponse!.texte, 120) : reponse!.image ? "Image" : ""}</span>}
+            {!edition && (
+              <span className="truncate text-xs leading-[18px] text-discret">
+                {reponse!.texte ? extrait(reponse!.texte, 120) : reponse!.vocal ? libelleVocal(reponse!.vocal.dureeMs) : reponse!.image ? "Image" : ""}
+              </span>
+            )}
           </span>
           <IconButton icon={Cancel01Icon} label={edition ? "Annuler la modification" : "Annuler la réponse"} variant="discret" size="sm" onClick={onAnnuler} />
         </div>
@@ -182,11 +212,14 @@ export function ChampGroupe({
           <IconButton icon={Cancel01Icon} label="Retirer l’image" variant="discret" size="sm" onClick={() => setImage(null)} />
         </div>
       )}
-      {erreur && (
+      {(erreur ?? enregistreur.erreur) && (
         <p role="alert" className="m-0 text-[13px] leading-5 text-erreur-texte">
-          {erreur}
+          {erreur ?? enregistreur.erreur}
         </p>
       )}
+      {enregistreur.etat !== "inactif" ? (
+        <BarreEnregistrement enregistreur={enregistreur} envoi={envoi} onEnvoyer={(note) => void envoyerNote(note)} />
+      ) : (
       <div className="flex items-end gap-1.5 max-sm:gap-1">
         {!edition && (
           <label
@@ -243,10 +276,21 @@ export function ChampGroupe({
           />
           {texte.length > COMPTEUR_DES && <span className="mt-1 self-end text-xs leading-[18px] text-discret tabular-nums">{`${texte.length.toLocaleString("fr-FR")} / 2 000`}</span>}
         </div>
-        <Button type="submit" size="lg" iconLeft={SentIcon} loading={envoi} disabled={!texte.trim() && !image} className="h-11 flex-none px-4 max-sm:h-10 max-sm:px-3">
-          <span className="max-sm:sr-only">{edition ? "Enregistrer" : "Envoyer"}</span>
-        </Button>
+        {vocalPossible && !edition && !texte.trim() && !image ? (
+          <BoutonMicro
+            onClick={() => {
+              setErreur(null);
+              void enregistreur.demarrer();
+            }}
+            className="h-11 max-sm:h-10 max-sm:px-3"
+          />
+        ) : (
+          <Button type="submit" size="lg" iconLeft={SentIcon} loading={envoi} disabled={!texte.trim() && !image} className="h-11 flex-none px-4 max-sm:h-10 max-sm:px-3">
+            <span className="max-sm:sr-only">{edition ? "Enregistrer" : "Envoyer"}</span>
+          </Button>
+        )}
       </div>
+      )}
     </form>
   );
 }

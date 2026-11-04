@@ -2,6 +2,7 @@ import { estFonctionAbsente, liste } from "@/lib/contenus/lecture";
 import { createClient } from "@/lib/supabase/server";
 import type { Lecture } from "@/lib/utilisateurs/types";
 import { CONTACT_EQUIPE, MIGRATION_MESSAGES, versContact, versConversation, versFil } from "./conversion";
+import { filAvecNotesVocales } from "./vocaux";
 import type { Contact, ConversationResume, EspaceMessages, Fil } from "./types";
 
 // Les lectures de la messagerie (migration 0035). La base vérifie tout : on ne lit que ses conversations (l'équipe :
@@ -33,7 +34,7 @@ export async function lireFil(id: string): Promise<Lecture<Fil | null>> {
     if (estFonctionAbsente(error)) return { migrationAbsente: true };
     throw echec("de la conversation", error);
   }
-  return { migrationAbsente: false, donnees: versFil(data) };
+  return { migrationAbsente: false, donnees: await filAvecNotesVocales(supabase, versFil(data)) };
 }
 
 /** À qui écrire : l'étudiant, ses formateurs puis l'Équipe Étudium ; le formateur, ses étudiants (20 au plus). */

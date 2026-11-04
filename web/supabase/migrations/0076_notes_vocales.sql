@@ -63,7 +63,8 @@ alter table public.messages_groupes add constraint messages_groupes_vocal
   check (duree_ms is null or (duree_ms between 500 and 300000 and texte = ''));
 
 -- ─── Les messages privés ────────────────────────────────────────────────────────────────────────────
--- message_json : dernière définition en 0035_messagerie.sql ; + « vocal » (durée et onde).
+-- message_json : dernière définition en 0035_messagerie.sql ; + « vocal » (chemin, durée et onde : le serveur de l'appli
+-- signe le lien d'écoute avec la session du participant).
 create or replace function public.message_json(p_message public.messages, p_cote text)
 returns jsonb
 language sql
@@ -77,7 +78,7 @@ as $$
     'fichier', case when p_message.fichier is null then null
       else jsonb_build_object('nom', p_message.nom_fichier, 'format', p_message.format, 'taille', p_message.taille_octets) end,
     'vocal', case when p_message.fichier is not null and p_message.duree_ms is not null
-      then jsonb_build_object('duree_ms', p_message.duree_ms, 'ondes', coalesce(to_jsonb(p_message.ondes), '[]'::jsonb)) end,
+      then jsonb_build_object('chemin', p_message.fichier, 'duree_ms', p_message.duree_ms, 'ondes', coalesce(to_jsonb(p_message.ondes), '[]'::jsonb)) end,
     'de_moi', p_message.de_etudiant = (p_cote = 'etudiant'),
     'auteur', case when p_cote = 'equipe' and not p_message.de_etudiant and p_message.auteur_id is distinct from (select auth.uid())
       then coalesce(public.nom_du_profil(p_message.auteur_id), 'Équipe Étudium') end,

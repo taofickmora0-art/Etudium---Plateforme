@@ -10,6 +10,7 @@ import type { IconSvgElement } from "@/components/ui/Icon";
 import { IconButton } from "@/components/ui/IconButton";
 import { MenuEntries, menuSeparatorClasses, menuSurfaceClasses, type MenuEntry } from "@/components/ui/Menu";
 import { Tag } from "@/components/ui/Tag";
+import { LecteurVocal } from "@/components/vocal/LecteurVocal";
 import { cn } from "@/lib/cn";
 import { nomAuteur, peutModifier } from "@/lib/groupes/regles";
 import { REACTIONS, type MessageGroupe } from "@/lib/groupes/types";
@@ -122,7 +123,7 @@ export function MessageDuFil({
   const enLigne = !m.supprime && !m.retire;
   const bulle = cn(
     "box-border flex min-w-0 max-w-full flex-col rounded-carte px-3.5 py-2 text-[15px] leading-[22px] max-sm:px-3 max-sm:text-sm max-sm:leading-5",
-    !enLigne ? "border border-dashed border-bordure-carte bg-transparent text-discret italic" : m.deMoi ? "bg-bleu text-white" : "bg-coque text-texte",
+    !enLigne ? "border border-dashed border-bordure-carte bg-transparent text-discret italic" : m.deMoi ? "bg-bleu text-white" : "bg-panneau text-texte shadow-pastille",
     surligne && "ring-2 ring-bleu ring-offset-2 ring-offset-panneau",
   );
   const items: MenuEntry[] = actions.map((a) => ({
@@ -163,12 +164,12 @@ export function MessageDuFil({
                 aria-label={`Aller au message cité de ${nomAuteur(m.reponse.auteur)}`}
                 className={cn(
                   "focus-etudium mb-1.5 flex min-w-0 cursor-pointer flex-col items-start rounded-champ border-0 border-l-[3px] border-solid px-2.5 py-1.5 text-left not-italic",
-                  m.deMoi ? "border-white/70 bg-white/15 text-white" : "border-bleu bg-panneau/80 text-texte",
+                  m.deMoi ? "border-white/70 bg-white/15 text-white" : "border-bleu bg-page text-texte",
                 )}
               >
                 <span className="text-xs leading-[18px] font-semibold">{nomAuteur(m.reponse.auteur)}</span>
                 <span className="line-clamp-2 text-xs leading-[18px] wrap-anywhere opacity-90">
-                  {m.reponse.supprime ? "Message supprimé" : m.reponse.texte || (m.reponse.image ? "Image" : "")}
+                  {m.reponse.supprime ? "Message supprimé" : m.reponse.texte || (m.reponse.vocal ? "🎤 Note vocale" : m.reponse.image ? "Image" : "")}
                 </span>
               </button>
             )}
@@ -187,6 +188,7 @@ export function MessageDuFil({
                 )}
               </button>
             )}
+            {enLigne && m.vocal && <LecteurVocal dureeMs={m.vocal.dureeMs} ondes={m.vocal.ondes} source={m.vocal.url} mien={m.deMoi} className="w-[min(68vw,300px)] py-1" />}
             {m.supprime ? (
               <span>Message supprimé</span>
             ) : m.retire ? (

@@ -17,7 +17,7 @@ const [S, E, E2] = Array.from({ length: 3 }, () => randomUUID());
 let CA: string; // l'assistance de E
 let GENERAL: string;
 
-type Vocal = { duree_ms: number; ondes: number[] };
+type Vocal = { duree_ms: number; ondes: number[]; chemin?: string };
 type Message = { id: string; texte: string; fichier: { nom: string; format: string; taille: number } | null; vocal: Vocal | null };
 type MessageGroupe = {
   id: string;
@@ -59,7 +59,7 @@ describe("Une note vocale dans un message privé", () => {
     const m = await envoyer(E, "", chemin, 12_400, [0, 40, 100]);
     expect(m).toMatchObject({ texte: "", fichier: { nom: "Note vocale", format: "audio/mp4", taille: 40_000 }, vocal: { duree_ms: 12_400, ondes: [0, 40, 100] } });
     const fil = await en<{ messages: Message[] }>(E, "select public.fil_conversation($1) as r", [CA]);
-    expect(fil.messages.at(-1)?.vocal).toEqual({ duree_ms: 12_400, ondes: [0, 40, 100] });
+    expect(fil.messages.at(-1)?.vocal).toEqual({ chemin, duree_ms: 12_400, ondes: [0, 40, 100] });
     const liste = await en<{ dernier: { vocal: number | null; fichier: string | null } }[]>(E, "select public.mes_conversations('etudiant') as r");
     expect(liste[0].dernier).toMatchObject({ vocal: 12_400, fichier: "Note vocale" });
     const notif = (await banc.db.query<{ texte: string }>("select texte from public.notifications where destinataire = $1 and categorie = 'messages' order by cree_le desc limit 1", [S])).rows[0];

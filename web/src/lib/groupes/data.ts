@@ -17,14 +17,18 @@ const PAGES_MAX = 10;
 
 const echec = (quoi: string, error: Erreur) => new Error(`Lecture ${quoi} impossible : ${error.message ?? error.code}`);
 
-/** Les liens temporaires des images, en un seul appel ; un lien manquant reste null. */
+/** Les liens temporaires des images et des notes vocales (0076), en un seul appel ; un lien manquant reste null. */
 export async function avecImages(supabase: Client, messages: MessageGroupe[]): Promise<MessageGroupe[]> {
-  const chemins = [...new Set(messages.flatMap((m) => (m.image ? [m.image.chemin] : [])))];
+  const chemins = [...new Set(messages.flatMap((m) => [m.vocal?.chemin, m.image?.chemin].filter((c): c is string => Boolean(c))))];
   if (chemins.length === 0) return messages;
   const { data, error } = await supabase.storage.from("groupes").createSignedUrls(chemins, 3600);
   const liens = new Map<string, string>();
   if (!error) for (const lien of data ?? []) if (lien.path && lien.signedUrl && !lien.error) liens.set(lien.path, lien.signedUrl);
-  return messages.map((m) => (m.image ? { ...m, image: { ...m.image, url: liens.get(m.image.chemin) ?? null } } : m));
+  return messages.map((m) => ({
+    ...m,
+    image: m.image ? { ...m.image, url: liens.get(m.image.chemin) ?? null } : null,
+    vocal: m.vocal ? { ...m.vocal, url: liens.get(m.vocal.chemin) ?? null } : null,
+  }));
 }
 
 /** Mes groupes : le Général, ceux de mes parcours, ceux de mes formations. */

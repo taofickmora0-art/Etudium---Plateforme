@@ -9,6 +9,7 @@ import { INDISPONIBLE } from "@/lib/indisponible";
 import { refusSignalement } from "@/lib/moderation/regles";
 import { MOTIFS, type MotifSignalement } from "@/lib/moderation/types";
 import { createClient } from "@/lib/supabase/server";
+import { versOnde, type NoteVocale } from "@/lib/vocal/regles";
 import { versGroupe, versMessage, versResume } from "./conversion";
 import { avecImages, lirePage } from "./data";
 import { analyserApres } from "./moderation";
@@ -92,23 +93,34 @@ async function messageRendu(supabase: Awaited<ReturnType<typeof createClient>>, 
   };
 }
 
+const CHEMIN_IMAGE = /^[0-9a-f-]{36}\/[0-9a-z-]+\.(jpg|jpeg|png|webp)$/i;
+const CHEMIN_VOCAL = /^[0-9a-f-]{36}\/[0-9a-z-]+\.(m4a|webm|ogg|mp3|aac)$/i;
+
 /**
- * Envoie un message : un texte, une image déjà déposée dans le dossier du compte (espace « groupes »), ou les deux ; en
- * réponse à un message, éventuellement. Il paraît tout de suite ; l'analyse automatique, si elle est active, part après.
+ * Envoie un message : un texte, une image déjà déposée dans le dossier du compte (espace « groupes »), ou les deux ; ou
+ * une note vocale (le fichier audio déposé, sa durée et son onde : migration 0076) ; en réponse à un message,
+ * éventuellement. Il paraît tout de suite ; l'analyse automatique, si elle est active, part après (jamais pour une note).
  */
 export async function envoyerMessageGroupe(
   groupeId: string,
   texteMessage: string,
-  image: string | null,
+  fichier: string | null,
   reponseA: string | null,
+  vocal: NoteVocale | null = null,
 ): Promise<{ ok: true; message: MessageGroupe } | Refus> {
   const supabase = await session();
   if (!supabase) return { ok: false, message: SESSION_EXPIREE };
   if (!UUID.test(groupeId) || typeof texteMessage !== "string" || texteMessage.length > TEXTE_MAX + 200 || (reponseA !== null && !UUID.test(reponseA))) {
     return { ok: false, message: ENVOI_ECHEC };
   }
-  if (image !== null && (typeof image !== "string" || !/^[0-9a-f-]{36}\/[0-9a-z-]+\.(jpg|jpeg|png|webp)$/i.test(image))) return { ok: false, message: ENVOI_ECHEC };
-  const { data, error } = await supabase.rpc("envoyer_message_groupe", { p_groupe: groupeId, p_texte: texteMessage, p_image: image, p_reponse_a: reponseA });
+  if (fichier !== null && (typeof fichier !== "string" || !(vocal ? CHEMIN_VOCAL : CHEMIN_IMAGE).test(fichier))) return { ok: false, message: ENVOI_ECHEC };
+  const { data, error } = await supabase.rpc("envoyer_message_groupe", {
+    p_groupe: groupeId,
+    p_texte: texteMessage,
+    p_image: fichier,
+    p_reponse_a: reponseA,
+    ...(vocal && fichier ? { p_duree_ms: Math.round(vocal.dureeMs), p_ondes: versOnde(vocal.ondes) } : {}),
+  });
   if (error) return refus(error, ENVOI_ECHEC);
   const rendu = await messageRendu(supabase, data);
   if (!rendu) return { ok: false, message: ENVOI_ECHEC };

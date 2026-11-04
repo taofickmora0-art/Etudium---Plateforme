@@ -9,9 +9,10 @@ vi.mock("@/lib/auth/current-user", () => ({ getShellUser: () => getShellUser(), 
 vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 
 const { lireConversations, lireFil, lireContacts, MIGRATION_MESSAGES } = await import("@/lib/messages/data");
-const { envoyerMessage, ouvrirConversation, contacterEquipe, compterMessagesNonLus, lienFichierMessage, relireFil, chercherContacts } = await import(
+const { envoyerMessage, ouvrirConversation, contacterEquipe, compterMessagesNonLus, lienFichierMessage, lienNoteVocale, relireFil, chercherContacts } = await import(
   "@/lib/messages/actions"
 );
+const { versConversation, versMessage } = await import("@/lib/messages/conversion");
 const { MESSAGE_MAX_OCTETS, formatDeMessage, LIBELLE_FORMATS_MESSAGE } = await import("@/lib/messages/fichiers");
 const { SUJETS_ASSISTANCE } = await import("@/lib/messages/types");
 const { photoPublicUrl } = await import("@/lib/profile/photo-url");
@@ -51,7 +52,7 @@ describe("Lire", () => {
           id: C,
           avec: { nom: "Dr Mireille Adjovi", photoUrl: photoPublicUrl(PHOTO), role: "Formateur·rice", equipe: false },
           formation: { titre: "Maîtriser Microsoft Excel", slug: "excel" },
-          dernier: { texte: "Merci !", fichier: null, deMoi: true, creeLe: "2026-10-15T14:05:00Z" },
+          dernier: { texte: "Merci !", fichier: null, vocal: null, deMoi: true, creeLe: "2026-10-15T14:05:00Z" },
           nonLu: false,
         },
         { id: "c2", avec: { nom: "Équipe Étudium", photoUrl: null, role: "Assistance", equipe: true }, formation: null, dernier: null, nonLu: true },
@@ -109,6 +110,31 @@ describe("Écrire", () => {
     expect(r).toMatchObject({ ok: true, message: { id: M, deMoi: true } });
   });
 
+  it("envoyer une note vocale (0076) : sa durée et son onde partent ; un message ordinaire n'en dit rien", async () => {
+    faux.repondre("rpc.envoyer_message", {
+      data: { ...MESSAGE, texte: "", fichier: { nom: "Note vocale", format: "audio/mp4", taille: 40000 }, vocal: { chemin: "moi/x/n.m4a", duree_ms: 12400, ondes: [0, 40, 100] }, de_moi: true },
+    });
+    faux.repondre("storage.messages.createSignedUrls", { data: [{ path: "moi/x/n.m4a", signedUrl: "https://s/n?token=t", error: null }] });
+    const r = await envoyerMessage(C, "", { chemin: "moi/x/n.m4a", nom: "Note vocale" }, { dureeMs: 12400, ondes: [0, 40, 100] });
+    expect(faux.de("rpc", "envoyer_message")[0].valeurs).toEqual({
+      p_conversation: C,
+      p_texte: "",
+      p_fichier: "moi/x/n.m4a",
+      p_nom: "Note vocale",
+      p_duree_ms: 12400,
+      p_ondes: [0, 40, 100],
+    });
+    expect(r).toMatchObject({ ok: true, message: { vocal: { dureeMs: 12400, ondes: [0, 40, 100], url: "https://s/n?token=t" } } });
+    expect(faux.de("storage.messages", "createSignedUrls")[0].valeurs).toEqual([["moi/x/n.m4a"], 3600]);
+  });
+
+  it("la note vocale lue : dans le fil et dans le dernier message de la liste ; rien d'inventé sans elle", () => {
+    expect(versMessage({ ...MESSAGE, vocal: { chemin: "f/x/n.m4a", duree_ms: 3000, ondes: [10, "x", 200, -1] } }).vocal).toEqual({ chemin: "f/x/n.m4a", url: null, dureeMs: 3000, ondes: [10, 0, 100, 0] });
+    expect(versMessage(MESSAGE).vocal).toBeNull();
+    expect(versConversation({ ...RESUME, dernier: { ...RESUME.dernier, texte: "", fichier: "Note vocale", vocal: 12400 } }).dernier).toMatchObject({ vocal: 12400 });
+    expect(versConversation(RESUME).dernier).toMatchObject({ vocal: null });
+  });
+
   it("les refus de la base s'affichent ; la session expirée aussi", async () => {
     faux.repondre("rpc.envoyer_message", { error: { code: "P0001", message: "Écrivez un message ou joignez un fichier." } });
     expect(await envoyerMessage(C, "", null)).toEqual({ ok: false, message: "Écrivez un message ou joignez un fichier." });
@@ -154,6 +180,14 @@ describe("Pastille et pièces jointes", () => {
     expect(faux.de("storage.messages", "createSignedUrl")[0].valeurs).toEqual(["f/x/Tableau ventes.xlsx", 60]);
     faux.repondre("rpc.fichier_message", { data: null });
     expect(await lienFichierMessage(M)).toEqual({ erreur: "Ce fichier n’est pas accessible." });
+  });
+
+  it("le lien d'écoute d'une note vocale, signé une heure, sans téléchargement forcé", async () => {
+    faux.repondre("rpc.fichier_message", { data: { chemin: "f/x/n.m4a", nom: "Note vocale" } });
+    faux.repondre("storage.messages.createSignedUrl", { data: { signedUrl: "https://s/n?token=t" } });
+    expect(await lienNoteVocale(M)).toEqual({ url: "https://s/n?token=t" });
+    expect(faux.de("storage.messages", "createSignedUrl")[0].valeurs).toEqual(["f/x/n.m4a", 3600]);
+    expect(await lienNoteVocale("pas-un-uuid")).toEqual({ erreur: "Ce fichier n’est pas accessible." });
   });
 
   it("les formats des rendus, 10 Mo au plus", () => {

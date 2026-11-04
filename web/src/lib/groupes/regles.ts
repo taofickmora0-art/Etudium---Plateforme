@@ -1,5 +1,6 @@
 import { nomCourt } from "@/lib/communaute/regles";
 import { heure } from "@/lib/notifications/temps";
+import { libelleVocal } from "@/lib/vocal/regles";
 import type { EspaceGroupes, MessageGroupe, ResumeGroupe } from "./types";
 
 // Les règles des groupes (migration 0075), sans dépendance serveur : les écrans s'en servent aussi. La base applique les
@@ -26,9 +27,9 @@ export function refusImage(type: string | null, taille: number): string | null {
   return null;
 }
 
-/** Son message, en ligne, de moins de 15 minutes. */
-export function peutModifier(m: Pick<MessageGroupe, "deMoi" | "supprime" | "retire" | "creeLe" | "texte">, maintenant: Date): boolean {
-  return m.deMoi && !m.supprime && !m.retire && maintenant.getTime() - Date.parse(m.creeLe) < MODIFIABLE_MS;
+/** Son message, en ligne, de moins de 15 minutes ; une note vocale ne se modifie pas. */
+export function peutModifier(m: Pick<MessageGroupe, "deMoi" | "supprime" | "retire" | "creeLe" | "texte" | "vocal">, maintenant: Date): boolean {
+  return m.deMoi && !m.supprime && !m.retire && !m.vocal && maintenant.getTime() - Date.parse(m.creeLe) < MODIFIABLE_MS;
 }
 
 /** « Awa K. » ; « Membre d’Étudium » sans prénom. */
@@ -40,10 +41,20 @@ export function extrait(texte: string, max = 90): string {
   return t.length <= max ? t : `${t.slice(0, max - 1).trimEnd()}…`;
 }
 
-/** Ce que la liste dit du dernier message : « Vous : … », « Awa K. : … », « Message supprimé », « Image ». */
+/** Ce que la liste dit du dernier message : « Vous : … », « Awa K. : … », « Message supprimé », « Image », la note vocale. */
 export function apercuDernier(d: NonNullable<ResumeGroupe["dernier"]>): string {
   const qui = d.deMoi ? "Vous" : nomAuteur(d.auteur);
-  const quoi = d.supprime ? "Message supprimé" : d.retire ? "Message retiré par la modération" : d.texte ? extrait(d.texte, 80) : d.image ? "Image" : "";
+  const quoi = d.supprime
+    ? "Message supprimé"
+    : d.retire
+      ? "Message retiré par la modération"
+      : d.texte
+        ? extrait(d.texte, 80)
+        : d.vocal !== null
+          ? `🎤 ${libelleVocal(d.vocal)}`
+          : d.image
+            ? "Image"
+            : "";
   return `${qui} : ${quoi}`;
 }
 

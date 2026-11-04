@@ -1,5 +1,7 @@
+import type { NoteVocale } from "@/lib/vocal/regles";
+
 // Les groupes de discussion (migration 0075, spec du 3 novembre 2026) : le Général, un groupe par parcours, un groupe par
-// formation (activé par son formateur ou l'équipe des contenus).
+// formation (activé par son formateur ou l'équipe des contenus). Les notes vocales : migration 0076.
 
 /** Les six réactions, dans leur ordre d'affichage (reactions_groupes, en base). */
 export const REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"] as const;
@@ -20,6 +22,8 @@ export type DernierMessage = {
   deMoi: boolean;
   texte: string;
   image: boolean;
+  /** La durée de la note vocale (ms) ; null pour un autre message. */
+  vocal: number | null;
   supprime: boolean;
   retire: boolean;
   creeLe: string;
@@ -42,7 +46,10 @@ export type ResumeGroupe = {
 export type ReactionMessage = { emoji: string; nombre: number; moi: boolean };
 
 /** Le message cité par une réponse. */
-export type Citation = { id: string; auteur: { prenom: string; nom: string }; texte: string; image: boolean; supprime: boolean };
+export type Citation = { id: string; auteur: { prenom: string; nom: string }; texte: string; image: boolean; vocal: boolean; supprime: boolean };
+
+/** La note vocale d'un message (espace privé « groupes »), avec un lien d'écoute temporaire. */
+export type VocalGroupe = NoteVocale & { chemin: string; type: string; url: string | null };
 
 export type MessageGroupe = {
   id: string;
@@ -52,6 +59,8 @@ export type MessageGroupe = {
   texte: string;
   /** L'image (espace privé « groupes »), avec un lien temporaire ; null sans image (ou message supprimé, retiré). */
   image: { chemin: string; type: string; url: string | null } | null;
+  /** La note vocale (sans texte) ; null pour un autre message (ou supprimé, retiré). */
+  vocal: VocalGroupe | null;
   reponse: Citation | null;
   creeLe: string;
   modifieLe: string | null;

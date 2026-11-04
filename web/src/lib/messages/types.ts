@@ -1,4 +1,7 @@
-// La messagerie (lot 5, étape A ; spec de la fin du lot 5, Q1 à Q6) : ce que l'appli lit de la base (migration 0035).
+import type { NoteVocale } from "@/lib/vocal/regles";
+
+// La messagerie (lot 5, étape A ; spec de la fin du lot 5, Q1 à Q6) : ce que l'appli lit de la base (migration 0035 ;
+// les notes vocales, 0076).
 
 /** L'espace d'où l'on regarde : l'étudiant, le formateur, ou l'équipe (l'assistance). */
 export type EspaceMessages = "etudiant" | "formateur" | "equipe";
@@ -14,15 +17,21 @@ export type ConversationResume = {
   avec: Interlocuteur;
   /** La formation qui relie l'étudiant au formateur (« Voir la formation ») ; null pour l'assistance. */
   formation: { titre: string; slug: string } | null;
-  /** Le dernier message : « Vous : Merci ! », ou le nom de sa pièce jointe. */
-  dernier: { texte: string; fichier: string | null; deMoi: boolean; creeLe: string } | null;
+  /** Le dernier message : « Vous : Merci ! », le nom de sa pièce jointe, ou la durée de sa note vocale (ms). */
+  dernier: { texte: string; fichier: string | null; vocal: number | null; deMoi: boolean; creeLe: string } | null;
   nonLu: boolean;
 };
 
 export type PieceJointe = { nom: string; format: string; taille: number };
 
-/** Un message du fil : « de mon côté » (bulle à droite) ou non ; `auteur` : le membre de l'équipe qui a répondu. */
-export type Message = { id: string; texte: string; fichier: PieceJointe | null; deMoi: boolean; auteur: string | null; creeLe: string };
+/** Une note vocale du fil : sa durée, son onde, son chemin (espace « messages ») et son lien d'écoute d'une heure. */
+export type VocalMessage = NoteVocale & { chemin: string; url: string | null };
+
+/**
+ * Un message du fil : « de mon côté » (bulle à droite) ou non ; `auteur` : le membre de l'équipe qui a répondu. Une note
+ * vocale est une pièce jointe audio (`fichier`) avec sa durée et son onde (`vocal`).
+ */
+export type Message = { id: string; texte: string; fichier: PieceJointe | null; vocal: VocalMessage | null; deMoi: boolean; auteur: string | null; creeLe: string };
 
 /** Le fil d'une conversation : ses 50 derniers messages, du plus ancien au plus récent. */
 export type Fil = { conversation: ConversationResume; messages: Message[]; plusAnciens: boolean };

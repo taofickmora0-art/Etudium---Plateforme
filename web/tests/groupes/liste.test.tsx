@@ -41,7 +41,7 @@ const resume = (o: Partial<ResumeGroupe>): ResumeGroupe => ({
   ...o,
 });
 const GROUPES = [
-  resume({ dernier: { id: "m", auteur: { prenom: "Awa", nom: "Kpadé" }, deMoi: false, texte: "Bienvenue à tous", image: false, supprime: false, retire: false, creeLe: ici }, nonLus: 3 }),
+  resume({ dernier: { id: "m", auteur: { prenom: "Awa", nom: "Kpadé" }, deMoi: false, texte: "Bienvenue à tous", image: false, vocal: null, supprime: false, retire: false, creeLe: ici }, nonLus: 3 }),
   resume({ slug: "reussite-academique", nom: "Réussite académique", type: "parcours", couleur: "academique", coupe: true, nonLus: 2 }),
   resume({ slug: "excel", nom: "Excel avancé", type: "formation", couleur: "academique" }),
   resume({ slug: "canva", nom: "Canva", type: "formation", couleur: "digital", actif: false }),
@@ -85,7 +85,7 @@ describe("La liste de mes groupes", () => {
 
   it("un message dans l'un d'eux : la liste se relit", async () => {
     vi.useFakeTimers();
-    chargerMesGroupes.mockResolvedValue({ ok: true, groupes: [resume({ nonLus: 7, dernier: { id: "x", auteur: { prenom: "Koffi", nom: "Dossou" }, deMoi: false, texte: "Du nouveau", image: false, supprime: false, retire: false, creeLe: ici } })] });
+    chargerMesGroupes.mockResolvedValue({ ok: true, groupes: [resume({ nonLus: 7, dernier: { id: "x", auteur: { prenom: "Koffi", nom: "Dossou" }, deMoi: false, texte: "Du nouveau", image: false, vocal: null, supprime: false, retire: false, creeLe: ici } })] });
     render(<ListeGroupes espace="etudiant" initiaux={GROUPES.slice(0, 1)} />);
     act(() => signalerGroupe(GROUPES[0].id, "message"));
     await act(async () => {

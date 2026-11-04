@@ -1,5 +1,6 @@
 import { liste, texte, un, type Ligne } from "@/lib/contenus/lecture";
 import { photoPublicUrl } from "@/lib/profile/photo-url";
+import { versDuree, versNoteVocale } from "@/lib/vocal/regles";
 import type { Badge, Citation, CouleurGroupe, FilGroupe, Groupe, GroupeDeFormation, MessageGroupe, RaisonFermeture, ResumeGroupe, TypeGroupe } from "./types";
 
 // Ce que rend la base (migration 0075, en JSON) mis aux formes de l'appli.
@@ -32,6 +33,7 @@ export function versResume(l: Ligne): ResumeGroupe {
           deMoi: d.de_moi === true,
           texte: texte(d.texte),
           image: d.image === true,
+          vocal: versDuree(d.vocal),
           supprime: d.supprime === true,
           retire: d.retire === true,
           creeLe: texte(d.cree_le),
@@ -42,12 +44,14 @@ export function versResume(l: Ligne): ResumeGroupe {
 
 function versCitation(l: Ligne | null): Citation | null {
   if (!l || !texte(l.id)) return null;
-  return { id: texte(l.id), auteur: nom(un(l.auteur)), texte: texte(l.texte), image: l.image === true, supprime: l.supprime === true };
+  return { id: texte(l.id), auteur: nom(un(l.auteur)), texte: texte(l.texte), image: l.image === true, vocal: l.vocal === true, supprime: l.supprime === true };
 }
 
 export function versMessage(l: Ligne): MessageGroupe {
   const auteur = un(l.auteur);
   const image = un(l.image);
+  const vocal = un(l.vocal);
+  const note = vocal && texte(vocal.chemin) ? versNoteVocale(vocal) : null;
   return {
     id: texte(l.id),
     groupeId: texte(l.groupe_id),
@@ -55,6 +59,7 @@ export function versMessage(l: Ligne): MessageGroupe {
     deMoi: l.de_moi === true,
     texte: texte(l.texte),
     image: image && texte(image.chemin) ? { chemin: texte(image.chemin), type: texte(image.type), url: null } : null,
+    vocal: vocal && note ? { ...note, chemin: texte(vocal.chemin), type: texte(vocal.type), url: null } : null,
     reponse: versCitation(un(l.reponse)),
     creeLe: texte(l.cree_le),
     modifieLe: texteOuNull(l.modifie_le),

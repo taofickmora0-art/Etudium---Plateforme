@@ -32,7 +32,7 @@ const conversation = (id: string, nom: string, dernier: Partial<NonNullable<Conv
   id,
   avec: { nom, photoUrl: null, role: "Étudiant·e", equipe: false },
   formation: { titre: "Maîtriser Microsoft Excel", slug: "excel" },
-  dernier: { texte: "", fichier: null, deMoi: false, creeLe: "2026-11-03T08:30:00Z", ...dernier },
+  dernier: { texte: "", fichier: null, vocal: null, deMoi: false, creeLe: "2026-11-03T08:30:00Z", ...dernier },
   nonLu,
 });
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Delete02Icon, Image01Icon, Pdf01Icon } from "@hugeicons/core-free-icons";
+import { Delete02Icon, Image01Icon, Mic01Icon, Pdf01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Icon } from "@/components/ui/Icon";
@@ -94,7 +94,7 @@ export function ElementModeration({
       </div>
       {e.pieceJointe && (
         <div className="flex min-w-0 items-center gap-2 text-sm leading-[22px]">
-          <Icon icon={e.pieceJointe.type === "application/pdf" ? Pdf01Icon : Image01Icon} size={18} className="flex-none text-discret" />
+          <Icon icon={e.pieceJointe.type === "application/pdf" ? Pdf01Icon : e.pieceJointe.type.startsWith("audio/") ? Mic01Icon : Image01Icon} size={18} className="flex-none text-discret" />
           {e.pieceJointe.url ? (
             <a href={e.pieceJointe.url} target="_blank" rel="noopener noreferrer" className={`${LIEN} min-w-0 truncate`}>
               {e.pieceJointe.nom}

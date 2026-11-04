@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cheminFormateur } from "@/lib/auth/espace-formateur";
-import { versGroupe, versMessage } from "@/lib/groupes/conversion";
+import { versGroupe, versMessage, versResume } from "@/lib/groupes/conversion";
 import { apercuDernier, grouperFil, libelleJour, momentListe, peutModifier, refusImage, totalNonLus } from "@/lib/groupes/regles";
 import type { MessageGroupe } from "@/lib/groupes/types";
 
@@ -13,6 +13,7 @@ const message = (o: Omit<Partial<MessageGroupe>, "auteur"> & { auteur?: Partial<
   deMoi: false,
   texte: "Bonjour",
   image: null,
+  vocal: null,
   reponse: null,
   creeLe: "2026-11-03T14:00:00+01:00",
   modifieLe: null,
@@ -69,6 +70,8 @@ describe("Ce qu'on peut faire d'un message", () => {
     expect(peutModifier(message({ deMoi: true, creeLe: "2026-11-03T14:40:00+01:00" }), MAINTENANT)).toBe(false);
     expect(peutModifier(message({ deMoi: false, creeLe: "2026-11-03T14:50:00+01:00" }), MAINTENANT)).toBe(false);
     expect(peutModifier(message({ deMoi: true, supprime: true, creeLe: "2026-11-03T14:50:00+01:00" }), MAINTENANT)).toBe(false);
+    const vocal = { chemin: "a/n.webm", type: "audio/webm", url: null, dureeMs: 3000, ondes: [] };
+    expect(peutModifier(message({ deMoi: true, texte: "", vocal, creeLe: "2026-11-03T14:50:00+01:00" }), MAINTENANT)).toBe(false);
   });
 
   it("une image : JPEG, PNG ou WebP, 5 Mo au plus", () => {
@@ -82,11 +85,12 @@ describe("Ce qu'on peut faire d'un message", () => {
 
 describe("La liste et le menu", () => {
   it("le dernier message : « Vous », le nom court, « Message supprimé », « Image »", () => {
-    const d = { id: "m", auteur: { prenom: "Awa", nom: "Kpadé" }, deMoi: false, texte: "Bonjour à tous", image: false, supprime: false, retire: false, creeLe: "" };
+    const d = { id: "m", auteur: { prenom: "Awa", nom: "Kpadé" }, deMoi: false, texte: "Bonjour à tous", image: false, vocal: null, supprime: false, retire: false, creeLe: "" };
     expect(apercuDernier(d)).toBe("Awa K. : Bonjour à tous");
     expect(apercuDernier({ ...d, deMoi: true })).toBe("Vous : Bonjour à tous");
     expect(apercuDernier({ ...d, texte: "", supprime: true })).toBe("Awa K. : Message supprimé");
     expect(apercuDernier({ ...d, texte: "", image: true })).toBe("Awa K. : Image");
+    expect(apercuDernier({ ...d, texte: "", vocal: 12_400 })).toBe("Awa K. : 🎤 Note vocale (0:12)");
   });
 
   it("le total du menu : les groupes actifs qui ne sont pas coupés", () => {
@@ -118,6 +122,25 @@ describe("Ce que rend la base", () => {
       epingle: true,
     });
     expect(m).toMatchObject({ auteur: { badge: "formateur" }, reponse: { id: "m0", auteur: { prenom: "Koffi" } }, reactions: [{ emoji: "👍", nombre: 2, moi: true }], epingle: true });
+  });
+
+  it("une note vocale (0076) : en « vocal », jamais en image ; la réponse citée et la liste le savent", () => {
+    const m = versMessage({
+      id: "m2",
+      groupe_id: "g1",
+      auteur: { id: "a", prenom: "Koffi", nom: "Dossou", photo: null, badge: null },
+      texte: "",
+      image: null,
+      vocal: { chemin: "a/n.webm", type: "audio/webm", duree_ms: 4200, ondes: [3, 60] },
+      reponse: { id: "m1", auteur: { prenom: "Awa", nom: "Kpadé" }, texte: "", image: false, vocal: true, supprime: false },
+      cree_le: "2026-11-03T10:00:00Z",
+    });
+    expect(m.vocal).toEqual({ chemin: "a/n.webm", type: "audio/webm", url: null, dureeMs: 4200, ondes: [3, 60] });
+    expect(m.image).toBeNull();
+    expect(m.reponse).toMatchObject({ vocal: true, image: false });
+    expect(versMessage({ id: "m3", texte: "Salut" }).vocal).toBeNull();
+    const resume = versResume({ id: "g", slug: "general", nom: "Général", dernier: { id: "m2", auteur: { prenom: "Koffi", nom: "Dossou" }, texte: "", image: false, vocal: 4200, cree_le: "" } });
+    expect(resume.dernier).toMatchObject({ vocal: 4200, image: false });
   });
 
   it("un groupe fermé garde sa raison ; un groupe inconnu est null", () => {

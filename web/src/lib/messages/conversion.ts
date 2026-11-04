@@ -1,5 +1,6 @@
 import { liste, texte, un, type Ligne } from "@/lib/contenus/lecture";
 import { photoPublicUrl } from "@/lib/profile/photo-url";
+import { versDuree, versNoteVocale } from "@/lib/vocal/regles";
 import type { Contact, ConversationResume, Fil, Message } from "./types";
 
 // Les réponses de la base (migration 0035) dans les formes de l'appli.
@@ -17,7 +18,13 @@ export function versConversation(c: Ligne): ConversationResume {
     avec: { nom: texte(avec.nom), photoUrl: photoPublicUrl(texte(avec.photo) || null), role: texte(avec.role), equipe: avec.equipe === true },
     formation: formation && texte(formation.titre) ? { titre: texte(formation.titre), slug: texte(formation.slug) } : null,
     dernier: dernier
-      ? { texte: texte(dernier.texte), fichier: texte(dernier.fichier) || null, deMoi: dernier.de_moi === true, creeLe: texte(dernier.cree_le) }
+      ? {
+          texte: texte(dernier.texte),
+          fichier: texte(dernier.fichier) || null,
+          vocal: versDuree(dernier.vocal),
+          deMoi: dernier.de_moi === true,
+          creeLe: texte(dernier.cree_le),
+        }
       : null,
     nonLu: c.non_lu === true,
   };
@@ -25,10 +32,13 @@ export function versConversation(c: Ligne): ConversationResume {
 
 export function versMessage(m: Ligne): Message {
   const fichier = un(m.fichier);
+  const vocal = un(m.vocal);
+  const note = fichier ? versNoteVocale(vocal) : null;
   return {
     id: texte(m.id),
     texte: texte(m.texte),
     fichier: fichier ? { nom: texte(fichier.nom), format: texte(fichier.format), taille: nombre(fichier.taille) } : null,
+    vocal: note ? { ...note, chemin: texte(vocal?.chemin), url: null } : null,
     deMoi: m.de_moi === true,
     auteur: texte(m.auteur) || null,
     creeLe: texte(m.cree_le),

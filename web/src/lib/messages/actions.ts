@@ -6,7 +6,9 @@ import { estFonctionAbsente, liste, texte, un } from "@/lib/contenus/lecture";
 import { viderFileApres } from "@/lib/envois/declencher";
 import { INDISPONIBLE } from "@/lib/indisponible";
 import { createClient } from "@/lib/supabase/server";
+import { versOnde, type NoteVocale } from "@/lib/vocal/regles";
 import { CONTACT_EQUIPE, versContact, versConversation, versFil, versMessage } from "./conversion";
+import { avecNotesVocales, filAvecNotesVocales } from "./vocaux";
 import { ESPACES_MESSAGES, SUJETS_ASSISTANCE, type Contact, type ConversationResume, type EspaceMessages, type Fil, type Message } from "./types";
 
 // Écrire et relire (migration 0035) : la base vérifie le droit d'écrire, le fichier et la cadence, et prévient l'autre
@@ -41,8 +43,17 @@ export async function ouvrirConversation(avec: string | null): Promise<{ ok: tru
   return UUID.test(id) ? { ok: true, id } : { ok: false, message: OUVERTURE_ECHEC };
 }
 
-/** Envoie un message : un texte, une pièce jointe déjà déposée dans le dossier du compte (espace « messages »), ou les deux. */
-export async function envoyerMessage(conversationId: string, texteMessage: string, fichier: { chemin: string; nom: string } | null): Promise<{ ok: true; message: Message } | Refus> {
+/**
+ * Envoie un message : un texte, une pièce jointe déjà déposée dans le dossier du compte (espace « messages »), ou les
+ * deux ; ou une note vocale (le fichier audio déposé, avec sa durée et son onde : migration 0076). Sans note vocale,
+ * l'appel reste celui de la 0035.
+ */
+export async function envoyerMessage(
+  conversationId: string,
+  texteMessage: string,
+  fichier: { chemin: string; nom: string } | null,
+  vocal: NoteVocale | null = null,
+): Promise<{ ok: true; message: Message } | Refus> {
   if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };
   if (!UUID.test(conversationId) || typeof texteMessage !== "string") return { ok: false, message: ENVOI_ECHEC };
   const supabase = await createClient();
@@ -51,12 +62,14 @@ export async function envoyerMessage(conversationId: string, texteMessage: strin
     p_texte: texteMessage,
     p_fichier: fichier ? fichier.chemin : null,
     p_nom: fichier ? fichier.nom : null,
+    ...(vocal && fichier ? { p_duree_ms: Math.round(vocal.dureeMs), p_ondes: versOnde(vocal.ondes) } : {}),
   });
   if (error) return refus(error, ENVOI_ECHEC);
   const brut = un(data);
   if (!brut) return { ok: false, message: ENVOI_ECHEC };
   viderFileApres();
-  return { ok: true, message: versMessage(brut) };
+  const [message] = await avecNotesVocales(supabase, [versMessage(brut)]);
+  return { ok: true, message };
 }
 
 /** « Contacter l'équipe » (page Aide) : ouvre l'assistance et écrit « Sujet : … » puis le message. */
@@ -75,8 +88,9 @@ export async function relireFil(id: string, avant?: string): Promise<Fil | null>
   if (!UUID.test(id) || !(await getShellUser())) return null;
   const date = typeof avant === "string" && !Number.isNaN(Date.parse(avant)) ? avant : null;
   try {
-    const { data, error } = await (await createClient()).rpc("fil_conversation", date ? { p_conversation: id, p_avant: date } : { p_conversation: id });
-    return error ? null : versFil(data);
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("fil_conversation", date ? { p_conversation: id, p_avant: date } : { p_conversation: id });
+    return error ? null : await filAvecNotesVocales(supabase, versFil(data));
   } catch {
     return null;
   }
@@ -123,6 +137,18 @@ export async function compterMessagesNonLus(espace: EspaceMessages): Promise<num
   } catch {
     return 0;
   }
+}
+
+/** Le lien d'écoute d'une note vocale (participants seulement), valable une heure, sans téléchargement forcé. */
+export async function lienNoteVocale(messageId: string): Promise<{ url: string } | { erreur: string }> {
+  if (!UUID.test(messageId)) return { erreur: FICHIER_INACCESSIBLE };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fichier_message", { p_message: messageId });
+  const chemin = texte((error ? null : un(data))?.chemin);
+  if (!chemin) return { erreur: FICHIER_INACCESSIBLE };
+  const lien = await supabase.storage.from("messages").createSignedUrl(chemin, 3600);
+  const url = lien.error ? "" : texte(lien.data?.signedUrl);
+  return url ? { url } : { erreur: LIEN_ECHEC };
 }
 
 /** Le lien de téléchargement d'une pièce jointe (participants seulement), valable 60 s, avec son nom. */

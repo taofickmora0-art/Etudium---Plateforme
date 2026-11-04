@@ -7,14 +7,19 @@ import { useTempsReel } from "@/components/temps-reel/evenements";
 import { Button, buttonVariants } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { IconButton } from "@/components/ui/IconButton";
+import { useClavier } from "@/components/ui/useClavier";
+import { BarreEnregistrement, BoutonMicro, useVocalPossible } from "@/components/vocal/Enregistrement";
+import { LecteurVocal } from "@/components/vocal/LecteurVocal";
+import { useEnregistreurVocal, type NoteEnregistree } from "@/components/vocal/useEnregistreurVocal";
 import { cn } from "@/lib/cn";
 import { tailleLisible } from "@/lib/admin/fichiers";
 import { identifiantAleatoire } from "@/lib/identifiant";
-import { envoyerMessage, lienFichierMessage, relireFil } from "@/lib/messages/actions";
+import { envoyerMessage, lienFichierMessage, lienNoteVocale, relireFil } from "@/lib/messages/actions";
 import { ACCEPT_MESSAGE, formatDeMessage, MESSAGE_MAX_OCTETS } from "@/lib/messages/fichiers";
 import type { EspaceMessages, Fil, Message } from "@/lib/messages/types";
 import { grouperParJour, heure } from "@/lib/notifications/temps";
 import { createClient } from "@/lib/supabase/client";
+import { deposerNoteVocale } from "@/lib/vocal/depot";
 import { AvatarInterlocuteur } from "./AvatarInterlocuteur";
 import { rafraichirMessagesNonLus } from "./useMessagesNonLus";
 
@@ -37,7 +42,13 @@ function fusionner(serveur: Message[], locaux: Message[]): Message[] {
   return [...serveur, ...enPlus].sort((a, b) => a.creeLe.localeCompare(b.creeLe));
 }
 
-/** Une bulle (NdMessages) : la sienne en bleu à droite, celle de l'autre en gris-bleu à gauche ; sa pièce jointe dessous. */
+/** Le lien d'écoute d'une note vocale, demandé au premier appui quand le serveur n'a pas pu le signer avec le fil. */
+const ecouter = (id: string) => () => lienNoteVocale(id).then((r) => ("url" in r ? r.url : null), () => null);
+
+/**
+ * Une bulle (NdMessages) : la sienne en bleu à droite, celle de l'autre en blanc à gauche ; sa pièce jointe dessous ; une
+ * note vocale se lit dans la bulle.
+ */
 function Bulle({ message }: { message: Message }) {
   const [erreur, setErreur] = useState<string | null>(null);
   const signature = message.auteur ? `${message.auteur} · ${heure(message.creeLe)}` : message.deMoi ? `Vous · ${heure(message.creeLe)}` : heure(message.creeLe);
@@ -53,13 +64,18 @@ function Bulle({ message }: { message: Message }) {
         <div
           className={cn(
             "box-border max-w-[min(100%,460px)] rounded-carte px-3.5 py-2.5 text-sm leading-[22px] whitespace-pre-line text-pretty [overflow-wrap:anywhere]",
-            message.deMoi ? "bg-bleu text-white" : "bg-coque text-texte",
+            message.deMoi ? "bg-bleu text-white" : "bg-panneau text-texte shadow-pastille",
           )}
         >
           {message.texte}
         </div>
       )}
-      {message.fichier && (
+      {message.vocal && message.fichier && (
+        <div className={cn("box-border w-[min(100%,340px)] rounded-carte px-3 py-2.5", message.deMoi ? "bg-bleu" : "bg-panneau shadow-pastille")}>
+          <LecteurVocal dureeMs={message.vocal.dureeMs} ondes={message.vocal.ondes} source={message.vocal.url ?? ecouter(message.id)} mien={message.deMoi} />
+        </div>
+      )}
+      {message.fichier && !message.vocal && (
         <button
           type="button"
           onClick={() => void telecharger()}
@@ -86,8 +102,9 @@ function Bulle({ message }: { message: Message }) {
 }
 
 /**
- * Une conversation (NdMessages, colonne de droite) : l'en-tête, les messages par jour, la zone de saisie. Relue toutes
- * les 10 s tant que l'onglet est visible ; une relecture qui échoue ne change rien à l'écran.
+ * Une conversation (volet de droite des Messages) : l'en-tête, les messages par jour, la zone de saisie, avec la note
+ * vocale (le micro quand le champ est vide). Relue toutes les 10 s tant que l'onglet est visible ; une relecture qui
+ * échoue ne change rien à l'écran. Sur téléphone, le champ reste au-dessus du clavier.
  */
 export function FilConversation({
   espace,
@@ -113,6 +130,9 @@ export function FilConversation({
   const locaux = useRef<Message[]>([]);
   const fin = useRef<HTMLDivElement>(null);
   const champ = useRef<HTMLTextAreaElement>(null);
+  const vocalPossible = useVocalPossible();
+  const enregistreur = useEnregistreurVocal();
+  const clavier = useClavier(true);
 
   // L'ouverture a marqué la conversation lue : la pastille du menu se relit.
   useEffect(() => {
@@ -168,6 +188,13 @@ export function FilConversation({
     setChoisi({ fichier, format });
   }
 
+  /** Le message vient de partir : il paraît, la liste de gauche le sait. */
+  function parti(message: Message) {
+    locaux.current = [...locaux.current, message];
+    setMessages((avant) => (avant.some((m) => m.id === message.id) ? avant : [...avant, message]));
+    onEnvoye(message);
+  }
+
   /** Dépose la pièce jointe (dossier du compte), puis envoie ; un refus garde le texte et retire le fichier déposé. */
   async function envoyer(event?: FormEvent) {
     event?.preventDefault();
@@ -192,12 +219,33 @@ export function FilConversation({
         if (piece) await supabase.storage.from("messages").remove([piece.chemin]).catch(() => undefined);
         return setErreur(reponse.message);
       }
-      locaux.current = [...locaux.current, reponse.message];
-      setMessages((avant) => (avant.some((m) => m.id === reponse.message.id) ? avant : [...avant, reponse.message]));
+      parti(reponse.message);
       setTexte("");
       setChoisi(null);
-      onEnvoye(reponse.message);
       champ.current?.focus();
+    } finally {
+      setEnvoi(false);
+    }
+  }
+
+  /** La note vocale : déposée (dossier du compte), puis envoyée ; un refus retire le fichier et garde la note. */
+  async function envoyerNote(note: NoteEnregistree) {
+    if (envoi) return;
+    setEnvoi(true);
+    setErreur(null);
+    try {
+      const depot = await deposerNoteVocale("messages", conversationId, note);
+      if (!depot.ok) return setErreur(depot.message);
+      const reponse = await envoyerMessage(conversationId, "", { chemin: depot.chemin, nom: "Note vocale" }, { dureeMs: note.dureeMs, ondes: note.ondes }).catch(() => ({
+        ok: false as const,
+        message: ENVOI_ECHEC,
+      }));
+      if (!reponse.ok) {
+        await depot.retirer();
+        return setErreur(reponse.message);
+      }
+      parti(reponse.message);
+      enregistreur.terminer();
     } finally {
       setEnvoi(false);
     }
@@ -214,26 +262,30 @@ export function FilConversation({
   }
 
   const maintenant = new Date();
+  const enregistrement = enregistreur.etat !== "inactif";
+  const erreurAffichee = erreur ?? enregistreur.erreur;
+  // Clavier ouvert sur téléphone : la conversation couvre la partie visible de l'écran, champ compris.
+  const styleClavier = clavier ? { position: "fixed" as const, top: `${clavier.haut}px`, left: 0, right: 0, height: `${clavier.visible}px`, zIndex: 40 } : undefined;
   return (
-    <section aria-labelledby={`${id}-titre`} className="box-border flex min-w-0 flex-col rounded-carte border border-bordure-carte bg-panneau">
+    <section aria-labelledby={`${id}-titre`} style={styleClavier} className="box-border flex min-h-0 min-w-0 flex-1 flex-col bg-panneau">
       <h2 id={`${id}-titre`} className="sr-only">{`Conversation avec ${avec.nom}`}</h2>
-      <div className="flex flex-wrap items-center gap-3 px-5 py-4 max-sm:gap-2.5 max-sm:px-3.5 max-sm:py-3">
-        <Link href={base} aria-label="Retour aux conversations" className={cn(buttonVariants({ variant: "discret", size: "sm" }), "-ml-1 px-1.5 sm:hidden")}>
+      <div className="flex flex-none flex-wrap items-center gap-3 px-5 py-3 max-sm:gap-2.5 max-sm:px-3 max-sm:py-2.5">
+        <Link href={base} aria-label="Retour aux conversations" className={cn(buttonVariants({ variant: "discret", size: "sm" }), "-ml-1 px-1.5 md:hidden")}>
           <Icon icon={ArrowLeft01Icon} size={20} />
         </Link>
         <AvatarInterlocuteur avec={avec} />
         <div className="flex min-w-0 flex-[1_1_200px] flex-col gap-0.5 max-sm:flex-1">
           <span className="truncate text-[15px] leading-[22px] font-semibold text-encre">{avec.nom}</span>
-          <span className="text-[13px] leading-5 text-discret">{formation ? `${avec.role} · ${formation.titre}` : avec.role}</span>
+          <span className="truncate text-[13px] leading-5 text-discret">{formation ? `${avec.role} · ${formation.titre}` : avec.role}</span>
         </div>
         {formation && espace === "etudiant" && (
-          <Link href={`/formations/${formation.slug}`} className={buttonVariants({ variant: "contour", size: "sm" })}>
+          <Link href={`/formations/${formation.slug}`} className={cn(buttonVariants({ variant: "contour", size: "sm" }), "max-sm:hidden")}>
             Voir la formation
           </Link>
         )}
       </div>
-      <div className="h-px bg-bordure-carte" />
-      <div aria-live="polite" className="flex max-h-[min(60dvh,560px)] min-h-[240px] flex-col gap-3.5 overflow-y-auto p-5 max-sm:max-h-[calc(100dvh-280px)] max-sm:px-3.5 max-sm:py-4">
+      <div className="h-px flex-none bg-bordure-carte" />
+      <div aria-live="polite" className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto overscroll-contain bg-page px-5 py-4 max-sm:px-3 max-sm:py-3">
         {plusAnciens && (
           <Button variant="discret" size="sm" className="self-center" onClick={() => void precedents()}>
             Messages précédents
@@ -242,10 +294,8 @@ export function FilConversation({
         {messages.length === 0 && <p className="m-auto text-center text-sm leading-[22px] text-discret">Écrivez le premier message.</p>}
         {grouperParJour(messages, maintenant).map((groupe) => (
           <div key={groupe.cle} className="flex flex-col gap-3.5">
-            <div className="flex items-center gap-3" aria-hidden="true">
-              <span className="h-px flex-1 bg-bordure-carte" />
-              <span className="text-xs leading-[18px] text-discret">{groupe.libelle}</span>
-              <span className="h-px flex-1 bg-bordure-carte" />
+            <div className="flex justify-center" aria-hidden="true">
+              <span className="rounded-full bg-panneau px-3 py-1 text-xs leading-[18px] font-medium text-texte shadow-pastille">{groupe.libelle}</span>
             </div>
             {groupe.lignes.map((m) => (
               <Bulle key={m.id} message={m} />
@@ -254,9 +304,9 @@ export function FilConversation({
         ))}
         <div ref={fin} />
       </div>
-      <div className="h-px bg-bordure-carte" />
-      <form onSubmit={(e) => void envoyer(e)} className="flex flex-col gap-2 px-4 py-3.5 max-sm:px-3 max-sm:py-3">
-        {choisi && (
+      <div className="h-px flex-none bg-bordure-carte" />
+      <div className="flex flex-none flex-col gap-2 px-4 py-3 max-sm:px-2.5 max-sm:pt-2 max-sm:pb-[calc(8px+env(safe-area-inset-bottom))]">
+        {choisi && !enregistrement && (
           <div className="flex items-center gap-2 self-start rounded-champ border border-bordure-carte py-1.5 pr-1.5 pl-3 text-sm leading-5">
             <Icon icon={File02Icon} size={16} />
             <span className="max-w-[220px] truncate font-medium text-encre">{choisi.fichier.name}</span>
@@ -264,41 +314,55 @@ export function FilConversation({
             <IconButton icon={Cancel01Icon} label="Retirer la pièce jointe" variant="discret" size="sm" onClick={() => setChoisi(null)} />
           </div>
         )}
-        {erreur && (
+        {erreurAffichee && (
           <p role="alert" className="m-0 text-[13px] leading-5 text-erreur-texte">
-            {erreur}
+            {erreurAffichee}
           </p>
         )}
-        <div className="flex items-end gap-2">
-          <label className="flex size-12 flex-none cursor-pointer items-center justify-center rounded-bouton text-texte transition-colors hover:bg-coque has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-bleu max-sm:size-11">
-            <input
-              type="file"
-              aria-label="Joindre un fichier"
-              accept={ACCEPT_MESSAGE}
-              className="sr-only"
-              onChange={(e) => {
-                void choisir(e.target.files?.[0]);
-                e.target.value = "";
-              }}
+        {enregistrement ? (
+          <BarreEnregistrement enregistreur={enregistreur} envoi={envoi} onEnvoyer={(note) => void envoyerNote(note)} />
+        ) : (
+          <form onSubmit={(e) => void envoyer(e)} className="flex items-end gap-2 max-sm:gap-1.5">
+            <label className="flex size-12 flex-none cursor-pointer items-center justify-center rounded-bouton text-texte transition-colors hover:bg-coque has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-bleu max-sm:size-11">
+              <input
+                type="file"
+                aria-label="Joindre un fichier"
+                accept={ACCEPT_MESSAGE}
+                className="sr-only"
+                onChange={(e) => {
+                  void choisir(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+              <Icon icon={Attachment01Icon} size={20} />
+            </label>
+            <textarea
+              ref={champ}
+              rows={1}
+              value={texte}
+              onChange={(e) => setTexte(e.target.value)}
+              onKeyDown={touche}
+              aria-label={`Message à ${avec.nom}`}
+              placeholder="Écrivez votre message…"
+              maxLength={4000}
+              className="box-border max-h-40 min-h-12 min-w-0 flex-1 resize-none rounded-champ border border-bordure-champ bg-panneau px-3.5 py-3 font-[inherit] text-[15px] leading-[22px] text-texte [field-sizing:content] placeholder:text-indice focus:border-bleu focus:outline-none max-sm:min-h-11 max-sm:py-2.5 max-sm:text-base"
             />
-            <Icon icon={Attachment01Icon} size={20} />
-          </label>
-          <textarea
-            ref={champ}
-            rows={1}
-            value={texte}
-            onChange={(e) => setTexte(e.target.value)}
-            onKeyDown={touche}
-            aria-label={`Message à ${avec.nom}`}
-            placeholder="Écrivez votre message…"
-            maxLength={4000}
-            className="box-border max-h-40 min-h-12 min-w-0 flex-1 resize-none rounded-champ border border-bordure-champ bg-panneau px-3.5 py-3 font-[inherit] text-[15px] leading-[22px] text-texte [field-sizing:content] placeholder:text-indice focus:border-bleu focus:outline-none max-sm:min-h-11 max-sm:py-2.5"
-          />
-          <Button type="submit" size="lg" iconLeft={SentIcon} loading={envoi} disabled={!texte.trim() && !choisi} className="max-sm:h-11 max-sm:px-3.5">
-            <span className="max-sm:sr-only">Envoyer</span>
-          </Button>
-        </div>
-      </form>
+            {vocalPossible && !texte.trim() && !choisi ? (
+              <BoutonMicro
+                onClick={() => {
+                  setErreur(null);
+                  void enregistreur.demarrer();
+                }}
+                className="h-12 max-sm:h-11 max-sm:px-3.5"
+              />
+            ) : (
+              <Button type="submit" size="lg" iconLeft={SentIcon} loading={envoi} disabled={!texte.trim() && !choisi} className="max-sm:h-11 max-sm:px-3.5">
+                <span className="max-sm:sr-only">Envoyer</span>
+              </Button>
+            )}
+          </form>
+        )}
+      </div>
     </section>
   );
 }

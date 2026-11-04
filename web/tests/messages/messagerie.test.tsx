@@ -39,17 +39,17 @@ const CONV: ConversationResume = {
   id: C,
   avec: { nom: "Dr Mireille Adjovi", photoUrl: null, role: "Formateur·rice", equipe: false },
   formation: { titre: "Maîtriser Microsoft Excel", slug: "excel" },
-  dernier: { texte: "Merci ! Je serai présente samedi.", fichier: null, deMoi: true, creeLe: aujourdhui(14, 5) },
+  dernier: { texte: "Merci ! Je serai présente samedi.", fichier: null, vocal: null, deMoi: true, creeLe: aujourdhui(14, 5) },
   nonLu: false,
 };
 const EQUIPE: ConversationResume = {
   id: C2,
   avec: { nom: "Équipe Étudium", photoUrl: null, role: "Assistance", equipe: true },
   formation: null,
-  dernier: { texte: "Votre formule Standard expire dans 5 jours.", fichier: null, deMoi: false, creeLe: "2026-10-14T08:30:00Z" },
+  dernier: { texte: "Votre formule Standard expire dans 5 jours.", fichier: null, vocal: null, deMoi: false, creeLe: "2026-10-14T08:30:00Z" },
   nonLu: true,
 };
-const message = (o: Partial<Message>): Message => ({ id: crypto.randomUUID(), texte: "", fichier: null, deMoi: false, auteur: null, creeLe: aujourdhui(14, 2), ...o });
+const message = (o: Partial<Message>): Message => ({ id: crypto.randomUUID(), texte: "", fichier: null, vocal: null, deMoi: false, auteur: null, creeLe: aujourdhui(14, 2), ...o });
 const FIL: Fil = {
   conversation: CONV,
   plusAnciens: false,
