@@ -50,3 +50,47 @@ describe("Les composants clients", () => {
     expect(fautes).toEqual([]);
   });
 });
+
+// L'inverse : un fichier serveur (sans « use client ») ne peut appeler une fonction (ni lire une constante) d'un module
+// « use client » : il n'en reçoit qu'une référence, et la page tombe en erreur à l'exécution seulement (« Attempted to
+// call estFiltreLivres() from the server but estFiltreLivres is on the client », 4 novembre 2026). Seuls les composants
+// (nom en majuscule initiale, hors CONSTANTES) et les types s'importent d'un module client. Un fichier partagé qui a
+// besoin d'une fonction client est lui-même du code client : il le dit par « use client ».
+
+function resoudreDepuis(fichier: string, specifier: string): string | null {
+  if (specifier.startsWith("@/")) return resoudre(specifier);
+  if (!specifier.startsWith(".")) return null;
+  const base = join(fichier, "..", specifier);
+  for (const candidat of [`${base}.ts`, `${base}.tsx`, join(base, "index.ts"), join(base, "index.tsx")]) {
+    try {
+      if (statSync(candidat).isFile()) return candidat;
+    } catch {
+      // essai suivant
+    }
+  }
+  return null;
+}
+
+const estComposant = (nom: string) => /^[A-Z]/.test(nom) && !/^[A-Z0-9_]+$/.test(nom);
+
+describe("Les fichiers serveur", () => {
+  it("n'importent d'un module client que des composants et des types", () => {
+    const fautes: string[] = [];
+    for (const fichier of fichiers(SRC)) {
+      const code = readFileSync(fichier, "utf8");
+      if (/^\s*["']use client["']/.test(code)) continue;
+      for (const m of code.matchAll(/^import\s+(?!type\b)([^;]*?)\s+from\s+"([^"]+)";/gm)) {
+        const cible = resoudreDepuis(fichier, m[2]);
+        if (!cible || !/^\s*["']use client["']/.test(readFileSync(cible, "utf8"))) continue;
+        const noms = (/\{([^}]*)\}/.exec(m[1])?.[1].split(",") ?? [])
+          .map((n) => n.trim())
+          .filter((n) => n && !n.startsWith("type "))
+          .map((n) => n.split(/\s+as\s+/)[0].trim());
+        for (const nom of noms) {
+          if (!estComposant(nom)) fautes.push(`${fichier.slice(SRC.length + 1)} → ${nom} (${m[2]})`);
+        }
+      }
+    }
+    expect(fautes).toEqual([]);
+  });
+});

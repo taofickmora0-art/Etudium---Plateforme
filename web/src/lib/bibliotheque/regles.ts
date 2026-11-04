@@ -12,6 +12,11 @@ export const ESPACE_LIVRES = "bibliotheque";
 export const PDF_REFUSE = "Choisissez un fichier PDF.";
 export const PDF_TROP_LOURD = "Ce fichier dépasse 50 Mo.";
 
+/** Le filtre de la page Bibliothèque du back-office (« ?etat=… »), lu par la page serveur et par la vue. */
+export type FiltreLivres = "tous" | StatutLivre;
+const FILTRES_LIVRES: readonly FiltreLivres[] = ["tous", "publie", "brouillon", "archive"];
+export const estFiltreLivres = (v: unknown): v is FiltreLivres => FILTRES_LIVRES.some((f) => f === v);
+
 /** Le guide à suivre quand la base n'a pas encore la Bibliothèque (texte pour l'équipe seulement). */
 export const MIGRATION_BIBLIOTHEQUE = "Appliquez la migration 0074 (guide « Ce qui te revient », section 73).";
 

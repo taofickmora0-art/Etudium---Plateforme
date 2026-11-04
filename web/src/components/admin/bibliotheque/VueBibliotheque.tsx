@@ -5,10 +5,9 @@ import { BookOpen02Icon, Download04Icon, LibraryIcon, PencilEdit02Icon } from "@
 import { GRILLE_CHIFFRES, Tuile } from "@/components/tableau/Blocs";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterChips } from "@/components/ui/FilterChips";
-import type { BibliothequeAdmin, StatutLivre } from "@/lib/bibliotheque/types";
+import { estFiltreLivres, type FiltreLivres } from "@/lib/bibliotheque/regles";
+import type { BibliothequeAdmin } from "@/lib/bibliotheque/types";
 import { GrilleLivres } from "./GrilleLivres";
-
-export type FiltreLivres = "tous" | StatutLivre;
 
 const FILTRES: { value: FiltreLivres; label: string }[] = [
   { value: "tous", label: "Tous" },
@@ -22,8 +21,6 @@ const VIDES: Record<FiltreLivres, string> = {
   brouillon: "Aucun brouillon",
   archive: "Aucun livre archivé",
 };
-
-export const estFiltreLivres = (v: unknown): v is FiltreLivres => FILTRES.some((f) => f.value === v);
 
 const chiffre = (n: number) => n.toLocaleString("fr-FR");
 

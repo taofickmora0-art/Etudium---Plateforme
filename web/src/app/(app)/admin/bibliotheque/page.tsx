@@ -3,12 +3,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BibliothequeAbsente } from "@/components/admin/bibliotheque/BibliothequeAbsente";
 import { GestionCategories } from "@/components/admin/bibliotheque/Categories";
-import { estFiltreLivres, VueBibliotheque } from "@/components/admin/bibliotheque/VueBibliotheque";
+import { VueBibliotheque } from "@/components/admin/bibliotheque/VueBibliotheque";
 import { PageAdmin } from "@/components/admin/PageAdmin";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { requireDomaine } from "@/lib/auth/require-domaine";
 import { lireBibliothequeAdmin, listCategoriesLivres } from "@/lib/bibliotheque/data";
+import { estFiltreLivres } from "@/lib/bibliotheque/regles";
 
 export const metadata: Metadata = { title: "Bibliothèque · Back-office · Étudium" };
 

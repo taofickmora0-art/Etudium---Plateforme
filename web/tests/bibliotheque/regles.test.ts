@@ -3,6 +3,7 @@ import {
   actionsLivre,
   cheminCouvertureValide,
   cheminPdfValide,
+  estFiltreLivres,
   ETATS_LIVRE,
   LIBELLES_ACCES,
   LIVRE_MAX_OCTETS,
@@ -56,6 +57,11 @@ describe("Les libellés et les actions", () => {
     expect(actionsLivre("brouillon")).toEqual(["publier", "supprimer"]);
     expect(actionsLivre("publie")).toEqual(["archiver"]);
     expect(actionsLivre("archive")).toEqual(["republier"]);
+  });
+
+  it("le filtre de la page du back-office (?etat=…), lu aussi par le serveur", () => {
+    for (const f of ["tous", "publie", "brouillon", "archive"]) expect(estFiltreLivres(f)).toBe(true);
+    for (const f of ["publies", "", undefined, null, 1]) expect(estFiltreLivres(f)).toBe(false);
   });
 });
 
