@@ -343,7 +343,7 @@ export function FilConversation({
               onChange={(e) => setTexte(e.target.value)}
               onKeyDown={touche}
               aria-label={`Message à ${avec.nom}`}
-              placeholder="Écrivez votre message…"
+              placeholder="Votre message…"
               maxLength={4000}
               className="box-border max-h-40 min-h-12 min-w-0 flex-1 resize-none rounded-champ border border-bordure-champ bg-panneau px-3.5 py-3 font-[inherit] text-[15px] leading-[22px] text-texte [field-sizing:content] placeholder:text-indice focus:border-bleu focus:outline-none max-sm:min-h-11 max-sm:py-2.5 max-sm:text-base"
             />

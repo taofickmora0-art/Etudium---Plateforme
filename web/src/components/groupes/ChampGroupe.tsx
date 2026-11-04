@@ -270,7 +270,7 @@ export function ChampGroupe({
             onChange={(e) => setTexte(e.target.value)}
             onKeyDown={touche}
             aria-label={edition ? "Modifier votre message" : `Message au groupe ${nomGroupe}`}
-            placeholder="Écrivez un message…"
+            placeholder="Votre message…"
             maxLength={TEXTE_MAX}
             className="box-border max-h-40 min-h-11 min-w-0 resize-none rounded-champ border border-bordure-champ bg-panneau px-3.5 py-2.5 font-[inherit] text-[15px] leading-[22px] text-texte [field-sizing:content] placeholder:text-indice focus:border-bleu focus:outline-none max-sm:min-h-10 max-sm:px-3 max-sm:py-2 max-sm:text-base max-sm:leading-[22px]"
           />

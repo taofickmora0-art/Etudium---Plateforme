@@ -133,7 +133,7 @@ describe("La conversation", () => {
     vi.mocked(actions.envoyerMessage).mockResolvedValue({ ok: true, message: message({ texte: "Merci beaucoup !", deMoi: true, creeLe: new Date().toISOString() }) });
     afficher();
     const champ = screen.getByRole("textbox", { name: "Message à Dr Mireille Adjovi" });
-    expect(champ).toHaveAttribute("placeholder", "Écrivez votre message…");
+    expect(champ).toHaveAttribute("placeholder", "Votre message…");
     await user.type(champ, "Merci");
     await user.keyboard("{Shift>}{Enter}{/Shift}");
     expect(champ).toHaveValue("Merci\n");
