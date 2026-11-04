@@ -297,8 +297,8 @@ export function PageCommunaute({
   );
 
   return (
-    // Le fil (720 px) et sa colonne (320 px) restent au milieu de l'écran, l'en-tête aligné sur eux.
-    <div className="mx-auto flex w-full max-w-[720px] min-w-0 flex-col xl:max-w-[1064px]">
+    // La largeur des autres pages (demande du 4 novembre 2026) : le fil prend la place, sa colonne (320 px) à droite.
+    <div className="flex w-full min-w-0 flex-col">
       {/* Tout en haut de la page, sous la barre du haut, où que l'on soit dans le fil (demande du 31 octobre 2026). */}
       <BandeauNouvellesPublications nouvelles={parues} onVoir={() => void actualiser()} />
       <Heading level="page">{titre}</Heading>
@@ -325,8 +325,8 @@ export function PageCommunaute({
       </div>
       <div className="mt-5 h-px bg-separateur" />
       <div className="mt-7 flex min-w-0 flex-col gap-6 xl:flex-row xl:items-start">
-        {/* Sur ordinateur, une largeur fixe : les vidéos et les images ne grandissent pas avec l'écran. */}
-        <div className="flex w-full max-w-[720px] min-w-0 flex-1 flex-col gap-4">
+        {/* Les images et les vidéos gardent leur hauteur maximale (CartePublication, VideoIntegree). */}
+        <div className="flex w-full min-w-0 flex-1 flex-col gap-4">
           {!espace.ouvert ? (
             <EspaceVerrouille espace={espace} espaceCompte={espaceCompte} />
           ) : (

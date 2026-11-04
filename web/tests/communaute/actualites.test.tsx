@@ -452,10 +452,13 @@ describe("La vidéo jointe", () => {
     expect(screen.getByText("Elle apparaît dans l’espace Académique.")).toBeInTheDocument();
   });
 
-  it("sur ordinateur, le fil a une largeur fixe (720 px au plus)", () => {
+  it("l'Accueil a la largeur des autres pages : ni centré ni limité, le fil occupe la place à côté de sa colonne", () => {
+    // Demande du 4 novembre 2026 (auparavant : un fil de 720 px au plus, centré avec sa colonne).
     page(lot([pub()]));
-    // La colonne du fil (sous les onglets « Publiées » / « Programmées »).
-    expect(carte().closest('[class~="max-w-[720px]"]')).not.toBeNull();
+    expect(carte().closest('[class~="max-w-[720px]"]')).toBeNull();
+    expect(carte().closest('[class~="mx-auto"]')).toBeNull();
+    expect(carte().closest('[class~="xl:max-w-[1064px]"]')).toBeNull();
+    expect(carte().closest('[class~="flex-1"]')).not.toBeNull();
   });
 });
 
