@@ -85,7 +85,8 @@ export function SidebarNavLinks({
     <div className={cn("menu-lateral-place relative shrink-0", className)}>
       {/* Figée quand la page défile (demande du 15 octobre 2026) ; si l'écran est trop bas pour toutes ses entrées, elle défile seule. */}
       {/* Juste sous l'en-tête, lui aussi figé (31 octobre) : à sa hauteur mesurée (--entete-app, MesureEntete). */}
-      <div className="menu-lateral sticky top-[var(--entete-app)] z-20 max-h-[calc(100dvh-var(--entete-app))] overflow-x-hidden overflow-y-auto rounded-l-coque bg-coque [scrollbar-color:var(--color-bordure-champ)_transparent] [scrollbar-width:thin]">
+      {/* Sans barre de défilement visible (4 novembre) : elle défile toujours à la molette et au doigt. */}
+      <div className="menu-lateral sticky top-[var(--entete-app)] z-20 max-h-[calc(100dvh-var(--entete-app))] overflow-x-hidden overflow-y-auto rounded-l-coque bg-coque [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <nav id="menu-lateral" aria-label={menu?.libelle ?? "Navigation principale"} className={NAV}>
           {groupes}
         </nav>

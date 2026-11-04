@@ -60,8 +60,11 @@ describe("La barre latérale repliable", () => {
     const barre = container.querySelector(".menu-lateral");
     // Sous l'en-tête, lui aussi figé (31 octobre) : à sa hauteur, mesurée dans le navigateur (--entete-app).
     expect(barre).toHaveClass("sticky", "top-[var(--entete-app)]", "max-h-[calc(100dvh-var(--entete-app))]", "overflow-y-auto");
-    // Sur un écran bas (portable en 1366 × 768), une barre de défilement fine et discrète, pas celle, épaisse, de Windows.
-    expect(barre?.className).toContain("[scrollbar-width:thin]");
+    // Sur un écran bas (portable en 1366 × 768), elle défile sans barre de défilement visible (demande du 4 novembre
+    // 2026) : ni Firefox et Chrome (scrollbar-width), ni Safari (::-webkit-scrollbar).
+    expect(barre?.className).toContain("[scrollbar-width:none]");
+    expect(barre?.className).toContain("[&::-webkit-scrollbar]:hidden");
+    expect(barre?.className).not.toContain("[scrollbar-width:thin]");
   });
 
   it("la hauteur de l'en-tête est mesurée et posée sur la page (--entete-app), pour la barre figée dessous", async () => {
