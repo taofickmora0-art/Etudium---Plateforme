@@ -118,7 +118,9 @@ describe("Un menu par espace (back-office, espace formateur, espace étudiant)",
     expect(screen.getByRole("link", { name: "Profil" })).toHaveAttribute("href", "/formateur/menu");
     formateur.unmount();
     const etudiant = render(<BottomNavLinks pathname="/accueil" />);
-    expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual(["Accueil", "Formations", "Événements", "Certificats", "Profil"]);
+    expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual(["Accueil", "Formations", "Certificats", "Profil"]);
+    // « Événements » a laissé sa place au bouton « Discussions » (4 novembre 2026) ; il reste dans le menu ≡.
+    expect(screen.getByRole("button", { name: "Discussions" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Formations" })).toHaveAttribute("href", "/formations");
     etudiant.unmount();
     const suivies = render(<BottomNavLinks pathname="/mes-formations" />);

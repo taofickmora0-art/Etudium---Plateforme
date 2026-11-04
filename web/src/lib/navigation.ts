@@ -74,11 +74,13 @@ export const NAV_MON_ESPACE: NavEntry[] = [
   { href: "/aide", label: "Aide", icon: HelpCircleIcon },
 ];
 
-/** Barre du bas du téléphone. « Profil » ouvre la page de menu du téléphone. */
+/**
+ * Barre du bas du téléphone. « Profil » ouvre la page de menu du téléphone. Au milieu, le bouton « Discussions »
+ * (Messages et Groupes, 4 novembre 2026) a pris la place d'« Événements », resté dans le menu ≡.
+ */
 export const NAV_BAS: NavEntry[] = [
   ACCUEIL,
   FORMATIONS,
-  { href: "/evenements", label: "Événements", icon: Calendar03Icon },
   { href: "/certificats", label: "Certificats", icon: Certificate01Icon },
   { href: "/menu", label: "Profil", icon: UserIcon },
 ];

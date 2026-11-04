@@ -6,6 +6,7 @@ import { BottomBar } from "@/components/ui/BottomBar";
 import { useDomaines } from "@/lib/auth/domaines-du-compte";
 import { spaceOf, type Espace } from "@/lib/auth/permissions";
 import { NAV_BAS_PAR_ESPACE, entreeActive, filtrerEntrees } from "@/lib/navigation";
+import { BoutonDiscussions } from "./BoutonDiscussions";
 
 /** Les onglets de la barre du bas, ceux de l'espace courant ; `pathname` absent (rendu préalable) = aucun onglet actif. */
 export function BottomNavLinks({ pathname, espace }: { pathname: string | null; espace?: Espace }) {
@@ -15,7 +16,11 @@ export function BottomNavLinks({ pathname, espace }: { pathname: string | null; 
   // Le back-office : seulement les onglets des domaines du compte (lot 6 A).
   const onglets = actuel === "admin" ? filtrerEntrees(tous, domaines) : tous;
   return (
-    <BottomBar items={onglets.map((e) => ({ ...e, active: pathname !== null && entreeActive(pathname, e) }))} className="rounded-t-none" />
+    <BottomBar
+      items={onglets.map((e) => ({ ...e, active: pathname !== null && entreeActive(pathname, e) }))}
+      milieu={actuel === "etudiant" ? <BoutonDiscussions pathname={pathname} /> : undefined}
+      className="rounded-t-none"
+    />
   );
 }
 
