@@ -1439,3 +1439,23 @@ Ta demande du 4 novembre 2026 (spec `docs/superpowers/specs/2026-11-04-messageri
    - **sur l'iPhone** : enregistre une note avec Safari, puis écoute-la sur l'ordinateur, et l'inverse ;
    - **le micro refusé** : refuse la permission : « Autorisez le micro dans votre navigateur pour enregistrer une note vocale. » ; le reste de la messagerie marche.
 3. **À savoir** : le micro n'apparaît que si le navigateur sait enregistrer (tous les navigateurs récents ; sinon « Envoyer » reste). Une note est un fichier : elle compte dans l'espace de stockage de Supabase (1 Go pour tout le site sur l'offre gratuite ; une minute de note pèse environ 0,5 Mo).
+
+## 76. « Mes résultats » : les notes de l'école, les moyennes et le code PIN (migration 0077), 15 minutes
+
+Ta demande du 5 novembre 2026 (spec `docs/superpowers/specs/2026-11-05-mes-resultats-design.md`), avec toutes mes recommandations.
+- **L'espace** : « Mes résultats », dans « Mon espace » (juste après « Tableau de bord »), sur ordinateur et dans le menu du téléphone. Gratuit pour tous les comptes étudiants.
+- **La création, comme une formation** : un **parcours** (« Licence en agronomie », UAC) et ses règles ; ses **semestres** (avec l'année universitaire) ; dans un semestre, ses **UE** (code, intitulé, crédits) ; dans une UE, ses **ECUE** (intitulé, crédits ou coefficient, au besoin un barème propre) ; dans une ECUE, les **notes** (type, libellé, note sur 20, sur 10 ou sur 40…, date). Tout se modifie, se réordonne (Monter, Descendre) et se supprime par le menu ⋮.
+- **Les règles d'un parcours** (bouton « Règles ») : le barème (40 % / 60 % par défaut, 30 / 70, 50 / 50, examen seul, ou personnalisé : jusqu'à 6 types qui font 100 %), la note pour valider une UE (10 par défaut), la compensation entre UE (désactivée par défaut), le rattrapage (il remplace l'examen, ou la meilleure des deux).
+- **Les calculs** : la moyenne de chaque ECUE (et le détail par type), de chaque UE (« Validée », « Non validée », « Provisoire » s'il manque des notes), du semestre (crédits, UE validées, mention), de chaque année et du parcours. **« Ce qu'il te faut »** : quand l'examen manque, la note minimale à avoir (« Il te faut au moins 8,67/20 à l'examen pour valider l'UE. »).
+- **Le code PIN** : proposé à la première visite (« Créer mon code » ou « Plus tard »), facultatif, puis demandé à chaque visite ; l'espace se reverrouille après 15 minutes sans geste. 5 codes faux : bloqué 15 minutes. La base vérifie le code elle-même : sans lui, même avec la session ouverte, elle ne rend rien, et personne d'autre que l'étudiant ne voit ses résultats (pas même l'équipe). « Sécurité » : reverrouiller, changer ou retirer le code. « Code oublié ? » : l'étudiant se reconnecte, puis crée un nouveau code ; ses résultats sont gardés.
+
+1. **La migration, sur la base de production** : Supabase › SQL Editor › New query, colle tout le fichier `web/supabase/migrations/0077_resultats.sql`, **après la 0076**, puis Run (« Success »). Elle se relance sans risque. Dis-moi « c'est appliqué » : je mets le code en ligne ensuite (l'ancien code marche avec la nouvelle base, pas l'inverse). Une base neuve l'a déjà : la 0077 est à la fin de `web/supabase/production/partie-5.sql`.
+2. **À vérifier, avec un compte étudiant** :
+   - **la première visite** : « Mes résultats » propose « Protège tes résultats » ; « Plus tard » ouvre l'espace et ne le repropose plus ;
+   - **un parcours** : « Nouveau parcours », nom et établissement, le barème 40 % / 60 % ; puis « Ajouter un semestre », une UE de 5 crédits, deux ECUE (2 et 3 crédits) ; des notes de contrôle continu et d'examen ; la moyenne de l'UE et du semestre, « Validée », la mention ;
+   - **ce qu'il te faut** : une ECUE avec seulement du contrôle continu : la carte de l'UE dit la note à avoir à l'examen ;
+   - **les règles** : passe le barème à 30 % / 70 %, puis le seuil à 12 : les moyennes et l'état des UE changent ;
+   - **le code** : « Sécurité » › crée un code ; « Reverrouiller maintenant » : le clavier paraît ; un code faux (« Encore 4 essais »), puis le bon ; sur le téléphone, les 4 cases montrent des points ;
+   - **le code oublié** : sur le clavier, « Code oublié ? » › « Me reconnecter », reconnecte-toi : « Crée ton nouveau code » ; le nouveau code ouvre l'espace et les résultats sont là ;
+   - **la confidentialité** : avec un autre compte, l'adresse d'un parcours du premier mène à « page introuvable ».
+3. **À savoir** : les règles se changent à tout moment, les notes restent ; les notes d'un type retiré du barème restent gardées mais ne comptent plus (la carte le signale). Les limites : 10 parcours, 20 semestres par parcours, 30 UE par semestre, 20 ECUE par UE, 60 notes par ECUE.
