@@ -30,6 +30,7 @@ export const CHEMINS_FERMES = [
   "/groupes",
   "/menu",
   "/mes-formations",
+  "/mes-resultats",
   "/messages",
   "/notifications",
   "/parcours",

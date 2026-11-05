@@ -79,6 +79,8 @@ describe("robots.txt", () => {
       "/accueil",
       "/tableau-de-bord",
       "/mes-formations",
+      "/mes-resultats",
+      "/mes-resultats/1d4b",
       "/formations-gratuites",
       "/parcours",
       "/profil",
