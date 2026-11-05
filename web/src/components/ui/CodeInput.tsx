@@ -20,13 +20,15 @@ type CodeInputProps = {
   error?: string;
   invalid?: boolean;
   disabled?: boolean;
+  /** Chiffres masqués (code PIN) : des points à la place, sans saisie automatique du code reçu. */
+  masque?: boolean;
   className?: string;
 };
 
 const onlyDigits = (text: string) => text.replace(/\D/g, "");
 
 /** Code de vérification en cases de 48 × 56 (planche « Formulaires », « Listes, zones de texte et code »). */
-export function CodeInput({ label, value, onChange, onComplete, length = 6, hint, error, invalid, disabled, className }: CodeInputProps) {
+export function CodeInput({ label, value, onChange, onComplete, length = 6, hint, error, invalid, disabled, masque, className }: CodeInputProps) {
   const id = useId();
   const boxes = useRef<(HTMLInputElement | null)[]>([]);
   const code = onlyDigits(value).slice(0, length);
@@ -97,7 +99,7 @@ export function CodeInput({ label, value, onChange, onComplete, length = 6, hint
             inputMode="numeric"
             // 22 px, au-dessus des 16 px exigés par Safari sur iPhone (globals.css) : garde sa taille.
             data-taille-libre=""
-            autoComplete={index === 0 ? "one-time-code" : "off"}
+            autoComplete={index === 0 && !masque ? "one-time-code" : "off"}
             aria-label={`Chiffre ${index + 1}`}
             aria-invalid={invalid || Boolean(error) || undefined}
             disabled={disabled}
@@ -116,7 +118,10 @@ export function CodeInput({ label, value, onChange, onComplete, length = 6, hint
             }}
             onKeyDown={(event) => handleKeyDown(index, event)}
             onPaste={(event) => handlePaste(index, event)}
-            className="box-border h-14 w-12 min-w-0 rounded-champ border border-bordure-champ bg-panneau text-center text-[22px] font-medium text-encre outline-none transition-[border-color,box-shadow] focus:border-bleu focus:shadow-focus aria-[invalid=true]:border-erreur-vif disabled:bg-page disabled:text-discret"
+            className={cn(
+              "box-border h-14 w-12 min-w-0 rounded-champ border border-bordure-champ bg-panneau text-center text-[22px] font-medium text-encre outline-none transition-[border-color,box-shadow] focus:border-bleu focus:shadow-focus aria-[invalid=true]:border-erreur-vif disabled:bg-page disabled:text-discret",
+              masque && "[-webkit-text-security:disc]",
+            )}
           />
         ))}
       </div>
