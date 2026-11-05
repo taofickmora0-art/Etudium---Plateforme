@@ -10,13 +10,14 @@ import type { Note, ParcoursComplet } from "@/lib/resultats/types";
 
 const enregistrerParcours = vi.fn();
 const enregistrerNote = vi.fn();
+const supprimerElement = vi.fn();
 vi.mock("@/lib/resultats/actions", () => ({
   enregistrerParcours: (...a: unknown[]) => enregistrerParcours(...a),
   enregistrerNote: (...a: unknown[]) => enregistrerNote(...a),
   enregistrerSemestre: vi.fn(),
   enregistrerUe: vi.fn(),
   enregistrerEcue: vi.fn(),
-  supprimerElement: vi.fn(),
+  supprimerElement: (...a: unknown[]) => supprimerElement(...a),
   deplacerElement: vi.fn(),
   creerPin: vi.fn(),
   changerPin: vi.fn(),
@@ -65,7 +66,7 @@ const complet: ParcoursComplet = {
 };
 
 beforeEach(() => {
-  for (const f of [enregistrerParcours, enregistrerNote, push]) f.mockReset();
+  for (const f of [enregistrerParcours, enregistrerNote, supprimerElement, push]) f.mockReset();
   enregistrerParcours.mockResolvedValue({ ok: true, id: "p2" });
   enregistrerNote.mockResolvedValue({ ok: true, id: "n9" });
 });
@@ -143,6 +144,41 @@ describe("La vue d'un semestre", () => {
     await user.click(within(fenetre).getByRole("button", { name: "Ajouter la note" }));
     expect(await within(fenetre).findByText("La note doit être entre 0 et 20.")).toBeInTheDocument();
     expect(enregistrerNote).not.toHaveBeenCalled();
+  });
+});
+
+describe("Les règles d'un parcours", () => {
+  it("un barème 40/60 aux noms de l'école (« Interrogations », « Examens sur table ») reste personnalisé, noms gardés", async () => {
+    const user = userEvent.setup();
+    const categories = [
+      { cle: "cc", nom: "Interrogations", poids: 40 },
+      { cle: "examen", nom: "Examens sur table", poids: 60, examen: true },
+    ];
+    const renomme = { ...complet, parcours: { ...complet.parcours, regles: { ...REGLES_PAR_DEFAUT, categories } } };
+    render(<VueParcours complet={renomme} semestreId="s1" pin={false} />);
+    await user.click(screen.getByRole("button", { name: "Règles" }));
+    const fenetre = screen.getByRole("dialog", { name: "Le parcours et ses règles" });
+    expect(within(fenetre).getByRole("radio", { name: /Personnalisé/ })).toBeChecked();
+    // Un modèle, puis de nouveau « Personnalisé » : les types de l'école reviennent.
+    await user.click(within(fenetre).getByRole("radio", { name: /30 % \/ 70 %/ }));
+    await user.click(within(fenetre).getByRole("radio", { name: /Personnalisé/ }));
+    expect(within(fenetre).getByLabelText("Nom du type 1")).toHaveValue("Interrogations");
+    await user.click(within(fenetre).getByRole("button", { name: "Enregistrer" }));
+    await waitFor(() => expect(enregistrerParcours).toHaveBeenCalled());
+    expect(enregistrerParcours.mock.calls[0][0].regles.categories).toEqual(categories);
+  });
+});
+
+describe("Une suppression refusée", () => {
+  it("le message de la base s'affiche dans la fenêtre", async () => {
+    const user = userEvent.setup();
+    supprimerElement.mockResolvedValue({ ok: false, message: "Ton espace s’est reverrouillé : saisis ton code.", verrouille: true });
+    render(<VueParcours complet={complet} semestreId="s1" pin={false} />);
+    await user.click(screen.getByRole("button", { name: "Actions sur « UE 101 · Agronomie générale »" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Supprimer l’UE" }));
+    const fenetre = await screen.findByRole("dialog", { name: "Supprimer « UE 101 · Agronomie générale » ?" });
+    await user.click(within(fenetre).getByRole("button", { name: "Supprimer" }));
+    expect(await within(fenetre).findByText("Ton espace s’est reverrouillé : saisis ton code.")).toBeInTheDocument();
   });
 });
 

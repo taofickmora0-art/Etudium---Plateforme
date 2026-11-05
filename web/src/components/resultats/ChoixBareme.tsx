@@ -74,9 +74,10 @@ export function ChoixBareme({ etat, onChange, parcours, name }: ChoixBaremeProps
         options={options}
         value={etat.modele}
         onValueChange={(modele) => {
-          // Passer en « Personnalisé » part du barème affiché, pour le retoucher.
+          // Passer en « Personnalisé » reprend les types déjà composés, sinon le barème affiché, pour le retoucher.
           const depart = MODELES_BAREME.find((m) => m.cle === etat.modele)?.categories ?? (etat.modele === "parcours" ? parcours : undefined);
-          onChange({ modele, lignes: modele === "perso" && depart ? versLignes(depart) : etat.lignes });
+          const composes = modeleDuBareme(etat.lignes.map((l) => ({ cle: l.cle ?? "", nom: l.nom, poids: lireNombre(l.poids), ...(l.examen ? { examen: true } : {}) }))) === "perso";
+          onChange({ modele, lignes: modele === "perso" && depart && !composes ? versLignes(depart) : etat.lignes });
         }}
       />
       {etat.modele === "perso" && (

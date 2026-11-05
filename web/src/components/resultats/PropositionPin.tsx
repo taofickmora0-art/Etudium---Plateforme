@@ -38,7 +38,8 @@ export function PropositionPin() {
           onClick={async () => {
             setEnvoi(true);
             // Accepté, la page se recharge d'elle-même (l'action rafraîchit).
-            if (!(await passerProposition()).ok) setEnvoi(false);
+            const ok = await passerProposition().then((r) => r.ok, () => false);
+            if (!ok) setEnvoi(false);
           }}
         >
           Plus tard

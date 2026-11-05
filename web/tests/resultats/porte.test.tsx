@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
+import { Activity } from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // La porte de « Mes résultats » (spec du 5 novembre 2026, §2 et §4) : avec un code, le clavier à 4 chiffres (masqués)
 // avant tout ; sans code ni proposition vue, « Protège tes résultats » (créer, ou plus tard) ; la fenêtre « Sécurité »
@@ -14,6 +15,7 @@ const changerPin = vi.fn();
 const retirerPin = vi.fn();
 const verrouillerResultats = vi.fn();
 const oublierPin = vi.fn();
+const prolongerResultats = vi.fn();
 vi.mock("@/lib/resultats/actions", () => ({
   ouvrirResultats: (...a: unknown[]) => ouvrirResultats(...a),
   creerPin: (...a: unknown[]) => creerPin(...a),
@@ -22,13 +24,15 @@ vi.mock("@/lib/resultats/actions", () => ({
   retirerPin: (...a: unknown[]) => retirerPin(...a),
   verrouillerResultats: (...a: unknown[]) => verrouillerResultats(...a),
   oublierPin: (...a: unknown[]) => oublierPin(...a),
+  prolongerResultats: (...a: unknown[]) => prolongerResultats(...a),
 }));
 const signOut = vi.fn(async () => undefined);
 vi.mock("@/lib/auth/actions", () => ({ signOut: () => signOut() }));
 const loadFullPage = vi.fn();
 vi.mock("@/lib/full-page", () => ({ loadFullPage: (url: string) => loadFullPage(url) }));
 const replace = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, push: vi.fn(), refresh: vi.fn() }), usePathname: () => "/mes-resultats" }));
+const refresh = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, push: vi.fn(), refresh }), usePathname: () => "/mes-resultats" }));
 let etat: unknown = null;
 vi.mock("@/lib/resultats/data", () => ({ lireEtatResultats: async () => etat }));
 
@@ -36,7 +40,7 @@ const { DeverrouillageResultats } = await import("@/components/resultats/Deverro
 const { PropositionPin } = await import("@/components/resultats/PropositionPin");
 const { SecuriteResultats } = await import("@/components/resultats/SecuriteResultats");
 const { PorteResultats } = await import("@/components/resultats/PorteResultats");
-const { MinuterieResultats } = await import("@/components/resultats/MinuterieResultats");
+const { ZoneProtegee } = await import("@/components/resultats/ZoneProtegee");
 
 /** Tape un code dans le groupe de cases « nom ». */
 async function taper(user: ReturnType<typeof userEvent.setup>, nom: string, code: string) {
@@ -46,13 +50,19 @@ async function taper(user: ReturnType<typeof userEvent.setup>, nom: string, code
 }
 
 beforeEach(() => {
-  for (const f of [ouvrirResultats, creerPin, passerProposition, changerPin, retirerPin, verrouillerResultats, oublierPin, signOut, replace]) f.mockReset();
+  for (const f of [ouvrirResultats, creerPin, passerProposition, changerPin, retirerPin, verrouillerResultats, oublierPin, prolongerResultats, signOut, replace, refresh]) f.mockReset();
   ouvrirResultats.mockResolvedValue({ ok: true });
   creerPin.mockResolvedValue({ ok: true });
   passerProposition.mockResolvedValue({ ok: true });
   changerPin.mockResolvedValue({ ok: true });
   retirerPin.mockResolvedValue({ ok: true });
-  verrouillerResultats.mockResolvedValue({ ok: true });
+  verrouillerResultats.mockResolvedValue(undefined);
+  prolongerResultats.mockResolvedValue({ ouvert: true });
+});
+
+// Un test qui échoue avec des minuteries simulées ne doit pas les laisser aux suivants.
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("Le déverrouillage", () => {
@@ -80,10 +90,24 @@ describe("Le déverrouillage", () => {
     expect(loadFullPage).toHaveBeenCalledWith(`/connexion?next=${encodeURIComponent("/mes-resultats?oubli=1")}`);
   });
 
-  it("après trop d'essais : le temps qui reste, et les cases fermées", () => {
+  it("après trop d'essais : le temps qui reste, et les cases fermées ; elles se rouvrent à la fin du blocage", () => {
+    vi.useFakeTimers();
     render(<DeverrouillageResultats bloqueJusqua={new Date(Date.now() + 10 * 60_000 - 1000).toISOString()} />);
     expect(screen.getByText("Trop d’essais : réessaie dans 10 minutes.")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Ton code PIN" }).querySelector("input")).toBeDisabled();
+    act(() => vi.advanceTimersByTime(10 * 60_000));
+    expect(screen.getByRole("group", { name: "Ton code PIN" }).querySelector("input")).toBeEnabled();
+    expect(screen.queryByText(/Trop d’essais/)).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it("une coupure du réseau : un message, et les cases restent utilisables", async () => {
+    const user = userEvent.setup();
+    ouvrirResultats.mockRejectedValueOnce(new Error("Failed to fetch"));
+    render(<DeverrouillageResultats bloqueJusqua={null} />);
+    await taper(user, "Ton code PIN", "1234");
+    expect(await screen.findByText("La connexion a échoué. Vérifie ton réseau, puis réessaie.")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Ton code PIN" }).querySelector("input")).toBeEnabled();
   });
 });
 
@@ -191,10 +215,18 @@ describe("La porte", () => {
   });
 });
 
-describe("La minuterie", () => {
+describe("La zone protégée", () => {
+  const zone = (mode: "visible" | "hidden") => (
+    <Activity mode={mode}>
+      <ZoneProtegee>
+        <p>Mes notes</p>
+      </ZoneProtegee>
+    </Activity>
+  );
+
   it("15 minutes sans rien faire : l'espace se reverrouille ; un geste repart de zéro", () => {
     vi.useFakeTimers();
-    render(<MinuterieResultats />);
+    render(zone("visible"));
     act(() => vi.advanceTimersByTime(14 * 60_000));
     fireEvent.pointerDown(document);
     act(() => vi.advanceTimersByTime(14 * 60_000));
@@ -202,5 +234,42 @@ describe("La minuterie", () => {
     act(() => vi.advanceTimersByTime(60_000 + 10));
     expect(verrouillerResultats).toHaveBeenCalled();
     vi.useRealTimers();
+  });
+
+  it("les gestes prolongent l'ouverture côté base, au plus une fois toutes les 3 minutes", () => {
+    vi.useFakeTimers();
+    render(zone("visible"));
+    act(() => vi.advanceTimersByTime(60_000));
+    fireEvent.keyDown(document, { key: "a" });
+    expect(prolongerResultats).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(3 * 60_000));
+    fireEvent.keyDown(document, { key: "a" });
+    fireEvent.keyDown(document, { key: "b" });
+    expect(prolongerResultats).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it("une page gardée en cache (bouton Retour) après 20 minutes : rien ne s'affiche, l'espace se reverrouille", () => {
+    vi.useFakeTimers();
+    const { rerender } = render(zone("visible"));
+    expect(screen.getByText("Mes notes")).toBeInTheDocument();
+    rerender(zone("hidden"));
+    act(() => vi.advanceTimersByTime(20 * 60_000));
+    rerender(zone("visible"));
+    expect(screen.queryByText("Mes notes")).toBeNull();
+    expect(verrouillerResultats).toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it("une page gardée en cache après 2 minutes : la base est revérifiée avant de réafficher", async () => {
+    vi.useFakeTimers();
+    const { rerender } = render(zone("visible"));
+    rerender(zone("hidden"));
+    act(() => vi.advanceTimersByTime(2 * 60_000));
+    rerender(zone("visible"));
+    expect(refresh).toHaveBeenCalled();
+    expect(verrouillerResultats).not.toHaveBeenCalled();
+    vi.useRealTimers();
+    expect(await screen.findByText("Mes notes")).toBeInTheDocument();
   });
 });

@@ -121,7 +121,7 @@ export function resultatEcue(ecue: Ecue, notes: Note[], regles: Regles): Resulta
   const manquantes = categories.filter((c) => c.moyenne === null);
   let lineaire: { a: number; b: number } | null = null;
   if (manquantes.length === 0 && moyenne !== null) lineaire = { a: moyenne, b: 0 };
-  else if (manquantes.length === 1 && manquantes[0].examen && presentes.length > 0) {
+  else if (manquantes.length === 1 && manquantes[0].examen) {
     lineaire = { a: presentes.reduce((s, c) => s + c.moyenne! * c.poids, 0) / total, b: manquantes[0].poids / total };
   }
   return { ecue, moyenne, provisoire, categories, nonClassees, nbNotes: siennes.length, lineaire, noteVisee: viser(lineaire, regles.seuilUe) };

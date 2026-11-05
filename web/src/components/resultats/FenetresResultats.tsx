@@ -115,7 +115,8 @@ function FenetreEcue({ ueId, ecue, regles, onFermer }: { ueId: string; ecue?: Ec
   );
 }
 
-const RATTRAPAGE = "rattrapage";
+/** Le choix « Rattrapage » du type d'une note : jamais la clé d'un type (elles n'ont ni « _ » ni majuscule). */
+const RATTRAPAGE = "_rattrapage";
 
 function FenetreNote({ ecue, note, regles, onFermer }: { ecue: Ecue; note?: Note; regles: Regles; onFermer: () => void }) {
   const id = useId();
@@ -176,6 +177,8 @@ function FenetreNote({ ecue, note, regles, onFermer }: { ecue: Ecue; note?: Note
 /** La fenêtre ouverte, d'après son genre ; une suppression demande confirmation. */
 export function FenetresResultats({ fenetre, onFermer, parcours, nbSemestres }: { fenetre: Fenetre | null; onFermer: () => void; parcours: Parcours; nbSemestres: number }) {
   const router = useRouter();
+  // Le refus d'une suppression, dit tel quel dans la fenêtre de confirmation.
+  const [refusSuppression, setRefusSuppression] = useState<string | null>(null);
   if (!fenetre) return null;
   switch (fenetre.quoi) {
     case "parcours":
@@ -196,10 +199,13 @@ export function FenetresResultats({ fenetre, onFermer, parcours, nbSemestres }: 
           title={fenetre.titre}
           description={fenetre.description}
           confirmLabel="Supprimer"
+          errorMessage={refusSuppression ?? "La suppression n’a pas abouti. Vérifie ton réseau, puis réessaie."}
           tone="danger"
           onConfirm={async () => {
+            setRefusSuppression(null);
             const retour = await supprimerElement(fenetre.type, fenetre.id);
             if (!retour.ok) {
+              setRefusSuppression(retour.message);
               if (retour.verrouille) router.refresh();
               throw new Error(retour.message);
             }

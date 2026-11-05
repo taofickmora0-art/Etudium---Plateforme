@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/Button";
 import { CodeInput } from "@/components/ui/CodeInput";
 import { Dialog, DialogClose } from "@/components/ui/Dialog";
 import { useToastFacultatif } from "@/components/ui/Toast";
-import { changerPin, creerPin, retirerPin, verrouillerResultats } from "@/lib/resultats/actions";
+import { changerPin, creerPin, retirerPin, verrouillerResultats, type Retour } from "@/lib/resultats/actions";
+import { ECHEC_RESEAU } from "@/lib/resultats/affichage";
 import { NouveauCode } from "./NouveauCode";
 
 type Vue = "menu" | "changer" | "retirer";
@@ -33,7 +34,12 @@ function RetraitCode({ onRetour, onFait }: { onRetour: () => void; onFait: () =>
         if (envoi) return;
         if (code.length < 4) return setErreur({ message: "Saisis ton code actuel." });
         setEnvoi(true);
-        const retour = await retirerPin(code);
+        let retour: Retour;
+        try {
+          retour = await retirerPin(code);
+        } catch {
+          retour = { ok: false, message: ECHEC_RESEAU };
+        }
         setEnvoi(false);
         if (retour.ok) return onFait();
         setCode("");

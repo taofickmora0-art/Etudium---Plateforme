@@ -6,7 +6,8 @@ import { CodeInput } from "@/components/ui/CodeInput";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { signOut } from "@/lib/auth/actions";
 import { loadFullPage } from "@/lib/full-page";
-import { ouvrirResultats } from "@/lib/resultats/actions";
+import { ouvrirResultats, type Retour } from "@/lib/resultats/actions";
+import { ECHEC_RESEAU } from "@/lib/resultats/affichage";
 import { CadrePorte } from "./CadrePorte";
 
 /** Où revenir après la reconnexion d'un code oublié : l'écran du nouveau code. */
@@ -21,13 +22,23 @@ const messageBlocage = (minutes: number) => `Trop d’essais : réessaie dans ${
 
 /** Le clavier de la porte : 4 chiffres masqués, envoyés dès la dernière case ; « Code oublié ? » passe par une reconnexion. */
 export function DeverrouillageResultats({ bloqueJusqua }: { bloqueJusqua: string | null }) {
-  const [maintenant] = useState(() => Date.now());
+  const [maintenant, setMaintenant] = useState(() => Date.now());
   const bloque = minutesRestantes(bloqueJusqua, maintenant);
   const [code, setCode] = useState("");
   const [erreur, setErreur] = useState<{ message: string } | null>(bloque ? { message: messageBlocage(bloque) } : null);
   const [envoi, setEnvoi] = useState(false);
   const [oubli, setOubli] = useState(false);
   const zone = useRef<HTMLDivElement>(null);
+
+  // À la fin du blocage, les cases se rouvrent d'elles-mêmes.
+  useEffect(() => {
+    if (!bloque || !bloqueJusqua) return;
+    const minuterie = setTimeout(() => {
+      setMaintenant(Date.now());
+      setErreur(null);
+    }, Date.parse(bloqueJusqua) - maintenant + 250);
+    return () => clearTimeout(minuterie);
+  }, [bloque, bloqueJusqua, maintenant]);
 
   // Après un refus, les cases vides reprennent le focus (une fois réactivées).
   useEffect(() => {
@@ -37,7 +48,12 @@ export function DeverrouillageResultats({ bloqueJusqua }: { bloqueJusqua: string
   const essayer = async (valeur: string) => {
     setEnvoi(true);
     setErreur(null);
-    const retour = await ouvrirResultats(valeur);
+    let retour: Retour;
+    try {
+      retour = await ouvrirResultats(valeur);
+    } catch {
+      retour = { ok: false, message: ECHEC_RESEAU };
+    }
     // Ouvert, la page se recharge d'elle-même (l'action rafraîchit) : les cases restent occupées jusque-là.
     if (retour.ok) return;
     setEnvoi(false);

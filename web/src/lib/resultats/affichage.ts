@@ -3,6 +3,9 @@ import type { Categorie, Semestre } from "./types";
 
 // Ce que l'écran de « Mes résultats » écrit à partir des calculs (sans dépendance : serveur, client et tests).
 
+/** Une action qui n'arrive pas au serveur (réseau coupé) : les écrans le disent et restent utilisables. */
+export const ECHEC_RESEAU = "La connexion a échoué. Vérifie ton réseau, puis réessaie.";
+
 /** « 12,5 » ou « 12.5 » → 12,5 ; NaN si ce n'est pas un nombre. */
 export const lireNombre = (texte: string) => (texte.trim() === "" ? NaN : Number(texte.trim().replace(",", ".")));
 
@@ -16,7 +19,8 @@ export const detailBareme = (categories: Categorie[]) => categories.map((c) => `
 
 /** Le modèle qui correspond à un barème (mêmes types, mêmes poids), sinon « perso ». */
 export function modeleDuBareme(categories: Categorie[]): string {
-  const signature = (liste: Categorie[]) => liste.map((c) => `${c.cle}:${c.poids}:${c.examen ? 1 : 0}`).join("|");
+  // Les noms comptent : « Interrogations · Examens sur table » (40/60) reste le barème de l'école, pas le modèle.
+  const signature = (liste: Categorie[]) => liste.map((c) => `${c.cle}:${c.nom.trim()}:${c.poids}:${c.examen ? 1 : 0}`).join("|");
   return MODELES_BAREME.find((m) => signature(m.categories) === signature(categories))?.cle ?? "perso";
 }
 

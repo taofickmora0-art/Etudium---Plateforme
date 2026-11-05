@@ -73,6 +73,12 @@ export async function verrouillerResultats(): Promise<void> {
   }
 }
 
+/** Des gestes sans enregistrement (lire, déplier, composer) : la base repousse la fin du jeton, sans relire la page. */
+export async function prolongerResultats(): Promise<{ ouvert: boolean }> {
+  const { data, error } = await (await clientResultats()).rpc("etat_resultats");
+  return { ouvert: !error && versEtat(data).ouvert };
+}
+
 /** « Plus tard » : la proposition du code ne revient plus. */
 export async function passerProposition(): Promise<Retour> {
   if (!(await getShellUser())) return { ok: false, message: SESSION_EXPIREE };

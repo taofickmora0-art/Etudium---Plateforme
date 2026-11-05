@@ -31,6 +31,9 @@ export function refusRegles(regles: Regles): string | null {
   return refusSeuil(regles.seuilUe) ?? refusSeuil(regles.seuilSemestre) ?? refusBareme(regles.categories);
 }
 
+/** Une clé qu'un type ne prend pas : elle désigne le choix « Rattrapage » de la fenêtre d'une note. */
+const CLES_RESERVEES = ["rattrapage"];
+
 /** La clé d'un nouveau type de notes : son nom sans accents ni espaces (« controle-continu »), unique dans le barème. */
 export function cleDepuisNom(nom: string, existantes: string[]): string {
   const base =
@@ -42,6 +45,7 @@ export function cleDepuisNom(nom: string, existantes: string[]): string {
       .replace(/^-+|-+$/g, "")
       .slice(0, 26) || "type";
   let cle = base;
-  for (let i = 2; existantes.includes(cle); i++) cle = `${base}-${i}`;
+  const prises = [...existantes, ...CLES_RESERVEES];
+  for (let i = 2; prises.includes(cle); i++) cle = `${base}-${i}`;
   return cle;
 }

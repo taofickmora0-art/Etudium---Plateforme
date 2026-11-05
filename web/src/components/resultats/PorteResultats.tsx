@@ -4,8 +4,8 @@ import { lireEtatResultats } from "@/lib/resultats/data";
 import type { EtatResultats } from "@/lib/resultats/types";
 import { ApresOubli } from "./ApresOubli";
 import { DeverrouillageResultats } from "./DeverrouillageResultats";
-import { MinuterieResultats } from "./MinuterieResultats";
 import { PropositionPin } from "./PropositionPin";
+import { ZoneProtegee } from "./ZoneProtegee";
 
 type PorteResultatsProps = {
   /** Le contenu de l'espace, ou une fonction qui le construit d'après l'état (le bouton « Sécurité » en a besoin). */
@@ -24,10 +24,6 @@ export async function PorteResultats({ children, oubli = false }: PorteResultats
   if (oubli) return <ApresOubli pin={etat.pin} />;
   if (etat.pin && !etat.ouvert) return <DeverrouillageResultats bloqueJusqua={etat.bloqueJusqua} />;
   if (!etat.pin && !etat.propose) return <PropositionPin />;
-  return (
-    <>
-      {etat.pin && <MinuterieResultats />}
-      {typeof children === "function" ? children(etat) : children}
-    </>
-  );
+  const contenu = typeof children === "function" ? children(etat) : children;
+  return etat.pin ? <ZoneProtegee>{contenu}</ZoneProtegee> : contenu;
 }

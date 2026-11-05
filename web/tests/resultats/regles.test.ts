@@ -21,6 +21,8 @@ describe("Le barème", () => {
     expect(cleDepuisNom("Contrôle continu", [])).toBe("controle-continu");
     expect(cleDepuisNom("TP", ["tp"])).toBe("tp-2");
     expect(cleDepuisNom("!!!", [])).toBe("type");
+    // « rattrapage » désigne le choix « Rattrapage » de la fenêtre d'une note : un type ne la prend pas.
+    expect(cleDepuisNom("Rattrapage", [])).toBe("rattrapage-2");
   });
 });
 

@@ -172,3 +172,13 @@ describe("L'affichage", () => {
     expect(formaterNote(10)).toBe("10,00");
   });
 });
+
+describe("« Ce qu'il te faut » avec une ECUE « Examen seul » encore sans note", () => {
+  it("la même note x aux deux examens : (0,4 × 12 + 0,6 x + x) / 2 ≥ 10 → x ≥ 9,5", () => {
+    const examenSeul = MODELES_BAREME.find((m) => m.cle === "examen")!.categories;
+    const ecues = [ecue("a", "u"), ecue("b", "u", 1, examenSeul)];
+    const r = resultatUe(ue("u", 4), ecues, [note("a", "cc", 12)], R);
+    expect(r.noteVisee).toEqual({ note: expect.closeTo(9.5, 9) });
+    expect(resultatEcue(ecues[1], [], R).noteVisee).toEqual({ note: 10 });
+  });
+});

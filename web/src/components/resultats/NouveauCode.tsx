@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
 import { CodeInput } from "@/components/ui/CodeInput";
 import type { Retour } from "@/lib/resultats/actions";
+import { ECHEC_RESEAU } from "@/lib/resultats/affichage";
 
 type Champ = "actuel" | "code" | "confirmation";
 
@@ -48,7 +49,12 @@ export function NouveauCode({ avecActuel = false, enregistrer, onFait, secondair
     }
     setErreur(null);
     setEnvoi(true);
-    const retour = await enregistrer(code, actuel);
+    let retour: Retour;
+    try {
+      retour = await enregistrer(code, actuel);
+    } catch {
+      retour = { ok: false, message: ECHEC_RESEAU };
+    }
     setEnvoi(false);
     if (retour.ok) {
       onFait?.();
