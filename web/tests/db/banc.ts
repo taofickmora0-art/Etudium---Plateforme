@@ -12,8 +12,11 @@ export type Qui = "anon" | { id: string };
 export type Banc = {
   /** Accès direct, en superutilisateur (pour préparer les données). */
   db: PGlite;
-  /** Exécute une requête comme le ferait l'API pour ce visiteur ou ce compte (rôle et règles d'accès compris). */
-  en<T = Record<string, unknown>>(qui: Qui, sql: string, params?: unknown[]): Promise<T[]>;
+  /**
+   * Exécute une requête comme le ferait l'API pour ce visiteur ou ce compte (rôle et règles d'accès compris).
+   * `reglages` : d'autres réglages de la requête, comme les pose PostgREST (`request.headers`, `request.jwt.claims`).
+   */
+  en<T = Record<string, unknown>>(qui: Qui, sql: string, params?: unknown[], reglages?: Record<string, string>): Promise<T[]>;
   /** Applique un fichier SQL (chemin relatif à web/). */
   appliquer(fichier: string): Promise<void>;
   /** Crée un compte (le déclencheur de la 0001 lui donne profil et rôle étudiant), puis lui ajoute ces rôles. */
@@ -42,9 +45,10 @@ export async function creerBanc(fichiers: string[]): Promise<Banc> {
 
   const banc: Banc = {
     db,
-    async en<T>(qui: Qui, sql: string, params: unknown[] = []) {
+    async en<T>(qui: Qui, sql: string, params: unknown[] = [], reglages: Record<string, string> = {}) {
       return db.transaction(async (tx) => {
         await tx.query("select set_config('request.jwt.claim.sub', $1, true)", [qui === "anon" ? "" : qui.id]);
+        for (const [nom, valeur] of Object.entries(reglages)) await tx.query("select set_config($1, $2, true)", [nom, valeur]);
         await tx.exec(`set local role ${qui === "anon" ? "anon" : "authenticated"}`);
         const { rows } = await tx.query<T>(sql, params);
         return rows;
