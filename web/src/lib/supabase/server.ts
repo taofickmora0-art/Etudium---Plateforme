@@ -7,9 +7,10 @@ import { getPublicEnv } from "@/lib/env";
 /**
  * Client Supabase pour les composants serveur, actions serveur et routes.
  * `remember` force la durée des cookies (« Se souvenir de moi » choisi à la connexion) ;
- * sinon, elle suit le cookie `etudium-souvenir`.
+ * sinon, elle suit le cookie `etudium-souvenir`. `entetes` : des en-têtes de plus pour chaque requête à la base (le
+ * jeton de déverrouillage de « Mes résultats », lu par ses règles d'accès).
  */
-export async function createClient(options: { remember?: boolean } = {}) {
+export async function createClient(options: { remember?: boolean; entetes?: Record<string, string> } = {}) {
   // Les cookies d'abord : pendant la compilation, Next met cette lecture en attente (la page sera rendue à la requête),
   // et une configuration absente ne fait pas échouer la compilation.
   const cookieStore = await cookies();
@@ -20,6 +21,7 @@ export async function createClient(options: { remember?: boolean } = {}) {
   const remember = options.remember ?? rememberFromCookie(cookieStore.get(REMEMBER_COOKIE)?.value);
 
   return createServerClient(supabaseUrl, supabaseKey, {
+    ...(options.entetes ? { global: { headers: options.entetes } } : {}),
     // `secure` en production (https seulement).
     cookieOptions: optionsCookiesSupabase(),
     cookies: {

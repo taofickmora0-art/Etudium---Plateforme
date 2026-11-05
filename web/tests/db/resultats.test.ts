@@ -14,7 +14,7 @@ let banc: Banc;
 const [A, B, ADM] = Array.from({ length: 3 }, () => randomUUID());
 
 type Resultat = { ok: boolean; jeton?: string; message?: string };
-const entete = (jeton: string | null) => (jeton ? { "request.headers": JSON.stringify({ "x-etudium-resultats": jeton }) } : {});
+const entete = (jeton: string | null): Record<string, string> => (jeton ? { "request.headers": JSON.stringify({ "x-etudium-resultats": jeton }) } : {});
 const en = <T>(qui: string, sql: string, params: unknown[] = [], jeton: string | null = null) => banc.en<T>({ id: qui }, sql, params, entete(jeton));
 const r = async <T>(qui: string, sql: string, params: unknown[] = [], jeton: string | null = null) => (await en<{ r: T }>(qui, sql, params, jeton))[0].r;
 const refus = (p: Promise<unknown>) => p.then(() => "accepté", (e: Error) => e.message);
