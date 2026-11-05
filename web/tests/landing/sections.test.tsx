@@ -93,7 +93,7 @@ describe("Sections à texte fixe de la landing (NdLanding)", () => {
     render(<HeroLanding />);
     expect(screen.getByRole("link", { name: "Créer mon compte gratuit" })).toHaveAttribute("href", "/inscription");
     expect(screen.getByRole("link", { name: "Découvrir les formations" })).toHaveAttribute("href", "/formations");
-    for (const nom of ["Réussite académique", "Compétences digitales", "Business & revenus en ligne"]) {
+    for (const nom of ["Réussite académique", "Compétences digitales", "Entrepreneuriat"]) {
       expect(screen.getByRole("link", { name: nom })).toHaveAttribute("href", "#parcours");
     }
   });

@@ -1460,14 +1460,19 @@ Ta demande du 5 novembre 2026 (spec `docs/superpowers/specs/2026-11-05-mes-resul
    - **la confidentialité** : avec un autre compte, l'adresse d'un parcours du premier mène à « page introuvable ».
 3. **À savoir** : les règles se changent à tout moment, les notes restent ; les notes d'un type retiré du barème restent gardées mais ne comptent plus (la carte le signale). Les limites : 10 parcours, 20 semestres par parcours, 30 UE par semestre, 20 ECUE par UE, 60 notes par ECUE.
 
-## 77. « Mes résultats » : le blocage du code qui s'allonge, le barème unique, les moyennes sans arrondi (migration 0078), 5 minutes
+## 77. Trois parcours (dont Entrepreneuriat), et « Mes résultats » : blocage, barème unique, moyennes sans arrondi (migration 0078), 10 minutes
 
-Tes retours du 5 novembre 2026, après le premier essai.
+Tes décisions du 5 novembre 2026.
+- **Les trois parcours** : Réussite académique, Compétences digitales, Entrepreneuriat.
+  - **Compétences digitales** reprend tout le contenu de Business & revenus en ligne : ses formations (à la suite des siennes), ses livres et ses sessions. Sa description parle maintenant aussi du freelance et de la vente en ligne.
+  - **Entrepreneuriat** prend la place de Business : sa couleur orange, son groupe de discussion et son espace de la communauté (avec leurs messages, rien n'est supprimé). Il commence sans formation : ajoute-les depuis le back-office.
+  - **« Compétences à vendre »** (la rubrique d'une formation qui apprend à vendre une compétence) : pour une formation de Compétences digitales ou d'Entrepreneuriat. La page Parcours ne range plus l'onglet orange par compétence : une simple liste, comme les autres.
+  - Le nom et la description de chaque parcours se changent dans le back-office (Parcours).
 - **Le blocage du code** : 5 codes faux bloquent 15 minutes, 5 de plus 1 heure, puis 24 heures à chaque fois. Le bon code remet le compte à zéro (comme un nouveau code).
 - **Le barème** : il se règle une seule fois, dans « Règles » du parcours, et vaut pour toutes les UE et ECUE. La fenêtre d'une ECUE ne le propose plus.
 - **Les moyennes** : coupées à deux décimales, jamais arrondies (9,995 s'écrit 9,99 : on voit pourquoi l'UE n'est pas validée).
 - **Le rattrapage** : dans la fenêtre d'une note, le type « Rattrapage » dit ce qu'il fait (« Elle remplace ta note d'examen. ») ; la carte de l'UE l'indique (« Examen 12,00 (avec rattrapage) »).
 - **Les écrans du code** : titre, cases et boutons centrés (aussi dans la fenêtre « Sécurité ») ; des textes plus courts partout.
 
-1. **La migration, sur la base de production** : Supabase › SQL Editor › New query, colle tout le fichier `web/supabase/migrations/0078_blocage_resultats.sql`, **après la 0077**, puis Run (« Success »). Elle se relance sans risque. Dis-moi « c'est appliqué » : je mets le code en ligne ensuite. Une base neuve l'a déjà : la 0078 est à la fin de `web/supabase/production/partie-5.sql`.
-2. **À vérifier** : un code faux 5 fois : « réessaie dans 15 minutes » ; la fenêtre d'une nouvelle ECUE n'a plus de barème ; une note de rattrapage change la moyenne de l'ECUE.
+1. **La migration, sur la base de production** : Supabase › SQL Editor › New query, colle tout le fichier `web/supabase/migrations/0078_blocage_et_parcours.sql`, **après la 0077**, puis Run (« Success »). Elle se relance sans risque. Dis-moi « c'est appliqué » : je mets le code en ligne ensuite. Une base neuve l'a déjà : la 0078 est à la fin de `web/supabase/production/partie-5.sql`.
+2. **À vérifier** : la page d'accueil et le catalogue montrent les trois parcours ; les anciennes formations Business sont dans Compétences digitales ; le groupe « Entrepreneuriat » existe ; un code faux 5 fois : « réessaie dans 15 minutes » ; la fenêtre d'une nouvelle ECUE n'a plus de barème ; une note de rattrapage change la moyenne de l'ECUE.

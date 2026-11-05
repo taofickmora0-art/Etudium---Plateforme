@@ -33,7 +33,7 @@ const compter = async (qui: string, jeton: string | null = null) =>
   Number((await en<{ n: number }>(qui, "select (select count(*) from public.parcours_scolaires) + (select count(*) from public.notes_scolaires) as n", [], jeton))[0].n);
 
 beforeAll(async () => {
-  banc = await creerBanc(["tests/db/realtime-simule.sql", ...migrationsJusqua("0076"), MIGRATION, "supabase/migrations/0078_blocage_resultats.sql"]);
+  banc = await creerBanc(["tests/db/realtime-simule.sql", ...migrationsJusqua("0076"), MIGRATION, "supabase/migrations/0078_blocage_et_parcours.sql"]);
   for (const [id, roles] of [[A, []], [B, []], [ADM, ["admin"]]] as const) await banc.creerCompte(id, [...roles]);
 }, 180_000);
 

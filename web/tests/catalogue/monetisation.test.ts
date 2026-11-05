@@ -8,7 +8,7 @@ const faux = fauxSupabase();
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => faux.client }));
 vi.mock("@/lib/auth/current-user", () => ({ demoModeActive: () => false, getShellUser: vi.fn() }));
 
-const { grouperBusiness, monetisationDe } = await import("@/lib/catalogue/monetisation");
+const { monetisationDe } = await import("@/lib/catalogue/monetisation");
 const { lireMonetisation } = await import("@/lib/catalogue/data");
 
 const LIENS = [
@@ -35,26 +35,6 @@ describe("Ce qu'une fiche propose", () => {
 
   it("sans lien : rien", () => {
     expect(monetisationDe("maitriser-microsoft-excel", LIENS, CARTES_DESIGN)).toEqual({ aVendre: [], aSuivre: [] });
-  });
-});
-
-describe("L'onglet Business de la page Parcours", () => {
-  it("les formations rangées par compétence (ordre du parcours Digital), puis « Pour toutes les compétences »", () => {
-    const business = CARTES_DESIGN.filter((c) => c.parcours.some((p) => p.couleur === "business"));
-    const sans = { ...business[0], id: "trouver-ses-prix", slug: "trouver-ses-prix", titre: "Fixer ses prix" };
-    const groupes = grouperBusiness([...business, sans], LIENS, CARTES_DESIGN);
-    expect(groupes.map((g) => [g.competence?.slug ?? null, slugs(g.formations)])).toEqual([
-      ["canva-debutant-a-expert", ["marketing-digital-debutants", "lancer-son-activite-freelance"]],
-      ["montage-video-smartphone", ["lancer-son-activite-freelance"]],
-      [null, ["trouver-ses-prix"]],
-    ]);
-  });
-
-  it("aucun lien : un seul groupe, « Pour toutes les compétences »", () => {
-    const business = CARTES_DESIGN.filter((c) => c.parcours.some((p) => p.couleur === "business"));
-    expect(grouperBusiness(business, [], CARTES_DESIGN).map((g) => [g.competence, slugs(g.formations)])).toEqual([
-      [null, ["marketing-digital-debutants", "lancer-son-activite-freelance"]],
-    ]);
   });
 });
 

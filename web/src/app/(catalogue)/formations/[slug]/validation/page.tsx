@@ -25,7 +25,7 @@ async function Validation({ params }: Params) {
   if (!compte) redirect(`/connexion?next=${encodeURIComponent(`/formations/${slug}/validation`)}`);
   let fiche: FicheFormation | null;
   let lecture: Awaited<ReturnType<typeof lireValidation>>;
-  // Une compétence validée : la première formation Business qui apprend à la vendre (0048 ; restructuration, §5.3).
+  // Une compétence validée : la première formation qui apprend à la vendre (0048 ; restructuration, §5.3).
   let etapeSuivante: CarteCatalogue | null = null;
   try {
     fiche = (await getFiche(slug)) ?? (await ficheApercu(slug));

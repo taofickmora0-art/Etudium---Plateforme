@@ -18,7 +18,8 @@ describe("La base de production, partie par partie", () => {
     expect(parcours).toEqual([
       { slug: "reussite-academique", couleur: "academique" },
       { slug: "competences-digitales", couleur: "digital" },
-      { slug: "business-revenus-en-ligne", couleur: "business" },
+      // La 0078 : Business & revenus en ligne devient Entrepreneuriat (même couleur, orange).
+      { slug: "entrepreneuriat", couleur: "business" },
     ]);
     const { rows: formations } = await banc.db.query<{ n: number }>("select count(*)::int as n from public.formations");
     expect(formations[0].n).toBe(0);

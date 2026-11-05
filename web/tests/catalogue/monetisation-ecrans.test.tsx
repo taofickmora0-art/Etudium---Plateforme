@@ -80,19 +80,16 @@ describe("Une fois la compétence validée", () => {
   });
 });
 
-describe("L'onglet Business de la page Parcours", () => {
-  it("les formations rangées par compétence, puis « Pour toutes les compétences »", () => {
-    const liens = [{ businessId: "lancer-son-activite-freelance", competenceId: "canva-debutant-a-expert" }];
-    render(<MesParcours parcours={PARCOURS_DESIGN} cartes={CARTES_DESIGN} progressions={new Map()} liens={liens} initial="business-revenus-en-ligne" />);
-    const panneau = screen.getByRole("tabpanel");
-    const canva = within(panneau).getByRole("list", { name: "Pour vendre : Canva, de débutant à expert" });
-    expect(within(canva).getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual(["/formations/lancer-son-activite-freelance"]);
-    const toutes = within(panneau).getByRole("list", { name: "Pour toutes les compétences" });
-    expect(within(toutes).getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual(["/formations/marketing-digital-debutants"]);
+describe("Les onglets de la page Parcours", () => {
+  it("l'onglet orange (Entrepreneuriat depuis la 0078) : une simple liste dans l'ordre du parcours, sans groupes", () => {
+    const orange = PARCOURS_DESIGN.find((p) => p.couleur === "business")!;
+    render(<MesParcours parcours={PARCOURS_DESIGN} cartes={CARTES_DESIGN} progressions={new Map()} initial={orange.slug} />);
+    expect(screen.getByRole("list", { name: `Formations du parcours ${orange.nom}` })).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Pour toutes les compétences" })).toBeNull();
   });
 
   it("les autres onglets restent une simple liste", () => {
-    render(<MesParcours parcours={PARCOURS_DESIGN} cartes={CARTES_DESIGN} progressions={new Map()} liens={[]} initial="competences-digitales" />);
+    render(<MesParcours parcours={PARCOURS_DESIGN} cartes={CARTES_DESIGN} progressions={new Map()} initial="competences-digitales" />);
     expect(screen.getByRole("list", { name: "Formations du parcours Compétences digitales" })).toBeInTheDocument();
   });
 });

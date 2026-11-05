@@ -14,7 +14,7 @@ describe("Les trois parcours (NdLanding §6)", () => {
     expect(within(section).getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
       "Réussite académique",
       "Compétences digitales",
-      "Business & revenus en ligne",
+      "Entrepreneuriat",
     ]);
     expect(
       screen.getByText("Les outils et méthodes pour réussir à l’université : bureautique, recherche documentaire, rédaction scientifique, mémoire et soutenance."),
@@ -24,7 +24,7 @@ describe("Les trois parcours (NdLanding §6)", () => {
     for (const [nom, slug] of [
       ["Réussite académique", "reussite-academique"],
       ["Compétences digitales", "competences-digitales"],
-      ["Business & revenus en ligne", "business-revenus-en-ligne"],
+      ["Entrepreneuriat", "entrepreneuriat"],
     ]) {
       expect(screen.getByRole("link", { name: `Voir les formations du parcours ${nom}` })).toHaveAttribute("href", `/formations?parcours=${slug}`);
     }

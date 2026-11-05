@@ -21,7 +21,7 @@ export const STATUTS: Record<StatutFormation, string> = {
 export const COULEURS: { value: CouleurParcours; label: string }[] = [
   { value: "academique", label: "Académique (bleu)" },
   { value: "digital", label: "Digital (violet)" },
-  { value: "business", label: "Business (orange)" },
+  { value: "business", label: "Entrepreneuriat (orange)" },
 ];
 
 export const BADGES: { value: Badge; label: string }[] = [

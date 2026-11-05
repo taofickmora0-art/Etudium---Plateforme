@@ -16,7 +16,7 @@ const OMBRE_FLOTTANTE = "shadow-[0_22px_56px_rgba(4,10,80,0.3)]";
 const PUCES_PARCOURS = [
   { nom: "Réussite académique", couleur: "bg-bleu-moyen" },
   { nom: "Compétences digitales", couleur: "bg-digital-clair" },
-  { nom: "Business & revenus en ligne", couleur: "bg-business-clair" },
+  { nom: "Entrepreneuriat", couleur: "bg-business-clair" },
 ];
 
 /** Une ligne de la liste de l'illustration : tuile, titre et sous-titre. */

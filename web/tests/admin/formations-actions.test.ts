@@ -106,7 +106,7 @@ describe("Back-office : formations", () => {
     const parcoursExistants = () =>
       faux.repondre("formations_parcours.select", (appel) => (appel.valeurs === "ordre" ? { data: { ordre: 0 } } : { data: [{ parcours_id: P1 }, { parcours_id: P2 }] }));
 
-    it("dans le parcours Business : les compétences cochées sont liées, les décochées déliées", async () => {
+    it("dans Compétences digitales ou Entrepreneuriat : les compétences cochées sont liées, les décochées déliées", async () => {
       parcoursExistants();
       faux.repondre("parcours.select", { data: [{ id: P2 }] });
       faux.repondre("formations_monetisation.select", { data: [{ competence_id: C1 }, { competence_id: C3 }] });
@@ -114,7 +114,7 @@ describe("Back-office : formations", () => {
       expect(state.status).toBe("success");
       expect(faux.de("parcours", "select")[0].filtres).toEqual([
         ["in", "id", [P1, P2]],
-        ["eq", "couleur", "business"],
+        ["in", "couleur", ["digital", "business"]],
       ]);
       expect(faux.de("formations_monetisation", "delete")[0].filtres).toEqual([
         ["eq", "business_id", F],
@@ -123,7 +123,7 @@ describe("Back-office : formations", () => {
       expect(faux.de("formations_monetisation", "insert")[0].valeurs).toEqual([{ business_id: F, competence_id: C2 }]);
     });
 
-    it("plus dans le parcours Business : tous ses liens sont retirés", async () => {
+    it("dans aucun de ces deux parcours : tous ses liens sont retirés", async () => {
       parcoursExistants();
       faux.repondre("parcours.select", { data: [] });
       faux.repondre("formations_monetisation.select", { data: [{ competence_id: C1 }] });

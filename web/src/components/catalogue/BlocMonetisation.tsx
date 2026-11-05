@@ -46,8 +46,8 @@ function Bloc({ id, titre, texte, cartes }: { id: string; titre: string; texte: 
 }
 
 /**
- * Sur la fiche d'une formation Business : « À suivre d'abord », les compétences qu'elle apprend à vendre. Sur la fiche
- * d'une compétence : « Et ensuite ? Vendre cette compétence », les formations Business qui la monétisent. Rien sans lien.
+ * Sur la fiche d'une formation qui apprend à vendre une compétence : « À suivre d'abord », ces compétences. Sur la fiche
+ * d'une compétence : « Et ensuite ? Vendre cette compétence », les formations qui la monétisent. Rien sans lien.
  * La même présentation pour un visiteur et pour un compte connecté (spec du 2 novembre 2026, §5).
  */
 export function BlocMonetisation({ monetisation }: { monetisation?: Monetisation | null }) {
@@ -66,7 +66,7 @@ export function BlocMonetisation({ monetisation }: { monetisation?: Monetisation
         <Bloc
           id="vendre"
           titre="Et ensuite ? Vendre cette compétence"
-          texte="Les formations du parcours Business qui vous apprennent à trouver des clients avec cette compétence."
+          texte="Les formations qui vous apprennent à trouver des clients avec cette compétence."
           cartes={monetisation.aVendre}
         />
       )}

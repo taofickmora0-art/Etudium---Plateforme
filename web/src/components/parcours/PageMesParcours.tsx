@@ -1,6 +1,6 @@
 import { siTablesAbsentes } from "@/components/admin/TablesAbsentes";
 import { lireAbonnement } from "@/lib/abonnement/data";
-import { lireMonetisation, listCatalogue, listParcoursCatalogue } from "@/lib/catalogue/data";
+import { listCatalogue, listParcoursCatalogue } from "@/lib/catalogue/data";
 import { lireProgression } from "@/lib/progression/data";
 import { progressionsParFormation } from "@/lib/progression/regles";
 import { MesParcours } from "./MesParcours";
@@ -14,18 +14,17 @@ export async function PageMesParcours({ searchParams }: { searchParams?: Promise
   const initial = Array.isArray(demande) ? demande[0] : demande;
   let donnees;
   try {
-    donnees = await Promise.all([listParcoursCatalogue(), listCatalogue(), lireProgression(), lireMonetisation(), lireAbonnement()]);
+    donnees = await Promise.all([listParcoursCatalogue(), listCatalogue(), lireProgression(), lireAbonnement()]);
   } catch (erreur) {
     return siTablesAbsentes(erreur);
   }
-  const [parcours, cartes, lignes, liens, abonnement] = donnees;
+  const [parcours, cartes, lignes, abonnement] = donnees;
   return (
     <MesParcours
       parcours={parcours}
       cartes={cartes}
       progressions={lignes ? progressionsParFormation(cartes, lignes) : new Map()}
       initial={initial}
-      liens={liens}
       abonne={abonnement.etat === "actif"}
     />
   );

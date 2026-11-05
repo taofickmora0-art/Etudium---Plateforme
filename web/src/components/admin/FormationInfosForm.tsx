@@ -81,8 +81,8 @@ export function FormationInfosForm({ formation, parcours, formateurs, espace = "
   const coche = (champ: string, enregistre: boolean) => (state.values ? state.values[champ] === "on" : enregistre);
   const parcoursCoches = state.values ? (state.values.parcours ?? "").split(",").filter(Boolean) : formation.parcoursIds;
   const vendues = state.values ? (state.values.competences_vendues ?? "").split(",").filter(Boolean) : liees;
-  // « Compétences à vendre » (restructuration, §5.3) : seulement s'il existe un parcours Business.
-  const rubriqueMonetisation = competences !== undefined && parcours.some((p) => p.couleur === "business");
+  // « Compétences à vendre » (restructuration, §5.3 ; 0078) : pour une formation de Compétences digitales ou d'Entrepreneuriat.
+  const rubriqueMonetisation = competences !== undefined && parcours.some((p) => p.couleur === "digital" || p.couleur === "business");
 
   // Le score minimal aux quiz (0031) : absent avant elle, sinon chaque enregistrement buterait sur la colonne absente.
   const champScore = formation.scoreQuiz !== null && (
@@ -193,8 +193,7 @@ export function FormationInfosForm({ formation, parcours, formateurs, espace = "
             <legend className="mb-1 p-0 text-sm leading-5 font-medium text-encre">Compétences à vendre</legend>
             <input type="hidden" name="monetisation" value="1" />
             <p className="m-0 mb-1 text-[13px] leading-5 text-discret">
-              Pour une formation du parcours Business : les formations de Compétences digitales qu’elle apprend à vendre. Aucune
-              cochée : elle vaut pour toutes les compétences.
+              Pour une formation de Compétences digitales ou d’Entrepreneuriat : les compétences qu’elle apprend à vendre.
             </p>
             {competences.length === 0 ? (
               <p className="m-0 text-[13px] leading-5 text-discret">Aucune formation publiée dans Compétences digitales pour le moment.</p>

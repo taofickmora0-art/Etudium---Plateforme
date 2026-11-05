@@ -311,7 +311,7 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
   // Le titre en ligne : il donne l'adresse quand le champ est vidé.
   const titre = texte(fd, "titre");
   const parcoursCoches = [...new Set(fd.getAll("parcours").map(String).filter(estUuid))];
-  // Les compétences qu'une formation Business apprend à vendre (0048) : seulement si le formulaire montre la rubrique.
+  // Les compétences qu'une formation apprend à vendre (0048, 0078) : seulement si le formulaire montre la rubrique.
   const monetisation = fd.has("monetisation");
   const vendues = [...new Set(fd.getAll("competences_vendues").map(String).filter(estUuid))];
   const saisie = {
@@ -409,14 +409,14 @@ export async function saveFormationInfos(_prev: FormState, fd: FormData): Promis
 }
 
 /**
- * Les compétences qu'une formation Business apprend à vendre (0048 ; restructuration, §5.3) : liées si elle est dans le
- * parcours Business, sinon toutes déliées. La base revérifie (une compétence publiée de Compétences digitales). Renvoie
- * le message à afficher sous la rubrique, ou null.
+ * Les compétences qu'une formation apprend à vendre (0048 ; restructuration, §5.3) : liées si elle est dans Compétences
+ * digitales ou Entrepreneuriat (0078), sinon toutes déliées. La base revérifie (une compétence publiée de Compétences
+ * digitales). Renvoie le message à afficher sous la rubrique, ou null.
  */
 async function enregistrerMonetisation(supabase: Supabase, id: string, parcoursCoches: string[], vendues: string[]): Promise<string | null> {
   let business = false;
   if (parcoursCoches.length > 0) {
-    const { data, error } = await supabase.from("parcours").select("id").in("id", parcoursCoches).eq("couleur", "business");
+    const { data, error } = await supabase.from("parcours").select("id").in("id", parcoursCoches).in("couleur", ["digital", "business"]);
     if (error) return ECHEC;
     business = ((data as unknown[] | null) ?? []).length > 0;
   }

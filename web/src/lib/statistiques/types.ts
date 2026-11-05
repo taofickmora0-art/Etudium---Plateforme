@@ -78,5 +78,5 @@ export const PERIODES: { value: "30" | "90" | "365"; label: string }[] = [
 export const ONGLETS: { value: OngletStatistiques; label: string }[] = [
   { value: "etudiants", label: "Étudiants" },
   { value: "formations", label: "Formations" },
-  { value: "business", label: "Business" },
+  { value: "business", label: "Entrepreneuriat" },
 ];

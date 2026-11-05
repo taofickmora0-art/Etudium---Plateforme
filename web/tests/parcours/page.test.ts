@@ -25,8 +25,6 @@ describe("Page Mes parcours : progression", () => {
     lireProgression.mockResolvedValue(null);
     const element = (await PageMesParcours({ searchParams: Promise.resolve({ parcours: "competences-digitales" }) })) as unknown as Element;
     expect(element.props.initial).toBe("competences-digitales");
-    // Le lien compétence → monétisation (0048), pour l'onglet Business.
-    expect(element.props.liens).toEqual(LIENS);
     const double = (await PageMesParcours({ searchParams: Promise.resolve({ parcours: ["business-revenus-en-ligne", "x"] }) })) as unknown as Element;
     expect(double.props.initial).toBe("business-revenus-en-ligne");
   });

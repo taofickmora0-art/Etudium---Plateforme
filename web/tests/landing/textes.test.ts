@@ -40,7 +40,7 @@ describe("Textes fixes de la landing (annexe §23)", () => {
   });
 
   it("6 points pour chacun des trois parcours du lancement, 4 problèmes, 4 étapes, 4 atouts", () => {
-    for (const slug of ["reussite-academique", "competences-digitales", "business-revenus-en-ligne"]) expect(POINTS_PARCOURS[slug], slug).toHaveLength(6);
+    for (const slug of ["reussite-academique", "competences-digitales", "entrepreneuriat"]) expect(POINTS_PARCOURS[slug], slug).toHaveLength(6);
     expect(PROBLEMES).toHaveLength(4);
     expect(ETAPES).toHaveLength(4);
     expect(ATOUTS).toHaveLength(4);

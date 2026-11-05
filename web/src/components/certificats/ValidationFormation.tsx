@@ -58,7 +58,7 @@ export function ValidationFormation({
   etat: EtatValidation;
   formation: { titre: string; slug: string };
   prenom: string;
-  /** Une compétence validée : la première formation Business qui apprend à la vendre (0048 ; restructuration, §5.3). */
+  /** Une compétence validée : la première formation qui apprend à la vendre (0048 ; restructuration, §5.3). */
   etapeSuivante?: CarteCatalogue | null;
 }) {
   const { certificat } = etat;

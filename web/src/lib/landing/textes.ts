@@ -58,14 +58,14 @@ export const POINTS_PARCOURS: Record<string, string[]> = {
     "Productivité académique",
   ],
   "competences-digitales": [
-    "Canva",
+    "Canva et design",
     "Intelligence artificielle",
-    "Création de contenu",
-    "Montage vidéo",
-    "Community management et marketing digital",
-    "Outils no-code et automatisation",
+    "Création de contenu et montage vidéo",
+    "Marketing digital et automatisation",
+    "Freelancing",
+    "Vente en ligne",
   ],
-  "business-revenus-en-ligne": ["Freelancing", "Produits digitaux", "E-commerce et vente en ligne", "Affiliation", "YouTube", "Acquisition de clients"],
+  entrepreneuriat: ["Trouver une idée", "Bâtir son projet", "Financer son projet", "Statut juridique", "Gestion et comptabilité", "Premiers clients"],
 };
 
 /**
@@ -84,12 +84,12 @@ export const PARCOURS_LANCEMENT: { slug: string; nom: string; couleur: CouleurPa
     slug: "competences-digitales",
     nom: "Compétences digitales",
     couleur: "digital",
-    description: "Les compétences numériques recherchées par les employeurs : design, intelligence artificielle, contenu et automatisation.",
+    description: "Les compétences numériques recherchées, et comment en vivre : design, intelligence artificielle, contenu, freelance et vente en ligne.",
   },
   {
-    slug: "business-revenus-en-ligne",
-    nom: "Business & revenus en ligne",
+    slug: "entrepreneuriat",
+    nom: "Entrepreneuriat",
     couleur: "business",
-    description: "Créer une activité et des revenus grâce au numérique : trouver des clients, vendre en ligne et lancer son business.",
+    description: "De l’idée à l’entreprise : trouver une idée, bâtir son projet, le financer et le gérer, pendant ses études et après.",
   },
 ];

@@ -199,7 +199,7 @@ describe("La page « Statistiques »", () => {
     expect(screen.getByText("Temps mesuré sur les vidéos suivies (YouTube, Vimeo, TikTok, Tella).")).toBeInTheDocument();
     await user.click(within(screen.getByRole("group", { name: "Période" })).getByRole("button", { name: "12 mois" }));
     expect(replace).toHaveBeenLastCalledWith("/admin/statistiques?periode=365&onglet=etudiants", { scroll: false });
-    await user.click(screen.getByRole("tab", { name: "Business" }));
+    await user.click(screen.getByRole("tab", { name: "Entrepreneuriat" }));
     expect(replace).toHaveBeenLastCalledWith("/admin/statistiques?periode=30&onglet=business", { scroll: false });
   });
 

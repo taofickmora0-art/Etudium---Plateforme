@@ -69,10 +69,11 @@ beforeEach(() => {
   routeur.replace.mockClear();
 });
 
-describe("Les compétences qu'une formation Business apprend à vendre (0048 ; restructuration, §5.3)", () => {
+describe("Les compétences qu'une formation apprend à vendre (0048 ; restructuration, §5.3 ; 0078)", () => {
   const PARCOURS = [
+    { id: "pa", slug: "reussite-academique", nom: "Réussite académique", nomCourt: "Académique", description: "", couleur: "academique" as const, ordre: 1, actif: true },
     { id: "pd", slug: "competences-digitales", nom: "Compétences digitales", nomCourt: "Digital", description: "", couleur: "digital" as const, ordre: 2, actif: true },
-    { id: "pb", slug: "business-revenus-en-ligne", nom: "Business & revenus en ligne", nomCourt: "Business", description: "", couleur: "business" as const, ordre: 3, actif: true },
+    { id: "pb", slug: "entrepreneuriat", nom: "Entrepreneuriat", nomCourt: "Entrepreneuriat", description: "", couleur: "business" as const, ordre: 3, actif: true },
   ];
   const COMPETENCES = [
     { id: "c1", titre: "Canva, de débutant à expert" },
@@ -82,13 +83,13 @@ describe("Les compétences qu'une formation Business apprend à vendre (0048 ; r
   it("la rubrique, sous les parcours : les compétences de Compétences digitales, celles déjà liées cochées", () => {
     const { container } = avecToast(<FormationInfosForm formation={FORMATION} parcours={PARCOURS} formateurs={[]} espace="formateur" competences={COMPETENCES} liees={["c2"]} />);
     const rubrique = screen.getByRole("group", { name: "Compétences à vendre" });
-    expect(within(rubrique).getByText(/Pour une formation du parcours Business/)).toBeInTheDocument();
+    expect(within(rubrique).getByText(/Pour une formation de Compétences digitales ou d’Entrepreneuriat/)).toBeInTheDocument();
     expect(within(rubrique).getByRole("checkbox", { name: "Canva, de débutant à expert" })).not.toBeChecked();
     expect(within(rubrique).getByRole("checkbox", { name: "Montage vidéo sur smartphone" })).toBeChecked();
     expect(container.querySelector('input[name="monetisation"]')).not.toBeNull();
   });
 
-  it("sans parcours Business, ou sans la liste : pas de rubrique", () => {
+  it("sans Compétences digitales ni Entrepreneuriat, ou sans la liste : pas de rubrique", () => {
     avecToast(<FormationInfosForm formation={FORMATION} parcours={[PARCOURS[0]]} formateurs={[]} competences={COMPETENCES} liees={[]} />);
     expect(screen.queryByRole("group", { name: "Compétences à vendre" })).toBeNull();
   });
