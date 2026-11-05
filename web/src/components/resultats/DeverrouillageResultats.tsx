@@ -18,7 +18,14 @@ const minutesRestantes = (jusqua: string | null, maintenant: number) => {
   return Number.isFinite(fin) && fin > maintenant ? Math.ceil((fin - maintenant) / 60_000) : 0;
 };
 
-const messageBlocage = (minutes: number) => `Trop d’essais : réessaie dans ${minutes} minute${minutes > 1 ? "s" : ""}.`;
+/** « 12 minutes », puis en heures à partir d'une heure (comme la base, migration 0078). */
+const attente = (minutes: number) => {
+  if (minutes < 60) return `${minutes} minute${minutes > 1 ? "s" : ""}`;
+  const heures = Math.ceil(minutes / 60);
+  return `${heures} heure${heures > 1 ? "s" : ""}`;
+};
+
+const messageBlocage = (minutes: number) => `Trop d’essais : réessaie dans ${attente(minutes)}.`;
 
 /** Le clavier de la porte : 4 chiffres masqués, envoyés dès la dernière case ; « Code oublié ? » passe par une reconnexion. */
 export function DeverrouillageResultats({ bloqueJusqua }: { bloqueJusqua: string | null }) {
@@ -63,12 +70,13 @@ export function DeverrouillageResultats({ bloqueJusqua }: { bloqueJusqua: string
 
   return (
     <>
-      <CadrePorte titre="Saisis ton code" texte="Tes résultats sont protégés par ton code à 4 chiffres.">
+      <CadrePorte titre="Saisis ton code">
         <div ref={zone}>
           <CodeInput
             label="Ton code PIN"
             length={4}
             masque
+            centre
             value={code}
             onChange={setCode}
             onComplete={(valeur) => void essayer(valeur)}
@@ -84,7 +92,7 @@ export function DeverrouillageResultats({ bloqueJusqua }: { bloqueJusqua: string
         open={oubli}
         onOpenChange={setOubli}
         title="Code oublié ?"
-        description="Pour créer un nouveau code, reconnecte-toi à ton compte : l’ancien code sera effacé. Tes résultats sont gardés."
+        description="Reconnecte-toi pour créer un nouveau code. Tes résultats sont gardés."
         confirmLabel="Me reconnecter"
         onConfirm={async () => {
           await signOut();

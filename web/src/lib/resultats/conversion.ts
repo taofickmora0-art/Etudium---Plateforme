@@ -54,8 +54,9 @@ export function versParcoursComplet(v: unknown): ParcoursComplet | null {
     ues: ues
       .map((u) => ({ id: texte(u.id), semestreId: texte(u.semestre_id), code: texte(u.code), intitule: texte(u.intitule), credits: nombre(u.credits), ordre: nombre(u.ordre) }))
       .sort(parOrdre),
+    // Le barème du parcours vaut pour toutes les ECUE (décision du 5 novembre 2026) : un barème propre d'avant est ignoré.
     ecues: ecues
-      .map((e: Ligne) => ({ id: texte(e.id), ueId: texte(e.ue_id), intitule: texte(e.intitule), poids: nombre(e.poids, 1), bareme: e.bareme ? versCategories(e.bareme) : null, ordre: nombre(e.ordre) }))
+      .map((e: Ligne) => ({ id: texte(e.id), ueId: texte(e.ue_id), intitule: texte(e.intitule), poids: nombre(e.poids, 1), bareme: null, ordre: nombre(e.ordre) }))
       .sort(parOrdre),
     notes: notes
       .map(

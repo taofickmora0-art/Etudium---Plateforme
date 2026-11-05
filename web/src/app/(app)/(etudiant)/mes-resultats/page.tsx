@@ -26,7 +26,7 @@ export default function Page({ searchParams }: Adresse) {
     <div className="flex max-w-[960px] min-w-0 flex-col gap-6">
       <div className="min-w-0">
         <Heading level="page">Mes résultats</Heading>
-        <Lead className="mt-2.5">Tes notes de l’école, tes moyennes et tes crédits, calculés avec les règles de ton établissement. Toi seul les vois.</Lead>
+        <Lead className="mt-2.5">Tes notes, tes moyennes et tes crédits.</Lead>
       </div>
       <Suspense fallback={<Skeleton className="h-60 rounded-carte" />}>
         <Contenu searchParams={searchParams} />

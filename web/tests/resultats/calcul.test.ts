@@ -166,10 +166,18 @@ describe("Le semestre et le parcours", () => {
 });
 
 describe("L'affichage", () => {
-  it("les mentions et les notes à deux décimales, avec une virgule", () => {
+  it("les mentions ; les notes à deux décimales, sans arrondir (9,995 n'atteint pas 10 : « 9,99 »)", () => {
     expect([9.99, 10, 12, 14, 16].map(mention)).toEqual([null, "Passable", "Assez bien", "Bien", "Très bien"]);
-    expect(formaterNote(12.4567)).toBe("12,46");
+    expect(formaterNote(12.4567)).toBe("12,45");
+    expect(formaterNote(9.995)).toBe("9,99");
+    expect(formaterNote(12.46)).toBe("12,46");
     expect(formaterNote(10)).toBe("10,00");
+  });
+
+  it("une moyenne de 10 tout juste, que l'ordinateur calcule 9,999999… : « 10,00 » et l'UE validée", () => {
+    const r = resultatUe(ue("u", 5), [ecue("a", "u")], [note("a", "cc", 5.47), note("a", "examen", 13.02)], R);
+    expect(formaterNote(r.moyenne!)).toBe("10,00");
+    expect(r.validee).toBe(true);
   });
 });
 

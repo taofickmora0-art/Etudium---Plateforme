@@ -22,13 +22,15 @@ type CodeInputProps = {
   disabled?: boolean;
   /** Chiffres masqués (code PIN) : des points à la place, sans saisie automatique du code reçu. */
   masque?: boolean;
+  /** Libellé, cases et message centrés (écrans et fenêtres d'un code PIN). */
+  centre?: boolean;
   className?: string;
 };
 
 const onlyDigits = (text: string) => text.replace(/\D/g, "");
 
 /** Code de vérification en cases de 48 × 56 (planche « Formulaires », « Listes, zones de texte et code »). */
-export function CodeInput({ label, value, onChange, onComplete, length = 6, hint, error, invalid, disabled, masque, className }: CodeInputProps) {
+export function CodeInput({ label, value, onChange, onComplete, length = 6, hint, error, invalid, disabled, masque, centre, className }: CodeInputProps) {
   const id = useId();
   const boxes = useRef<(HTMLInputElement | null)[]>([]);
   const code = onlyDigits(value).slice(0, length);
@@ -84,7 +86,7 @@ export function CodeInput({ label, value, onChange, onComplete, length = 6, hint
   };
 
   return (
-    <div className={cn("flex flex-col gap-1.5", className)}>
+    <div className={cn("flex flex-col gap-1.5", centre && "w-full items-center text-center", className)}>
       <span id={`${id}-label`} className="text-sm leading-5 font-medium text-encre">
         {label}
       </span>
@@ -126,7 +128,7 @@ export function CodeInput({ label, value, onChange, onComplete, length = 6, hint
         ))}
       </div>
       {error ? (
-        <span id={`${id}-hint`} className="flex items-center gap-1.5 text-xs leading-[18px] text-erreur-texte">
+        <span id={`${id}-hint`} className={cn("flex items-center gap-1.5 text-xs leading-[18px] text-erreur-texte", centre && "justify-center")}>
           <Icon icon={AlertCircleIcon} size={14} />
           {error}
         </span>

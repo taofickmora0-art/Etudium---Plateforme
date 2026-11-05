@@ -7,7 +7,8 @@ import { creerBanc, migrationsJusqua, type Banc } from "./banc";
 // Migration 0077 : « Mes résultats » (spec du 5 novembre 2026). Parcours scolaires, semestres, UE, ECUE et notes,
 // réservés à leur propriétaire (pas même l'équipe) ; règles de calcul et barèmes vérifiés ; limites par compte ; code
 // PIN facultatif : quand il existe, la base n'ouvre rien sans un jeton de déverrouillage (en-tête x-etudium-resultats),
-// valable 15 minutes ; 5 erreurs bloquent 15 minutes ; le code oublié se réinitialise après une connexion récente.
+// valable 15 minutes ; 5 erreurs bloquent 15 minutes (puis 1 heure, puis 24 heures : migration 0078) ; le code oublié
+// se réinitialise après une connexion récente.
 
 const MIGRATION = "supabase/migrations/0077_resultats.sql";
 let banc: Banc;
@@ -32,7 +33,7 @@ const compter = async (qui: string, jeton: string | null = null) =>
   Number((await en<{ n: number }>(qui, "select (select count(*) from public.parcours_scolaires) + (select count(*) from public.notes_scolaires) as n", [], jeton))[0].n);
 
 beforeAll(async () => {
-  banc = await creerBanc(["tests/db/realtime-simule.sql", ...migrationsJusqua("0076"), MIGRATION]);
+  banc = await creerBanc(["tests/db/realtime-simule.sql", ...migrationsJusqua("0076"), MIGRATION, "supabase/migrations/0078_blocage_resultats.sql"]);
   for (const [id, roles] of [[A, []], [B, []], [ADM, ["admin"]]] as const) await banc.creerCompte(id, [...roles]);
 }, 180_000);
 
@@ -125,6 +126,24 @@ describe("Le code PIN", () => {
     expect((await r<{ bloque_jusqua: string | null }>(A, "select public.etat_resultats() as r")).bloque_jusqua).not.toBeNull();
     await banc.db.query("update public.verrou_resultats set bloque_jusqua = now() - interval '1 second'");
     expect((await r<Resultat>(A, "select public.ouvrir_resultats('1234') as r")).ok).toBe(true);
+  });
+
+  it("le blocage s'allonge : 15 minutes, 1 heure, puis 24 heures ; le bon code remet le compte à zéro", async () => {
+    await r(A, "select public.definir_pin_resultats('1234') as r");
+    const bloquer = async () => {
+      await banc.db.query("update public.verrou_resultats set bloque_jusqua = null");
+      let message = "";
+      for (let i = 0; i < 5; i++) message = (await r<Resultat>(A, "select public.ouvrir_resultats('9999') as r")).message ?? "";
+      return message;
+    };
+    expect(await bloquer()).toBe("Trop d’essais : réessaie dans 15 minutes.");
+    expect(await bloquer()).toBe("Trop d’essais : réessaie dans 1 heure.");
+    expect(await bloquer()).toBe("Trop d’essais : réessaie dans 24 heures.");
+    expect((await r<Resultat>(A, "select public.ouvrir_resultats('1234') as r")).message).toBe("Trop d’essais : réessaie dans 24 heures.");
+    expect(await bloquer()).toBe("Trop d’essais : réessaie dans 24 heures.");
+    await banc.db.query("update public.verrou_resultats set bloque_jusqua = null");
+    expect((await r<Resultat>(A, "select public.ouvrir_resultats('1234') as r")).ok).toBe(true);
+    expect(await bloquer()).toBe("Trop d’essais : réessaie dans 15 minutes.");
   });
 
   it("refuse un code qui n'a pas 4 chiffres ; changer le code exige l'actuel ; le retirer rend tout lisible", async () => {

@@ -17,9 +17,11 @@ const formaterDate = (iso: string) => DATE.format(new Date(`${iso}T00:00:00Z`));
 
 const moyenneOuTiret = (m: number | null) => (m === null ? "—" : formaterNote(m));
 
-/** « Contrôle continu 12,50 · Examen 10,00 », puis ce qui manque encore (« examen à venir »). */
-function detailParType(r: ResultatEcue) {
-  const notes = r.categories.filter((c) => c.moyenne !== null).map((c) => `${c.nom} ${formaterNote(c.moyenne!)}`);
+/** « Contrôle continu 12,50 · Examen 15,00 (avec rattrapage) », puis ce qui manque encore (« à venir : examen »). */
+function detailParType(r: ResultatEcue, avecRattrapage: boolean) {
+  const notes = r.categories
+    .filter((c) => c.moyenne !== null)
+    .map((c) => `${c.nom} ${formaterNote(c.moyenne!)}${c.examen && avecRattrapage ? " (avec rattrapage)" : ""}`);
   const manquants = r.categories.filter((c) => c.moyenne === null).map((c) => c.nom.toLowerCase());
   if (notes.length === 0) return "Pas encore de note";
   return manquants.length ? `${notes.join(" · ")} · à venir : ${manquants.join(", ")}` : notes.join(" · ");
@@ -29,21 +31,18 @@ type LigneEcueProps = {
   r: ResultatEcue;
   notes: Note[];
   regles: Regles;
-  /** L'UE a plusieurs ECUE : « ce qu'il te faut » se dit aussi pour chacune. */
-  plusieurs: boolean;
   premier: boolean;
   dernier: boolean;
   ouvrir: OuvrirFenetre;
 };
 
-function LigneEcue({ r, notes, regles, plusieurs, premier, dernier, ouvrir }: LigneEcueProps) {
+function LigneEcue({ r, notes, regles, premier, dernier, ouvrir }: LigneEcueProps) {
   const deplacer = useDeplacer();
   const [ouvertes, setOuvertes] = useState(false);
   const { ecue } = r;
   const siennes = notes.filter((n) => n.ecueId === ecue.id);
   const bareme = ecue.bareme ?? regles.categories;
   const nomType = (n: Note) => (n.rattrapage ? "Rattrapage" : (bareme.find((c) => c.cle === n.categorie)?.nom ?? "Type retiré"));
-  const visee = plusieurs ? texteVisee(r.noteVisee, "cette ECUE") : null;
   const actions: MenuEntry[] = [
     { label: "Modifier l’ECUE", icon: PencilEdit02Icon, onSelect: () => ouvrir({ quoi: "ecue", ueId: ecue.ueId, ecue }) },
     ...(premier ? [] : [{ label: "Monter", icon: ArrowUp02Icon, onSelect: () => void deplacer("ecue", ecue.id, -1) }]),
@@ -63,13 +62,9 @@ function LigneEcue({ r, notes, regles, plusieurs, premier, dernier, ouvrir }: Li
         <div className="min-w-0 flex-1">
           <p className="m-0 text-sm leading-[22px] font-medium text-encre">
             {ecue.intitule}{" "}
-            <span className="font-normal text-discret">
-              · {pluriel(ecue.poids, "crédit")}
-              {ecue.bareme ? " · barème propre" : ""}
-            </span>
+            <span className="font-normal text-discret">· {pluriel(ecue.poids, "crédit")}</span>
           </p>
-          <p className="m-0 text-[13px] leading-5 text-discret">{detailParType(r)}</p>
-          {visee && <p className="m-0 mt-1 text-[13px] leading-5 text-bleu">{visee}</p>}
+          <p className="m-0 text-[13px] leading-5 text-discret">{detailParType(r, siennes.some((n) => n.rattrapage))}</p>
           {r.nonClassees > 0 && (
             <p className="m-0 mt-1 text-[13px] leading-5 text-attention-texte">
               {pluriel(r.nonClassees, "note")} d’un type retiré du barème {r.nonClassees > 1 ? "ne comptent" : "ne compte"} pas.
@@ -184,7 +179,7 @@ export function CarteUe({ resultat, notes, regles, compensee, premier, dernier, 
       {resultat.ecues.length > 0 && (
         <ul className="m-0 list-none p-0">
           {resultat.ecues.map((r, i) => (
-            <LigneEcue key={r.ecue.id} r={r} notes={notes} regles={regles} plusieurs={resultat.ecues.length > 1} premier={i === 0} dernier={i === resultat.ecues.length - 1} ouvrir={ouvrir} />
+            <LigneEcue key={r.ecue.id} r={r} notes={notes} regles={regles} premier={i === 0} dernier={i === resultat.ecues.length - 1} ouvrir={ouvrir} />
           ))}
         </ul>
       )}

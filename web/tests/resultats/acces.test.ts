@@ -141,7 +141,7 @@ describe("La lecture", () => {
                 intitule: "Biologie",
                 credits: "5.0",
                 ordre: 0,
-                ecue_scolaires: [{ id: E, ue_id: U, intitule: "Botanique", poids: "3.00", bareme: null, ordre: 0, notes_scolaires: [{ id: "n1", ecue_id: E, categorie: "cc", libelle: "I1", note: "14.00", sur: "20.00", rattrapage: false, date: null, cree_le: "2026-01-01T00:00:00Z" }] }],
+                ecue_scolaires: [{ id: E, ue_id: U, intitule: "Botanique", poids: "3.00", bareme: [{ cle: "examen", nom: "Examen", poids: 100, examen: true }], ordre: 0, notes_scolaires: [{ id: "n1", ecue_id: E, categorie: "cc", libelle: "I1", note: "14.00", sur: "20.00", rattrapage: false, date: null, cree_le: "2026-01-01T00:00:00Z" }] }],
               },
             ],
           },
@@ -152,6 +152,7 @@ describe("La lecture", () => {
     expect(p?.parcours).toMatchObject({ nom: "Licence", regles: { seuilUe: 10, rattrapage: "remplace" } });
     expect(p?.semestres.map((s) => s.nom)).toEqual(["Semestre 1", "Semestre 2"]);
     expect(p?.ues[0]).toMatchObject({ credits: 5, code: "AGR101" });
+    // Le barème du parcours vaut pour toutes les ECUE (décision du 5 novembre 2026) : un barème propre d'avant est ignoré.
     expect(p?.ecues[0]).toMatchObject({ poids: 3, bareme: null });
     expect(p?.notes[0]).toMatchObject({ note: 14, sur: 20, categorie: "cc" });
     expect(await lireParcoursComplet("pas-un-uuid")).toBeNull();

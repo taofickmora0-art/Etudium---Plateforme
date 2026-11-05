@@ -14,20 +14,15 @@ import type { Categorie } from "@/lib/resultats/types";
 
 type LigneType = { cle: string | null; nom: string; poids: string; examen: boolean };
 
-/** Le choix en cours : un modèle, « perso » (les lignes), ou « parcours » (une ECUE garde le barème du parcours). */
+/** Le choix en cours : un modèle, ou « perso » (les lignes). */
 export type EtatBareme = { modele: string; lignes: LigneType[] };
 
 const versLignes = (categories: Categorie[]): LigneType[] => categories.map((c) => ({ cle: c.cle, nom: c.nom, poids: formaterNombre(c.poids), examen: c.examen === true }));
 
-/** L'état de départ : `null`, le barème du parcours (pour une ECUE). */
-export function etatBareme(categories: Categorie[] | null, parcours?: Categorie[]): EtatBareme {
-  if (categories === null) return { modele: "parcours", lignes: versLignes(parcours ?? MODELES_BAREME[0].categories) };
-  return { modele: modeleDuBareme(categories), lignes: versLignes(categories) };
-}
+export const etatBareme = (categories: Categorie[]): EtatBareme => ({ modele: modeleDuBareme(categories), lignes: versLignes(categories) });
 
-/** Le barème choisi ; null : celui du parcours. Les nouveaux types reçoivent une clé tirée de leur nom. */
-export function categoriesDuBareme(etat: EtatBareme): Categorie[] | null {
-  if (etat.modele === "parcours") return null;
+/** Le barème choisi. Les nouveaux types reçoivent une clé tirée de leur nom. */
+export function categoriesDuBareme(etat: EtatBareme): Categorie[] {
   const modele = MODELES_BAREME.find((m) => m.cle === etat.modele);
   if (modele) return modele.categories;
   const prises = etat.lignes.flatMap((l) => (l.cle ? [l.cle] : []));
@@ -38,22 +33,15 @@ export function categoriesDuBareme(etat: EtatBareme): Categorie[] | null {
   });
 }
 
-type ChoixBaremeProps = {
-  etat: EtatBareme;
-  onChange: (etat: EtatBareme) => void;
-  /** Pour une ECUE : le barème du parcours, proposé en premier. */
-  parcours?: Categorie[];
-  name: string;
-};
+type ChoixBaremeProps = { etat: EtatBareme; onChange: (etat: EtatBareme) => void; name: string };
 
 /** Le barème : un modèle (40/60 par défaut), ou des types personnalisés (6 au plus, 100 % au total, un examen au plus). */
-export function ChoixBareme({ etat, onChange, parcours, name }: ChoixBaremeProps) {
+export function ChoixBareme({ etat, onChange, name }: ChoixBaremeProps) {
   const total = etat.lignes.reduce((s, l) => s + (Number.isFinite(lireNombre(l.poids)) ? lireNombre(l.poids) : 0), 0);
   const changerLigne = (i: number, ligne: Partial<LigneType>) =>
     onChange({ ...etat, lignes: etat.lignes.map((l, j) => (j === i ? { ...l, ...ligne } : ligne.examen ? { ...l, examen: false } : l)) });
 
   const options = [
-    ...(parcours ? [{ value: "parcours", label: <>Celui du parcours <span className="text-discret">· {detailBareme(parcours)}</span></> }] : []),
     ...MODELES_BAREME.map((m) => ({
       value: m.cle,
       label: (
@@ -62,7 +50,7 @@ export function ChoixBareme({ etat, onChange, parcours, name }: ChoixBaremeProps
         </>
       ),
     })),
-    { value: "perso", label: <>Personnalisé <span className="text-discret">· tes propres types de notes</span></> },
+    { value: "perso", label: "Personnalisé" },
   ];
 
   return (
@@ -75,7 +63,7 @@ export function ChoixBareme({ etat, onChange, parcours, name }: ChoixBaremeProps
         value={etat.modele}
         onValueChange={(modele) => {
           // Passer en « Personnalisé » reprend les types déjà composés, sinon le barème affiché, pour le retoucher.
-          const depart = MODELES_BAREME.find((m) => m.cle === etat.modele)?.categories ?? (etat.modele === "parcours" ? parcours : undefined);
+          const depart = MODELES_BAREME.find((m) => m.cle === etat.modele)?.categories;
           const composes = modeleDuBareme(etat.lignes.map((l) => ({ cle: l.cle ?? "", nom: l.nom, poids: lireNombre(l.poids), ...(l.examen ? { examen: true } : {}) }))) === "perso";
           onChange({ modele, lignes: modele === "perso" && depart && !composes ? versLignes(depart) : etat.lignes });
         }}
@@ -125,7 +113,7 @@ export function ChoixBareme({ etat, onChange, parcours, name }: ChoixBaremeProps
             </Button>
             <span className={cn("text-sm", Math.abs(total - 100) > 1e-6 ? "text-erreur-texte" : "text-discret")}>Total : {formaterNombre(total)} %</span>
           </div>
-          <p className="m-0 text-xs leading-[18px] text-discret">« Examen » : le type que remplace le rattrapage. Les notes d’un type retiré restent gardées, sans compter.</p>
+          <p className="m-0 text-xs leading-[18px] text-discret">« Examen » : la note que le rattrapage peut remplacer.</p>
         </div>
       )}
     </div>

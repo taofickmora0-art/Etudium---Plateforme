@@ -8,7 +8,7 @@ import type { Categorie, Ecue, Note, ParcoursComplet, Regles, Ue } from "./types
 //     quand rien ne manque.
 //   - Un semestre : la moyenne de ses UE, pondérée par leurs crédits ; la compensation, si elle est activée.
 //   - « Ce qu'il te faut » : la note minimale à l'examen (le même pour les ECUE où seul l'examen manque).
-// Rien n'est arrondi : seul l'affichage arrondit (formaterNote).
+// Rien n'est arrondi : l'affichage coupe à deux décimales (formaterNote).
 
 export const REGLES_PAR_DEFAUT: Regles = {
   seuilUe: 10,
@@ -78,6 +78,14 @@ export type ResultatSemestre = {
   compense: boolean;
 };
 
+/**
+ * L'ordinateur calcule avec des nombres à virgule approchés : une moyenne de 10 tout juste peut valoir 9,9999999999998.
+ * Les seuils et l'affichage tolèrent cet écart infime (un cent-millionième), jamais plus.
+ */
+const JEU = 1e-8;
+/** La moyenne atteint le seuil. */
+const atteint = (moyenne: number, seuil: number) => moyenne + JEU >= seuil;
+
 export const noteSur20 = (n: Pick<Note, "note" | "sur">) => (n.note / n.sur) * 20;
 
 const moyenneSimple = (valeurs: number[]) => (valeurs.length ? valeurs.reduce((s, v) => s + v, 0) / valeurs.length : null);
@@ -132,7 +140,7 @@ export function resultatUe(ue: Ue, ecues: Ecue[], notes: Note[], regles: Regles)
   const notees = resultats.filter((r) => r.moyenne !== null);
   const moyenne = ponderee(notees.map((r) => [r.moyenne!, r.ecue.poids]));
   const provisoire = moyenne !== null && resultats.some((r) => r.moyenne === null || r.provisoire);
-  const validee = moyenne === null || provisoire ? null : moyenne >= regles.seuilUe;
+  const validee = moyenne === null || provisoire ? null : atteint(moyenne, regles.seuilUe);
   // Toutes les ECUE linéaires (et au moins un examen à venir) : la même note x à chaque examen manquant.
   let noteVisee: Visee = null;
   if (resultats.length > 0 && resultats.every((r) => r.lineaire)) {
@@ -154,7 +162,7 @@ export function resultatSemestre(ues: Ue[], ecues: Ecue[], notes: Note[], regles
   let creditsAcquis = resultats.reduce((s, r) => s + r.creditsAcquis, 0);
   const uesValidees = resultats.filter((r) => r.validee).length;
   let compense = false;
-  if (regles.compensation && moyenne !== null && !provisoire && moyenne >= regles.seuilSemestre && creditsAcquis < credits) {
+  if (regles.compensation && moyenne !== null && !provisoire && atteint(moyenne, regles.seuilSemestre) && creditsAcquis < credits) {
     compense = true;
     creditsAcquis = credits;
   }
@@ -192,17 +200,20 @@ export function resultatParcours({ parcours, semestres, ues, ecues, notes }: Par
 
 /** Passable dès 10, Assez bien dès 12, Bien dès 14, Très bien dès 16 ; rien en dessous de 10. */
 export function mention(moyenne: number): string | null {
-  if (moyenne >= 16) return "Très bien";
-  if (moyenne >= 14) return "Bien";
-  if (moyenne >= 12) return "Assez bien";
-  if (moyenne >= 10) return "Passable";
+  if (atteint(moyenne, 16)) return "Très bien";
+  if (atteint(moyenne, 14)) return "Bien";
+  if (atteint(moyenne, 12)) return "Assez bien";
+  if (atteint(moyenne, 10)) return "Passable";
   return null;
 }
 
 const DEUX_DECIMALES = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-/** « 12,46 » : deux décimales, une virgule. */
-export const formaterNote = (n: number) => DEUX_DECIMALES.format(n);
+/**
+ * « 12,45 » : deux décimales, une virgule, sans arrondir (12,4567 → « 12,45 » ; 9,995 → « 9,99 », qui n'atteint pas 10).
+ * L'écart toléré (JEU) rattrape les nombres approchés de l'ordinateur (12,46 vaut 12,4599999… en mémoire).
+ */
+export const formaterNote = (n: number) => DEUX_DECIMALES.format(Math.floor((n + JEU) * 100) / 100);
 
 /** Une note à viser, arrondie au centième supérieur (8,666… → « 8,67 ») : l'atteindre suffit vraiment. */
 export const formaterNoteVisee = (n: number) => DEUX_DECIMALES.format(Math.ceil(n * 100 - 1e-9) / 100);

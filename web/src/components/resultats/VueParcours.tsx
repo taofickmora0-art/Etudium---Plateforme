@@ -98,7 +98,7 @@ export function VueParcours({ complet, semestreId, pin }: VueParcoursProps) {
             {parcours.nom}
           </Heading>
           <p className="mt-1 mb-0 text-sm leading-[22px] text-discret">
-            {[parcours.etablissement, detailBareme(parcours.regles.categories), `UE validée dès ${formaterNombre(parcours.regles.seuilUe)}/20`].filter(Boolean).join(" · ")}
+            {[parcours.etablissement, detailBareme(parcours.regles.categories)].filter(Boolean).join(" · ")}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -111,7 +111,7 @@ export function VueParcours({ complet, semestreId, pin }: VueParcoursProps) {
       </div>
 
       <div className="grid grid-cols-2 gap-3 max-sm:gap-2.5">
-        <Tuile label="Moyenne générale" valeur={moyenneOuTiret(bilan.moyenne)} aide={provisoire ? "Provisoire : des notes manquent." : undefined} />
+        <Tuile label="Moyenne générale" valeur={moyenneOuTiret(bilan.moyenne)} aide={provisoire ? "Provisoire" : undefined} />
         <Tuile label="Crédits cumulés" valeur={sur(bilan.creditsAcquis, bilan.credits)} />
       </div>
       {annees.length > 0 && (
@@ -147,7 +147,7 @@ export function VueParcours({ complet, semestreId, pin }: VueParcoursProps) {
       {!courant || !resultat ? (
         <EmptyState
           title="Ajoute ton premier semestre"
-          description="Puis, dans chaque semestre, ses UE et leurs ECUE, comme les modules et les leçons d’une formation."
+          description="Puis ses UE et leurs ECUE."
           action={
             <Button iconLeft={Add01Icon} onClick={() => setFenetre({ quoi: "semestre" })}>
               Ajouter un semestre
@@ -167,7 +167,7 @@ export function VueParcours({ complet, semestreId, pin }: VueParcoursProps) {
             <Tuile label="Moyenne du semestre" valeur={moyenneOuTiret(resultat.moyenne)} aide={resultat.provisoire ? "Provisoire" : resultat.valide ? "Semestre validé" : undefined} />
             <Tuile label="Crédits" valeur={sur(resultat.creditsAcquis, resultat.credits)} />
             <Tuile label="UE validées" valeur={`${resultat.uesValidees} / ${uesDuSemestre.length}`} />
-            <Tuile label="Mention" valeur={resultat.mention ?? "—"} aide={resultat.provisoire ? "Après toutes les notes" : undefined} />
+            <Tuile label="Mention" valeur={resultat.mention ?? "—"} />
           </div>
           {resultat.compense && (
             <Banner tone="reussite" title="Semestre acquis par compensation.">
@@ -177,7 +177,7 @@ export function VueParcours({ complet, semestreId, pin }: VueParcoursProps) {
           {resultat.ues.length === 0 ? (
             <EmptyState
               title="Ajoute la première UE"
-              description="Une UE regroupe des matières (les ECUE) et porte des crédits."
+              description="Avec ses crédits, puis ses ECUE."
               action={
                 <Button iconLeft={Add01Icon} onClick={() => setFenetre({ quoi: "ue", semestreId: courant.id })}>
                   Ajouter une UE

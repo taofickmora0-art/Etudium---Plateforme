@@ -31,7 +31,7 @@ export function ListeParcours({ parcours, pin }: { parcours: ParcoursComplet[]; 
         <EmptyState
           icon={Mortarboard02Icon}
           title="Crée ton premier parcours"
-          description="Un parcours, c’est ton cursus (« Licence en agronomie, UAC ») : ses semestres, ses UE, ses ECUE et tes notes. Les moyennes se calculent avec les règles de ton école."
+          description="Ton cursus (« Licence en agronomie »), ses semestres, ses UE et tes notes."
           action={bouton}
         />
       ) : (
@@ -49,7 +49,7 @@ export function ListeParcours({ parcours, pin }: { parcours: ParcoursComplet[]; 
                     <IconTile icon={Mortarboard02Icon} tone="information" />
                     <span className="min-w-0">
                       <span className="block truncate text-base leading-6 font-semibold text-encre">{p.parcours.nom}</span>
-                      <span className="block truncate text-sm leading-5 text-discret">{p.parcours.etablissement || "Établissement non précisé"}</span>
+                      {p.parcours.etablissement && <span className="block truncate text-sm leading-5 text-discret">{p.parcours.etablissement}</span>}
                     </span>
                   </span>
                   <span className="flex flex-wrap gap-x-5 gap-y-1 text-sm leading-[22px] text-texte">

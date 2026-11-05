@@ -9,9 +9,8 @@ import { Select } from "@/components/ui/Select";
 import { TextInput } from "@/components/ui/TextInput";
 import { enregistrerEcue, enregistrerNote, enregistrerSemestre, enregistrerUe, supprimerElement, type Retour, type TypeElement } from "@/lib/resultats/actions";
 import { formaterNombre, lireNombre } from "@/lib/resultats/affichage";
-import { refusBareme, refusCredits, refusNote, refusPoids } from "@/lib/resultats/regles";
+import { refusCredits, refusNote, refusPoids } from "@/lib/resultats/regles";
 import type { Ecue, Note, Parcours, Regles, Semestre, Ue } from "@/lib/resultats/types";
-import { categoriesDuBareme, ChoixBareme, etatBareme } from "./ChoixBareme";
 import { FenetreParcours } from "./FenetreParcours";
 import { FenetreSaisie } from "./FenetreSaisie";
 
@@ -46,7 +45,7 @@ function FenetreSemestre({ parcoursId, semestre, rang, onFermer }: { parcoursId:
       <Field label="Nom" htmlFor={`${id}-nom`}>
         <TextInput id={`${id}-nom`} maxLength={60} value={nom} onChange={(e) => setNom(e.target.value)} />
       </Field>
-      <Field label="Année universitaire" htmlFor={`${id}-annee`} hint="Facultatif : elle sert à la moyenne de chaque année.">
+      <Field label="Année universitaire" htmlFor={`${id}-annee`}>
         <TextInput id={`${id}-annee`} maxLength={20} placeholder="2025-2026" value={annee} onChange={(e) => setAnnee(e.target.value)} />
       </Field>
     </FenetreSaisie>
@@ -61,7 +60,6 @@ function FenetreUe({ semestreId, ue, onFermer }: { semestreId: string; ue?: Ue; 
   return (
     <FenetreSaisie
       titre={ue ? "Modifier l’UE" : "Nouvelle UE"}
-      description="Une unité d’enseignement, avec ses crédits."
       bouton={ue ? "Enregistrer" : "Ajouter l’UE"}
       onFermer={onFermer}
       envoyer={() => {
@@ -72,7 +70,7 @@ function FenetreUe({ semestreId, ue, onFermer }: { semestreId: string; ue?: Ue; 
         return enregistrerUe({ ...(ue ? { id: ue.id } : {}), semestreId, code: code.trim(), intitule: intitule.trim(), credits: valeur });
       }}
     >
-      <Field label="Code" htmlFor={`${id}-code`} hint="Facultatif.">
+      <Field label="Code" htmlFor={`${id}-code`}>
         <TextInput id={`${id}-code`} maxLength={20} placeholder="UE 101" value={code} onChange={(e) => setCode(e.target.value)} />
       </Field>
       <Field label="Intitulé" htmlFor={`${id}-intitule`}>
@@ -85,23 +83,21 @@ function FenetreUe({ semestreId, ue, onFermer }: { semestreId: string; ue?: Ue; 
   );
 }
 
-function FenetreEcue({ ueId, ecue, regles, onFermer }: { ueId: string; ecue?: Ecue; regles: Regles; onFermer: () => void }) {
+function FenetreEcue({ ueId, ecue, onFermer }: { ueId: string; ecue?: Ecue; onFermer: () => void }) {
   const id = useId();
   const [intitule, setIntitule] = useState(ecue?.intitule ?? "");
   const [poids, setPoids] = useState(ecue ? formaterNombre(ecue.poids) : "1");
-  const [bareme, setBareme] = useState(() => etatBareme(ecue?.bareme ?? null, regles.categories));
   return (
     <FenetreSaisie
       titre={ecue ? "Modifier l’ECUE" : "Nouvelle ECUE"}
-      description="Une matière de l’UE. Ses crédits (ou son coefficient) pèsent dans la moyenne de l’UE."
       bouton={ecue ? "Enregistrer" : "Ajouter l’ECUE"}
       onFermer={onFermer}
       envoyer={() => {
         const valeur = lireNombre(poids);
-        const categories = categoriesDuBareme(bareme);
-        const refus = (!intitule.trim() && "Donne un intitulé à l’ECUE.") || refusPoids(valeur) || (categories && refusBareme(categories));
+        const refus = (!intitule.trim() && "Donne un intitulé à l’ECUE.") || refusPoids(valeur);
         if (refus) return refuser(refus);
-        return enregistrerEcue({ ...(ecue ? { id: ecue.id } : {}), ueId, intitule: intitule.trim(), poids: valeur, bareme: categories });
+        // Le barème est celui du parcours, le même pour toutes les ECUE.
+        return enregistrerEcue({ ...(ecue ? { id: ecue.id } : {}), ueId, intitule: intitule.trim(), poids: valeur, bareme: null });
       }}
     >
       <Field label="Intitulé" htmlFor={`${id}-intitule`}>
@@ -110,7 +106,6 @@ function FenetreEcue({ ueId, ecue, regles, onFermer }: { ueId: string; ecue?: Ec
       <Field label="Crédits ou coefficient" htmlFor={`${id}-poids`}>
         <TextInput id={`${id}-poids`} inputMode="decimal" value={poids} onChange={(e) => setPoids(e.target.value)} />
       </Field>
-      <ChoixBareme name={`${id}-bareme`} etat={bareme} onChange={setBareme} parcours={regles.categories} />
     </FenetreSaisie>
   );
 }
@@ -122,7 +117,7 @@ function FenetreNote({ ecue, note, regles, onFermer }: { ecue: Ecue; note?: Note
   const id = useId();
   const bareme = ecue.bareme ?? regles.categories;
   const examen = bareme.find((c) => c.examen);
-  const options = [...bareme.map((c) => ({ value: c.cle, label: c.nom })), ...(examen ? [{ value: RATTRAPAGE, label: `Rattrapage (${examen.nom.toLowerCase()})` }] : [])];
+  const options = [...bareme.map((c) => ({ value: c.cle, label: c.nom })), ...(examen ? [{ value: RATTRAPAGE, label: "Rattrapage" }] : [])];
   const depart = note?.rattrapage && examen ? RATTRAPAGE : options.some((o) => o.value === note?.categorie) ? note!.categorie : options[0].value;
   const [type, setType] = useState(depart);
   const [libelle, setLibelle] = useState(note?.libelle ?? "");
@@ -153,10 +148,14 @@ function FenetreNote({ ecue, note, regles, onFermer }: { ecue: Ecue; note?: Note
         });
       }}
     >
-      <Field label="Type" htmlFor={`${id}-type`}>
+      <Field
+        label="Type"
+        htmlFor={`${id}-type`}
+        hint={type === RATTRAPAGE ? (regles.rattrapage === "meilleure" ? "La meilleure des deux (examen ou rattrapage) compte." : "Elle remplace ta note d’examen.") : undefined}
+      >
         <Select id={`${id}-type`} options={options} value={type} onValueChange={setType} />
       </Field>
-      <Field label="Libellé" htmlFor={`${id}-libelle`} hint="Facultatif.">
+      <Field label="Libellé" htmlFor={`${id}-libelle`}>
         <TextInput id={`${id}-libelle`} maxLength={60} placeholder="Interrogation 2" value={libelle} onChange={(e) => setLibelle(e.target.value)} />
       </Field>
       <div className="flex gap-3">
@@ -167,7 +166,7 @@ function FenetreNote({ ecue, note, regles, onFermer }: { ecue: Ecue; note?: Note
           <TextInput id={`${id}-sur`} inputMode="decimal" value={sur} onChange={(e) => setSur(e.target.value)} />
         </Field>
       </div>
-      <Field label="Date" htmlFor={`${id}-date`} hint="Facultatif.">
+      <Field label="Date" htmlFor={`${id}-date`}>
         <ChampDate id={`${id}-date`} value={date} onChange={setDate} />
       </Field>
     </FenetreSaisie>
@@ -188,7 +187,7 @@ export function FenetresResultats({ fenetre, onFermer, parcours, nbSemestres }: 
     case "ue":
       return <FenetreUe semestreId={fenetre.semestreId} ue={fenetre.ue} onFermer={onFermer} />;
     case "ecue":
-      return <FenetreEcue ueId={fenetre.ueId} ecue={fenetre.ecue} regles={parcours.regles} onFermer={onFermer} />;
+      return <FenetreEcue ueId={fenetre.ueId} ecue={fenetre.ecue} onFermer={onFermer} />;
     case "note":
       return <FenetreNote ecue={fenetre.ecue} note={fenetre.note} regles={parcours.regles} onFermer={onFermer} />;
     case "supprimer":

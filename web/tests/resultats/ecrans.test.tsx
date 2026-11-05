@@ -11,12 +11,13 @@ import type { Note, ParcoursComplet } from "@/lib/resultats/types";
 const enregistrerParcours = vi.fn();
 const enregistrerNote = vi.fn();
 const supprimerElement = vi.fn();
+const enregistrerEcue = vi.fn();
 vi.mock("@/lib/resultats/actions", () => ({
   enregistrerParcours: (...a: unknown[]) => enregistrerParcours(...a),
   enregistrerNote: (...a: unknown[]) => enregistrerNote(...a),
   enregistrerSemestre: vi.fn(),
   enregistrerUe: vi.fn(),
-  enregistrerEcue: vi.fn(),
+  enregistrerEcue: (...a: unknown[]) => enregistrerEcue(...a),
   supprimerElement: (...a: unknown[]) => supprimerElement(...a),
   deplacerElement: vi.fn(),
   creerPin: vi.fn(),
@@ -66,7 +67,8 @@ const complet: ParcoursComplet = {
 };
 
 beforeEach(() => {
-  for (const f of [enregistrerParcours, enregistrerNote, supprimerElement, push]) f.mockReset();
+  for (const f of [enregistrerParcours, enregistrerNote, supprimerElement, enregistrerEcue, push]) f.mockReset();
+  enregistrerEcue.mockResolvedValue({ ok: true, id: "e9" });
   enregistrerParcours.mockResolvedValue({ ok: true, id: "p2" });
   enregistrerNote.mockResolvedValue({ ok: true, id: "n9" });
 });
@@ -133,6 +135,34 @@ describe("La vue d'un semestre", () => {
     await waitFor(() =>
       expect(enregistrerNote).toHaveBeenCalledWith({ ecueId: "e1", categorie: "cc", libelle: "Interrogation 3", note: 14.5, sur: 20, rattrapage: false, date: null }),
     );
+  });
+
+  it("une ECUE prend le barème du parcours : sa fenêtre n'en propose pas", async () => {
+    const user = userEvent.setup();
+    render(<VueParcours complet={complet} semestreId="s1" pin={false} />);
+    await user.click(screen.getByRole("button", { name: "Ajouter une ECUE" }));
+    const fenetre = screen.getByRole("dialog", { name: "Nouvelle ECUE" });
+    expect(within(fenetre).queryByRole("group", { name: "Barème" })).toBeNull();
+    await user.type(within(fenetre).getByLabelText("Intitulé"), "Chimie");
+    await user.click(within(fenetre).getByRole("button", { name: "Ajouter l’ECUE" }));
+    await waitFor(() => expect(enregistrerEcue).toHaveBeenCalledWith({ ueId: "u1", intitule: "Chimie", poids: 1, bareme: null }));
+  });
+
+  it("un rattrapage : la fenêtre dit ce qu'il fait ; il part avec le type examen ; la carte l'indique", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<VueParcours complet={complet} semestreId="s1" pin={false} />);
+    await user.click(screen.getByRole("button", { name: "Ajouter une note à « Physiologie végétale »" }));
+    const fenetre = screen.getByRole("dialog", { name: "Nouvelle note" });
+    await user.click(within(fenetre).getByRole("combobox", { name: "Type" }));
+    await user.click(screen.getByRole("option", { name: "Rattrapage" }));
+    expect(within(fenetre).getByText("Elle remplace ta note d’examen.")).toBeInTheDocument();
+    await user.type(within(fenetre).getByLabelText("Note obtenue"), "15");
+    await user.click(within(fenetre).getByRole("button", { name: "Ajouter la note" }));
+    await waitFor(() => expect(enregistrerNote).toHaveBeenCalledWith(expect.objectContaining({ categorie: "examen", rattrapage: true, note: 15 })));
+    // Le rattrapage (15) remplace l'examen (10) : la carte le dit.
+    const avecRattrapage = { ...complet, notes: [...complet.notes, { ...note("e1", "examen", 15), rattrapage: true }] };
+    rerender(<VueParcours complet={avecRattrapage} semestreId="s1" pin={false} />);
+    expect(screen.getByRole("article", { name: "UE 101 · Agronomie générale" })).toHaveTextContent("Contrôle continu 12,50 · Examen 15,00 (avec rattrapage)");
   });
 
   it("une note hors barème est refusée avant l'envoi", async () => {

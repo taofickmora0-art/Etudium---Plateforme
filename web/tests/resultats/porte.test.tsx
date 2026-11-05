@@ -101,6 +101,11 @@ describe("Le déverrouillage", () => {
     vi.useRealTimers();
   });
 
+  it("un blocage de plusieurs heures se dit en heures (0078 : 15 minutes, 1 heure, puis 24 heures)", () => {
+    render(<DeverrouillageResultats bloqueJusqua={new Date(Date.now() + 24 * 3_600_000 - 1000).toISOString()} />);
+    expect(screen.getByText("Trop d’essais : réessaie dans 24 heures.")).toBeInTheDocument();
+  });
+
   it("une coupure du réseau : un message, et les cases restent utilisables", async () => {
     const user = userEvent.setup();
     ouvrirResultats.mockRejectedValueOnce(new Error("Failed to fetch"));

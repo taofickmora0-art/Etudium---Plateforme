@@ -14,10 +14,8 @@ type NouveauCodeProps = {
   enregistrer: (code: string, actuel: string) => Promise<Retour>;
   /** Après un enregistrement réussi. */
   onFait?: () => void;
-  /** Le bouton secondaire, à gauche (« Annuler », « Continuer sans code »). */
+  /** Le bouton secondaire, à gauche (« Annuler », « Retour »). */
   secondaire?: ReactNode;
-  /** Les boutons alignés à droite (fenêtre) plutôt que centrés (écran de la porte). */
-  aDroite?: boolean;
 };
 
 const zoneFocus = (zone: HTMLDivElement | null) => zone?.querySelector("input")?.focus();
@@ -25,7 +23,7 @@ const zoneFocus = (zone: HTMLDivElement | null) => zone?.querySelector("input")?
 const passerA = (zone: HTMLDivElement | null) => setTimeout(() => zoneFocus(zone));
 
 /** Choisir un code à 4 chiffres, deux fois le même (et le code actuel, pour en changer). */
-export function NouveauCode({ avecActuel = false, enregistrer, onFait, secondaire, aDroite = false }: NouveauCodeProps) {
+export function NouveauCode({ avecActuel = false, enregistrer, onFait, secondaire }: NouveauCodeProps) {
   const [actuel, setActuel] = useState("");
   const [code, setCode] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -76,13 +74,14 @@ export function NouveauCode({ avecActuel = false, enregistrer, onFait, secondair
         if (!envoi) void valider();
       }}
     >
-      <div className={aDroite ? "flex flex-col gap-4" : "flex flex-col items-center gap-4"}>
+      <div className="flex flex-col items-center gap-4">
         {avecActuel && (
           <div ref={(el) => void (zones.current.actuel = el)}>
             <CodeInput
               label="Ton code actuel"
               length={4}
               masque
+              centre
               value={actuel}
               onChange={setActuel}
               onComplete={() => passerA(zones.current.code)}
@@ -96,6 +95,7 @@ export function NouveauCode({ avecActuel = false, enregistrer, onFait, secondair
             label="Choisis ton code"
             length={4}
             masque
+            centre
             value={code}
             onChange={setCode}
             onComplete={() => passerA(zones.current.confirmation)}
@@ -104,10 +104,10 @@ export function NouveauCode({ avecActuel = false, enregistrer, onFait, secondair
           />
         </div>
         <div ref={(el) => void (zones.current.confirmation = el)}>
-          <CodeInput label="Confirme ton code" length={4} masque value={confirmation} onChange={setConfirmation} error={erreurDe("confirmation")} disabled={envoi} />
+          <CodeInput label="Confirme ton code" length={4} masque centre value={confirmation} onChange={setConfirmation} error={erreurDe("confirmation")} disabled={envoi} />
         </div>
       </div>
-      <div className={aDroite ? "flex flex-wrap justify-end gap-2 max-sm:flex-col-reverse max-sm:[&>*]:w-full" : "flex flex-wrap justify-center gap-2 max-sm:flex-col-reverse max-sm:[&>*]:w-full"}>
+      <div className="flex flex-wrap justify-center gap-2 max-sm:flex-col-reverse max-sm:[&>*]:w-full">
         {secondaire}
         <Button type="submit" loading={envoi}>
           Enregistrer mon code

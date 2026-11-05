@@ -30,7 +30,6 @@ export function FenetreParcours({ parcours, onFermer }: { parcours?: Parcours; o
   return (
     <FenetreSaisie
       titre={parcours ? "Le parcours et ses règles" : "Nouveau parcours"}
-      description="Les règles de ton école : elles servent à toutes les moyennes du parcours."
       bouton={parcours ? "Enregistrer" : "Créer le parcours"}
       onFermer={onFermer}
       envoyer={() => {
@@ -39,7 +38,7 @@ export function FenetreParcours({ parcours, onFermer }: { parcours?: Parcours; o
           seuilSemestre: compensation ? lireNombre(seuilSemestre) : regles.seuilSemestre,
           compensation,
           rattrapage,
-          categories: categoriesDuBareme(bareme) ?? regles.categories,
+          categories: categoriesDuBareme(bareme),
         };
         const refus = (!nom.trim() && "Donne un nom au parcours.") || refusRegles(nouvelles);
         if (refus) return { ok: false, message: refus };
@@ -50,16 +49,16 @@ export function FenetreParcours({ parcours, onFermer }: { parcours?: Parcours; o
       <Field label="Nom du parcours" htmlFor={`${id}-nom`}>
         <TextInput id={`${id}-nom`} maxLength={120} placeholder="Licence en agronomie" value={nom} onChange={(e) => setNom(e.target.value)} />
       </Field>
-      <Field label="Établissement" htmlFor={`${id}-etablissement`} hint="Facultatif.">
+      <Field label="Établissement" htmlFor={`${id}-etablissement`}>
         <TextInput id={`${id}-etablissement`} maxLength={120} placeholder="Université d’Abomey-Calavi" value={etablissement} onChange={(e) => setEtablissement(e.target.value)} />
       </Field>
       <ChoixBareme name={`${id}-bareme`} etat={bareme} onChange={setBareme} />
-      <Field label="Note pour valider une UE" htmlFor={`${id}-seuil`} hint="Sur 20 : 10 dans la plupart des écoles, 12 dans certaines.">
+      <Field label="Note pour valider une UE (sur 20)" htmlFor={`${id}-seuil`}>
         <TextInput id={`${id}-seuil`} inputMode="decimal" value={seuilUe} onChange={(e) => setSeuilUe(e.target.value)} className="w-28" />
       </Field>
       <Switch
         label="Compensation entre les UE"
-        description="Toutes les UE d’un semestre sont acquises si sa moyenne atteint le seuil."
+        description="Les UE d’un semestre sont acquises si sa moyenne atteint le seuil."
         checked={compensation}
         onCheckedChange={setCompensation}
       />
@@ -69,14 +68,14 @@ export function FenetreParcours({ parcours, onFermer }: { parcours?: Parcours; o
         </Field>
       )}
       <RadioGroup
-        label="Le rattrapage"
+        label="Note de rattrapage"
         showLabel
         name={`${id}-rattrapage`}
         value={rattrapage}
         onValueChange={(v) => setRattrapage(v === "meilleure" ? "meilleure" : "remplace")}
         options={[
-          { value: "remplace", label: "Sa note remplace celle de l’examen" },
-          { value: "meilleure", label: "La meilleure des deux est gardée" },
+          { value: "remplace", label: "Elle remplace la note d’examen" },
+          { value: "meilleure", label: "La meilleure des deux (examen ou rattrapage) compte" },
         ]}
       />
     </FenetreSaisie>

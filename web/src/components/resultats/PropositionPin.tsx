@@ -13,7 +13,7 @@ export function PropositionPin() {
 
   if (creation) {
     return (
-      <CadrePorte titre="Crée ton code" texte="Il te sera demandé à chaque visite de « Mes résultats ».">
+      <CadrePorte titre="Crée ton code">
         <NouveauCode
           enregistrer={(code) => creerPin(code)}
           secondaire={
@@ -29,7 +29,7 @@ export function PropositionPin() {
   return (
     <CadrePorte
       titre="Protège tes résultats"
-      texte="Ajoute un code à 4 chiffres : il sera demandé à chaque visite de cet espace. C’est facultatif, et tu pourras le changer ou le retirer dans « Sécurité »."
+      texte="Un code à 4 chiffres, demandé à chaque visite. C’est facultatif."
     >
       <div className="flex flex-wrap justify-center gap-2 max-sm:w-full max-sm:flex-col-reverse">
         <Button

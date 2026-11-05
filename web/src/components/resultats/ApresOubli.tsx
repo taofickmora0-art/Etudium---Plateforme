@@ -14,7 +14,7 @@ export function ApresOubli({ pin }: { pin: boolean }) {
   const router = useRouter();
   const sortir = () => router.replace("/mes-resultats");
   return (
-    <CadrePorte titre="Crée ton nouveau code" texte="Ta connexion est confirmée : choisis un nouveau code à 4 chiffres. Il remplacera l’ancien.">
+    <CadrePorte titre="Crée ton nouveau code" texte="Il remplacera l’ancien.">
       <NouveauCode
         enregistrer={async (code) => {
           if (pin) {

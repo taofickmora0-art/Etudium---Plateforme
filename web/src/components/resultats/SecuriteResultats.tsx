@@ -47,9 +47,9 @@ function RetraitCode({ onRetour, onFait }: { onRetour: () => void; onFait: () =>
       }}
     >
       <div ref={zone}>
-        <CodeInput label="Ton code actuel" length={4} masque value={code} onChange={setCode} error={erreur?.message} disabled={envoi} />
+        <CodeInput label="Ton code actuel" length={4} masque centre value={code} onChange={setCode} error={erreur?.message} disabled={envoi} />
       </div>
-      <div className="flex flex-wrap justify-end gap-2 max-sm:flex-col-reverse max-sm:[&>*]:w-full">
+      <div className="flex flex-wrap justify-center gap-2 max-sm:flex-col-reverse max-sm:[&>*]:w-full">
         <Button variant="contour" onClick={onRetour}>
           Retour
         </Button>
@@ -77,14 +77,7 @@ export function SecuriteResultats({ pin }: { pin: boolean }) {
     </Button>
   );
 
-  const description =
-    vue === "retirer"
-      ? "Tes résultats ne seront plus protégés. Saisis ton code actuel pour confirmer."
-      : vue === "changer"
-        ? "Saisis ton code actuel, puis le nouveau."
-        : pin
-          ? "Un code à 4 chiffres protège tes résultats. Sans geste pendant 15 minutes, l’espace se reverrouille."
-          : "Aucun code ne protège tes résultats. Ajoute-en un : il sera demandé à chaque visite.";
+  const description = vue === "retirer" ? "Tes résultats ne seront plus protégés." : vue === "menu" && !pin ? "Aucun code ne protège tes résultats." : undefined;
 
   return (
     <>
@@ -98,9 +91,14 @@ export function SecuriteResultats({ pin }: { pin: boolean }) {
       >
         Sécurité
       </Button>
-      <Dialog open={ouvert} onOpenChange={setOuvert} title={TITRES[vue]} description={description} icon={LockPasswordIcon} iconTone="information">
+      <Dialog open={ouvert} onOpenChange={setOuvert} title={TITRES[vue]} description={description}
+        icon={LockPasswordIcon}
+        iconTone="information"
+        // Un code se saisit au centre : titre, cases et boutons.
+        className="text-center [&>span]:mx-auto"
+      >
         {vue === "changer" ? (
-          <NouveauCode avecActuel aDroite enregistrer={(code, actuel) => changerPin(actuel, code)} onFait={() => fermer("Ton nouveau code est enregistré.")} secondaire={retour} />
+          <NouveauCode avecActuel enregistrer={(code, actuel) => changerPin(actuel, code)} onFait={() => fermer("Ton nouveau code est enregistré.")} secondaire={retour} />
         ) : vue === "retirer" ? (
           <RetraitCode onRetour={() => setVue("menu")} onFait={() => fermer("Ton code est retiré.")} />
         ) : pin ? (
@@ -124,7 +122,6 @@ export function SecuriteResultats({ pin }: { pin: boolean }) {
           </div>
         ) : (
           <NouveauCode
-            aDroite
             enregistrer={(code) => creerPin(code)}
             onFait={() => fermer("Ton code est enregistré.")}
             secondaire={
