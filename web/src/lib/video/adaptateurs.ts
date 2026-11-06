@@ -118,9 +118,19 @@ async function youtube(id: string, cible: HTMLElement, ev: Evenements): Promise<
     },
   );
   const Player = window.YT!.Player;
+  // Les sous-titres restent masqués tant que l'étudiant ne les demande pas (bouton « Sous-titres » d'Étudium).
+  let sousTitresVoulus = false;
+  const masquerSousTitres = () => {
+    try {
+      lecteur.unloadModule("captions");
+    } catch {
+      // Sans module de sous-titres : rien à masquer.
+    }
+  };
+  let lecteur: LecteurYouTube;
   return avantDelai(
     new Promise<Adaptateur>((resoudre) => {
-      const lecteur: LecteurYouTube = new Player(cible, {
+      lecteur = new Player(cible, {
         videoId: id,
         host: "https://www.youtube-nocookie.com",
         playerVars: { controls: 0, disablekb: 1, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, origin: window.location.origin },
@@ -137,6 +147,9 @@ async function youtube(id: string, cible: HTMLElement, ev: Evenements): Promise<
             ev.pret();
           },
           onStateChange: ({ data }: { data: number }) => {
+            // YouTube rallume ses sous-titres au lancement de la lecture (automatiques, langue du navigateur) : on les
+            // retire, sauf si l'étudiant les a demandés.
+            if (data === 1 && !sousTitresVoulus) masquerSousTitres();
             if (data === 1) ev.etat(true);
             else if (data === 2) ev.etat(false);
             else if (data === 0) {
@@ -162,7 +175,11 @@ async function youtube(id: string, cible: HTMLElement, ev: Evenements): Promise<
             return false;
           }
         },
-        setSousTitres: (actifs) => (actifs ? lecteur.loadModule("captions") : lecteur.unloadModule("captions")),
+        setSousTitres: (actifs) => {
+          sousTitresVoulus = actifs;
+          if (actifs) lecteur.loadModule("captions");
+          else masquerSousTitres();
+        },
         detruire: () => lecteur.destroy(),
       };
     }),
