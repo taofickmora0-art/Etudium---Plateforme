@@ -5,7 +5,13 @@ import { estMesuree } from "./plateformes";
 // interface commune : le lecteur Étudium pose ses propres commandes par-dessus. Les scripts ne se chargent qu'à la
 // première vidéo de la page. Les plateformes sans mesure (Loom, ScreenPal, Drive) n'ont pas de lecteur piloté.
 
-export type Evenements = { pret(): void; etat(enLecture: boolean): void; fin(): void };
+export type Evenements = {
+  pret(): void;
+  etat(enLecture: boolean): void;
+  fin(): void;
+  /** Des sous-titres arrivent après l'ouverture (YouTube livre les automatiques au lancement de la lecture). */
+  sousTitres?(): void;
+};
 
 export type Adaptateur = {
   lire(): void;
@@ -42,6 +48,8 @@ type LecteurYouTube = {
   loadModule(module: string): void;
   unloadModule(module: string): void;
   getOption(module: string, option: string): unknown;
+  /** Les modules chargés qui ont des réglages (« captions » quand les sous-titres le sont). */
+  getOptions?(): string[];
   destroy(): void;
 };
 
@@ -127,6 +135,22 @@ async function youtube(id: string, cible: HTMLElement, ev: Evenements): Promise<
       // Sans module de sous-titres : rien à masquer.
     }
   };
+  const pistesSousTitres = () => {
+    try {
+      const pistes = lecteur.getOption("captions", "tracklist");
+      return Array.isArray(pistes) ? pistes : [];
+    } catch {
+      return [];
+    }
+  };
+  const sousTitresCharges = () => {
+    try {
+      // Le module s'appelle « captions » (ou « cc » selon les versions du lecteur).
+      return lecteur.getOptions?.().some((m) => m === "captions" || m === "cc") ?? false;
+    } catch {
+      return false;
+    }
+  };
   let lecteur: LecteurYouTube;
   return avantDelai(
     new Promise<Adaptateur>((resoudre) => {
@@ -145,6 +169,12 @@ async function youtube(id: string, cible: HTMLElement, ev: Evenements): Promise<
             }
             resoudre(adaptateur);
             ev.pret();
+          },
+          // YouTube charge ses sous-titres (les automatiques, souvent au lancement de la lecture) : le bouton
+          // « Sous-titres » d'Étudium apparaît, et ils restent masqués tant que l'étudiant ne les demande pas.
+          onApiChange: () => {
+            if (pistesSousTitres().length > 0) ev.sousTitres?.();
+            if (!sousTitresVoulus && sousTitresCharges()) masquerSousTitres();
           },
           onStateChange: ({ data }: { data: number }) => {
             // YouTube rallume ses sous-titres au lancement de la lecture (automatiques, langue du navigateur) : on les
@@ -167,14 +197,7 @@ async function youtube(id: string, cible: HTMLElement, ev: Evenements): Promise<
         duree: async () => lecteur.getDuration?.() ?? 0,
         setMuet: (muet) => (muet ? lecteur.mute() : lecteur.unMute()),
         setVitesse: (v) => lecteur.setPlaybackRate(v),
-        sousTitres: async () => {
-          try {
-            const pistes = lecteur.getOption("captions", "tracklist");
-            return Array.isArray(pistes) && pistes.length > 0;
-          } catch {
-            return false;
-          }
-        },
+        sousTitres: async () => pistesSousTitres().length > 0,
         setSousTitres: (actifs) => {
           sousTitresVoulus = actifs;
           if (actifs) lecteur.loadModule("captions");

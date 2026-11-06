@@ -317,6 +317,10 @@ export function LecteurEtudium({
           }
         } else void envoyerRef.current();
       },
+      // Des sous-titres livrés en cours de lecture (les automatiques de YouTube) : le bouton apparaît.
+      sousTitres: () => {
+        if (!annule) setSousTitresDispo(true);
+      },
       fin: () => {
         // La dernière seconde compte : la dernière observation précède la fin d'au plus une seconde (seuil à 100 %).
         const bout = dureeLueRef.current || dureeRef.current;

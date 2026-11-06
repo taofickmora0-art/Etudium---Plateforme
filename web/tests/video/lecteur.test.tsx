@@ -161,6 +161,15 @@ describe("Lecteur aux couleurs d'Étudium", () => {
     expect(bouton).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("des sous-titres que YouTube ne livre qu'une fois la lecture lancée (automatiques) : le bouton apparaît alors", async () => {
+    const f = fauxLecteur();
+    await monter({ creer: f.creer });
+    expect(screen.queryByRole("button", { name: "Sous-titres" })).toBeNull();
+    act(() => f.evenements().sousTitres?.());
+    fireEvent.click(screen.getByRole("button", { name: "Sous-titres" }));
+    expect(f.adaptateur.setSousTitres).toHaveBeenCalledWith(true);
+  });
+
   it("la lecture continue est envoyée toutes les 10 s ; un saut dans la barre ne l'est pas", async () => {
     const f = fauxLecteur();
     await monter({ creer: f.creer });
