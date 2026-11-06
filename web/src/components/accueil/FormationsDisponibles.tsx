@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { CarteFormation } from "@/components/catalogue/CarteFormation";
+import { GRILLE_CARTES } from "@/components/ui/grilles";
 import { Icon } from "@/components/ui/Icon";
 import { Heading } from "@/components/ui/Text";
+import { cn } from "@/lib/cn";
 import type { CarteCatalogue } from "@/lib/catalogue/types";
 
 /** Sous le fil de l'Accueil, les formations les plus récentes et « Voir toutes les formations » (spec du nouvel Accueil, §3). */
@@ -19,10 +21,11 @@ export function FormationsDisponibles({ cartes }: { cartes: CarteCatalogue[] }) 
           <Icon icon={ArrowRight01Icon} size={16} />
         </Link>
       </div>
-      {/* Sur téléphone, une rangée qui défile en largeur : la page reste courte. */}
-      <div className="grid gap-5 sm:grid-cols-2 max-sm:-mx-4 max-sm:flex max-sm:snap-x max-sm:gap-3 max-sm:overflow-x-auto max-sm:px-4 max-sm:pb-1 max-sm:[scrollbar-width:none]">
+      {/* La grille du catalogue (3 colonnes au plus) ; sur téléphone, une rangée qui défile en largeur : la page reste courte. */}
+      <div className={cn(GRILLE_CARTES, "max-sm:-mx-4 max-sm:flex max-sm:snap-x max-sm:gap-3 max-sm:overflow-x-auto max-sm:px-4 max-sm:pb-1 max-sm:[scrollbar-width:none]")}>
         {cartes.map((carte) => (
-          <div key={carte.id} className="flex min-w-0 max-sm:w-[248px] max-sm:flex-none max-sm:snap-start">
+          // La carte s'étire sur toute sa colonne : toutes ont la même largeur, quel que soit leur texte.
+          <div key={carte.id} className="flex min-w-0 [&>*]:min-w-0 [&>*]:flex-1 max-sm:w-[248px] max-sm:flex-none max-sm:snap-start">
             <CarteFormation carte={carte} titleAs="h3" />
           </div>
         ))}

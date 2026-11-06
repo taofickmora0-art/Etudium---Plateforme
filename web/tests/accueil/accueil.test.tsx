@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import type { CarteCatalogue } from "@/lib/catalogue/types";
 import type { Espace, LotPublications, MoiCommunaute, Publication } from "@/lib/communaute/types";
+import { GRILLE_CARTES } from "@/components/ui/grilles";
 
 // Le nouvel Accueil (spec du nouvel Accueil, §1 à §3) : la communauté avec son en-tête, les nouvelles formations à leur
 // date dans Actualités, « Formations disponibles » sous le fil.
@@ -136,6 +137,13 @@ describe("Le nouvel Accueil", () => {
     const section = screen.getByRole("region", { name: "Formations disponibles" });
     expect(within(section).getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["Formation a", "Formation b", "Formation c", "Formation d"]);
     expect(within(section).getByRole("link", { name: "Voir toutes les formations" })).toHaveAttribute("href", "/formations");
+    // La grille des cartes du catalogue (3 colonnes au plus), chaque carte étirée sur sa colonne : toutes ont la même
+    // largeur, quelle que soit la longueur de leur texte.
+    const titre = within(section).getByRole("heading", { name: "Formation a" });
+    const cadre = [...section.querySelectorAll(":scope > div")].at(-1)!;
+    expect(cadre.className).toContain(GRILLE_CARTES);
+    for (const case_ of cadre.children) expect(case_.className).toContain("[&>*]:flex-1");
+    expect(titre).toBeInTheDocument();
   });
 
   it("sans formation disponible : pas de section", () => {
