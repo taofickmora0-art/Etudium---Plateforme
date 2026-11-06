@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import type { Adaptateur, Evenements } from "@/lib/video/adaptateurs";
+import { masquerVideo } from "@/lib/video/masque";
 import { fusionner } from "@/lib/video/suivi";
 import { id } from "../lecon/donnees";
 
@@ -17,7 +18,8 @@ function SondeEtat() {
   return <span>{etat?.terminee ? "état : terminée" : "état : à faire"}</span>;
 }
 
-const VIDEO = { fournisseur: "youtube" as const, id: "dQw4w9WgXcQ" };
+// Le lecteur reçoit l'identifiant brouillé (il n'est pas en clair dans le code de la page) et le retrouve lui-même.
+const VIDEO = masquerVideo({ fournisseur: "youtube", id: "dQw4w9WgXcQ" });
 
 /** Un faux lecteur officiel : position et durée réglables, événements déclenchés par le test. */
 function fauxLecteur({ sousTitres = false, durees = [370] }: { sousTitres?: boolean; durees?: number[] } = {}) {
@@ -82,6 +84,25 @@ const monter = async (props: Partial<Parameters<typeof LecteurEtudium>[0]> & { c
     await vi.advanceTimersByTimeAsync(0);
   });
 };
+
+describe("Le lien de la vidéo, caché au mieux", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "setInterval", "clearInterval", "clearTimeout", "Date"] });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200, headers: { "content-type": "application/json" } })));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("l'identifiant n'est pas en clair dans ce que reçoit la page ; le lecteur le retrouve ; pas de menu du clic droit", async () => {
+    expect(JSON.stringify(VIDEO)).not.toContain("dQw4w9WgXcQ");
+    const f = fauxLecteur();
+    await monter({ creer: f.creer });
+    expect(f.creer).toHaveBeenCalledWith({ fournisseur: "youtube", id: "dQw4w9WgXcQ" }, expect.anything(), expect.anything());
+    expect(fireEvent.contextMenu(document.querySelector("[data-surface]")!)).toBe(false);
+  });
+});
 
 describe("Lecteur aux couleurs d'Étudium", () => {
   beforeEach(() => {
@@ -227,7 +248,7 @@ describe("Lecteur aux couleurs d'Étudium", () => {
       <ToastProvider>
         <EtatLeconProvider termineeInitiale={false} avecVideo seuil={90} actif>
           <LecteurEtudium
-            video={{ fournisseur: "tiktok", id: "7234567890123456789" }}
+            video={masquerVideo({ fournisseur: "tiktok", id: "7234567890123456789" })}
             titre="Découvrir l’interface"
             legende="Module 1"
             leconId={id(1)}

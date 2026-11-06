@@ -13,6 +13,7 @@ import { EnTeteLecon } from "./EnTeteLecon";
 import { LeconVerrouillee } from "./LeconVerrouillee";
 import { aUnContenuEcrit, ContenuEcrit } from "./ContenuEcrit";
 import type { MoiCommunaute } from "@/lib/communaute/types";
+import { masquerVideo } from "@/lib/video/masque";
 import { BandeauApercu, type Apercu } from "./BandeauApercu";
 import { DiscussionsLecon } from "./DiscussionsLecon";
 import { LecteurEtudium } from "./LecteurEtudium";
@@ -104,7 +105,8 @@ export function ContenuLecon({ donnees, connecte, apercu = null, moi = null, lie
           <LecteurVideo video={lecon.video} titre={lecon.titre} />
         ) : (
           <LecteurEtudium
-            video={lecon.video}
+            // L'identifiant part brouillé : le code de la page ne montre pas le lien de la vidéo.
+            video={masquerVideo(lecon.video)}
             titre={lecon.titre}
             // Sur la vidéo, le titre de la leçon regardée (le module est déjà au-dessus du titre de la page).
             legende={lecon.titre}

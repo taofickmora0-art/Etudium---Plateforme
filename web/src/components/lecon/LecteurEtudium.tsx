@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckmarkCircle02Icon,
@@ -17,7 +17,7 @@ import { MetaDot } from "@/components/ui/Progress";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
 import { dureeLecon, formatVideo } from "@/lib/lecon/regles";
-import type { VideoLecon } from "@/lib/lecon/types";
+import { demasquerVideo, type VideoMasquee } from "@/lib/video/masque";
 import { aSecoursManuel } from "@/lib/video/plateformes";
 import { creerAdaptateur, type Adaptateur, type Evenements } from "@/lib/video/adaptateurs";
 import { ajouter, fusionner, observer, pourcentageVu, type EtatSuivi, type Intervalle } from "@/lib/video/suivi";
@@ -25,7 +25,8 @@ import { useEtatLecon } from "./EtatLecon";
 import { LecteurVideo } from "./LecteurVideo";
 
 type Props = {
-  video: VideoLecon;
+  /** La vidéo, l'identifiant brouillé : il n'est pas en clair dans le code de la page (lib/video/masque). */
+  video: VideoMasquee;
   titre: string;
   /** « Module 3 · Les tableaux croisés dynamiques », dans la barre du lecteur (ordinateur). */
   legende?: string;
@@ -85,7 +86,7 @@ const envoyerAuServeur = (corps: Record<string, unknown>, keepalive = false) =>
  * Si le lecteur officiel ne se charge pas, la vidéo reste lisible dans son lecteur d'origine (sans mesure).
  */
 export function LecteurEtudium({
-  video,
+  video: masquee,
   titre,
   legende,
   leconId,
@@ -97,6 +98,8 @@ export function LecteurEtudium({
   positionInitiale = 0,
   creer = creerAdaptateur,
 }: Props) {
+  // L'identifiant retrouvé ici, dans le navigateur, juste avant de créer le lecteur officiel.
+  const video = useMemo(() => demasquerVideo({ fournisseur: masquee.fournisseur, code: masquee.code }), [masquee.fournisseur, masquee.code]);
   const { fournisseur, id } = video;
   const router = useRouter();
   const { toast } = useToast();
@@ -500,6 +503,8 @@ export function LecteurEtudium({
         onPointerMove={montrerCommandes}
         // Au toucher, le doigt qui se lève « quitte » la vidéo : seule la souris efface les commandes en sortant.
         onPointerLeave={(e) => e.pointerType !== "touch" && cacherCommandes()}
+        // Pas de menu du clic droit sur la vidéo (« Inspecter », « Copier l'adresse »…).
+        onContextMenu={(e) => e.preventDefault()}
         className={cn("relative overflow-hidden rounded-carte bg-encre text-white", formatVideo(video))}
       >
         <div ref={conteneur} aria-hidden="true" className="absolute inset-0 [&_iframe]:pointer-events-none [&_iframe]:absolute [&_iframe]:inset-0 [&_iframe]:size-full [&_iframe]:border-0" />
