@@ -73,8 +73,10 @@ beforeAll(async () => {
 describe("Migration 0071 : les trois parcours de base", () => {
   it("une base vide (0001 à 0071) a les trois parcours, avec leurs textes, leur ordre et leurs couleurs", async () => {
     expect(sansSuivi(await lireParcours(banc))).toEqual(PARCOURS);
-    // La landing et le filtre du catalogue s'appuient sur ces adresses, ces noms et ces couleurs.
-    expect(PARCOURS_LANCEMENT.map(({ slug, nom, couleur }) => ({ slug, nom, couleur }))).toEqual(PARCOURS.map(({ slug, nom, couleur }) => ({ slug, nom, couleur })));
+    // La landing et le filtre du catalogue s'appuient sur ces adresses, ces noms et ces couleurs (après la 0078 :
+    // Business & revenus en ligne devient Entrepreneuriat).
+    const apres0078 = PARCOURS.map(({ slug, nom, couleur }) => (slug === "business-revenus-en-ligne" ? { slug: "entrepreneuriat", nom: "Entrepreneuriat", couleur } : { slug, nom, couleur }));
+    expect(PARCOURS_LANCEMENT.map(({ slug, nom, couleur }) => ({ slug, nom, couleur }))).toEqual(apres0078);
     // Actifs : un visiteur les voit.
     expect((await banc.en<{ slug: string }>("anon", "select slug from public.parcours order by ordre")).map((p) => p.slug)).toEqual(PARCOURS.map((p) => p.slug));
   });

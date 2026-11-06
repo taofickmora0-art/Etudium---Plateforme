@@ -3,7 +3,6 @@ import { CarteFormation } from "@/components/catalogue/CarteFormation";
 import { CARTE_FICHE, EnTeteFiche, TitreSection } from "@/components/catalogue/StructureFiche";
 import { GRILLE_CATALOGUE_CONNECTEE, GRILLE_CATALOGUE_PUBLIQUE } from "@/components/ui/grilles";
 import { Icon } from "@/components/ui/Icon";
-import { Tag } from "@/components/ui/Tag";
 import { Heading } from "@/components/ui/Text";
 import { etatDeCarte } from "@/lib/catalogue/regles";
 import type { EtatsCartes } from "@/lib/catalogue/types";
@@ -13,6 +12,7 @@ import type { FormateurPublic } from "@/lib/formateurs/types";
 import { AvatarFormateur } from "./AvatarFormateur";
 import { BoutonMessageFormateur } from "./BoutonMessageFormateur";
 import { ReseauxFormateur } from "./ReseauxFormateur";
+import { TagFormateur } from "./TagFormateur";
 
 type Props = {
   formateur: FormateurPublic;
@@ -39,7 +39,7 @@ function EnTeteProfil({ formateur, peutEcrire, maintenant }: Pick<Props, "format
             <Heading level="page" className="min-w-0 wrap-anywhere">
               {formateur.nom}
             </Heading>
-            <Tag tone="complementaire">Formateur</Tag>
+            <TagFormateur id={formateur.id} />
           </div>
           {sousTitre && <p className="m-0 text-[15px] leading-[22px] font-medium text-pretty text-texte max-sm:text-sm max-sm:leading-5">{sousTitre}</p>}
           {arrivee && (

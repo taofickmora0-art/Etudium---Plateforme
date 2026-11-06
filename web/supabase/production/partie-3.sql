@@ -1,4 +1,4 @@
--- Étudium · base de production · partie 3 sur 5 (migrations 0035 à 0055).
+-- Étudium · base de production · partie 3 sur 6 (migrations 0035 à 0055).
 -- Fichier produit par scripts/assembler-migrations.mjs : ne pas le modifier à la main.
 -- Supabase › SQL Editor › New query : colle tout ce fichier, puis Run. Attends « Success » avant la partie suivante.
 -- Ensuite : partie 4.

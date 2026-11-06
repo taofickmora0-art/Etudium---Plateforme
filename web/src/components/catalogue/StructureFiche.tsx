@@ -16,6 +16,7 @@ import { nombreDeFormations } from "@/lib/formateurs/regles";
 import type { ApercuFormateur } from "@/lib/formateurs/types";
 import { CarteFormateur, elementsInclus, ListeCochee } from "./BlocsFiche";
 import { resumeProgramme } from "./ProgrammeFiche";
+import { TagFormateur } from "@/components/formateurs/TagFormateur";
 
 // La structure de la fiche d'une formation, la même pour un visiteur et pour un compte connecté (spec du 2 novembre 2026,
 // §5) : en haut, le fil et un seul bouton ; à gauche, le titre, « Contenus du cours » et la suite ; à droite, le
@@ -176,7 +177,7 @@ export function FormateurDuCours({ fiche, formateur }: { fiche: Pick<FicheFormat
           <CarteFormateurSurvol formateur={formateur} className="text-[15px] leading-[22px] font-semibold max-sm:text-sm max-sm:leading-5" />
           {formateur.titre && <span className="text-[13px] leading-5 text-discret max-sm:text-xs max-sm:leading-[18px]">{formateur.titre}</span>}
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-            <Tag tone="complementaire">Formateur</Tag>
+            <TagFormateur id={formateur.id} />
             <span className="flex items-center gap-1 text-[13px] leading-5 text-discret max-sm:text-xs">
               <Icon icon={BookOpen01Icon} size={16} />
               <span>{nombreDeFormations(formateur.nbFormations)}</span>

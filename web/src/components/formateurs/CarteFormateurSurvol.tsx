@@ -6,13 +6,13 @@ import { Calendar03Icon } from "@hugeicons/core-free-icons";
 import { HoverCard } from "radix-ui";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
-import { Tag } from "@/components/ui/Tag";
 import { cn } from "@/lib/cn";
 import { arriveeDuFormateur } from "@/lib/formateurs/regles";
 import type { ApercuFormateur } from "@/lib/formateurs/types";
 import { AvatarFormateur } from "./AvatarFormateur";
 import { BoutonMessageFormateur } from "./BoutonMessageFormateur";
 import { ReseauxFormateur } from "./ReseauxFormateur";
+import { TagFormateur } from "./TagFormateur";
 
 /** L'adresse du profil public d'un formateur (spec du 2 novembre 2026, §6). */
 export const adresseFormateur = (id: string) => `/formateurs/${id}`;
@@ -27,7 +27,7 @@ function ContenuCarte({ formateur }: { formateur: ApercuFormateur }) {
         <AvatarFormateur nom={formateur.nom} photoUrl={formateur.photoUrl} taille={64} />
         <div className="flex min-w-0 flex-col items-start gap-1.5">
           <span className="text-base leading-6 font-semibold text-encre">{formateur.nom}</span>
-          <Tag tone="complementaire">Formateur</Tag>
+          <TagFormateur id={formateur.id} />
         </div>
       </div>
       {formateur.presentation && <p className="m-0 mt-3.5 line-clamp-5 text-sm leading-[22px] text-pretty text-texte">{formateur.presentation}</p>}

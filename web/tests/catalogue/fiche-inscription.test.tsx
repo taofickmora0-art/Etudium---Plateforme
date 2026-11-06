@@ -190,6 +190,15 @@ describe("La colonne de droite : le formateur du cours", () => {
     expect(favori.compareDocumentPosition(inclus) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it("une formation sans formateur : l'Équipe Étudium, son badge et son profil", () => {
+    const equipe = { ...FORMATEUR, id: "etudium", nom: "Équipe Étudium", titre: "L’équipe pédagogique d’Étudium", peutEcrire: false };
+    render(<FicheConnectee fiche={EXCEL} formateur={equipe} />);
+    const bloc = screen.getByRole("region", { name: "Formateur du cours" });
+    expect(within(bloc).getByRole("link", { name: "Équipe Étudium" })).toHaveAttribute("href", "/formateurs/etudium");
+    expect(within(bloc).getByText("Équipe", { selector: "span" })).toBeInTheDocument();
+    expect(within(bloc).queryByText("Formateur")).toBeNull();
+  });
+
   it("la photo du compte plutôt que les initiales ; « 1 formation » au singulier ; sans réseau, pas de liste", () => {
     const photo = "https://projet.supabase.co/storage/v1/object/public/photos-profil/a/b.jpg";
     render(<FicheConnectee fiche={EXCEL} formateur={{ ...FORMATEUR, photoUrl: photo, nbFormations: 1, reseaux: {} }} />);

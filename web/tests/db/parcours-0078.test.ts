@@ -43,6 +43,21 @@ beforeAll(async () => {
   await banc.db.exec(sql);
 }, 180_000);
 
+describe("L'Équipe Étudium, formatrice des formations sans formateur", () => {
+  it("son profil public : les formations publiées sans formateur, pour tous (visiteurs compris)", async () => {
+    await banc.db.query("insert into public.formateurs (nom) values ('Koffi Mensah')");
+    await banc.db.query("update public.formations set formateur_id = (select id from public.formateurs limit 1) where slug = 'canva'");
+    await banc.db.query("insert into public.formations (slug, titre) values ('brouillon', 'Brouillon')");
+    const profil = (await banc.en<{ r: { id: string; nom: string; nb_formations: number; formations: { slug: string }[]; peut_ecrire: boolean } }>("anon", "select public.formateur_etudium() as r"))[0].r;
+    expect(profil).toMatchObject({ id: "etudium", nom: "Équipe Étudium", peut_ecrire: false });
+    expect(profil.formations.map((f) => f.slug).sort()).toEqual(["academique", "boutique", "freelance"]);
+    expect(profil.nb_formations).toBe(3);
+    await banc.db.query("update public.formations set formateur_id = null where slug = 'canva'");
+    await banc.db.query("delete from public.formations where slug = 'brouillon'");
+    await banc.db.query("delete from public.formateurs");
+  });
+});
+
 describe("Les trois parcours", () => {
   it("Réussite académique, Compétences digitales, puis Entrepreneuriat (la place de Business, sa couleur orange)", async () => {
     const parcours = (await banc.db.query<{ slug: string; nom: string; nom_court: string; couleur: string }>("select slug, nom, nom_court, couleur from public.parcours order by ordre")).rows;

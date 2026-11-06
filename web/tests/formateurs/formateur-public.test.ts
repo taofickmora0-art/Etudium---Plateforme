@@ -208,9 +208,18 @@ describe("lireFormateurDeFiche (le bloc « Formateur du cours » de la fiche)", 
     });
   });
 
-  it("formation sans formateur, fiche inconnue, migration 0070 absente ou lecture en échec : null (la fiche garde le bloc d'avant)", async () => {
+  it("formation sans formateur : l'Équipe Étudium (0078), avec le logo d'Étudium, sans « Message »", async () => {
+    faux.repondre("rpc.formateur_etudium", { data: { ...BRUT, id: "etudium", nom: "Équipe Étudium", photo: null, peut_ecrire: false } });
+    expect(await lireFormateurDeFiche(undefined)).toMatchObject({ id: "etudium", nom: "Équipe Étudium", photoUrl: "/icons/icone-192.png", peutEcrire: false });
+    expect(faux.de("rpc", "formateur_etudium")).toHaveLength(1);
+    expect(faux.de("rpc", "formateur_public")).toEqual([]);
+    // Son profil : /formateurs/etudium. Avant la 0078 : « absente » ; la fiche reste alors sans bloc formateur.
+    faux.repondre("rpc.formateur_etudium", { error: { code: "42883", message: "function public.formateur_etudium() does not exist" } });
+    expect(await lireFormateurPublic("etudium")).toBe("absente");
     expect(await lireFormateurDeFiche(undefined)).toBeNull();
-    expect(faux.appels).toEqual([]);
+  });
+
+  it("fiche inconnue, migration 0070 absente ou lecture en échec : null (la fiche garde le bloc d'avant)", async () => {
     faux.repondre("rpc.formateur_public", { data: null });
     expect(await lireFormateurDeFiche(ID)).toBeNull();
     faux.repondre("rpc.formateur_public", ABSENTE);

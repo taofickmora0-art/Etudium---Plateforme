@@ -140,7 +140,7 @@ export function FormationInfosForm({ formation, parcours, formateurs, espace = "
                 <Select
                   id="formation-formateur"
                   name="formateur_id"
-                  options={[{ value: "", label: "Aucun" }, ...formateurs.map((f) => ({ value: f.id, label: f.nom }))]}
+                  options={[{ value: "", label: "Équipe Étudium" }, ...formateurs.map((f) => ({ value: f.id, label: f.nom }))]}
                   defaultValue={valeur("formateur_id", formation.formateurId)}
                 />
               </Field>
