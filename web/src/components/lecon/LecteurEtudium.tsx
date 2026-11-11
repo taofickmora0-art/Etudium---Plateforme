@@ -42,7 +42,16 @@ type Props = {
   positionInitiale?: number;
   /** Remplace la création du lecteur officiel (tests). */
   creer?: typeof creerAdaptateur;
+  /** L'animation jouée avant la vidéo (null : aucune, pour les tests). */
+  intro?: string | null;
 };
+
+/** L'animation d'Étudium (logo et son, 5 s), jouée avant chaque vidéo de formation lancée depuis le début. */
+export const INTRO_ETUDIUM = "/videos/intro-etudium.mp4";
+/** Au-delà, l'animation (bloquée, réseau lent) laisse sa place à la vidéo. */
+const DUREE_MAX_INTRO_MS = 8000;
+/** Après l'animation, sa dernière image (fond bleu) reste jusqu'au départ de la vidéo, au plus ce délai. */
+const ATTENTE_APRES_INTRO_MS = 2000;
 
 const VITESSES = [1, 1.25, 1.5, 2, 0.75];
 const libelleVitesse = (v: number) => `${String(v).replace(".", ",")}×`;
@@ -97,6 +106,7 @@ export function LecteurEtudium({
   termineeInitiale,
   positionInitiale = 0,
   creer = creerAdaptateur,
+  intro = INTRO_ETUDIUM,
 }: Props) {
   // L'identifiant retrouvé ici, dans le navigateur, juste avant de créer le lecteur officiel.
   const video = useMemo(() => demasquerVideo({ fournisseur: masquee.fournisseur, code: masquee.code }), [masquee.fournisseur, masquee.code]);
@@ -136,6 +146,11 @@ export function LecteurEtudium({
   // La vraie durée de la vidéo, lue sur le lecteur officiel (0 tant qu'elle est inconnue) : comparée à la durée de la
   // leçon, elle dit si le seuil peut être atteint.
   const dureeLueRef = useRef(0);
+  // L'animation d'Étudium : jouée une fois par ouverture, au premier « Lire » d'une vidéo qui part du début.
+  const animation = useRef<HTMLVideoElement>(null);
+  const introJouee = useRef(false);
+  const introEnCours = useRef(false);
+  const minuteurIntro = useRef<number | undefined>(undefined);
 
   const [pret, setPret] = useState(false);
   const [echec, setEchec] = useState(false);
@@ -158,6 +173,7 @@ export function LecteurEtudium({
   const [terminee, setTerminee] = useState(termineeInitiale);
   const [commandesVisibles, setCommandesVisibles] = useState(true);
   const [dureeVideo, setDureeVideo] = useState(0);
+  const [introVisible, setIntroVisible] = useState(false);
 
   /** Ouvre le visionnage (une fois). Un échec (coupure réseau, refus) sera retenté au prochain envoi. */
   const commencer = useCallback((): Promise<boolean> => {
@@ -303,6 +319,8 @@ export function LecteurEtudium({
         setEnLecture(lecture);
         if (lecture) {
           setDemarre(true);
+          // La vidéo est partie : l'animation (sa dernière image) s'efface.
+          setIntroVisible(false);
           montrerCommandesRef.current();
           void commencerRef.current();
           const a = adaptateur.current;
@@ -383,6 +401,7 @@ export function LecteurEtudium({
       adaptateur.current?.detruire();
       adaptateur.current = null;
       enLectureRef.current = false;
+      setIntroVisible(false);
       setPret(false);
       setEnLecture(false);
       setDemarre(false);
@@ -439,7 +458,18 @@ export function LecteurEtudium({
     };
   }, []);
 
-  const lire = () => {
+  // L'animation s'arrête avec la page (masquée par Next, ou quittée) : sinon son son continuerait.
+  useEffect(() => {
+    const element = animation.current;
+    return () => {
+      window.clearTimeout(minuteurIntro.current);
+      introEnCours.current = false;
+      element?.pause();
+    };
+  }, []);
+
+  /** Lance la vidéo, après le saut de reprise s'il y en a un. */
+  const lancer = () => {
     const a = adaptateur.current;
     if (!a) return;
     if (sautEnAttente.current !== null) {
@@ -448,8 +478,34 @@ export function LecteurEtudium({
     }
     a.lire();
   };
+  /** Fin de l'animation (ou son échec) : la vidéo démarre ; si elle ne part pas d'elle-même, le bouton « Lire » revient. */
+  const finIntro = () => {
+    if (!introEnCours.current) return;
+    introEnCours.current = false;
+    window.clearTimeout(minuteurIntro.current);
+    lancer();
+    minuteurIntro.current = window.setTimeout(() => setIntroVisible(false), ATTENTE_APRES_INTRO_MS);
+  };
+  const lire = () => {
+    if (!adaptateur.current) return;
+    const element = animation.current;
+    // L'animation, comme si elle était au début de la vidéo : pas à une reprise, une fois par ouverture. Lancée dans
+    // le geste de l'étudiant, le navigateur la laisse jouer avec le son.
+    if (element && !introJouee.current && !demarre && sautEnAttente.current === null) {
+      introJouee.current = true;
+      introEnCours.current = true;
+      setIntroVisible(true);
+      element.currentTime = 0;
+      minuteurIntro.current = window.setTimeout(finIntro, DUREE_MAX_INTRO_MS);
+      void Promise.resolve(element.play()).catch(finIntro);
+      return;
+    }
+    lancer();
+  };
   const basculer = () => (enLecture ? adaptateur.current?.pause() : lire());
   const commandesMasquees = enLecture && !commandesVisibles;
+  // Pendant l'animation, la barre est cachée et hors d'atteinte du clavier.
+  const barreCachee = commandesMasquees || introVisible;
 
   // Le seuil se mesure sur la durée de la leçon : absente, ou plus longue que la vidéo, il ne peut pas être atteint.
   // On le dit au lieu de laisser « Terminer la leçon » grisé sans raison.
@@ -528,7 +584,24 @@ export function LecteurEtudium({
           // Commandes effacées : le pointeur aussi, pour ne pas gêner la vidéo.
           className={cn("absolute inset-0 cursor-pointer", commandesMasquees && "cursor-none")}
         />
-        {!enLecture && (
+        {intro && (
+          <video
+            ref={animation}
+            src={intro}
+            data-intro=""
+            data-visible={introVisible}
+            preload="auto"
+            playsInline
+            muted={muet}
+            disablePictureInPicture
+            aria-hidden="true"
+            tabIndex={-1}
+            onEnded={finIntro}
+            onError={finIntro}
+            className={cn("absolute inset-0 size-full bg-encre object-contain", !introVisible && "invisible")}
+          />
+        )}
+        {!enLecture && !introVisible && (
           <button
             type="button"
             aria-label="Lire la vidéo"
@@ -544,12 +617,13 @@ export function LecteurEtudium({
         <div
           ref={commandes}
           data-commandes=""
-          data-masquees={commandesMasquees}
+          data-masquees={barreCachee}
+          inert={introVisible}
           onFocus={montrerCommandes}
           className={cn(
             "absolute inset-x-0 bottom-0 flex flex-col gap-1.5 bg-linear-to-t from-black/65 to-transparent px-3 pt-6 pb-2 transition-opacity duration-300 sm:gap-2.5 sm:px-[18px] sm:pt-10 sm:pb-4",
             !demarre && "max-sm:hidden",
-            commandesMasquees && "pointer-events-none opacity-0",
+            barreCachee && "pointer-events-none opacity-0",
           )}
         >
           {legende && <span className="truncate text-sm leading-5 font-medium max-lg:hidden">{legende}</span>}

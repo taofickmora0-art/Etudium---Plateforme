@@ -29,6 +29,8 @@ describe("Proxy : ce qu'il surveille", () => {
     // Fichiers de décodage de pdf.js (visualiseur, tâche 1.8) : servis à tous, visiteurs compris (aperçus gratuits).
     for (const fichier of ["/pdfjs/wasm/jbig2.wasm", "/pdfjs/wasm/jbig2_nowasm_fallback.js", "/pdfjs/standard_fonts/FoxitSerif.pfb"])
       expect(motif.test(fichier), fichier).toBe(false);
+    // L'animation d'Étudium avant les vidéos : servie à tous, visiteurs compris (aperçus gratuits).
+    expect(motif.test("/videos/intro-etudium.mp4")).toBe(false);
   });
 
   it("le mode démonstration laisse tout passer", async () => {

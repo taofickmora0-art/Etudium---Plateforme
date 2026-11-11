@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import type { Adaptateur, Evenements } from "@/lib/video/adaptateurs";
@@ -76,6 +76,7 @@ const monter = async (props: Partial<Parameters<typeof LecteurEtudium>[0]> & { c
         reference={370}
         seuil={90}
         termineeInitiale={false}
+        intro={null}
         {...(props as object)}
       />
     </ToastProvider>,
@@ -267,6 +268,7 @@ describe("Lecteur aux couleurs d'Étudium", () => {
             seuil={90}
             termineeInitiale={false}
             creer={creer as never}
+            intro={null}
           />
           <BoutonFin leconId={id(1)} variante="ordinateur" />
         </EtatLeconProvider>
@@ -419,6 +421,7 @@ describe("Lecteur aux couleurs d'Étudium", () => {
       seuil: 90,
       termineeInitiale: false,
       creer: f.creer,
+      intro: null,
     };
     const { rerender } = render(
       <ToastProvider>
@@ -509,6 +512,7 @@ describe("Lecteur aux couleurs d'Étudium", () => {
       seuil: 90,
       termineeInitiale: false,
       positionInitiale: 0,
+      intro: null,
     };
     const { rerender } = render(
       <ToastProvider>
@@ -563,6 +567,7 @@ describe("Lecteur aux couleurs d'Étudium", () => {
             seuil={90}
             termineeInitiale={false}
             creer={f.creer}
+            intro={null}
           />
           <SondeEtat />
         </EtatLeconProvider>
@@ -581,3 +586,129 @@ describe("Lecteur aux couleurs d'Étudium", () => {
   });
 });
 
+
+describe("L'animation d'Étudium avant la vidéo", () => {
+  // Ta demande du 11 novembre 2026 : l'animation (logo et son, 5 s) passe avant chaque vidéo de formation, sans être
+  // ajoutée à chaque fichier. Comme si elle était au début de la vidéo : pas à une reprise, une fois par ouverture.
+  const INTRO = "/videos/intro-etudium.mp4";
+  let jouer: ReturnType<typeof vi.fn>;
+  const animation = () => document.querySelector<HTMLVideoElement>("video[data-intro]")!;
+  const lireLaVideo = () => fireEvent.click(screen.getByRole("button", { name: "Lire la vidéo" }));
+  const attendre = (ms = 0) =>
+    act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "setInterval", "clearInterval", "clearTimeout", "Date"] });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200, headers: { "content-type": "application/json" } })));
+    jouer = vi.fn(async () => undefined);
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(jouer as never);
+    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("au premier « Lire », l'animation joue d'abord, avec le son, sans bouton ni barre ; la vidéo démarre à sa fin", async () => {
+    const f = fauxLecteur();
+    await monter({ creer: f.creer, intro: INTRO });
+    expect(animation()).toHaveAttribute("src", INTRO);
+    expect(animation()).toHaveAttribute("data-visible", "false");
+    lireLaVideo();
+    expect(jouer).toHaveBeenCalledTimes(1);
+    expect(animation().muted).toBe(false);
+    expect(animation()).toHaveAttribute("data-visible", "true");
+    expect(f.adaptateur.lire).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Lire la vidéo" })).toBeNull();
+    expect(document.querySelector("[data-commandes]")).toHaveAttribute("data-masquees", "true");
+    fireEvent.ended(animation());
+    expect(f.adaptateur.lire).toHaveBeenCalledTimes(1);
+    // La vidéo est partie : l'animation s'efface.
+    expect(animation()).toHaveAttribute("data-visible", "false");
+  });
+
+  it("le son coupé avant le départ : l'animation est muette aussi", async () => {
+    const f = fauxLecteur();
+    await monter({ creer: f.creer, intro: INTRO });
+    fireEvent.click(screen.getByRole("button", { name: "Couper le son" }));
+    lireLaVideo();
+    expect(animation().muted).toBe(true);
+  });
+
+  it("une seule fois : après une pause, la relecture ne la rejoue pas", async () => {
+    const f = fauxLecteur();
+    await monter({ creer: f.creer, intro: INTRO });
+    lireLaVideo();
+    fireEvent.ended(animation());
+    await attendre();
+    fireEvent.click(screen.getByRole("button", { name: "Mettre en pause" }));
+    fireEvent.click(screen.getByRole("button", { name: "Lancer la lecture" }));
+    expect(jouer).toHaveBeenCalledTimes(1);
+    expect(f.adaptateur.lire).toHaveBeenCalledTimes(2);
+  });
+
+  it("une vidéo reprise là où on l'avait laissée démarre sans l'animation", async () => {
+    const f = fauxLecteur();
+    await monter({ creer: f.creer, intro: INTRO, positionInitiale: 250 });
+    lireLaVideo();
+    expect(jouer).not.toHaveBeenCalled();
+    expect(f.adaptateur.aller).toHaveBeenCalledWith(250);
+    expect(f.adaptateur.lire).toHaveBeenCalled();
+  });
+
+  it("si la vidéo ne démarre pas d'elle-même après l'animation (téléphone qui l'exige), le bouton « Lire » revient", async () => {
+    const f = fauxLecteur();
+    f.adaptateur.lire = vi.fn();
+    await monter({ creer: f.creer, intro: INTRO });
+    lireLaVideo();
+    fireEvent.ended(animation());
+    expect(f.adaptateur.lire).toHaveBeenCalledTimes(1);
+    // Sa dernière image (fond bleu) reste un moment, le temps que la vidéo parte.
+    expect(animation()).toHaveAttribute("data-visible", "true");
+    await attendre(2000);
+    expect(animation()).toHaveAttribute("data-visible", "false");
+    lireLaVideo();
+    expect(jouer).toHaveBeenCalledTimes(1);
+    expect(f.adaptateur.lire).toHaveBeenCalledTimes(2);
+  });
+
+  it("en quittant la page pendant l'animation, elle s'arrête (son compris)", async () => {
+    const f = fauxLecteur();
+    const arreter = vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined);
+    await monter({ creer: f.creer, intro: INTRO });
+    lireLaVideo();
+    arreter.mockClear();
+    cleanup();
+    expect(arreter).toHaveBeenCalled();
+    await attendre(10_000);
+    expect(f.adaptateur.lire).not.toHaveBeenCalled();
+  });
+
+  it("l'animation refusée par le navigateur, introuvable ou bloquée : la vidéo démarre quand même", async () => {
+    const refus = fauxLecteur();
+    jouer.mockRejectedValueOnce(new Error("NotAllowedError"));
+    await monter({ creer: refus.creer, intro: INTRO });
+    lireLaVideo();
+    await attendre();
+    expect(refus.adaptateur.lire).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    const introuvable = fauxLecteur();
+    await monter({ creer: introuvable.creer, intro: INTRO });
+    lireLaVideo();
+    fireEvent.error(animation());
+    expect(introuvable.adaptateur.lire).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    const bloquee = fauxLecteur();
+    await monter({ creer: bloquee.creer, intro: INTRO });
+    lireLaVideo();
+    await attendre(7900);
+    expect(bloquee.adaptateur.lire).not.toHaveBeenCalled();
+    await attendre(100);
+    expect(bloquee.adaptateur.lire).toHaveBeenCalledTimes(1);
+  });
+});
