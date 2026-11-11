@@ -213,11 +213,7 @@ describe("Une suppression refusée", () => {
 });
 
 describe("Le menu", () => {
-  it("« Mes résultats » vient juste après le tableau de bord", () => {
-    const liens = NAV_MON_ESPACE.map((e) => [e.href, e.label]);
-    expect(liens.slice(0, 2)).toEqual([
-      ["/tableau-de-bord", "Tableau de bord"],
-      ["/mes-resultats", "Mes résultats"],
-    ]);
+  it("« Mes résultats » est retiré pour le moment (11 novembre 2026) : plus dans le menu", () => {
+    expect(NAV_MON_ESPACE.map((e) => e.href)).not.toContain("/mes-resultats");
   });
 });
