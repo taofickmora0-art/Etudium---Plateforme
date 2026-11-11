@@ -22,7 +22,7 @@ import {
   FILTRES_COMPTES,
   formuleAffichee,
   initialesCompte,
-  LIBELLES_ROLES,
+  libelleRoles,
   nomAffiche,
   nomCourt,
   rolePrincipal,
@@ -33,7 +33,7 @@ import { FenetresCompte, type FenetreCompte } from "./FenetresCompte";
 import { FenetresSuspension, type FenetreSuspension } from "./FenetresSuspension";
 
 const DELAI_RECHERCHE_MS = 300;
-const COLONNES = ["Utilisateur", "E-mail", "Rôle", "Formule", "Statut", "Inscrit le"];
+const COLONNES = ["Utilisateur", "E-mail", "Rôles", "Formule", "Statut", "Inscrit le"];
 
 type Props = {
   initial: PageComptes;
@@ -53,7 +53,7 @@ export function ListeComptes({ initial, moi }: Props) {
   const [donnees, setDonnees] = useState(initial);
   const [erreur, setErreur] = useState<string | null>(null);
   const [chargement, demarrer] = useTransition();
-  const [cible, setCible] = useState<{ id: string; nomCourt: string; role: Role; prenom: string; nom: string }>({ id: "", nomCourt: "", role: "etudiant", prenom: "", nom: "" });
+  const [cible, setCible] = useState<{ id: string; nomCourt: string; roles: Role[]; prenom: string; nom: string }>({ id: "", nomCourt: "", roles: ["etudiant"], prenom: "", nom: "" });
   const [fenetre, setFenetre] = useState<FenetreSuspension | FenetreCompte | "role">(null);
   const minuterie = useRef<ReturnType<typeof setTimeout> | null>(null);
   const derniere = useRef(0);
@@ -80,12 +80,12 @@ export function ListeComptes({ initial, moi }: Props) {
     const droits = droitsSurCompte(moi, c);
     const ouvrir = (quoi: FenetreSuspension | FenetreCompte | "role") => () => {
       fenetreDemandee.current = true;
-      setCible({ id: c.id, nomCourt: nomCourt(c.prenom, c.nom, c.email), role: rolePrincipal(c.roles), prenom: c.prenom, nom: c.nom });
+      setCible({ id: c.id, nomCourt: nomCourt(c.prenom, c.nom, c.email), roles: c.roles, prenom: c.prenom, nom: c.nom });
       setFenetre(quoi);
     };
     return [
       { label: "Voir le profil", href: `/admin/utilisateurs/${c.id}` },
-      ...(droits.changerRole ? [{ label: "Changer le rôle", onSelect: ouvrir("role") }] : []),
+      ...(droits.changerRole ? [{ label: "Changer les rôles", onSelect: ouvrir("role") }] : []),
       ...(droits.renommer ? [{ label: "Modifier le nom", onSelect: ouvrir("renommer") }] : []),
       ...(droits.suspendre ? [{ label: "Suspendre le compte", danger: true, onSelect: ouvrir("suspendre") }] : []),
       ...(droits.reactiver ? [{ label: "Réactiver le compte", onSelect: ouvrir("reactiver") }] : []),
@@ -151,7 +151,7 @@ export function ListeComptes({ initial, moi }: Props) {
                     </span>
                   </td>
                   <td className={CELLULE_TABLEAU}>{c.email}</td>
-                  <td className={CELLULE_TABLEAU}>{LIBELLES_ROLES[rolePrincipal(c.roles)]}</td>
+                  <td className={CELLULE_TABLEAU}>{libelleRoles(c.roles)}</td>
                   <td className={CELLULE_TABLEAU}>
                     {rolePrincipal(c.roles) === "etudiant" ? (
                       <Tag tone={c.formule ? "nouveau" : "enAttente"}>{formuleAffichee(c.roles, c.formule)}</Tag>
@@ -198,6 +198,7 @@ export function ListeComptes({ initial, moi }: Props) {
         retourFocus={() => document.querySelector<HTMLElement>(`[data-actions-compte="${cible.id}"]`)}
       />
       <FenetreRole
+        key={`roles-${cible.id}`}
         compte={cible}
         ouverte={fenetre === "role"}
         onOuverteChange={(ouverte) => setFenetre(ouverte ? "role" : null)}

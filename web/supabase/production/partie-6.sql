@@ -1,4 +1,4 @@
--- Étudium · base de production · partie 6 sur 6 (migrations 0078 à 0078).
+-- Étudium · base de production · partie 6 sur 6 (migrations 0078 à 0079).
 -- Fichier produit par scripts/assembler-migrations.mjs : ne pas le modifier à la main.
 -- Supabase › SQL Editor › New query : colle tout ce fichier, puis Run. Attends « Success » avant la partie suivante.
 -- C'était la dernière partie : reprends le guide « Mise en ligne ».
@@ -283,5 +283,567 @@ $$;
 
 revoke execute on function public.formateur_etudium() from public;
 grant execute on function public.formateur_etudium() to anon, authenticated;
+
+commit;
+
+-- ═══ 0079_plusieurs_roles.sql ═══
+-- Migration 0079 : plusieurs rôles pour un compte (ta demande du 11 novembre 2026).
+--   - Un compte est étudiant, formateur, ou les deux, avec au plus un rôle de l'équipe (modérateur, admin ou super
+--     admin). Le super admin les choisit (changer_roles) ; changer_role (0017, un seul rôle) marche encore.
+--   - « Étudiant » ouvre l'espace étudiant, même à un formateur. Un formateur sans « Étudiant » reste sans espace
+--     étudiant (règle du 20 octobre, 0036) : les formateurs d'avant la 0079 la gardent (ils perdent la ligne
+--     « étudiant », que changer_role leur donnait sans effet).
+--   - Les vérifications « un formateur n'est pas étudiant » deviennent « le compte a le rôle étudiant » : accès aux
+--     leçons et formations ouvertes, inscription, actions d'étudiant, conversation côté étudiant, abonnements (payé ou
+--     attribué), notifications d'apprentissage. Le reste (badges, espace formateur, groupes, messagerie du formateur)
+--     ne change pas, sauf pour un formateur qui est aussi étudiant : les groupes le traitent en étudiant.
+--   - Un visiteur garde les aperçus ; on ne s'inscrit pas à sa propre formation ; un formateur étudiant inscrit à la
+--     formation d'un autre est prévenu de sa désactivation ; le journal note aussi le rôle « Étudiant ».
+--   - Un seul rôle de l'équipe, garanti par la base ; les rôles ne s'écrivent plus que par changer_roles.
+--   - Après la 0079, ne plus rejouer la 0017 : elle remettrait un seul rôle par compte.
+-- À appliquer après la 0078. Rejouable.
+
+begin;
+
+-- ─── 1. Plus d'un rôle par compte ───────────────────────────────────────────────────────────────────
+drop trigger if exists roles_un_seul on public.roles;
+drop function if exists public.roles_un_seul();
+
+-- Une seule fois (avant la 0079, changer_roles n'existe pas) : les formateurs d'avant gardent la règle du 20 octobre.
+do $$
+begin
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'changer_roles'
+  ) then
+    delete from public.roles e
+    where e.role = 'etudiant'
+      and exists (select 1 from public.roles f where f.profil_id = e.profil_id and f.role = 'formateur');
+  end if;
+end;
+$$;
+drop index if exists public.roles_un_seul_role;
+
+-- Un seul rôle de l'équipe par compte, garanti par la base (même pour deux demandes simultanées).
+create unique index if not exists roles_une_equipe on public.roles (profil_id) where role in ('moderateur', 'admin', 'super_admin');
+
+-- Les rôles ne s'écrivent que par changer_roles (et l'inscription) : plus d'écriture directe par l'API, qui pourrait
+-- laisser un compte ni étudiant ni formateur.
+revoke insert, update, delete on public.roles from anon, authenticated;
+
+-- ─── 2. Choisir les rôles d'un compte (super admin seul) ────────────────────────────────────────────
+create or replace function public.changer_roles(p_compte uuid, p_roles public.role_etudium[])
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_prenom text;
+  v_nom text;
+  v_voulus public.role_etudium[];
+  v_actuels public.role_etudium[];
+  v_equipe constant public.role_etudium[] := array['moderateur', 'admin', 'super_admin']::public.role_etudium[];
+  v_equipe_avant public.role_etudium;
+  v_equipe_apres public.role_etudium;
+begin
+  if not public.a_role('super_admin') then
+    raise exception 'Seul le super admin change les rôles.' using errcode = '42501';
+  end if;
+  select prenom, nom into v_prenom, v_nom from public.profils where id = p_compte for update;
+  if not found then
+    raise exception 'Compte introuvable.';
+  end if;
+  v_voulus := array(select distinct x from unnest(coalesce(p_roles, '{}'::public.role_etudium[])) as t(x) where x is not null order by x);
+  if not ('etudiant' = any (v_voulus) or 'formateur' = any (v_voulus)) then
+    raise exception 'Un compte est étudiant, formateur, ou les deux.';
+  end if;
+  if (select count(*) from unnest(v_voulus) as t(x) where x = any (v_equipe)) > 1 then
+    raise exception 'Un seul rôle de l’équipe à la fois.';
+  end if;
+  v_actuels := array(select r.role from public.roles r where r.profil_id = p_compte order by r.role);
+  if v_actuels = v_voulus then
+    return;
+  end if;
+  if p_compte = (select auth.uid()) and 'super_admin' = any (v_actuels) and not ('super_admin' = any (v_voulus)) then
+    raise exception 'Vous ne pouvez pas vous retirer le rôle super admin.';
+  end if;
+  if exists (select 1 from public.suspensions where profil_id = p_compte)
+     and exists (select 1 from unnest(v_voulus) as t(x) where x <> 'etudiant' and not (x = any (v_actuels))) then
+    raise exception 'Réactivez le compte avant de lui donner un rôle.';
+  end if;
+
+  -- Formateur retiré : sa fiche est détachée (ses formations y restent), gardée pour la lui rendre.
+  if 'formateur' = any (v_actuels) and not ('formateur' = any (v_voulus)) then
+    update public.formateurs set compte_precedent = compte_id, compte_id = null where compte_id = p_compte;
+  end if;
+
+  -- D'un rôle de l'équipe à un autre : la même ligne, sans « Vous faites partie de l’équipe » (0016).
+  select x into v_equipe_avant from unnest(v_actuels) as t(x) where x = any (v_equipe) limit 1;
+  select x into v_equipe_apres from unnest(v_voulus) as t(x) where x = any (v_equipe) limit 1;
+  if v_equipe_avant is not null and v_equipe_apres is not null and v_equipe_avant <> v_equipe_apres then
+    update public.roles set role = v_equipe_apres where profil_id = p_compte and role = v_equipe_avant;
+  end if;
+
+  delete from public.roles where profil_id = p_compte and not (role = any (v_voulus));
+  insert into public.roles (profil_id, role) select p_compte, x from unnest(v_voulus) as t(x) on conflict do nothing;
+
+  -- Formateur donné : sa fiche d'avant s'il en a eu une, sinon une fiche à son nom.
+  if 'formateur' = any (v_voulus) and not exists (select 1 from public.formateurs where compte_id = p_compte) then
+    update public.formateurs set compte_id = p_compte, compte_precedent = null
+    where id = (select id from public.formateurs where compte_precedent = p_compte order by modifie_le desc limit 1);
+    if not found then
+      insert into public.formateurs (nom, compte_id)
+      values (left(coalesce(nullif(btrim(coalesce(v_prenom, '') || ' ' || coalesce(v_nom, '')), ''), 'Formateur'), 80), p_compte);
+    end if;
+  end if;
+end;
+$$;
+
+-- Un seul rôle (0017), pour l'appli d'avant : formateur seul, étudiant seul, ou étudiant et un rôle de l'équipe.
+create or replace function public.changer_role(p_compte uuid, p_role public.role_etudium)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if p_role is null then
+    raise exception 'Choisissez un rôle.';
+  end if;
+  perform public.changer_roles(
+    p_compte,
+    case
+      when p_role = 'formateur' then array['formateur']
+      when p_role = 'etudiant' then array['etudiant']
+      else array['etudiant', p_role::text]
+    end::public.role_etudium[]
+  );
+end;
+$$;
+
+-- ─── 3. « Étudiant » plutôt que « pas formateur » (dernières versions, seule cette vérification change) ──
+create or replace function public.acces_lecon(p_lecon uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select not public.compte_suspendu() and (
+    public.equipe_contenus()
+    or public.formateur_de(public.formation_de_la_lecon(p_lecon))
+    or (
+      ((select auth.uid()) is null or public.a_role('etudiant'))
+      and exists (
+        select 1
+        from public.lecons l
+        join public.modules m on m.id = l.module_id
+        join public.formations f on f.id = m.formation_id
+        where l.id = p_lecon
+          and f.statut = 'publiee'
+          and l.publiee
+          and (
+            l.apercu
+            or (
+              ((f.gratuite and (select auth.uid()) is not null) or public.abonne((select auth.uid())))
+              and exists (
+                select 1 from public.inscriptions_formations i
+                where i.profil_id = (select auth.uid()) and i.formation_id = f.id
+              )
+            )
+          )
+      )
+    )
+  );
+$$;
+
+create or replace function public.formation_ouverte(p_formation uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select not public.compte_suspendu() and (
+    public.equipe_contenus()
+    or public.formateur_de(p_formation)
+    or (
+      ((select auth.uid()) is null or public.a_role('etudiant'))
+      and exists (
+        select 1
+        from public.formations f
+        where f.id = p_formation
+          and f.statut = 'publiee'
+          and ((f.gratuite and (select auth.uid()) is not null) or public.abonne((select auth.uid())))
+      )
+    )
+  );
+$$;
+
+create or replace function public.s_inscrire_formation(p_formation uuid)
+returns timestamptz
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := (select auth.uid());
+  v_le timestamptz;
+begin
+  if v_uid is null then
+    raise exception 'Connectez-vous pour vous inscrire à cette formation.' using errcode = '42501';
+  end if;
+  if public.compte_suspendu() then
+    raise exception 'Votre compte est suspendu.' using errcode = '42501';
+  end if;
+  if not public.a_role('etudiant') then
+    raise exception 'Un compte formateur ne suit pas de formation.' using errcode = '42501';
+  end if;
+  if public.formateur_de(p_formation) then
+    raise exception 'Vous êtes le formateur de cette formation.' using errcode = '42501';
+  end if;
+  if public.equipe_contenus() then
+    raise exception 'L’équipe a déjà accès à toutes les formations.' using errcode = '42501';
+  end if;
+  if not exists (select 1 from public.formations f where f.id = p_formation and f.statut = 'publiee') then
+    raise exception 'Cette formation n’est pas disponible.';
+  end if;
+  if not public.formation_ouverte(p_formation) then
+    raise exception 'Cette formation est réservée aux abonnés : un abonnement ouvre toutes les formations.' using errcode = '42501';
+  end if;
+  insert into public.inscriptions_formations (profil_id, formation_id)
+  values (v_uid, p_formation)
+  on conflict do nothing;
+  select i.inscrit_le into v_le from public.inscriptions_formations i where i.profil_id = v_uid and i.formation_id = p_formation;
+  return v_le;
+end;
+$$;
+
+create or replace function public.refuser_compte_formateur()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if tg_op = 'UPDATE' and new.profil_id is distinct from (select auth.uid()) then
+    return new;
+  end if;
+  if not exists (select 1 from public.roles r where r.profil_id = new.profil_id and r.role = 'etudiant') then
+    raise exception 'Un compte formateur ne suit pas de formation.' using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.refuser_formateur_conversation()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_compte uuid;
+begin
+  if tg_table_name = 'conversations' then
+    v_compte := new.etudiant_id;
+  elsif new.de_etudiant then
+    v_compte := new.auteur_id;
+  end if;
+  if v_compte is not null and not exists (select 1 from public.roles r where r.profil_id = v_compte and r.role = 'etudiant') then
+    raise exception 'Un compte formateur ne suit pas de formation.' using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.notifier(
+  p_destinataires uuid[],
+  p_categorie text,
+  p_titre text,
+  p_texte text,
+  p_lien text,
+  p_auteur_inclus boolean
+)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_nombre integer;
+begin
+  delete from public.notifications
+  where destinataire = any (p_destinataires) and cree_le < now() - interval '6 months';
+
+  if public.notification_importante(p_categorie, p_lien) then
+    insert into public.envois (canal, destinataire, titre, texte, lien)
+    select 'email', p.id, left(p_titre, 200), left(coalesce(p_texte, ''), 400), p_lien
+    from public.profils p
+    where p.id = any (p_destinataires)
+      and (coalesce(p_auteur_inclus, false) or p.id is distinct from (select auth.uid()));
+  end if;
+
+  insert into public.notifications (destinataire, categorie, titre, texte, lien)
+  select p.id, p_categorie, left(p_titre, 200), left(coalesce(p_texte, ''), 400), p_lien
+  from public.profils p
+  where p.id = any (p_destinataires)
+    and (coalesce(p_auteur_inclus, false) or p.id is distinct from (select auth.uid()))
+    and (p.preferences_notifications ->> 'canal_appli') is distinct from 'false'
+    and (p_categorie = 'service' or (p.preferences_notifications ->> p_categorie) is distinct from 'false')
+    and not (
+      p_categorie in ('sessions_live', 'nouveaux_contenus', 'rappels_apprentissage', 'recommandations', 'expiration_renouvellement')
+      and not exists (select 1 from public.roles r where r.profil_id = p.id and r.role = 'etudiant')
+    );
+  get diagnostics v_nombre = row_count;
+  return v_nombre;
+end;
+$$;
+
+create or replace function public.preparer_paiement(p_formule uuid, p_code text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := (select auth.uid());
+  v public.paiements%rowtype;
+  v_calcul jsonb;
+begin
+  perform public.exiger_compte_actif();
+  if not public.a_role('etudiant') then
+    raise exception 'Un compte formateur n’a pas d’abonnement.' using errcode = '42501';
+  end if;
+  -- Deux demandes simultanées d'un même compte passent l'une après l'autre ; un code promo est verrouillé le temps de
+  -- compter ses utilisations (un code à 100 % active l'abonnement dans la même transaction).
+  perform pg_advisory_xact_lock(hashtext('etudium.paiement.' || v_uid::text));
+  if coalesce(trim(p_code), '') <> '' then
+    perform 1 from public.codes_promo where code = upper(trim(p_code)) for update;
+    -- Un code saisi compte comme un essai (limite contre les codes devinés, 0053).
+    if not public.noter_essai_code() then
+      raise exception 'Trop d’essais de code. Réessayez dans quelques minutes.';
+    end if;
+  end if;
+
+  select * into v from public.paiements
+  where profil_id = v_uid and statut = 'en_attente' and payiz_id is not null and essai_le > now() - interval '3 minutes'
+  order by essai_le desc limit 1;
+  if found then
+    return public.carte_paiement(v) || jsonb_build_object('repris', true);
+  end if;
+
+  v_calcul := public.remise_code(p_code, p_formule, v_uid);
+  if not (v_calcul ->> 'ok')::boolean then
+    raise exception '%', v_calcul ->> 'message';
+  end if;
+  if (v_calcul ->> 'montant')::integer > 0 and not public.paiements_ouverts() then
+    raise exception 'Les paiements ouvrent bientôt.';
+  end if;
+
+  -- Une préparation jamais partie chez Payiz (coupure réseau, Payiz lent) est reprise pour le même abonnement, le même
+  -- code et le même montant : même identifiant, donc même clé d'idempotence, et pas de seconde demande au téléphone (0053).
+  select * into v from public.paiements
+  where profil_id = v_uid and statut = 'en_attente' and payiz_id is null
+    and formule_id = p_formule
+    and code_promo_id is not distinct from (v_calcul ->> 'code_id')::uuid
+    and montant = (v_calcul ->> 'montant')::integer
+    and cree_le > now() - interval '15 minutes'
+  order by cree_le desc limit 1;
+  if found then
+    return public.carte_paiement(v) || jsonb_build_object('repris', false);
+  end if;
+
+  insert into public.paiements (profil_id, formule_id, code_promo_id, prix_initial, remise, montant)
+  values (v_uid, p_formule, (v_calcul ->> 'code_id')::uuid, (v_calcul ->> 'prix_initial')::integer,
+          (v_calcul ->> 'remise')::integer, (v_calcul ->> 'montant')::integer)
+  returning * into v;
+  if v.montant = 0 then
+    perform public.activer_paiement(v.id);
+    select * into v from public.paiements where id = v.id;
+  end if;
+  return public.carte_paiement(v) || jsonb_build_object('repris', false);
+end;
+$$;
+
+create or replace function public.attribuer_abonnement(p_compte uuid, p_formule uuid, p_moyen text, p_montant integer, p_reference text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_formule public.formules%rowtype;
+  v_reference text := nullif(btrim(coalesce(p_reference, '')), '');
+  v_montant integer;
+  v_prix integer;
+  v public.paiements%rowtype;
+begin
+  perform public.exiger_equipe_paiements();
+  if not exists (select 1 from public.profils where id = p_compte) then
+    raise exception 'Compte inconnu.';
+  end if;
+  if not exists (select 1 from public.roles r where r.profil_id = p_compte and r.role = 'etudiant') then
+    raise exception 'Un compte formateur n’a pas d’abonnement.';
+  end if;
+  select * into v_formule from public.formules where id = p_formule;
+  if not found then
+    raise exception 'Abonnement inconnu.';
+  end if;
+  if p_moyen is null or p_moyen not in ('mobile_money', 'especes', 'virement', 'offert') then
+    raise exception 'Choisissez le moyen de paiement.';
+  end if;
+  if p_moyen = 'offert' then
+    v_montant := 0;
+  elsif p_montant is null or p_montant < 0 then
+    raise exception 'Indiquez le montant reçu.';
+  else
+    v_montant := p_montant;
+  end if;
+  if char_length(coalesce(v_reference, '')) > 120 then
+    raise exception 'La référence compte 120 caractères au plus.';
+  end if;
+  v_prix := coalesce(v_formule.prix_fcfa, v_montant);
+
+  insert into public.paiements (profil_id, formule_id, prix_initial, remise, montant, source, moyen_manuel, reference_manuelle, attribue_par)
+  values (p_compte, p_formule, v_prix, greatest(v_prix - v_montant, 0), v_montant, 'manuel', p_moyen, v_reference, (select auth.uid()))
+  returning * into v;
+  -- Le numéro de reçu et l'abonnement, à la suite de celui en cours (comme un paiement en ligne).
+  perform public.activer_paiement(v.id);
+  select * into v from public.paiements where id = v.id;
+
+  perform public.notifier(
+    array[p_compte], 'service', 'Votre abonnement ' || v_formule.nom || ' est actif',
+    'Jusqu’au ' || public.date_longue(public.fin_abonnement(p_compte)) || '.', '/abonnement'
+  );
+  return public.carte_paiement(v);
+end;
+$$;
+
+create or replace function public.suiveurs_actifs_formation(p_formation uuid)
+returns uuid[]
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(array_agg(s), '{}')
+  from unnest(public.suiveurs_formation(p_formation)) s
+  where not exists (select 1 from public.suspensions su where su.profil_id = s)
+    and exists (select 1 from public.roles r where r.profil_id = s and r.role = 'etudiant')
+    and not exists (select 1 from public.roles r where r.profil_id = s and r.role in ('admin', 'moderateur', 'super_admin'))
+    and not exists (
+      select 1 from public.formations f join public.formateurs fo on fo.id = f.formateur_id
+      where f.id = p_formation and fo.compte_id = s
+    );
+$$;
+
+create or replace function public.journal_roles()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_compte uuid := coalesce(new.profil_id, old.profil_id);
+  v_role text := coalesce(new.role, old.role)::text;
+  v_nom text;
+begin
+  -- Un compte supprimé emporte ses rôles : la suppression est déjà au journal.
+  if not exists (select 1 from public.profils where id = v_compte) then
+    return null;
+  end if;
+  v_nom := coalesce(public.nom_du_profil(v_compte), 'un compte');
+  if tg_op = 'UPDATE' then
+    -- changer_role (0017) passe d'un rôle de l'équipe à un autre en modifiant la ligne.
+    if new.role is not distinct from old.role then
+      return null;
+    end if;
+    perform public.journaliser('comptes', 'role_change', 'compte', v_compte::text, v_nom,
+      format('Rôle de %s : %s → %s', v_nom, public.libelle_role(old.role::text), public.libelle_role(new.role::text)),
+      jsonb_build_object('ancien', old.role::text, 'nouveau', new.role::text));
+  elsif tg_op = 'INSERT' then
+    perform public.journaliser('comptes', 'role_ajoute', 'compte', v_compte::text, v_nom,
+      format('Rôle « %s » donné à %s', public.libelle_role(v_role), v_nom), jsonb_build_object('role', v_role));
+  else
+    perform public.journaliser('comptes', 'role_retire', 'compte', v_compte::text, v_nom,
+      format('Rôle « %s » retiré à %s', public.libelle_role(v_role), v_nom), jsonb_build_object('role', v_role));
+  end if;
+  return null;
+end;
+$$;
+
+create or replace function public.lien_groupe(p_profil uuid, p_slug text, p_message uuid)
+returns text
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select case
+      when exists (select 1 from public.roles r where r.profil_id = p_profil and r.role = 'formateur')
+        and not exists (select 1 from public.roles r where r.profil_id = p_profil and r.role = 'etudiant')
+      then '/formateur/groupes/' else '/groupes/' end
+    || p_slug || coalesce('?message=' || p_message::text, '');
+$$;
+
+create or replace function public.groupe_par_slug(p_slug text)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  g public.groupes%rowtype;
+  v_ouvert boolean;
+  v_base jsonb;
+begin
+  perform public.exiger_compte_actif();
+  select * into g from public.groupes where slug = lower(btrim(coalesce(p_slug, '')));
+  if not found or (g.formation_id is null and not g.actif) then
+    return null;
+  end if;
+  v_ouvert := public.peut_lire_groupe(g.id);
+  v_base := jsonb_build_object(
+    'id', g.id,
+    'slug', g.slug,
+    'nom', g.nom,
+    'type', public.type_groupe(g),
+    'couleur', public.couleur_groupe(g),
+    'actif', g.actif,
+    'ouvert', v_ouvert,
+    'parcours', (select jsonb_build_object('nom', pa.nom, 'slug', pa.slug) from public.parcours pa where pa.id = g.parcours_id),
+    'formation', (select jsonb_build_object('titre', f.titre, 'slug', f.slug) from public.formations f where f.id = g.formation_id)
+  );
+  if not v_ouvert then
+    return v_base || jsonb_build_object('raison', case
+      when g.formation_id is not null and not g.actif then 'desactive'
+      when g.formation_id is not null then 'inscription'
+      when public.a_role('formateur') and not public.a_role('etudiant') then 'formateur'
+      else 'abonnement'
+    end);
+  end if;
+  return v_base || jsonb_build_object(
+    'raison', null,
+    'membres', public.compter_membres_groupe(g.id),
+    'coupe', exists (select 1 from public.groupes_coupes c where c.groupe_id = g.id and c.profil_id = (select auth.uid())),
+    'peut_moderer', public.peut_moderer_groupe(g.id),
+    -- L'équipe modère depuis la file : elle ne signale pas.
+    'equipe', public.equipe_communaute(),
+    'peut_ecrire', g.actif,
+    'non_lus', public.non_lus_groupe(g.id, (select auth.uid())),
+    'epingle', (
+      select public.message_groupe_json(m)
+      from public.messages_groupes m
+      where m.id = g.epingle_id and m.supprime_le is null and m.moderation = 'visible'
+    )
+  );
+end;
+$$;
+
+revoke execute on function public.changer_roles(uuid, public.role_etudium[]) from public, anon;
+grant execute on function public.changer_roles(uuid, public.role_etudium[]) to authenticated;
 
 commit;

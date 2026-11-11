@@ -81,7 +81,23 @@ function visuel(d: DonneesSession): { refus: string } | { p_image?: DonneesSessi
   return {};
 }
 
-function parametres(d: DonneesSession, equipe: boolean) {
+/** La fiche formateur du compte connecté (0014) ; null s'il n'en a pas ou si la lecture échoue. */
+async function maFiche(supabase: { rpc: (nom: "ma_fiche_formateur") => PromiseLike<{ data: unknown; error: unknown }> }): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.rpc("ma_fiche_formateur");
+    return !error && typeof data === "string" ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+/** L'animateur : sa propre fiche depuis l'espace formateur (formateur et équipe, 0079), sinon le choix de l'équipe. */
+async function animateur(d: DonneesSession, equipe: boolean, supabase: Parameters<typeof maFiche>[0]): Promise<string | null> {
+  if (d.espace === "formateur" && equipe) return maFiche(supabase);
+  return equipe ? uuidOuNull(d.formateurId) : null;
+}
+
+function parametres(d: DonneesSession, formateur: string | null) {
   return {
     p_titre: d.titre.trim(),
     p_description: d.description.trim(),
@@ -91,7 +107,7 @@ function parametres(d: DonneesSession, equipe: boolean) {
     p_lien: d.lien.trim(),
     p_parcours: uuidOuNull(d.parcoursId),
     // Un formateur anime toujours ses sessions : la base l'impose, on ne transmet rien.
-    p_formateur: equipe ? uuidOuNull(d.formateurId) : null,
+    p_formateur: formateur,
   };
 }
 
@@ -103,7 +119,8 @@ export async function creerSession(d: DonneesSession): Promise<{ ok: true; id: s
   if (refus) return { ok: false, message: refus };
   const promo = visuel(d);
   if ("refus" in promo) return { ok: false, message: promo.refus };
-  const { data, error } = await garde.supabase.rpc("creer_session", { ...parametres(d, garde.equipe), ...promo });
+  const formateur = await animateur(d, garde.equipe, garde.supabase);
+  const { data, error } = await garde.supabase.rpc("creer_session", { ...parametres(d, formateur), ...promo });
   if (error) {
     // L'affiche déposée pour cette session refusée ne reste pas dans le stockage (le formulaire la redéposera).
     if (promo.p_image) await garde.supabase.storage.from("communaute").remove([promo.p_image.chemin]).catch(() => undefined);
@@ -124,7 +141,8 @@ export async function modifierSession(id: string, d: DonneesSession): Promise<Re
   if ("refus" in promo) return { ok: false, message: promo.refus };
   // L'affiche d'avant : une fois remplacée ou retirée, elle n'est plus jointe à rien et quitte le stockage.
   const avant = await affichePrecedente(garde.supabase, id);
-  const { error } = await garde.supabase.rpc("modifier_session", { p_session: id, ...parametres(d, garde.equipe), ...promo });
+  const formateur = await animateur(d, garde.equipe, garde.supabase);
+  const { error } = await garde.supabase.rpc("modifier_session", { p_session: id, ...parametres(d, formateur), ...promo });
   if (error) {
     // Une nouvelle affiche refusée quitte le stockage ; celle de la session reste.
     if (promo.p_image && promo.p_image.chemin !== avant) await garde.supabase.storage.from("communaute").remove([promo.p_image.chemin]).catch(() => undefined);

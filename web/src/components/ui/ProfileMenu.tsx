@@ -23,7 +23,8 @@ type ProfileMenuProps = {
 
 /** Menu du profil, ouvert depuis le rond de profil de la barre du haut (planche « Menus », « Menu du profil »). */
 export function ProfileMenu({ user, roles, currentSpace = "etudiant", onSignOut, onInstall }: ProfileMenuProps) {
-  // Un formateur n'a plus l'espace étudiant (restructuration R1) : ni lui, ni l'abonnement ; son profil est dans son espace.
+  // Un formateur sans « Étudiant » n'a pas l'espace étudiant (R1, 0079) : ni lui, ni l'abonnement ; son profil est dans
+  // son espace. Plusieurs rôles : un espace par rôle.
   const apprenant = canAccess("etudiant", roles);
   const espaces: MenuEntry[] = apprenant ? [{ label: "Espace étudiant", icon: Home03Icon, href: "/accueil", current: currentSpace === "etudiant" }] : [];
   if (canAccess("formateur", roles)) espaces.push({ label: "Espace formateur", icon: TeachingIcon, href: "/formateur", current: currentSpace === "formateur" });

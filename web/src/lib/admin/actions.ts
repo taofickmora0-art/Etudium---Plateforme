@@ -259,6 +259,16 @@ export async function ranger(table: "modules" | "lecons", id: string, parent: st
 const ESSAIS_ADRESSE = 10;
 
 /** Nouvelle formation en brouillon ; son adresse vient du titre, avec « -2 », « -3 »… si elle est déjà prise. */
+/** La fiche formateur du compte connecté (0014) ; null s'il n'en a pas ou si la lecture échoue. */
+async function maFicheFormateur(supabase: { rpc: (nom: "ma_fiche_formateur") => PromiseLike<{ data: unknown; error: unknown }> }): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.rpc("ma_fiche_formateur");
+    return !error && typeof data === "string" ? data : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function createFormation(_prev: FormState, fd: FormData): Promise<FormState> {
   const espace = espaceDe(fd);
   const values = { titre: texte(fd, "titre") };
@@ -269,6 +279,9 @@ export async function createFormation(_prev: FormState, fd: FormData): Promise<F
     const garde = await exigerEditeur();
     if ("erreur" in garde) return { status: "error", message: garde.erreur, values };
     const { supabase } = garde;
+    // Depuis l'espace formateur, la formation est la sienne, même s'il est aussi dans l'équipe (0079) : sa fiche est
+    // transmise (pour un formateur seul, la base la met d'elle-même).
+    const fiche = espace === "formateur" ? await maFicheFormateur(supabase) : null;
     const base = slugify(parsed.data.titre) || "formation";
     // n-ième adresse candidate : la base, puis « base-2 », « base-3 »… raccourcie pour rester sous 80 caractères.
     const candidate = (n: number) => {
@@ -283,7 +296,11 @@ export async function createFormation(_prev: FormState, fd: FormData): Promise<F
     while (utilisees.has(candidate(n))) n++;
     // Adresse déjà prise (par un brouillon invisible pour un formateur, ou créée entre-temps) : la suivante.
     for (let essai = 0; essai < ESSAIS_ADRESSE; essai++, n++) {
-      const { data, error } = await supabase.from("formations").insert({ titre: parsed.data.titre, slug: candidate(n) }).select("id").single();
+      const { data, error } = await supabase
+        .from("formations")
+        .insert({ titre: parsed.data.titre, slug: candidate(n), ...(fiche ? { formateur_id: fiche } : {}) })
+        .select("id")
+        .single();
       if (error?.code === "23505") continue;
       if (error || !data) return erreurEnregistrement(error ?? {}, values);
       return { status: "success", redirection: `${baseFormations(espace)}/${(data as { id: string }).id}` };

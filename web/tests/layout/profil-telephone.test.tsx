@@ -44,10 +44,28 @@ describe("La page Profil du téléphone", () => {
   });
 
   it("le formateur : son profil et la déconnexion ; pas d'abonnement ni de changement d'espace", () => {
-    render(<MobileProfileMenu user={compte(["etudiant", "formateur"])} espace="formateur" />);
+    render(<MobileProfileMenu user={compte(["formateur"])} espace="formateur" />);
     expect(liens()).toEqual([["Mon profil", "/formateur/profil"]]);
     expect(screen.getByRole("button", { name: "Se déconnecter" })).toBeInTheDocument();
     expect(screen.queryByText("Série d’apprentissage")).toBeNull();
     expect(screen.queryByText("Gagnés cette semaine")).toBeNull();
+  });
+
+  it("plusieurs rôles (0079) : chaque espace du compte, depuis l'espace étudiant comme depuis l'espace formateur", () => {
+    const { unmount } = render(<MobileProfileMenu user={compte(["etudiant", "formateur", "admin"])} espace="formateur" />);
+    expect(liens()).toEqual([
+      ["Mon profil", "/formateur/profil"],
+      ["Espace étudiant", "/accueil"],
+      ["Espace formateur", "/formateur"],
+      ["Back-office", "/admin"],
+    ]);
+    unmount();
+    render(<MobileProfileMenu user={compte(["etudiant", "formateur"])} />);
+    expect(liens()).toEqual([
+      ["Mon profil", "/profil"],
+      ["Mon abonnement", "/abonnement"],
+      ["Espace étudiant", "/accueil"],
+      ["Espace formateur", "/formateur"],
+    ]);
   });
 });

@@ -39,14 +39,20 @@ describe("Session vérifiée à chaque page", () => {
     await expect(SessionGuard()).rejects.toThrow("NEXT_REDIRECT:/auth/sortie");
   });
 
-  it("un formateur est renvoyé vers son espace : l'équivalent de la page, sinon son tableau de bord (R1)", async () => {
-    vi.mocked(getShellUser).mockResolvedValue({ ...DEMO_USER, roles: ["etudiant", "formateur"] });
+  it("un formateur sans « Étudiant » est renvoyé vers son espace : l'équivalent de la page, sinon son tableau de bord (R1)", async () => {
+    vi.mocked(getShellUser).mockResolvedValue({ ...DEMO_USER, roles: ["formateur"] });
     cheminDemande = "/communaute/publications/p1";
     await expect(SessionGuard()).rejects.toThrow("NEXT_REDIRECT:/formateur/communaute/publications/p1");
     cheminDemande = "/accueil";
     await expect(SessionGuard()).rejects.toThrow("NEXT_REDIRECT:/formateur");
     cheminDemande = null;
     await expect(SessionGuard()).rejects.toThrow("NEXT_REDIRECT:/formateur");
+  });
+
+  it("formateur et étudiant (0079) : il reste sur la page de l'espace étudiant", async () => {
+    vi.mocked(getShellUser).mockResolvedValue({ ...DEMO_USER, roles: ["etudiant", "formateur"] });
+    cheminDemande = "/accueil";
+    await expect(SessionGuard()).resolves.toBeNull();
   });
 
   it("une session valable ne change rien", async () => {

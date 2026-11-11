@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { safeNext } from "@/lib/auth/messages";
-import { cheminFormateur, estFormateurConnecte } from "@/lib/auth/espace-formateur";
+import { cheminFormateur, formateurSansEspaceEtudiant } from "@/lib/auth/espace-formateur";
 import { rediriger } from "@/lib/auth/redirection";
 import { estSuspendu } from "@/lib/auth/suspension";
 import { createClient } from "@/lib/supabase/server";
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
           return rediriger("/connexion?erreur=suspendu");
         }
         // Un formateur arrive dans son espace (restructuration R1).
-        return rediriger((await estFormateurConnecte(supabase)) ? cheminFormateur(next) : next);
+        return rediriger((await formateurSansEspaceEtudiant(supabase)) ? cheminFormateur(next) : next);
       }
     } catch {
       // Base injoignable ou non configurée : même issue qu'un échec.

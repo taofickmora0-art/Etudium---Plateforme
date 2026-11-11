@@ -38,12 +38,13 @@ export async function FicheUtilisateur({ params, roles }: { params: Promise<{ id
 
   const connecte = await getAuthUser();
   const droits = droitsSurCompte({ id: connecte?.id ?? "", roles }, { id: compte.id, roles: compte.roles, suspendu: compte.suspension !== null });
-  const formateur = compte.roles.includes("formateur");
-  // L'abonnement (0054) : pas pour un formateur, qui n'a pas d'espace étudiant ; rien sans la migration.
+  // L'abonnement (0054) : seulement pour un compte qui a l'espace étudiant (un formateur peut l'avoir aussi, 0079) ;
+  // rien sans la migration.
+  const sansEspaceEtudiant = !compte.roles.includes("etudiant");
   const [remarques, abonnements, formules] = await Promise.all([
     lireRemarquesFormateurs(compte.id),
-    formateur ? Promise.resolve(null) : lireAbonnementsCompte(compte.id),
-    formateur ? Promise.resolve([]) : lireFormules(),
+    sansEspaceEtudiant ? Promise.resolve(null) : lireAbonnementsCompte(compte.id),
+    sansEspaceEtudiant ? Promise.resolve([]) : lireFormules(),
   ]);
   const nom = nomAffiche(compte.prenom, compte.nom);
   // L'argent (attribuer, résilier) : administrateurs seulement ; la base le revérifie.

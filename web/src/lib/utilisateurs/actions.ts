@@ -6,7 +6,8 @@ import type { Role } from "@/lib/auth/permissions";
 import { estFonctionAbsente } from "@/lib/contenus/lecture";
 import { viderFileApres } from "@/lib/envois/declencher";
 import { versPage } from "./data";
-import { estFiltre, estRole, MOTIF_MAX } from "./regles";
+import { INDISPONIBLE } from "@/lib/indisponible";
+import { estFiltre, estRole, MOTIF_MAX, refusRoles, rolesOrdonnes } from "./regles";
 import type { FiltreComptes, PageComptes, Resultat } from "./types";
 
 // Actions de la page Utilisateurs (spec des utilisateurs, §2 à §4). Chacune commence par vérifier l'équipe ; la base
@@ -40,16 +41,19 @@ export async function chercherComptes(
 }
 
 /**
- * Le rôle d'un compte, un seul en plus d'étudiant (super admin seul ; migration 0017). Le rôle Formateur crée sa fiche
- * formateur, ou lui rend la sienne : la base s'en charge.
+ * Les rôles d'un compte (super admin seul ; migration 0079) : étudiant, formateur, ou les deux, et au plus un rôle de
+ * l'équipe. Le rôle Formateur crée sa fiche formateur, ou lui rend la sienne : la base s'en charge.
  */
-export async function changerRole(compteId: string, role: Role): Promise<Resultat> {
+export async function changerRoles(compteId: string, roles: Role[]): Promise<Resultat> {
   const garde = await exigerDomaine("roles");
   if ("erreur" in garde) return { ok: false, message: garde.erreur };
-  if (!UUID.test(compteId) || !estRole(role)) return { ok: false, message: ECHEC };
-  const { error } = await garde.supabase.rpc("changer_role", { p_compte: compteId, p_role: role });
+  if (!UUID.test(compteId) || !Array.isArray(roles) || !roles.every(estRole)) return { ok: false, message: ECHEC };
+  const choisis = rolesOrdonnes(roles);
+  const refus = refusRoles(choisis);
+  if (refus) return { ok: false, message: refus };
+  const { error } = await garde.supabase.rpc("changer_roles", { p_compte: compteId, p_roles: choisis });
   if (error) {
-    return { ok: false, message: estFonctionAbsente(error) ? "Appliquez la migration 0017 (guide « Ce qui te revient », section 22)." : message(error) };
+    return { ok: false, message: estFonctionAbsente(error) ? INDISPONIBLE : message(error) };
   }
   refresh();
   return { ok: true };

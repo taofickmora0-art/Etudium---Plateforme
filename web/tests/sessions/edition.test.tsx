@@ -164,6 +164,7 @@ describe("Le formulaire", () => {
       lien: "https://meet.google.com/abc-defg-hij",
       parcoursId: P,
       formateurId: null,
+      espace: "formateur",
       // Sans visuel de promotion (spec promotion des sessions live, §1).
       image: null,
       video: null,

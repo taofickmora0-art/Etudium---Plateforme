@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { accueilDe, cheminFormateur, estFormateurConnecte } from "@/lib/auth/espace-formateur";
+import { accueilDe, cheminFormateur, formateurSansEspaceEtudiant } from "@/lib/auth/espace-formateur";
 
 // Restructuration R1 : un formateur n'a plus l'espace étudiant. Une adresse étudiante le mène à l'équivalent de son
 // espace, sinon à son tableau de bord.
@@ -23,17 +23,25 @@ describe("Où va un formateur", () => {
     expect(cheminFormateur("/formateur/messages?c=1")).toBe("/formateur/messages?c=1");
   });
 
-  it("l'accueil d'un compte : son tableau de bord pour un formateur, l'Accueil pour les autres", () => {
-    expect(accueilDe(["etudiant", "formateur"])).toBe("/formateur");
+  it("l'accueil d'un compte : son tableau de bord pour un formateur sans « Étudiant », l'Accueil pour les autres", () => {
+    expect(accueilDe(["formateur"])).toBe("/formateur");
+    expect(accueilDe(["formateur", "admin"])).toBe("/formateur");
+    expect(accueilDe(["etudiant", "formateur"])).toBe("/accueil");
     expect(accueilDe(["etudiant", "admin"])).toBe("/accueil");
     expect(accueilDe(["etudiant"])).toBe("/accueil");
   });
 
-  it("le compte connecté est-il formateur ? la base le dit ; non en cas de doute", async () => {
-    const rpc = vi.fn(async () => ({ data: true, error: null }));
-    expect(await estFormateurConnecte({ rpc })).toBe(true);
+  it("le compte connecté est-il formateur sans espace étudiant ? la base le dit ; non en cas de doute", async () => {
+    const roles = (formateur: boolean, etudiant: boolean) =>
+      vi.fn(async (_nom: "a_role", { r }: { r: "formateur" | "etudiant" }) => ({ data: r === "formateur" ? formateur : etudiant, error: null }));
+    const rpc = roles(true, false);
+    expect(await formateurSansEspaceEtudiant({ rpc })).toBe(true);
     expect(rpc).toHaveBeenCalledWith("a_role", { r: "formateur" });
-    expect(await estFormateurConnecte({ rpc: async () => ({ data: null, error: { message: "panne" } }) })).toBe(false);
-    expect(await estFormateurConnecte({ rpc: async () => Promise.reject(new Error("réseau")) })).toBe(false);
+    expect(rpc).toHaveBeenCalledWith("a_role", { r: "etudiant" });
+    // Formateur et étudiant (0079) : il garde la page demandée.
+    expect(await formateurSansEspaceEtudiant({ rpc: roles(true, true) })).toBe(false);
+    expect(await formateurSansEspaceEtudiant({ rpc: roles(false, false) })).toBe(false);
+    expect(await formateurSansEspaceEtudiant({ rpc: async () => ({ data: null, error: { message: "panne" } }) })).toBe(false);
+    expect(await formateurSansEspaceEtudiant({ rpc: async () => Promise.reject(new Error("réseau")) })).toBe(false);
   });
 });

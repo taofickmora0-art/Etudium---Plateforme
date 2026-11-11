@@ -54,6 +54,17 @@ describe("Back-office : formations", () => {
     expect(state).toEqual({ status: "success", redirection: `/admin/formations/${F}` });
   });
 
+  it("formateur et équipe (0079), depuis son espace formateur : la formation porte sa fiche", async () => {
+    getShellUser.mockResolvedValue({ roles: ["etudiant", "formateur", "admin"] });
+    const FICHE = "44444444-4444-4444-8444-444444444444";
+    faux.repondre("rpc.ma_fiche_formateur", { data: FICHE });
+    faux.repondre("formations.select", { data: [] });
+    faux.repondre("formations.insert", { data: { id: F } });
+    const state = await createFormation(IDLE, form({ titre: "Excel", espace: "formateur" }));
+    expect(faux.de("formations", "insert")[0].valeurs).toEqual({ titre: "Excel", slug: "excel", formateur_id: FICHE });
+    expect(state).toEqual({ status: "success", redirection: `/formateur/formations/${F}` });
+  });
+
   it("un titre très long déjà pris reçoit un suffixe sans dépasser 80 caractères", async () => {
     // Une adresse de 79 caractères (le maximum est 80) : le suffixe oblige à la raccourcir.
     const titre = "Anticonstitutionnellement".repeat(3) + "abcd";

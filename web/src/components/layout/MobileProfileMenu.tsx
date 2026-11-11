@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Home03Icon, Shield01Icon } from "@hugeicons/core-free-icons";
+import { Home03Icon, Shield01Icon, TeachingIcon } from "@hugeicons/core-free-icons";
 import { LigneInstallation } from "@/components/installation/LigneInstallation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
@@ -35,7 +35,13 @@ function Tuile({ glyph, valeur, legende, nom }: { glyph: ReactNode; valeur: stri
  */
 export function MobileProfileMenu({ user, espace = "etudiant" }: { user: ShellUser; espace?: "etudiant" | "formateur" }) {
   const formateur = espace === "formateur";
-  const equipe = !formateur && canAccess("admin", user.roles);
+  // Plusieurs espaces (l'équipe, ou plusieurs rôles depuis la 0079) : on passe de l'un à l'autre, comme dans le menu du
+  // profil sur ordinateur.
+  const espaces = [
+    canAccess("etudiant", user.roles) && { href: "/accueil", icon: Home03Icon, titre: "Espace étudiant" },
+    canAccess("formateur", user.roles) && { href: "/formateur", icon: TeachingIcon, titre: "Espace formateur" },
+    canAccess("admin", user.roles) && { href: "/admin", icon: Shield01Icon, titre: "Back-office" },
+  ].filter((e) => e !== false);
   return (
     <div className="flex flex-col">
       <h1 className="sr-only">Profil</h1>
@@ -58,9 +64,7 @@ export function MobileProfileMenu({ user, espace = "etudiant" }: { user: ShellUs
         {(formateur ? NAV_MENU_FORMATEUR : NAV_MENU_TELEPHONE).map((e) => (
           <ListRow key={e.href} href={e.href} leading={<Icon icon={e.icon} size={22} />} title={e.label} />
         ))}
-        {/* Deux espaces : l'équipe passe de l'un à l'autre (comme dans le menu du profil sur ordinateur). */}
-        {equipe && <ListRow href="/accueil" leading={<Icon icon={Home03Icon} size={22} />} title="Espace étudiant" />}
-        {equipe && <ListRow href="/admin" leading={<Icon icon={Shield01Icon} size={22} />} title="Back-office" />}
+        {espaces.length > 1 && espaces.map((e) => <ListRow key={e.href} href={e.href} leading={<Icon icon={e.icon} size={22} />} title={e.titre} />)}
         <LigneInstallation />
         <MenuLogout />
       </List>

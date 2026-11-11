@@ -93,6 +93,8 @@ export type DonneesSession = {
   parcoursId: string | null;
   /** L'animateur choisi par l'équipe ; ignoré pour un formateur (il anime toujours ses sessions). */
   formateurId: string | null;
+  /** L'espace du formulaire : depuis l'espace formateur, il anime la session, même s'il est aussi dans l'équipe (0079). */
+  espace?: "admin" | "formateur";
   /** Le visuel de promotion : une affiche déjà déposée, ou l'adresse d'une vidéo (pas les deux). */
   image?: PieceSession | null;
   video?: string | null;

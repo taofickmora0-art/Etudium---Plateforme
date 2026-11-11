@@ -154,6 +154,7 @@ function Formulaire({ espace, parcours, formateurs, initial, moi = SANS_COMPTE, 
       lien: lien.trim(),
       parcoursId: parcoursId || null,
       formateurId: espace === "admin" ? formateurId || null : null,
+      espace,
       image: null,
       video: adresseVideo || null,
     };

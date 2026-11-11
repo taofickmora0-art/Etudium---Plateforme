@@ -7,7 +7,7 @@ import { clearLocalSession } from "./local-session";
 import { authErrorMessage, safeNext } from "./messages";
 import { codeSchema, fieldErrorsFrom, newPasswordSchema, resetRequestSchema, signInSchema, signUpSchema, type FormState } from "./schemas";
 import { PENDING_EMAIL_COOKIE, PENDING_EMAIL_MAX_AGE, REMEMBER_COOKIE, SUITE_COOKIE } from "./session-cookies";
-import { cheminFormateur, estFormateurConnecte } from "./espace-formateur";
+import { cheminFormateur, formateurSansEspaceEtudiant } from "./espace-formateur";
 import { estSuspendu, MESSAGE_SUSPENDU } from "./suspension";
 
 // Actions serveur des écrans de compte. `redirect()` est toujours appelé hors des blocs try (il lève une erreur).
@@ -62,7 +62,7 @@ export async function signIn(_prev: FormState, formData: FormData): Promise<Form
       await supabase.auth.signOut();
       suspendu = true;
     } else {
-      formateur = await estFormateurConnecte(supabase);
+      formateur = await formateurSansEspaceEtudiant(supabase);
     }
   } catch {
     return { status: "error", message: authErrorMessage(null), values: { email, remember: souvenir } };

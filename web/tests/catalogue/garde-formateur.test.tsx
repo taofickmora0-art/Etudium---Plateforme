@@ -20,7 +20,8 @@ const { apercuFormateur, renvoyerFormateur } = await import("@/lib/catalogue/gar
 const { BandeauApercu } = await import("@/components/lecon/BandeauApercu");
 
 const compte = (roles: Role[]) => ({ ...DEMO_USER, roles });
-const FORMATEUR = compte(["etudiant", "formateur"]);
+// Un formateur sans « Étudiant » (0079) : il n'a pas l'espace étudiant.
+const FORMATEUR = compte(["formateur"]);
 const lire = (chemin: string) => readFileSync(join(process.cwd(), chemin), "utf8");
 
 beforeEach(() => editeurFormation.mockReset());

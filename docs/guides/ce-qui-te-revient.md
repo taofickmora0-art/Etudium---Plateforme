@@ -1477,3 +1477,15 @@ Tes décisions du 5 novembre 2026.
 
 1. **La migration, sur la base de production** : Supabase › SQL Editor › New query, colle tout le fichier `web/supabase/migrations/0078_blocage_et_parcours.sql`, **après la 0077**, puis Run (« Success »). Elle se relance sans risque. Dis-moi « c'est appliqué » : je mets le code en ligne ensuite. Une base neuve l'a déjà : la 0078 est à la fin de `web/supabase/production/partie-6.sql`.
 2. **À vérifier** : la page d'accueil et le catalogue montrent les trois parcours ; les anciennes formations Business sont dans Compétences digitales ; le groupe « Entrepreneuriat » existe ; une formation sans formateur montre « Équipe Étudium », et son nom mène au profil ; un code faux 5 fois : « réessaie dans 15 minutes » ; la fenêtre d'une nouvelle ECUE n'a plus de barème ; une note de rattrapage change la moyenne de l'ECUE.
+
+## 78. Plusieurs rôles pour un compte (migration 0079), 10 minutes
+
+Ta demande du 11 novembre 2026, avec « Tout, étudiant compris ».
+- **Les rôles d'un compte** : « Étudiant », « Formateur », ou les deux, et au plus un rôle de l'équipe (Modérateur, Admin ou Super admin). Dans le back-office (Utilisateurs), « Changer les rôles » ouvre deux cases et le choix de l'équipe ; la colonne « Rôles » les montre tous.
+- **Chaque rôle ouvre son espace** : « Étudiant » l'espace étudiant (même pour un formateur : il suit les formations des autres, s'abonne, a ses certificats), « Formateur » l'espace formateur, l'équipe le back-office. Le menu du profil propose chaque espace du compte.
+- **Ce qui ne change pas pour les comptes d'aujourd'hui** : un formateur reste sans espace étudiant (règle du 20 octobre) tant que tu ne lui coches pas « Étudiant ». Un compte est toujours étudiant ou formateur : un rôle de l'équipe seul est refusé.
+- **Les règles** : se retirer soi-même le rôle super admin reste impossible ; un formateur qui est aussi étudiant ne s'inscrit pas à sa propre formation ; un formateur qui est aussi dans l'équipe crée ses formations et ses sessions à son nom depuis l'espace formateur.
+- **Après la 0079, ne rejoue plus jamais la 0017** : elle remettrait un seul rôle par compte.
+
+1. **La migration, sur la base de production** : Supabase › SQL Editor › New query, colle tout le fichier `web/supabase/migrations/0079_plusieurs_roles.sql`, **après la 0078**, puis Run (« Success »). Elle se relance sans risque. Dis-moi « c'est appliqué » : je mets le code en ligne ensuite (l'ancien code marche avec la nouvelle base, pas l'inverse). Une base neuve l'a déjà : la 0079 est à la fin de `web/supabase/production/partie-6.sql`.
+2. **À vérifier** : dans Utilisateurs, ouvre un compte de test et coche « Étudiant » et « Formateur » : le compte a les deux espaces (menu du profil), s'inscrit à une formation et ouvre son espace formateur ; décoche « Étudiant » : il ne garde que l'espace formateur ; un formateur d'aujourd'hui n'a toujours pas l'espace étudiant.

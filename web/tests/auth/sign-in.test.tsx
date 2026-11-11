@@ -79,9 +79,9 @@ describe("Connexion", () => {
     expect(createClient).toHaveBeenCalledWith({ remember: true });
   });
 
-  it("un formateur arrive dans son espace : son tableau de bord, ou l'équivalent de la page demandée (R1)", async () => {
+  it("un formateur sans « Étudiant » arrive dans son espace : son tableau de bord, ou l'équivalent de la page demandée (R1)", async () => {
     auth.signInWithPassword.mockResolvedValue({ error: null });
-    rpc.mockImplementation(async (nom: string) => ({ data: nom === "a_role", error: null }));
+    rpc.mockImplementation(async (nom: string, args?: { r?: string }) => ({ data: nom === "a_role" && args?.r === "formateur", error: null }));
     await expect(signIn(IDLE, form(BONS))).rejects.toThrow("NEXT_REDIRECT:/formateur");
     await expect(signIn(IDLE, form({ ...BONS, next: "/profil" }))).rejects.toThrow("NEXT_REDIRECT:/formateur/profil");
     auth.exchangeCodeForSession.mockResolvedValue({ error: null });

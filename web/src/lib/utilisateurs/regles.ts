@@ -26,7 +26,33 @@ export const LIBELLES_ROLES: Record<Role, string> = {
   super_admin: "Super admin",
 };
 
-const EQUIPE: Role[] = ["moderateur", "admin", "super_admin"];
+/** Les rôles de l'équipe : un seul à la fois (0079). */
+export const ROLES_EQUIPE: Role[] = ["moderateur", "admin", "super_admin"];
+const EQUIPE = ROLES_EQUIPE;
+
+/** Les rôles sans doublon, dans l'ordre de la base. */
+export const rolesOrdonnes = (roles: Role[]): Role[] => ROLES_ORDONNES.filter((r) => roles.includes(r));
+
+/** Ce que la base refuserait (0079) : un compte est étudiant, formateur, ou les deux ; un seul rôle de l'équipe. */
+export function refusRoles(roles: Role[]): string | null {
+  if (!roles.includes("etudiant") && !roles.includes("formateur")) return "Un compte est étudiant, formateur, ou les deux.";
+  if (roles.filter((r) => ROLES_EQUIPE.includes(r)).length > 1) return "Un seul rôle de l’équipe à la fois.";
+  return null;
+}
+
+/** « Étudiant · Formateur · Admin ». */
+export const libelleRoles = (roles: Role[]): string => rolesOrdonnes(roles).map((r) => LIBELLES_ROLES[r]).join(" · ") || LIBELLES_ROLES.etudiant;
+
+/** « Espace étudiant, espace formateur et back-office. » : les espaces qu'ouvrent les rôles d'un compte. */
+export function espacesDesRoles(roles: Role[]): string {
+  const espaces = [
+    ...(roles.includes("etudiant") ? ["espace étudiant"] : []),
+    ...(roles.includes("formateur") ? ["espace formateur"] : []),
+    ...(roles.some((r) => ROLES_EQUIPE.includes(r)) ? [roles.includes("super_admin") ? "back-office, avec le choix des rôles" : "back-office"] : []),
+  ];
+  const texte = espaces.length > 1 ? `${espaces.slice(0, -1).join(", ")} et ${espaces.at(-1)}` : (espaces[0] ?? "aucun espace");
+  return `${texte[0].toUpperCase()}${texte.slice(1)}.`;
+}
 
 export const estRole = (valeur: unknown): valeur is Role => ROLES_ORDONNES.includes(valeur as Role);
 export const estFiltre = (valeur: unknown): valeur is FiltreComptes => FILTRES_COMPTES.some((f) => f.value === valeur);
@@ -62,18 +88,6 @@ export function initialesCompte(prenom: string, nom: string, email: string): str
   if (mots.length === 0) return (email.trim()[0] ?? "?").toUpperCase();
   return (mots[0][0] + (mots.length > 1 ? mots[mots.length - 1][0] : "")).toUpperCase();
 }
-
-/**
- * Les espaces que donne chaque rôle (migration 0017) : un seul rôle en plus d'étudiant, donc deux espaces au plus ;
- * l'équipe n'a jamais l'espace formateur, elle gère toutes les formations depuis le back-office.
- */
-export const ESPACES_DU_ROLE: Record<Role, string> = {
-  etudiant: "Espace étudiant seulement.",
-  formateur: "Espace étudiant et espace formateur : crée et suit ses formations.",
-  moderateur: "Espace étudiant et back-office.",
-  admin: "Espace étudiant et back-office : formations, comptes et suspensions.",
-  super_admin: "Espace étudiant et back-office, avec le choix des rôles.",
-};
 
 const DATE_COURTE = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric", timeZone: "Africa/Porto-Novo" });
 

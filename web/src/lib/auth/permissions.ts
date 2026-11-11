@@ -7,16 +7,15 @@ export type Role = "etudiant" | "formateur" | "moderateur" | "admin" | "super_ad
 export type Espace = "etudiant" | "formateur" | "admin";
 
 export const ACCES: Record<Espace, Role[] | "tous"> = {
-  etudiant: "tous",
-  // Deux espaces au plus (migration 0017) : l'équipe, super admin compris, gère les formations depuis le back-office
-  // et n'a pas l'espace formateur.
+  etudiant: ["etudiant"],
+  // L'espace formateur demande le rôle Formateur : l'équipe gère les formations depuis le back-office.
   formateur: ["formateur"],
   admin: ["moderateur", "admin", "super_admin"],
 };
 
 export function canAccess(espace: Espace, roles: Role[]): boolean {
-  // Restructuration du 20 octobre 2026 (R1) : un formateur n'a plus l'espace étudiant ; l'équipe le garde.
-  if (espace === "etudiant") return !roles.includes("formateur");
+  // Plusieurs rôles (0079) : chaque rôle ouvre son espace. « Étudiant » ouvre l'espace étudiant, même à un formateur ;
+  // un formateur sans « Étudiant » ne l'a pas (restructuration R1, 20 octobre 2026).
   const autorises = ACCES[espace];
   return autorises === "tous" || roles.some((r) => autorises.includes(r));
 }

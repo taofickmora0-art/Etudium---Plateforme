@@ -39,10 +39,15 @@ describe("Règles d'accès", () => {
     expect(canAccess("admin", ["etudiant", "super_admin"])).toBe(true);
   });
 
-  it("un formateur n'a plus l'espace étudiant ; l'équipe le garde (restructuration R1)", () => {
-    expect(canAccess("etudiant", ["etudiant", "formateur"])).toBe(false);
+  it("« Étudiant » ouvre l'espace étudiant, même à un formateur ; un formateur sans « Étudiant » ne l'a pas (0079)", () => {
+    expect(canAccess("etudiant", ["etudiant", "formateur"])).toBe(true);
+    expect(canAccess("etudiant", ["formateur"])).toBe(false);
+    expect(canAccess("etudiant", ["formateur", "admin"])).toBe(false);
     expect(canAccess("etudiant", ["etudiant", "admin"])).toBe(true);
     expect(canAccess("etudiant", ["etudiant", "super_admin"])).toBe(true);
+    // Formateur et équipe : les deux espaces.
+    expect(canAccess("formateur", ["formateur", "admin"])).toBe(true);
+    expect(canAccess("admin", ["formateur", "admin"])).toBe(true);
   });
 
   it("l'espace se lit dans l'adresse", () => {
@@ -64,9 +69,11 @@ describe("Pages réservées", () => {
     await expect(requireSpace("admin")).rejects.toThrow("NEXT_REDIRECT:/accueil");
   });
 
-  it("un formateur qui tape /admin retourne à son tableau de bord", async () => {
-    vi.mocked(getShellUser).mockResolvedValue(compte(["etudiant", "formateur"]));
+  it("un formateur qui tape /admin retourne à son tableau de bord ; formateur et étudiant, à l'Accueil", async () => {
+    vi.mocked(getShellUser).mockResolvedValue(compte(["formateur"]));
     await expect(requireSpace("admin")).rejects.toThrow("NEXT_REDIRECT:/formateur");
+    vi.mocked(getShellUser).mockResolvedValue(compte(["etudiant", "formateur"]));
+    await expect(requireSpace("admin")).rejects.toThrow("NEXT_REDIRECT:/accueil");
   });
 
   it("sans compte (ou session fermée ailleurs), passage par la sortie", async () => {
@@ -82,14 +89,14 @@ describe("Pages réservées", () => {
 });
 
 describe("Menus selon les rôles", () => {
-  it("chacun voit ses espaces dans le menu du téléphone : deux au plus", () => {
+  it("chacun voit ses espaces dans le menu du téléphone", () => {
     const { unmount } = render(<MobileProfileMenu user={compte(["etudiant", "super_admin"])} />);
     expect(screen.queryByRole("link", { name: /Espace formateur/ })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Espace étudiant/ })).toHaveAttribute("href", "/accueil");
     expect(screen.getByRole("link", { name: /Back-office/ })).toHaveAttribute("href", "/admin");
     unmount();
-    // Un formateur n'a plus l'espace étudiant (R1) : son menu du téléphone ne propose aucun changement d'espace.
-    render(<MobileProfileMenu user={compte(["etudiant", "formateur"])} espace="formateur" />);
+    // Un formateur sans « Étudiant » (R1, 0079) : un seul espace, son menu du téléphone ne propose aucun changement.
+    render(<MobileProfileMenu user={compte(["formateur"])} espace="formateur" />);
     expect(screen.queryByRole("link", { name: /Espace formateur/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Back-office/ })).not.toBeInTheDocument();
   });

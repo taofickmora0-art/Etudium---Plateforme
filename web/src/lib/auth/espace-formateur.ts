@@ -1,6 +1,7 @@
 import type { Role } from "./permissions";
 
-// Restructuration du 20 octobre 2026 (R1) : un formateur n'a plus l'espace étudiant. Une adresse étudiante le mène à
+// Restructuration du 20 octobre 2026 (R1) : un formateur sans le rôle « Étudiant » (0079) n'a pas l'espace étudiant.
+// Une adresse étudiante le mène à
 // l'équivalent de son espace (ses pages de compte, sa communauté), sinon à son tableau de bord. Les liens des
 // notifications passent par ce même renvoi.
 
@@ -26,18 +27,21 @@ export function cheminFormateur(chemin: string): string {
   return EQUIVALENTS[page] ?? "/formateur";
 }
 
-/** L'accueil d'un compte : le tableau de bord pour un formateur, l'Accueil (la communauté) pour les autres. */
+/** L'accueil d'un compte : le tableau de bord pour un formateur sans « Étudiant », l'Accueil (la communauté) sinon. */
 export function accueilDe(roles: Role[]): string {
-  return roles.includes("formateur") ? "/formateur" : "/accueil";
+  return roles.includes("formateur") && !roles.includes("etudiant") ? "/formateur" : "/accueil";
 }
 
-type ClientRpc = { rpc: (nom: "a_role", args: { r: "formateur" }) => PromiseLike<{ data: unknown; error: unknown }> };
+type ClientRpc = { rpc: (nom: "a_role", args: { r: "formateur" | "etudiant" }) => PromiseLike<{ data: unknown; error: unknown }> };
 
-/** Le compte qui vient de se connecter est-il formateur ? La base le dit (a_role) ; non en cas de doute. */
-export async function estFormateurConnecte(supabase: ClientRpc): Promise<boolean> {
+/**
+ * Le compte qui vient de se connecter est-il un formateur sans l'espace étudiant ? La base le dit (a_role) ; non en
+ * cas de doute. Formateur et étudiant (0079) : il garde la page demandée.
+ */
+export async function formateurSansEspaceEtudiant(supabase: ClientRpc): Promise<boolean> {
   try {
-    const { data, error } = await supabase.rpc("a_role", { r: "formateur" });
-    return !error && data === true;
+    const [formateur, etudiant] = await Promise.all([supabase.rpc("a_role", { r: "formateur" }), supabase.rpc("a_role", { r: "etudiant" })]);
+    return !formateur.error && formateur.data === true && !etudiant.error && etudiant.data === false;
   } catch {
     return false;
   }

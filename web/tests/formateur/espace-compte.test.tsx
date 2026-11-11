@@ -22,7 +22,8 @@ const { MobileProfileMenu } = await import("@/components/layout/MobileProfileMen
 const { ProfileMenu } = await import("@/components/ui/ProfileMenu");
 
 const compte = (roles: Role[]) => ({ ...DEMO_USER, roles });
-const FORMATEUR = compte(["etudiant", "formateur"]);
+// Un formateur sans « Étudiant » (0079) : il n'a pas l'espace étudiant.
+const FORMATEUR = compte(["formateur"]);
 const lire = (fichier: string) => readFileSync(join(process.cwd(), fichier), "utf8");
 
 describe("L'en-tête de l'espace formateur", () => {

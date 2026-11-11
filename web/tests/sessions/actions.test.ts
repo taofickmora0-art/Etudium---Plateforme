@@ -89,6 +89,17 @@ describe("Programmer, modifier, annuler", () => {
     expect(faux.de("rpc", "creer_session")[1].valeurs).toMatchObject({ p_formateur: FICHE });
   });
 
+  it("formateur et équipe (0079), depuis son espace formateur : il anime la session (sa fiche est transmise)", async () => {
+    getShellUser.mockResolvedValue({ roles: ["etudiant", "formateur", "admin"] });
+    faux.repondre("rpc.ma_fiche_formateur", { data: FICHE });
+    faux.repondre("rpc.creer_session", { data: ID });
+    expect(await creerSession({ ...D, formateurId: null, espace: "formateur" })).toEqual({ ok: true, id: ID });
+    expect(faux.de("rpc", "creer_session")[0].valeurs).toMatchObject({ p_formateur: FICHE });
+    faux.repondre("rpc.modifier_session", { data: null });
+    await modifierSession(ID, { ...D, formateurId: null, espace: "formateur" });
+    expect(faux.de("rpc", "modifier_session")[0].valeurs).toMatchObject({ p_formateur: FICHE });
+  });
+
   it("relecture du lot 6 A (critique) : le modérateur programme, modifie et annule une session (domaine de la communauté)", async () => {
     getShellUser.mockResolvedValue({ roles: ["etudiant", "moderateur"] });
     faux.repondre("rpc.creer_session", { data: ID });

@@ -4,13 +4,16 @@ import {
   dateCourte,
   dateNumerique,
   droitsSurCompte,
-  ESPACES_DU_ROLE,
+  espacesDesRoles,
   FILTRES_COMPTES,
   formuleAffichee,
   LIBELLES_ROLES,
+  libelleRoles,
   nomAffiche,
   nomCourt,
+  refusRoles,
   rolePrincipal,
+  rolesOrdonnes,
 } from "@/lib/utilisateurs/regles";
 import type { Role } from "@/lib/auth/permissions";
 
@@ -36,14 +39,17 @@ describe("Règles de la page Utilisateurs", () => {
     expect(nomAffiche("  ", " ")).toBe("Sans nom");
   });
 
-  it("chaque rôle dit ses espaces : deux au plus", () => {
-    expect(ESPACES_DU_ROLE).toEqual({
-      etudiant: "Espace étudiant seulement.",
-      formateur: "Espace étudiant et espace formateur : crée et suit ses formations.",
-      moderateur: "Espace étudiant et back-office.",
-      admin: "Espace étudiant et back-office : formations, comptes et suspensions.",
-      super_admin: "Espace étudiant et back-office, avec le choix des rôles.",
-    });
+  it("plusieurs rôles (0079) : leurs espaces, leur libellé, leur ordre, et ce que la base refuserait", () => {
+    expect(espacesDesRoles(["etudiant"])).toBe("Espace étudiant.");
+    expect(espacesDesRoles(["formateur"])).toBe("Espace formateur.");
+    expect(espacesDesRoles(["etudiant", "formateur", "admin"])).toBe("Espace étudiant, espace formateur et back-office.");
+    expect(espacesDesRoles(["etudiant", "super_admin"])).toBe("Espace étudiant et back-office, avec le choix des rôles.");
+    expect(libelleRoles(["admin", "etudiant", "formateur"])).toBe("Étudiant · Formateur · Admin");
+    expect(rolesOrdonnes(["super_admin", "etudiant", "etudiant"])).toEqual(["etudiant", "super_admin"]);
+    expect(refusRoles(["etudiant", "formateur", "moderateur"])).toBeNull();
+    expect(refusRoles(["formateur"])).toBeNull();
+    expect(refusRoles(["admin"])).toBe("Un compte est étudiant, formateur, ou les deux.");
+    expect(refusRoles(["etudiant", "admin", "super_admin"])).toBe("Un seul rôle de l’équipe à la fois.");
   });
 
   it("le tableau : rôle principal, formule (lot 2 : gratuit pour les étudiants), date du design, nom court", () => {
