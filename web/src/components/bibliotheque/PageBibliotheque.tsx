@@ -62,7 +62,7 @@ function ContinuerLaLecture({ livres }: { livres: CarteLivre[] }) {
       </Heading>
       <ul
         aria-label="Livres commencés"
-        className="m-0 grid list-none auto-cols-[minmax(140px,calc((100%-80px)/6))] grid-flow-col gap-4 overflow-x-auto p-0 pb-1 [scrollbar-width:thin] max-sm:-mx-4 max-sm:gap-3 max-sm:px-4"
+        className="m-0 grid list-none auto-cols-[minmax(140px,calc((100%-80px)/6))] grid-flow-col gap-4 overflow-x-auto p-0 pb-1 max-sm:-mx-4 max-sm:gap-3 max-sm:px-4"
       >
         {livres.slice(0, RANGEE_MAX).map((livre) => (
           <li key={livre.id} className="min-w-0">

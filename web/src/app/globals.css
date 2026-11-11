@@ -106,6 +106,18 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/*
+ * Pas de barre de défilement, nulle part (demande du 11 novembre 2026) : la page, les fenêtres, les tableaux et les
+ * rangées défilent toujours, à la molette (Maj + molette en largeur), au doigt, au pavé tactile et au clavier.
+ */
+* {
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}
+
 ::placeholder {
   color: var(--color-indice);
 }

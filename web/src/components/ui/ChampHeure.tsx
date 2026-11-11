@@ -108,7 +108,7 @@ export function ChampHeure({
           <div
             role="group"
             aria-label="Heures"
-            className="flex max-h-60 flex-1 flex-col gap-0.5 overflow-y-auto pr-1 [scrollbar-width:thin]"
+            className="flex max-h-60 flex-1 flex-col gap-0.5 overflow-y-auto pr-1"
           >
             <span
               aria-hidden="true"
@@ -137,7 +137,7 @@ export function ChampHeure({
           <div
             role="group"
             aria-label="Minutes"
-            className="flex max-h-60 flex-1 flex-col gap-0.5 overflow-y-auto pr-1 [scrollbar-width:thin]"
+            className="flex max-h-60 flex-1 flex-col gap-0.5 overflow-y-auto pr-1"
           >
             <span
               aria-hidden="true"
