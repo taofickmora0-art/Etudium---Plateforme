@@ -274,8 +274,8 @@ describe("Le pays et l'opérateur (Payiz, tous pays)", () => {
     expect(operateursProposes()).toEqual(["MTN Mobile Money", "Moov Money", "Celtiis Cash"]);
     const logo = screen.getByRole("radio", { name: /MTN Mobile Money/ }).querySelector("img");
     expect(logo).toHaveAttribute("src", "https://cdn.payiz.app/operateurs/mtn.png");
-    // Sans logo chez Payiz : l'initiale.
-    expect(screen.getByRole("radio", { name: /Celtiis Cash/ }).querySelector("img")).toBeNull();
+    // Sans logo chez le prestataire : celui d'Étudium, hébergé avec le site (13 novembre 2026, repris de flashSMS).
+    expect(screen.getByRole("radio", { name: /Celtiis Cash/ }).querySelector("img")).toHaveAttribute("src", "/logos/mobile-money/celtiis-cash.svg");
   });
 
   it("le premier pays proposé quand le Bénin ne l'est pas", () => {

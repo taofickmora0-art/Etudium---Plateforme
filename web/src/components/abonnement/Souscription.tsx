@@ -15,6 +15,7 @@ import { essayerCode, payer, reessayer, suivrePaiement } from "@/lib/abonnement/
 import { dateLongue, dureeAbonnement, montantDevise, montantFcfa, periodeSouscription } from "@/lib/abonnement/regles";
 import type { CodeFormule, EtapePaiement, EtatAbonnement, Formule, MoyensDePaiement, Operateur, OperateurPaiement, PaysPaiement } from "@/lib/abonnement/types";
 import { cn } from "@/lib/cn";
+import { logoOperateur } from "@/lib/paiements/logos";
 import { messageEchec, messageErreurPayiz, MOYENS_REPLI, normaliserTelephone, operateurDuNumero } from "@/lib/paiements/regles";
 import { AttentePaiement } from "./AttentePaiement";
 import { phraseActif, ResultatPaiement } from "./ResultatPaiement";
@@ -79,8 +80,9 @@ function ChampNumero({ indicatif, className, ...props }: ComponentPropsWithoutRe
   );
 }
 
-/** Le logo servi par Payiz, ou une pastille. */
-function LogoOperateur({ logo }: { logo: string | null }) {
+/** Le logo servi par le prestataire, sinon celui hébergé avec le site, sinon une pastille. */
+function LogoOperateur({ logo: fourni, code }: { logo: string | null; code: string }) {
+  const logo = fourni ?? logoOperateur(code);
   if (!logo) {
     return (
       <span className="flex size-7 items-center justify-center rounded-md bg-bleu-pale text-bleu max-sm:size-6">
@@ -88,7 +90,7 @@ function LogoOperateur({ logo }: { logo: string | null }) {
       </span>
     );
   }
-  // Une image de Payiz : l'optimisation d'images de Next ne s'y applique pas.
+  // Une image du prestataire (ou un fichier du site) : l'optimisation d'images de Next ne s'y applique pas.
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={logo} alt="" width={28} height={28} loading="lazy" referrerPolicy="no-referrer" className="size-7 rounded-md object-contain max-sm:size-6" />;
 }
@@ -371,7 +373,7 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
                           setOperateurChoisi(true);
                           setCodePaiement("");
                         }}
-                        options={operateurs.map((o) => ({ value: o.code, title: o.nom, visual: <LogoOperateur logo={o.logo} /> }))}
+                        options={operateurs.map((o) => ({ value: o.code, title: o.nom, visual: <LogoOperateur logo={o.logo} code={o.code} /> }))}
                       />
                       {horsLimites && <p className="m-0 text-[13px] leading-5 text-erreur-texte">{messageErreurPayiz("amount_out_of_range")}</p>}
                       {moyens.repli && ouverts && <p className="m-0 text-[13px] leading-5 text-discret">{REPLI}</p>}
