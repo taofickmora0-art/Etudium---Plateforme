@@ -343,7 +343,7 @@ describe("Suivre et réessayer", () => {
     fetchPayiz.mockResolvedValueOnce(reponse(409, { error: { code: "payment_closed", message: "…" } }));
     faux.repondre("rpc.noter_echec", { data: carteSql({ statut: "expire", payiz_id: "pay_1" }) });
     expect(await reessayer({ paiementId: PAIEMENT_ID, telephone: "01 42 00 00 00", pays: "BEN", operateur: "mtn" })).toMatchObject({ etat: "expire" });
-    expect(faux.de("rpc", "noter_echec")[0].valeurs).toEqual({ p_paiement: PAIEMENT_ID, p_statut: "expire", p_motif: null, p_jeton: JETON });
+    expect(faux.de("rpc", "noter_echec")[0].valeurs).toEqual({ p_paiement: PAIEMENT_ID, p_statut: "expire", p_motif: null, p_jeton: JETON, p_payiz: "pay_1" });
   });
 });
 

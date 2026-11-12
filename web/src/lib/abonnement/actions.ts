@@ -1,13 +1,16 @@
 "use server";
 
+import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getShellUser } from "@/lib/auth/current-user";
 import { estFonctionAbsente } from "@/lib/contenus/lecture";
 import { viderFileApres } from "@/lib/envois/declencher";
 import { INDISPONIBLE as FONCTION_INDISPONIBLE } from "@/lib/indisponible";
+import type { MoyensRoutes } from "@/lib/paiements/aiguillage";
 import { configurationPaiement, type ConfigPaiement } from "@/lib/paiements/config";
-import { lireMoyensDePaiement } from "@/lib/paiements/moyens";
-import { codePaysValide, indicatifDuPays } from "@/lib/paiements/pays";
-import { creerPaiementPayiz, ErreurPayiz, lirePaiementPayiz, relancerPaiementPayiz } from "@/lib/paiements/payiz";
+import { lireMoyensDePaiement, lireMoyensRoutes } from "@/lib/paiements/moyens";
+import { alpha2De, codePaysValide, indicatifDuPays } from "@/lib/paiements/pays";
+import { creerPaiementPayiz, ErreurPayiz, relancerPaiementPayiz } from "@/lib/paiements/payiz";
 import {
   codeOperateurValide,
   erreurPayizASignaler,
@@ -18,16 +21,19 @@ import {
   nomOperateur,
   normaliserTelephone,
 } from "@/lib/paiements/regles";
-import { appliquerPayiz } from "@/lib/paiements/synchroniser";
+import { ErreurSasPay, erreurSasPayTraduite, estSasPay, messageErreurSasPay, payerSasPay } from "@/lib/paiements/saspay";
+import { relirePaiement } from "@/lib/paiements/synchroniser";
 import { createClient } from "@/lib/supabase/server";
 import { versCartePaiement, versEssaiCode } from "./conversion";
-import { etapeDepuisCarte } from "./regles";
+import { dureeAbonnement, etapeDepuisCarte } from "./regles";
 import type { CartePaiement, EssaiCode, EtapePaiement, MoyensDePaiement, Operateur } from "./types";
 
 // Les actions de la souscription (lot 2, spec §3). La base prépare le paiement (montant, code promo, un seul en cours) ;
 // le serveur appelle Payiz avec sa clé secrète, puis note l'essai avec le jeton du serveur. Le numéro complet ne quitte
 // jamais cette action : seul son masque est enregistré. Depuis le 3 novembre 2026, tous les pays et tous les opérateurs
 // de Payiz : le pays (et l'opérateur, s'il est choisi) part avec le numéro ; le pays et le nom de l'opérateur sont notés.
+// Depuis le 12 novembre 2026, SasPay encaisse les pays et les opérateurs que Payiz n'encaisse pas (aiguillage.ts), sans
+// que l'étudiant le sache : sa référence est notée « softpay:… », et rien de ce qui part au navigateur ne le nomme.
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const INDISPONIBLE = "Les paiements ouvrent bientôt.";
@@ -40,6 +46,16 @@ const ECHEC = "Le paiement n’a pas pu être lancé. Réessayez.";
 const INDISPONIBLE_POUR_LE_MOMENT = "Le paiement est indisponible pour le moment. Réessayez plus tard.";
 /** Le refus du jeton du serveur : une affaire de configuration, pas un message pour l'étudiant. */
 const JETON_REFUSE = "Jeton de paiement non reconnu.";
+const CODE_PAIEMENT_REQUIS = "Saisissez le code de paiement donné par votre opérateur.";
+const PEUT_ETRE_PARTIE = "La demande a peut-être été envoyée sur votre téléphone : validez-la si elle est arrivée, puis cliquez de nouveau sur « Payer ».";
+
+/**
+ * La clé d'idempotence d'une demande : la même pour une même demande (double clic, deux onglets, réponse perdue puis
+ * nouveau « Payer » : SasPay rend alors la demande déjà partie, sans second débit), une autre dès que l'essai d'avant,
+ * l'opérateur, le numéro ou le code changent.
+ */
+const cleDemande = (paiementId: string, ...parties: (string | null | undefined)[]) =>
+  `${paiementId}-${createHash("sha256").update(parties.map((p) => p ?? "").join("|")).digest("hex").slice(0, 16)}`;
 
 type Erreur = { code?: string; message?: string };
 
@@ -53,8 +69,8 @@ function messageBase(e: Erreur): string {
   return ECHEC;
 }
 
-/** Les chiffres en série (un numéro de téléphone) ne vont pas dans le journal. */
-const sansNumero = (texte: string) => texte.replace(/\+?\d{8,}/g, "•••");
+/** Les numéros de téléphone (même écrits avec des espaces ou des points) et les adresses e-mail ne vont pas dans le journal. */
+const sansNumero = (texte: string) => texte.replace(/\+?\d(?:[\s.]?\d){7,}/g, "•••").replace(/[^\s@]+@[^\s@]+/g, "•••");
 
 /** Le payeur vérifié : son numéro international, son pays, et l'indicatif de ce pays. */
 type Payeur = { telephone: string; pays: string; indicatif: string };
@@ -127,6 +143,61 @@ async function noterEssai(supabase: SupabaseClient, config: ConfigPaiement, paie
   return etapeDepuisCarte(versCartePaiement(data));
 }
 
+/** Un refus de SasPay : en clair pour l'étudiant, sans son nom ; ce qui regarde l'équipe va dans le journal du serveur. */
+function refusSasPay(action: "payer" | "reessayer", x: unknown): EtapePaiement {
+  if (!(x instanceof ErreurSasPay)) return erreur(ECHEC);
+  // Pas de réponse à temps, même au second envoi : la demande a pu partir. Un nouveau « Payer » (même clé) la retrouve.
+  if (x.code === "delai") return erreur(PEUT_ETRE_PARTIE);
+  if (!erreurSasPayTraduite(x.code)) console.error(`[saspay] ${action} refusé : statut ${x.statut}, code ${x.code}, « ${sansNumero(x.message)} »`);
+  return erreur(messageErreurSasPay(x.code));
+}
+
+/**
+ * Qui encaisse : SasPay pour un opérateur que seul lui propose ; sinon Payiz, comme avant (il déduit l'opérateur du
+ * numéro, ou refuse lui-même). Sans opérateur choisi, dans un pays où SasPay encaisse au moins un opérateur, il faut le
+ * choisir : sinon Payiz restreindrait la liste à ses seuls opérateurs (`operator_required`).
+ */
+function aiguiller(routes: MoyensRoutes, pays: string, operateur: Operateur | null): "payiz" | "saspay" | { message: string } {
+  if (operateur) return routes.prestataireDe(pays, operateur) === "saspay" ? "saspay" : "payiz";
+  const ceux = routes.moyens.pays.find((p) => p.code === pays)?.operateurs ?? [];
+  if (ceux.some((o) => routes.prestataireDe(pays, o.code) === "saspay")) return { message: messageOperateurRequis([]) };
+  return "payiz";
+}
+
+type DemandeSecours = { payeur: Payeur; operateur: Operateur; codePaiement?: string; moyens: MoyensDePaiement; cleIdempotence: string };
+
+/** La demande chez SasPay, puis l'essai noté ; Wave et Orange Money rendent la page de l'opérateur, où valider. */
+async function payerChezSasPay(supabase: SupabaseClient, config: ConfigPaiement, carte: CartePaiement, d: DemandeSecours): Promise<EtapePaiement> {
+  if (!config.saspay) return erreur(INDISPONIBLE_POUR_LE_MOMENT);
+  const choisi = d.moyens.pays.find((p) => p.code === d.payeur.pays)?.operateurs.find((o) => o.code === d.operateur);
+  if (choisi?.validation === "code" && !d.codePaiement?.trim()) return erreur(CODE_PAIEMENT_REQUIS);
+  const pays = alpha2De(d.payeur.pays);
+  if (!pays) return erreur(messageErreurPayiz("country_unavailable"));
+  let ref: string;
+  let redirection: string | null;
+  try {
+    const compte = await getShellUser();
+    if (!compte) return erreur(ECHEC);
+    const site = (process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000").replace(/\/+$/, "");
+    ({ ref, redirection } = await payerSasPay(config.saspay.cle, {
+      paiementId: carte.id,
+      cleIdempotence: d.cleIdempotence,
+      montant: carte.montant,
+      description: `Abonnement Étudium ${carte.formule.nom} (${dureeAbonnement(carte.formule.dureeMois)})`,
+      pays,
+      reseau: d.operateur,
+      telephone: d.payeur.telephone,
+      client: { email: compte.email, prenom: compte.prenom || "Étudiant", nom: compte.nom || "Étudium" },
+      urlRetour: `${site}/abonnement`,
+      codePaiement: d.codePaiement,
+    }));
+  } catch (x) {
+    return refusSasPay(carte.payizId ? "reessayer" : "payer", x);
+  }
+  const etape = await noterEssai(supabase, config, carte.id, ref, { operateur: d.operateur, moyens: d.moyens, payeur: d.payeur });
+  return redirection && etape.etat === "attente" ? { ...etape, redirection } : etape;
+}
+
 /** Avant tout appel à Payiz : paiements ouverts et jeton du serveur reconnu, sinon l'argent reçu ne serait pas confirmé. */
 async function prets(supabase: SupabaseClient, config: ConfigPaiement): Promise<boolean> {
   const { data, error } = await supabase.rpc("paiements_prets", { p_jeton: config.jeton });
@@ -151,9 +222,18 @@ export async function essayerCode(formuleId: string, code: string): Promise<Essa
   return essai;
 }
 
-type Entree = { formuleId: string; code: string; telephone: string; /** ISO 3166 alpha-3. */ pays: string; operateur: Operateur | null };
+type Entree = {
+  formuleId: string;
+  code: string;
+  telephone: string;
+  /** ISO 3166 alpha-3. */
+  pays: string;
+  operateur: Operateur | null;
+  /** Le code de paiement généré d'avance, pour les opérateurs qui l'exigent (Orange Côte d'Ivoire, Orange Burkina). */
+  codePaiement?: string;
+};
 
-/** « Payer » : prépare le paiement, l'envoie chez Payiz (la demande part sur le téléphone) et note l'essai. */
+/** « Payer » : prépare le paiement, l'envoie chez Payiz ou SasPay (la demande part sur le téléphone) et note l'essai. */
 export async function payer(e: Entree): Promise<EtapePaiement> {
   if (!UUID.test(e.formuleId)) return erreur(CHOISIR);
   const saisie = e.telephone.trim();
@@ -187,20 +267,31 @@ export async function payer(e: Entree): Promise<EtapePaiement> {
   if (!(await prets(supabase, config))) return erreur(INDISPONIBLE);
 
   const operateur = codeOperateurValide(e.operateur) ? e.operateur : null;
+  // Avec SasPay en secours, la liste dit d'abord qui encaisse (elle est le plus souvent déjà gardée : la page vient de la
+  // lire). Sans lui, tout part chez Payiz, comme avant.
+  const routes = config.saspay ? await lireMoyensRoutes({ montant: carte.montant, devise: "XOF" }) : null;
+  if (routes) {
+    const choix = aiguiller(routes, payeur.pays, operateur);
+    if (typeof choix === "object") return erreur(choix.message);
+    if (choix === "saspay") {
+      const cleIdempotence = cleDemande(carte.id, "", operateur, payeur.telephone, e.codePaiement?.trim());
+      return payerChezSasPay(supabase, config, carte, { payeur, operateur: operateur!, codePaiement: e.codePaiement, moyens: routes.moyens, cleIdempotence });
+    }
+  }
   // La liste de Payiz (le nom de l'opérateur, les candidats) est lue en même temps : elle est le plus souvent déjà gardée.
   const [creation, moyens] = await Promise.all([
     creerPaiementPayiz(config.cle, { paiementId: carte.id, montant: carte.montant, formule: carte.formule, telephone: payeur.telephone, pays: payeur.pays, operateur }).then(
       (p) => ({ ok: true as const, p }),
       (x: unknown) => ({ ok: false as const, x }),
     ),
-    lireMoyensDePaiement({ montant: carte.montant, devise: "XOF" }),
+    routes ? routes.moyens : lireMoyensDePaiement({ montant: carte.montant, devise: "XOF" }),
   ]);
   if (!creation.ok) return refusPayiz("payer", creation.x, moyens, payeur.pays);
   const deduit = creation.p.latest_attempt?.operator;
   return noterEssai(supabase, config, carte.id, creation.p.id, { operateur: operateur ?? (codeOperateurValide(deduit) ? deduit : null), moyens, payeur });
 }
 
-/** L'écran d'attente, toutes les 3 secondes : l'état relu chez Payiz, appliqué en base. */
+/** L'écran d'attente, toutes les 3 secondes : l'état relu chez Payiz (ou SasPay), appliqué en base. */
 export async function suivrePaiement(paiementId: string): Promise<EtapePaiement> {
   if (!UUID.test(paiementId)) return erreur(INTROUVABLE);
   const supabase = await createClient();
@@ -210,18 +301,22 @@ export async function suivrePaiement(paiementId: string): Promise<EtapePaiement>
   const config = configurationPaiement();
   if (carte.statut === "en_attente" && carte.payizId && config) {
     try {
-      carte = (await appliquerPayiz(supabase, carte.id, await lirePaiementPayiz(config.cle, carte.payizId), config.jeton)) ?? carte;
+      carte = (await relirePaiement(supabase, config, carte)) ?? carte;
       // Le reçu par e-mail (migration 0058) part tout de suite.
       if (carte.statut === "reussi") viderFileApres();
     } catch {
-      // Payiz injoignable ou réponse inattendue : on garde l'état connu ; le suivi suivant réessaie.
+      // Prestataire injoignable ou réponse inattendue : on garde l'état connu ; le suivi suivant réessaie.
     }
   }
   return etapeDepuisCarte(carte);
 }
 
-/** « Réessayer » : un nouvel essai sur le même paiement, avec le même numéro ou un autre (d'un autre pays aussi). */
-export async function reessayer(e: { paiementId: string; telephone: string; pays: string; operateur: Operateur | null }): Promise<EtapePaiement> {
+/**
+ * « Réessayer » : un nouvel essai sur le même paiement, avec le même numéro ou un autre (d'un autre pays aussi). Chez
+ * Payiz après Payiz : un essai de plus sur son paiement. Sinon (SasPay, ou un changement de prestataire) : une nouvelle
+ * demande, seulement quand la précédente n'attend plus sur le téléphone.
+ */
+export async function reessayer(e: { paiementId: string; telephone: string; pays: string; operateur: Operateur | null; codePaiement?: string }): Promise<EtapePaiement> {
   if (!UUID.test(e.paiementId)) return erreur(INTROUVABLE);
   const payeur = await verifierPayeur(e.telephone.trim(), e.pays);
   if (typeof payeur === "string") return erreur(payeur);
@@ -236,20 +331,80 @@ export async function reessayer(e: { paiementId: string; telephone: string; pays
   if (!(await prets(supabase, config))) return erreur(INDISPONIBLE);
 
   const operateur = codeOperateurValide(e.operateur) ? e.operateur : null;
+  const routes = config.saspay ? await lireMoyensRoutes({ montant: lu.montant, devise: "XOF" }) : null;
+  let choix: "payiz" | "saspay" = "payiz";
+  if (routes) {
+    const aiguille = aiguiller(routes, payeur.pays, operateur);
+    if (typeof aiguille === "object") return erreur(aiguille.message);
+    choix = aiguille;
+  }
+  if (choix === "saspay" || estSasPay(lu.payizId)) {
+    const liste = routes ? routes.moyens : await lireMoyensDePaiement({ montant: lu.montant, devise: "XOF" });
+    // L'essai d'avant fait partie de la clé : deux réessais simultanés du même échec n'en font qu'un.
+    const cleIdempotence = cleDemande(lu.id, lu.payizId, operateur, payeur.telephone, e.codePaiement?.trim());
+    return nouvelleDemande(supabase, config, lu, { choix, payeur, operateur, codePaiement: e.codePaiement, moyens: liste, cleIdempotence });
+  }
+  // Chez Payiz, chaque essai sur son paiement a sa propre clé (Payiz refuse lui-même deux essais en même temps).
+  const cleIdempotence = `${lu.id}-${Date.now()}`;
   const [relance, moyens] = await Promise.all([
-    relancerPaiementPayiz(config.cle, lu.payizId, { telephone: payeur.telephone, pays: payeur.pays, operateur, cleIdempotence: `${lu.id}-${Date.now()}` }).then(
+    relancerPaiementPayiz(config.cle, lu.payizId, { telephone: payeur.telephone, pays: payeur.pays, operateur, cleIdempotence }).then(
       (essai) => ({ ok: true as const, essai }),
       (x: unknown) => ({ ok: false as const, x }),
     ),
-    lireMoyensDePaiement({ montant: lu.montant, devise: "XOF" }),
+    routes ? routes.moyens : lireMoyensDePaiement({ montant: lu.montant, devise: "XOF" }),
   ]);
   if (!relance.ok) {
     if (relance.x instanceof ErreurPayiz && relance.x.code === "payment_closed") {
-      const { data, error } = await supabase.rpc("noter_echec", { p_paiement: lu.id, p_statut: "expire", p_motif: null, p_jeton: config.jeton });
+      const { data, error } = await supabase.rpc("noter_echec", { p_paiement: lu.id, p_statut: "expire", p_motif: null, p_jeton: config.jeton, p_payiz: lu.payizId });
       return error ? erreur(messageBase(error)) : etapeDepuisCarte(versCartePaiement(data));
     }
     return refusPayiz("reessayer", relance.x, moyens, payeur.pays);
   }
   const deduit = relance.essai?.operator;
   return noterEssai(supabase, config, lu.id, lu.payizId, { operateur: operateur ?? (codeOperateurValide(deduit) ? deduit : null), moyens, payeur });
+}
+
+/**
+ * Un réessai qui crée une nouvelle demande (SasPay, ou un changement de prestataire) : la précédente est d'abord relue ;
+ * si elle attend encore sur le téléphone, rien ne part (elle peut aboutir). Chez Payiz, un nouveau paiement porte la même
+ * référence, avec une autre clé d'idempotence.
+ */
+async function nouvelleDemande(
+  supabase: SupabaseClient,
+  config: ConfigPaiement,
+  lu: CartePaiement,
+  d: { choix: "payiz" | "saspay"; payeur: Payeur; operateur: Operateur | null; codePaiement?: string; moyens: MoyensDePaiement; cleIdempotence: string },
+): Promise<EtapePaiement> {
+  let carte = lu;
+  if (carte.statut === "en_attente") {
+    try {
+      carte = (await relirePaiement(supabase, config, carte)) ?? carte;
+    } catch {
+      // Le prestataire ne répond pas : l'état connu (en attente) tient.
+    }
+    if (carte.statut === "reussi") {
+      viderFileApres();
+      return { etat: "reussi", paiement: carte };
+    }
+    if (carte.statut === "en_attente") return erreur(messageErreurPayiz("attempt_in_progress"));
+  }
+  // Seul un essai échoué laisse repartir une demande : un paiement expiré ou annulé est clos (« Recommencer »).
+  if (carte.statut !== "echoue") return etapeDepuisCarte(carte);
+  if (d.choix === "saspay" && d.operateur) return payerChezSasPay(supabase, config, carte, { ...d, operateur: d.operateur });
+  let creation;
+  try {
+    creation = await creerPaiementPayiz(config.cle, {
+      paiementId: carte.id,
+      cleIdempotence: d.cleIdempotence,
+      montant: carte.montant,
+      formule: carte.formule,
+      telephone: d.payeur.telephone,
+      pays: d.payeur.pays,
+      operateur: d.operateur,
+    });
+  } catch (x) {
+    return refusPayiz("reessayer", x, d.moyens, d.payeur.pays);
+  }
+  const deduit = creation.latest_attempt?.operator;
+  return noterEssai(supabase, config, carte.id, creation.id, { operateur: d.operateur ?? (codeOperateurValide(deduit) ? deduit : null), moyens: d.moyens, payeur: d.payeur });
 }

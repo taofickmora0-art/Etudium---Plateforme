@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { lireMoyensDePaiement, moyensParMontant, versMoyensDePaiement, viderCacheMoyens } from "@/lib/paiements/moyens";
+import { lireMoyensDePaiement, lireMoyensRoutes, moyensParMontant, versMoyensDePaiement, viderCacheMoyens } from "@/lib/paiements/moyens";
 import { MOYENS_REPLI } from "@/lib/paiements/regles";
 
 // Les moyens de paiement lus chez Payiz (GET /v1/payment_methods, demande du 2 novembre 2026) : les pays, leurs
@@ -158,5 +158,76 @@ describe("La lecture chez Payiz", () => {
       "https://api.payiz.app/v1/payment_methods?amount=9000&currency=XOF",
       "https://api.payiz.app/v1/payment_methods?amount=15000&currency=XOF",
     ]);
+  });
+});
+
+describe("Avec SasPay en secours (12 novembre 2026)", () => {
+  const SASPAY_PAYS = { results: [{ id: 1, iso_code: "BJ" }, { id: 2, iso_code: "CI" }] };
+  const SASPAY_RESEAUX = {
+    results: [
+      { country: 1, code: "mtn_bj", name: "MTN", is_active: true },
+      { country: 2, code: "wave_ci", name: "Wave CI", is_active: true },
+      { country: 2, code: "mtn_ci", name: "MTN CI", is_active: true },
+    ],
+  };
+  let saspayRepond = true;
+  let payizRepond = true;
+  const appelsSasPay = () => fetchPayiz.mock.calls.filter((c) => String(c[0]).includes("saspay")).length;
+
+  beforeEach(() => {
+    saspayRepond = true;
+    payizRepond = true;
+    vi.stubEnv("SASPAY_CLE_SECRETE", "sk_test_s");
+    fetchPayiz.mockImplementation(async (url) => {
+      const u = String(url);
+      if (u.includes("api.payiz.app")) return payizRepond ? reponse(200, LISTE) : reponse(500, {});
+      if (!saspayRepond) return reponse(503, {});
+      if (u.endsWith("/countries/")) return reponse(200, SASPAY_PAYS);
+      if (u.includes("/networks/")) return reponse(200, SASPAY_RESEAUX);
+      return reponse(404, {});
+    });
+  });
+
+  it("une seule liste : Payiz d'abord, SasPay comble ; le prestataire reste sur le serveur", async () => {
+    const { moyens, prestataireDe } = await lireMoyensRoutes({ montant: 15000 }, fetchPayiz);
+    expect(moyens.pays.map((p) => [p.code, p.operateurs.map((o) => o.code)])).toEqual([
+      ["BEN", ["mtn", "moov", "celtiis"]],
+      ["CIV", ["wave_ci", "mtn_ci"]],
+      ["GHA", ["mtn"]],
+      ["TGO", ["togocel"]],
+    ]);
+    expect(prestataireDe("CIV", "wave_ci")).toBe("saspay");
+    expect(prestataireDe("BEN", "mtn")).toBe("payiz");
+    expect(await lireMoyensDePaiement({ montant: 15000 }, fetchPayiz)).toEqual(moyens);
+  });
+
+  it("la liste de SasPay ne dépend pas du montant : gardée 1 heure, 10 minutes s'il ne répond pas", async () => {
+    vi.useFakeTimers({ now: new Date("2026-11-12T09:00:00Z") });
+    await lireMoyensRoutes({ montant: 15000 }, fetchPayiz);
+    await lireMoyensRoutes({ montant: 9000 }, fetchPayiz);
+    expect(appelsSasPay()).toBe(3); // pays, réseaux, codes de paiement (404 : la table de repli sert)
+    vi.setSystemTime(new Date("2026-11-12T10:00:01Z"));
+    saspayRepond = false;
+    // Muet : la liste de Payiz seule.
+    expect((await lireMoyensRoutes({ montant: 15000 }, fetchPayiz)).moyens.pays.map((p) => p.code)).toEqual(["BEN", "GHA", "TGO"]);
+    const apres = appelsSasPay();
+    saspayRepond = true;
+    vi.setSystemTime(new Date("2026-11-12T10:05:00Z"));
+    await lireMoyensRoutes({ montant: 15000 }, fetchPayiz);
+    expect(appelsSasPay()).toBe(apres);
+    vi.setSystemTime(new Date("2026-11-12T10:10:02Z"));
+    expect((await lireMoyensRoutes({ montant: 15000 }, fetchPayiz)).moyens.pays.map((p) => p.code)).toContain("CIV");
+  });
+
+  it("Payiz muet : SasPay seul ; les deux muets : le repli, chez Payiz", async () => {
+    payizRepond = false;
+    const seul = await lireMoyensRoutes({ montant: 15000 }, fetchPayiz);
+    expect(seul.moyens.repli).toBe(false);
+    expect(seul.prestataireDe("BEN", "mtn_bj")).toBe("saspay");
+    viderCacheMoyens();
+    saspayRepond = false;
+    const rien = await lireMoyensRoutes({ montant: 15000 }, fetchPayiz);
+    expect(rien.moyens).toEqual(MOYENS_REPLI);
+    expect(rien.prestataireDe("BEN", "mtn")).toBe("payiz");
   });
 });

@@ -148,13 +148,14 @@ const SECTIONS: SectionJuridique[] = [
     contenu: (
       <>
         <P>
-          Le paiement se fait par Mobile Money, sans quitter Étudium, avec les opérateurs de Mobile Money proposés par notre prestataire de
-          paiement dans votre pays (par exemple MTN, Moov ou Celtiis au Bénin). Ce prestataire est Payiz. Vous choisissez votre pays et saisissez
-          votre numéro, puis vous validez la demande sur votre téléphone.
+          Le paiement se fait par Mobile Money, sans quitter Étudium, avec les opérateurs de Mobile Money proposés par nos prestataires de
+          paiement dans votre pays (par exemple MTN, Moov ou Celtiis au Bénin). Ces prestataires sont Payiz et SasPay, selon votre pays et votre
+          opérateur. Vous choisissez votre pays et saisissez votre numéro, puis vous validez la demande sur votre téléphone, ou sur la page de
+          paiement de l’opérateur (Wave, Orange Money) lorsqu’il l’exige.
         </P>
         <P>
           Les prix sont fixés en francs CFA. Si votre opérateur fonctionne dans une autre monnaie, le montant débité peut être différent :
-          lorsque notre prestataire l’indique, il s’affiche avant le paiement.
+          lorsque le prestataire l’indique, il s’affiche avant le paiement.
         </P>
         <Liste>
           <li>Votre accès s’ouvre dès que le paiement est confirmé. Votre reçu est disponible dans « Mon abonnement ».</li>
@@ -167,8 +168,8 @@ const SECTIONS: SectionJuridique[] = [
           demande est étudiée au cas par cas.
         </P>
         <P>
-          Si un remboursement est accordé, il passe par Payiz, et l’abonnement concerné est annulé : l’accès qu’il ouvrait se ferme aussitôt, et
-          vous en êtes prévenu.
+          Si un remboursement est accordé, il passe par le prestataire qui a reçu le paiement, et l’abonnement concerné est annulé : l’accès
+          qu’il ouvrait se ferme aussitôt, et vous en êtes prévenu.
         </P>
       </>
     ),

@@ -64,6 +64,13 @@ export type OperateurPaiement = {
   montantAPayer: number | null;
   minimum: number | null;
   maximum: number | null;
+  /**
+   * Comment l'opérateur fait valider (absent : sur le téléphone) : « page », sur sa propre page (Wave, Orange Money),
+   * où l'étudiant est envoyé ; « code », avec un code de paiement que l'étudiant génère d'avance (Orange Côte d'Ivoire).
+   */
+  validation?: "page" | "code";
+  /** Pour « code » : ce qu'il faut composer pour obtenir le code (« Composez #144*82#… »). */
+  consigne?: string | null;
 };
 
 /** Un pays où l'on peut payer : son code ISO 3166 alpha-3, son nom en français, son indicatif (« +229 »). */
@@ -86,7 +93,7 @@ export type EssaiCode =
 
 /** Où en est un paiement, pour l'écran de souscription. */
 export type EtapePaiement =
-  | { etat: "attente"; paiement: CartePaiement; finAttente: string }
+  | { etat: "attente"; paiement: CartePaiement; finAttente: string; /** Wave, Orange Money : la page de l'opérateur, où valider. */ redirection?: string }
   | { etat: "reussi"; paiement: CartePaiement }
   | { etat: "echoue"; paiement: CartePaiement; message: string; /** L'écran a cessé d'attendre ; l'état chez Payiz est inconnu. */ incertain?: boolean }
   | { etat: "expire"; paiement: CartePaiement }

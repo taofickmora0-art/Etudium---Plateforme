@@ -40,7 +40,16 @@ export type DetailPaiement = CartePaiement & {
   abonnementEquipe: { id: string; debut: string; fin: string; annuleLe: string | null; motifAnnulation: string | null } | null;
 };
 /** « Paiements activés » : empreinte posée en base, jeton du serveur reconnu, clé Payiz de test ou réelle. */
-export type EtatReglage = { ouverts: boolean; jeton: "reconnu" | "non_reconnu" | "absent"; cle: "test" | "reel" | "absente"; webhook: boolean };
+export type EtatReglage = {
+  ouverts: boolean;
+  jeton: "reconnu" | "non_reconnu" | "absent";
+  cle: "test" | "reel" | "absente";
+  webhook: boolean;
+  /** SasPay, en secours de Payiz (12 novembre 2026) : sa clé, son mode, ses notifications, le nombre de pays qu'il encaisse (null : muet ou inutilisé). */
+  secours?: EtatSecours;
+};
+
+export type EtatSecours = { cle: "test" | "reel" | "absente"; ignoree: boolean; webhook: boolean; pays: number | null };
 
 export const PAIEMENTS_PAR_PAGE = 20;
 

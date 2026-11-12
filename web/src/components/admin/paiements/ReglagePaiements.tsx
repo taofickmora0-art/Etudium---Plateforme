@@ -8,10 +8,17 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Tag } from "@/components/ui/Tag";
 import { Heading } from "@/components/ui/Text";
 import { activerPaiements, desactiverPaiements } from "@/lib/admin/paiements/actions";
-import type { EtatReglage } from "@/lib/admin/paiements/types";
+import type { EtatReglage, EtatSecours } from "@/lib/admin/paiements/types";
 
 const AJOUTER_CLE = "Ajoutez PAYIZ_CLE_SECRETE aux variables d’environnement du site, puis redéployez-le.";
 const NOTE = "m-0 text-sm leading-[22px] text-discret";
+
+/** L'état de SasPay, en secours de Payiz (12 novembre 2026) : jamais sa clé. */
+function texteSecours(s: EtatSecours): string {
+  if (s.cle === "absente") return "SasPay (secours) : non configuré";
+  if (s.ignoree) return `SasPay (secours) : clé de ${s.cle === "test" ? "test" : "réelle"} ignorée (Payiz est en mode ${s.cle === "test" ? "réel" : "test"})`;
+  return `SasPay (secours) : mode ${s.cle === "reel" ? "réel" : "test"} · ${s.pays === null ? "ne répond pas" : `${s.pays} pays`}`;
+}
 
 /**
  * Le réglage « Paiements activés » (lot 2, spec §6) : l'activation pose en base l'empreinte du jeton du serveur. Tant
@@ -48,6 +55,10 @@ export function ReglagePaiements({ etat, ecriture }: { etat: EtatReglage; ecritu
           <p className={NOTE}>{etat.cle === "absente" ? "Clé Payiz : absente" : `Clé Payiz : mode ${etat.cle === "reel" ? "réel" : "test"}`}</p>
           {!etat.ouverts && <p className={NOTE}>Les étudiants voient « Les paiements ouvrent bientôt. ».</p>}
           {!etat.webhook && <p className={NOTE}>Notifications Payiz : non configurées.</p>}
+          {etat.secours && <p className={NOTE}>{texteSecours(etat.secours)}</p>}
+          {etat.secours && etat.secours.cle !== "absente" && !etat.secours.ignoree && !etat.secours.webhook && (
+            <p className={NOTE}>Notifications SasPay : non configurées.</p>
+          )}
         </div>
         {ecriture && !etat.ouverts && (
           <Button onClick={() => void activer()} disabled={!pret} loading={occupe}>

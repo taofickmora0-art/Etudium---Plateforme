@@ -53,7 +53,7 @@ describe("Le reçu", () => {
       "Remise (PROMO20)",
       "Montant payé",
       "Moyen : MTN Mobile Money · +229 01 •• •• •• 00",
-      "Étudium · Paiement traité par Payiz",
+      "Étudium · Paiement par Mobile Money",
     ]) {
       expect(document.body).toHaveTextContent(t);
     }

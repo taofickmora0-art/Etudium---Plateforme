@@ -56,7 +56,7 @@ export function Recu({ recu }: { recu: DonneesRecu }) {
       <p className="m-0 text-sm leading-[22px] text-texte">
         {`Moyen : ${moyen}${recu.montant > 0 && recu.telephoneMasque ? ` · ${recu.telephoneMasque}` : ""}${recu.referenceManuelle ? ` · réf. ${recu.referenceManuelle}` : ""}`}
       </p>
-      <p className="m-0 text-[13px] leading-5 text-discret">{recu.moyenManuel ? "Étudium · Paiement enregistré par l’équipe" : "Étudium · Paiement traité par Payiz"}</p>
+      <p className="m-0 text-[13px] leading-5 text-discret">{recu.moyenManuel ? "Étudium · Paiement enregistré par l’équipe" : "Étudium · Paiement par Mobile Money"}</p>
 
       <div className="print:hidden">
         <Button variant="contour" onClick={() => window.print()}>

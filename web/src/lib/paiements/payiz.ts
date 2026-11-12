@@ -81,6 +81,8 @@ async function appeler<T>(cle: string, chemin: string, { methode, corps, idempot
 export type DemandePaiement = {
   /** L'identifiant du paiement chez nous : référence et clé d'idempotence (un double clic ne paie pas deux fois). */
   paiementId: string;
+  /** Une autre clé d'idempotence (un nouveau paiement Payiz pour le même paiement, après un échec chez SasPay). */
+  cleIdempotence?: string;
   montant: number;
   formule: { code: CodeFormule; nom: string; dureeMois: number };
   /** Normalisé : « +2290142000000 ». */
@@ -102,7 +104,7 @@ export function creerPaiementPayiz(cle: string, d: DemandePaiement, f: typeof fe
     "/payments",
     {
       methode: "POST",
-      idempotence: d.paiementId,
+      idempotence: d.cleIdempotence ?? d.paiementId,
       corps: {
         amount: d.montant,
         currency: "XOF",

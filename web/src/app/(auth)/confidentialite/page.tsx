@@ -63,10 +63,10 @@ const SECTIONS: SectionJuridique[] = [
         <Liste>
           <li>
             L’abonnement choisi et ses dates, le code promo utilisé, le montant, l’état du paiement, le pays et l’opérateur, la référence de la
-            transaction chez Payiz et le numéro de reçu.
+            transaction chez le prestataire de paiement et le numéro de reçu.
           </li>
           <li>
-            Votre numéro de téléphone est transmis à Payiz pour la demande de paiement. Étudium ne le garde que masqué (par exemple
+            Votre numéro de téléphone est transmis au prestataire de paiement (Payiz ou SasPay) pour la demande de paiement. Étudium ne le garde que masqué (par exemple
             +229 •• •• •• •• 00).
           </li>
           <li>Étudium ne reçoit ni ne conserve votre code secret Mobile Money, et ne traite aucune carte bancaire.</li>
@@ -155,6 +155,10 @@ const SECTIONS: SectionJuridique[] = [
           <li>Resend : envoi des e-mails.</li>
           <li>Google : connexion avec votre compte Google, si vous la choisissez.</li>
           <li>Payiz : paiements par Mobile Money. Payiz reçoit votre numéro de téléphone, votre pays, le montant et la référence du paiement.</li>
+          <li>
+            SasPay : paiements par Mobile Money, dans les pays et pour les opérateurs que Payiz ne propose pas. SasPay reçoit votre numéro de
+            téléphone, votre pays, vos nom, prénom et adresse e-mail, le montant et la référence du paiement.
+          </li>
           <li>
             Anthropic : analyse automatique des publications de la communauté, pour la modération, lorsqu’elle est activée. Anthropic reçoit le
             titre et le texte de la publication, ses liens, l’adresse de sa vidéo et son fichier joint (image ou PDF).

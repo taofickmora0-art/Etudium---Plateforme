@@ -1,6 +1,7 @@
 import { versCartePaiement, versEtatAbonnement, versMoyenManuel } from "@/lib/abonnement/conversion";
 import { estFonctionAbsente, liste } from "@/lib/contenus/lecture";
-import { configurationPaiement } from "@/lib/paiements/config";
+import { configurationPaiement, etatSasPay } from "@/lib/paiements/config";
+import { paysSecours } from "@/lib/paiements/moyens";
 import { createClient } from "@/lib/supabase/server";
 import type { AbonnementsCompte, CodePromo, ComptePaiement, DetailPaiement, EtatReglage, PagePaiements, ResumePaiements } from "./types";
 
@@ -124,6 +125,7 @@ export async function lireEtatPaiements(): Promise<EtatReglage> {
     jeton: !jeton ? "absent" : d.jeton_reconnu === true ? "reconnu" : "non_reconnu",
     cle: !cle ? "absente" : cle.startsWith("sk_live_") ? "reel" : "test",
     webhook: Boolean(process.env.PAYIZ_SECRET_WEBHOOK?.trim()),
+    secours: { ...etatSasPay(), pays: await paysSecours() },
   };
 }
 

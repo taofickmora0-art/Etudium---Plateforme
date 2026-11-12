@@ -17,16 +17,20 @@ const minutesSecondes = (ms: number) => {
  * L'attente de la validation sur le téléphone (NdPaiementAttente ; feuille du bas au téléphone, NdMobPaiementAttente) :
  * le montant, le numéro masqué, et le compte à rebours. Le suivi lui-même est mené par la souscription. `montant` : ce
  * que Payiz a annoncé au payeur dans sa monnaie (« 321,50 GHS ») ; sans lui, le montant du paiement en FCFA.
+ * `redirection` (Wave, Orange Money, 12 novembre 2026) : la validation se fait sur la page de l'opérateur, où l'étudiant
+ * est envoyé ; un lien la rouvre s'il n'y est pas allé.
  */
 export function AttentePaiement({
   paiement,
   finAttente,
   montant,
+  redirection,
   onFermer,
 }: {
   paiement: CartePaiement;
   finAttente: string;
   montant?: string;
+  redirection?: string;
   onFermer: () => void;
 }) {
   const [maintenant, setMaintenant] = useState(() => Date.now());
@@ -41,12 +45,23 @@ export function AttentePaiement({
       open
       onOpenChange={(ouverte) => !ouverte && onFermer()}
       dismissible={false}
-      title="Confirmez sur votre téléphone"
-      description={`Une demande de ${montant ?? montantFcfa(paiement.montant)} a été envoyée au ${paiement.telephoneMasque ?? "numéro indiqué"}. Saisissez votre code secret Mobile Money pour valider.`}
+      title={redirection ? "Validez sur la page de votre opérateur" : "Confirmez sur votre téléphone"}
+      description={
+        redirection
+          ? `Validez le paiement de ${montant ?? montantFcfa(paiement.montant)} sur la page de votre opérateur, puis revenez ici.`
+          : `Une demande de ${montant ?? montantFcfa(paiement.montant)} a été envoyée au ${paiement.telephoneMasque ?? "numéro indiqué"}. Saisissez votre code secret Mobile Money pour valider.`
+      }
       footer={
-        <Button variant="contour" onClick={onFermer}>
-          Fermer
-        </Button>
+        <>
+          <Button variant="contour" onClick={onFermer}>
+            Fermer
+          </Button>
+          {redirection && (
+            <Button asChild>
+              <a href={redirection}>Ouvrir la page de paiement</a>
+            </Button>
+          )}
+        </>
       }
     >
       <div className="mt-[18px] flex items-center gap-3 rounded-bouton bg-page px-4 py-3.5 max-sm:mt-4">

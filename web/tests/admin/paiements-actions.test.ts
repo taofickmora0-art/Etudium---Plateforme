@@ -51,14 +51,34 @@ describe("Le réglage « Paiements activés »", () => {
   it("l'état ne contient jamais la clé ni le jeton", async () => {
     faux.repondre("rpc.etat_paiements", { data: { ouverts: true, jeton_reconnu: true } });
     const etat = await lireEtatPaiements();
-    expect(etat).toEqual({ ouverts: true, jeton: "reconnu", cle: "test", webhook: false });
+    expect(etat).toEqual({ ouverts: true, jeton: "reconnu", cle: "test", webhook: false, secours: { cle: "absente", ignoree: false, webhook: false, pays: null } });
     expect(JSON.stringify(etat)).not.toContain("sk_test_cle");
     expect(JSON.stringify(etat)).not.toContain(JETON);
     faux.repondre("rpc.etat_paiements", { data: { ouverts: true, jeton_reconnu: false } });
     expect((await lireEtatPaiements()).jeton).toBe("non_reconnu");
     vi.stubEnv("PAYIZ_CLE_SECRETE", "");
     faux.repondre("rpc.etat_paiements", { data: { ouverts: false, jeton_reconnu: null } });
-    expect(await lireEtatPaiements()).toEqual({ ouverts: false, jeton: "absent", cle: "absente", webhook: false });
+    expect(await lireEtatPaiements()).toEqual({ ouverts: false, jeton: "absent", cle: "absente", webhook: false, secours: { cle: "absente", ignoree: false, webhook: false, pays: null } });
+  });
+
+  it("SasPay en secours (12 novembre 2026) : son mode et le nombre de pays qu'il encaisse, jamais sa clé", async () => {
+    vi.stubEnv("SASPAY_CLE_SECRETE", "sk_test_saspay");
+    vi.stubEnv("SASPAY_SECRET_WEBHOOK", "whsec_s");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) =>
+        String(url).endsWith("/countries/")
+          ? new Response(JSON.stringify({ results: [{ id: 1, iso_code: "CI" }] }))
+          : String(url).includes("/networks/")
+            ? new Response(JSON.stringify({ results: [{ country: 1, code: "wave_ci", name: "Wave", is_active: true }] }))
+            : new Response("{}", { status: 404 }),
+      ),
+    );
+    faux.repondre("rpc.etat_paiements", { data: { ouverts: true, jeton_reconnu: true } });
+    const etat = await lireEtatPaiements();
+    expect(etat.secours).toEqual({ cle: "test", ignoree: false, webhook: true, pays: 1 });
+    expect(JSON.stringify(etat)).not.toContain("sk_test_saspay");
+    vi.unstubAllGlobals();
   });
 });
 

@@ -28,7 +28,7 @@ describe("Conditions d’utilisation", () => {
     expect(metadata.title).toBe("Conditions d’utilisation · Étudium");
     expect(metadata.description).toMatch(/Mobile Money/);
     expect(screen.getByRole("heading", { level: 1, name: "Conditions d’utilisation" })).toBeInTheDocument();
-    expect(screen.getByText("Dernière mise à jour : 3 novembre 2026")).toBeInTheDocument();
+    expect(screen.getByText("Dernière mise à jour : 12 novembre 2026")).toBeInTheDocument();
   });
 
   it("numérote les sections principales, et le sommaire mène à chacune", () => {
@@ -59,10 +59,13 @@ describe("Conditions d’utilisation", () => {
     expect(t).toContain("Standard : 6 mois");
     expect(t).toContain("Premium : 1 an");
     expect(t).toContain("Il n’y a ni reconduction ni prélèvement automatique.");
-    // Tous les pays et tous les opérateurs de Payiz (3 novembre 2026) : plus « MTN ou Moov » seulement.
+    // Tous les pays et tous les opérateurs de Payiz (3 novembre 2026) : plus « MTN ou Moov » seulement. SasPay en secours
+    // (12 novembre 2026) : les deux prestataires sont nommés, et la validation sur la page de l'opérateur est dite.
     expect(t).toContain(
-      "les opérateurs de Mobile Money proposés par notre prestataire de paiement dans votre pays (par exemple MTN, Moov ou Celtiis au Bénin). Ce prestataire est Payiz.",
+      "les opérateurs de Mobile Money proposés par nos prestataires de paiement dans votre pays (par exemple MTN, Moov ou Celtiis au Bénin). Ces prestataires sont Payiz et SasPay, selon votre pays et votre opérateur.",
     );
+    expect(t).toContain("sur la page de paiement de l’opérateur (Wave, Orange Money)");
+    expect(t).toContain("il passe par le prestataire qui a reçu le paiement");
     expect(t).not.toContain("MTN ou Moov");
     expect(t).toContain("Les prix sont fixés en francs CFA.");
     expect(t).toContain("Payiz");

@@ -5,6 +5,12 @@ import type { PaiementPayiz } from "./payiz";
 // Les règles du paiement Mobile Money (lot 2, spec §2 et §6 ; tous pays depuis le 3 novembre 2026) : le numéro,
 // l'opérateur proposé, les messages, et la lecture d'un paiement Payiz. Module sans rien du serveur : l'écran s'en sert.
 
+/** Le préfixe de l'identifiant d'un paiement SasPay (12 novembre 2026), dans `payiz_id` (0081) : il dit à qui le relire. */
+export const PREFIXE_SASPAY = "softpay:";
+
+/** La référence est-elle celle d'un paiement SasPay ? */
+export const estSasPay = (ref: string | null | undefined): boolean => Boolean(ref?.startsWith(PREFIXE_SASPAY));
+
 /** Un pays tel que le numéro en a besoin : son code alpha-3 et son indicatif (« +229 »). */
 export type PaysTelephone = { code: string; indicatif: string };
 

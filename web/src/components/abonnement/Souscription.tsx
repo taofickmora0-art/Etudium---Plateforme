@@ -25,11 +25,15 @@ import { phraseActif, ResultatPaiement } from "./ResultatPaiement";
 // l'indicatif du pays devant le numéro, l'opérateur proposé d'après le numéro, et ce que le payeur paiera dans sa monnaie.
 // Un code promo ne vaut que pour les abonnements choisis par l'équipe (0073) : changer d'abonnement revérifie le code, et
 // une remise ne s'affiche que pour l'abonnement où elle a été vérifiée.
+// Depuis le 12 novembre 2026, la liste réunit deux prestataires (le serveur choisit, l'écran n'en nomme aucun) : certains
+// opérateurs font valider sur leur propre page (Wave, Orange Money), où l'étudiant est envoyé ; d'autres demandent un
+// code de paiement généré d'avance (Orange Côte d'Ivoire), saisi ici.
 
 const SUIVI_MS = 3000;
 const CHAMP_NUMERO = "numero-mobile-money";
 const CHAMP_PAYS = "pays-mobile-money";
 const INDICATIF = "indicatif-mobile-money";
+const CHAMP_CODE_PAIEMENT = "code-paiement-mobile-money";
 const CARTE = "rounded-carte border border-bordure-carte bg-panneau px-6 pt-[22px] pb-6 max-sm:px-4 max-sm:pt-4 max-sm:pb-5";
 const REPLI = "La liste des opérateurs n’a pas pu être chargée : seuls MTN et Moov, au Bénin, sont proposés pour le moment.";
 
@@ -103,6 +107,8 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
   const [confirme, setConfirme] = useState(false);
   const [formuleId, setFormuleId] = useState(parDefaut?.id ?? "");
   const [telephone, setTelephone] = useState("");
+  // Le code de paiement que certains opérateurs demandent (généré d'avance sur le téléphone).
+  const [codePaiement, setCodePaiement] = useState("");
   const [operateur, setOperateur] = useState<Operateur | null>(null);
   const [operateurChoisi, setOperateurChoisi] = useState(false);
   // `operator_required` : les opérateurs que Payiz propose pour ce numéro.
@@ -144,6 +150,7 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
   // Sans opérateur choisi, le montant vaut pour le pays si tous ses opérateurs annoncent le même.
   const unanime = pays.operateurs.every((o) => o.devise === pays.operateurs[0]?.devise && o.montantAPayer === pays.operateurs[0]?.montantAPayer);
   const montantAnnonce = exacts ? aPayer(choisi ?? (unanime ? pays.operateurs[0] : undefined), total) : null;
+  const avecCode = choisi?.validation === "code";
   const horsLimites =
     choisi?.devise === "XOF" && ((choisi.minimum !== null && total < choisi.minimum) || (choisi.maximum !== null && total > choisi.maximum));
 
@@ -162,6 +169,8 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
     setResultat(r);
     setOuverte(true);
     if (r.etat === "reussi") setConfirme(true);
+    // Wave, Orange Money : la validation se fait sur la page de l'opérateur ; l'étudiant revient sur « Mon abonnement ».
+    if (r.etat === "attente" && r.redirection) window.location.assign(r.redirection);
   }
 
   async function agir(action: () => Promise<EtapePaiement>) {
@@ -175,11 +184,14 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
   }
 
   const operateurEnvoye = choisi?.code ?? null;
+  const avecSonCode = avecCode ? { codePaiement: codePaiement.trim() } : {};
   const lancer = () =>
-    agir(() => payer({ formuleId, code: code?.code ?? "", telephone: offert ? "" : telephone, pays: pays.code, operateur: offert ? null : operateurEnvoye }));
+    agir(() =>
+      payer({ formuleId, code: code?.code ?? "", telephone: offert ? "" : telephone, pays: pays.code, operateur: offert ? null : operateurEnvoye, ...(offert ? {} : avecSonCode) }),
+    );
   const relancer = () => {
     const paiementId = resultat && resultat.etat !== "reussi" ? resultat.paiement.id : null;
-    return paiementId ? agir(() => reessayer({ paiementId, telephone, pays: pays.code, operateur: operateurEnvoye })) : lancer();
+    return paiementId ? agir(() => reessayer({ paiementId, telephone, pays: pays.code, operateur: operateurEnvoye, ...avecSonCode })) : lancer();
   };
 
   // Le suivi de l'attente : toutes les 3 s, jamais deux demandes à la fois ; à la fin des 3 minutes, l'échec « à temps ».
@@ -224,6 +236,7 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
     if (!nouveau) return;
     setCodePays(code);
     setCandidats(null);
+    setCodePaiement("");
     setOperateurChoisi(false);
     setOperateur(operateurPropose(telephone, nouveau));
   }
@@ -326,7 +339,15 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
                         options={moyens.pays.map((p) => ({ value: p.code, label: p.nom }))}
                       />
                     </Field>
-                    <Field label="Numéro Mobile Money" htmlFor={CHAMP_NUMERO} hint="Vous recevrez une demande de confirmation sur ce téléphone.">
+                    <Field
+                      label="Numéro Mobile Money"
+                      htmlFor={CHAMP_NUMERO}
+                      hint={
+                        choisi?.validation === "page"
+                          ? "Vous validerez le paiement sur la page de votre opérateur."
+                          : "Vous recevrez une demande de confirmation sur ce téléphone."
+                      }
+                    >
                       <ChampNumero
                         id={CHAMP_NUMERO}
                         indicatif={pays.indicatif}
@@ -348,12 +369,24 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
                         onValueChange={(v) => {
                           setOperateur(v);
                           setOperateurChoisi(true);
+                          setCodePaiement("");
                         }}
                         options={operateurs.map((o) => ({ value: o.code, title: o.nom, visual: <LogoOperateur logo={o.logo} /> }))}
                       />
                       {horsLimites && <p className="m-0 text-[13px] leading-5 text-erreur-texte">{messageErreurPayiz("amount_out_of_range")}</p>}
                       {moyens.repli && ouverts && <p className="m-0 text-[13px] leading-5 text-discret">{REPLI}</p>}
                     </div>
+                    {avecCode && (
+                      <Field label="Code de paiement" htmlFor={CHAMP_CODE_PAIEMENT} hint={choisi?.consigne ?? undefined}>
+                        <TextInput
+                          id={CHAMP_CODE_PAIEMENT}
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          value={codePaiement}
+                          onChange={(e) => setCodePaiement(e.target.value)}
+                        />
+                      </Field>
+                    )}
                   </>
                 )}
                 {/* « Appliquer » est posé dans le champ (libellé 20 px + 6 px d'écart, puis 7 px dans le champ de 48 px). */}
@@ -416,7 +449,7 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
               <p className="m-0 flex flex-[1_1_240px] items-center gap-2 text-[13px] leading-5 text-discret">
                 <Icon icon={SquareLock02Icon} size={16} />
-                Paiement sécurisé par Payiz. Étudium ne voit jamais votre code secret.
+                Paiement sécurisé. Étudium ne voit jamais votre code secret.
               </p>
               <div className="flex gap-2 max-sm:w-full max-sm:flex-col-reverse">
                 <Button onClick={() => void lancer()} loading={occupe} disabled={(!offert && !ouverts) || verification}>
@@ -460,6 +493,7 @@ export function Souscription({ formules, abonnement, ouverts, initiale, maintena
           paiement={resultat.paiement}
           finAttente={resultat.finAttente}
           montant={demande && demande.montant === resultat.paiement.montant ? demande.texte : undefined}
+          redirection={resultat.redirection}
           onFermer={() => setOuverte(false)}
         />
       )}

@@ -467,3 +467,56 @@ describe("L'attente et le résultat", () => {
     expect(screen.getByRole("dialog", { name: "Paiement confirmé" })).toBeInTheDocument();
   });
 });
+
+describe("Les opérateurs qui valident autrement (12 novembre 2026)", () => {
+  // SasPay comble les pays que Payiz n'encaisse pas : Wave et Orange Money font valider sur leur page, Orange Côte
+  // d'Ivoire demande un code de paiement généré d'avance. Rien à l'écran ne nomme le prestataire.
+  const IVOIRE: MoyensDePaiement = {
+    repli: false,
+    pays: [
+      ...MOYENS.pays,
+      {
+        code: "CIV",
+        nom: "Côte d’Ivoire",
+        indicatif: "+225",
+        operateurs: [
+          operateur("wave_ci", "Wave", { validation: "page", logo: null, montantAPayer: null }),
+          operateur("orange_ci", "Orange Money", { validation: "code", consigne: "Composez #144*82# sur votre téléphone pour obtenir votre code de paiement.", logo: null, montantAPayer: null }),
+        ],
+      },
+    ],
+  };
+  const afficherIvoire = async () => {
+    afficher({ moyens: { 15000: IVOIRE } });
+    await choisirDansListe(screen.getByRole("combobox", { name: "Pays" }), "Côte d’Ivoire", { user });
+    await allerAuPaiement("07 00 00 00 00");
+  };
+
+  it("un opérateur à code de paiement : le champ, avec ce qu'il faut composer ; le code part avec le paiement", async () => {
+    payer.mockResolvedValue({ etat: "erreur", message: "x" });
+    await afficherIvoire();
+    expect(screen.queryByLabelText("Code de paiement")).toBeNull();
+    await user.click(screen.getByRole("radio", { name: /Orange Money/ }));
+    expect(screen.getByText("Composez #144*82# sur votre téléphone pour obtenir votre code de paiement.")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Code de paiement"), "123456");
+    await user.click(screen.getByRole("button", { name: `Payer ${montantFcfa(15000)}` }));
+    expect(payer).toHaveBeenCalledWith({ formuleId: "f-standard", code: "", telephone: "07 00 00 00 00", pays: "CIV", operateur: "orange_ci", codePaiement: "123456" });
+  });
+
+  it("Wave : validation sur la page de l'opérateur, où l'étudiant est envoyé (et un lien s'il n'y est pas allé)", async () => {
+    payer.mockResolvedValue({ ...(attente() as Extract<EtapePaiement, { etat: "attente" }>), redirection: "https://pay.wave.example/sp1" });
+    suivre.mockResolvedValue(attente());
+    await afficherIvoire();
+    await user.click(screen.getByRole("radio", { name: /Wave/ }));
+    expect(screen.getByText("Vous validerez le paiement sur la page de votre opérateur.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: `Payer ${montantFcfa(15000)}` }));
+    const fenetre = screen.getByRole("dialog", { name: "Validez sur la page de votre opérateur" });
+    expect(within(fenetre).getByRole("link", { name: "Ouvrir la page de paiement" })).toHaveAttribute("href", "https://pay.wave.example/sp1");
+  });
+
+  it("le paiement ne nomme aucun prestataire", () => {
+    afficher();
+    expect(screen.getByText("Paiement sécurisé. Étudium ne voit jamais votre code secret.")).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/payiz|saspay/i);
+  });
+});

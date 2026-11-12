@@ -26,7 +26,7 @@ describe("Politique de confidentialité", () => {
     expect(metadata.title).toBe("Politique de confidentialité · Étudium");
     expect(metadata.description).toMatch(/prestataires/);
     expect(screen.getByRole("heading", { level: 1, name: "Politique de confidentialité" })).toBeInTheDocument();
-    expect(screen.getByText("Dernière mise à jour : 3 novembre 2026")).toBeInTheDocument();
+    expect(screen.getByText("Dernière mise à jour : 12 novembre 2026")).toBeInTheDocument();
   });
 
   it("numérote les sections principales, et le sommaire mène à chacune", () => {
@@ -52,12 +52,15 @@ describe("Politique de confidentialité", () => {
   it("nomme les prestataires", () => {
     render(<Page />);
     const prestataires = within(document.getElementById("prestataires") as HTMLElement);
-    for (const nom of [/^Supabase :/, /^Vercel :/, /^Resend :/, /^Google :/, /^Payiz :/, /^Anthropic :/, /^YouTube, Vimeo/]) {
+    for (const nom of [/^Supabase :/, /^Vercel :/, /^Resend :/, /^Google :/, /^Payiz :/, /^SasPay :/, /^Anthropic :/, /^YouTube, Vimeo/]) {
       expect(prestataires.getByText(nom)).toBeInTheDocument();
     }
     expect(texte()).toContain("hébergés dans l’Union européenne (région de Paris)");
     // Tous les pays depuis le 3 novembre 2026 : le pays du payeur part chez Payiz et reste noté avec le paiement.
     expect(texte()).toContain("Payiz reçoit votre numéro de téléphone, votre pays, le montant et la référence du paiement.");
+    // SasPay en secours (12 novembre 2026) : il reçoit aussi le nom et l'adresse e-mail.
+    expect(texte()).toContain("SasPay reçoit votre numéro de téléphone, votre pays, vos nom, prénom et adresse e-mail, le montant et la référence du paiement.");
+    expect(texte()).toContain("Votre numéro de téléphone est transmis au prestataire de paiement (Payiz ou SasPay) pour la demande de paiement.");
   });
 
   it("le paiement : le pays et l’opérateur notés, le numéro gardé masqué", () => {

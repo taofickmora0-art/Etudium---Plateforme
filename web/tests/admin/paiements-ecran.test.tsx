@@ -69,6 +69,21 @@ describe("Le réglage « Paiements activés »", () => {
     expect(screen.getByText("Notifications Payiz : non configurées.")).toBeInTheDocument();
   });
 
+  it("SasPay en secours : non configuré, en service (ses pays), muet, ou ignoré (autre mode que Payiz)", () => {
+    const { rerender } = afficher({ etat: { ...ACTIF, secours: { cle: "absente", ignoree: false, webhook: false, pays: null } } });
+    expect(screen.getByText("SasPay (secours) : non configuré")).toBeInTheDocument();
+    const etat = (secours: NonNullable<EtatReglage["secours"]>) => ({ ...ACTIF, secours });
+    const page = (e: EtatReglage) => <PagePaiements resume={RESUME} etat={e} formules={FORMULES} codes={CODES} paiements={PAIEMENTS} ecriture />;
+    rerender(page(etat({ cle: "reel", ignoree: false, webhook: true, pays: 18 })));
+    expect(screen.getByText("SasPay (secours) : mode réel · 18 pays")).toBeInTheDocument();
+    expect(screen.queryByText("Notifications SasPay : non configurées.")).toBeNull();
+    rerender(page(etat({ cle: "test", ignoree: false, webhook: false, pays: null })));
+    expect(screen.getByText("SasPay (secours) : mode test · ne répond pas")).toBeInTheDocument();
+    expect(screen.getByText("Notifications SasPay : non configurées.")).toBeInTheDocument();
+    rerender(page(etat({ cle: "test", ignoree: true, webhook: false, pays: null })));
+    expect(screen.getByText("SasPay (secours) : clé de test ignorée (Payiz est en mode réel)")).toBeInTheDocument();
+  });
+
   it("désactivés, sans jeton : bouton bloqué, et où ajouter la clé", () => {
     afficher({ etat: { ouverts: false, jeton: "absent", cle: "absente", webhook: false } });
     expect(screen.getByText("Paiements désactivés")).toBeInTheDocument();
@@ -142,6 +157,9 @@ describe("Les chiffres et les onglets", () => {
     expect(detail).toHaveTextContent("MTN Mobile Money (Bénin) · +229 01 •• •• •• 00");
     expect(within(detail).getByRole("link", { name: "Voir le reçu" })).toHaveAttribute("href", "/abonnement/recus/ET-R-2026-000001");
     expect(within(detail).getByRole("button", { name: "Annuler l’abonnement" })).toBeInTheDocument();
+    // Qui a encaissé (12 novembre 2026 : Payiz, ou SasPay en secours).
+    expect(detail).toHaveTextContent("Encaissé parPayiz");
+    expect(detail).toHaveTextContent("Référencepay_1");
   });
 
   it("Abonnements : le prix, recommandé, proposé", async () => {

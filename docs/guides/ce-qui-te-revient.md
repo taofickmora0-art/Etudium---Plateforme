@@ -1489,3 +1489,18 @@ Ta demande du 11 novembre 2026, avec « Tout, étudiant compris ».
 
 1. **La migration, sur la base de production** : Supabase › SQL Editor › New query, colle tout le fichier `web/supabase/migrations/0079_plusieurs_roles.sql`, **après la 0078**, puis Run (« Success »). Elle se relance sans risque. Dis-moi « c'est appliqué » : je mets le code en ligne ensuite (l'ancien code marche avec la nouvelle base, pas l'inverse). Une base neuve l'a déjà : la 0079 est à la fin de `web/supabase/production/partie-6.sql`.
 2. **À vérifier** : dans Utilisateurs, ouvre un compte de test et coche « Étudiant » et « Formateur » : le compte a les deux espaces (menu du profil), s'inscrit à une formation et ouvre son espace formateur ; décoche « Étudiant » : il ne garde que l'espace formateur ; un formateur d'aujourd'hui n'a toujours pas l'espace étudiant.
+
+## 79. SasPay en secours de Payiz, pour les autres pays d'Afrique (migration 0081), 20 minutes
+
+Ta demande du 12 novembre 2026, comme sur flashSMS.
+- **Une seule liste** : l'étudiant voit réunis les pays et les opérateurs de Payiz et de SasPay. Un opérateur que Payiz encaisse passe par Payiz ; les autres passent par SasPay. Aucun écran ne nomme le prestataire.
+- **Wave et Orange Money** (quand ils passent par SasPay) : l'étudiant valide sur la page de l'opérateur, puis revient sur « Mon abonnement ». **Orange Côte d'Ivoire et Orange Burkina** : un champ « Code de paiement » apparaît, avec ce qu'il faut composer.
+- **Sans clé SasPay, rien ne change** : la liste reste celle de Payiz.
+- **Les pages juridiques** (conditions, confidentialité) nomment SasPay parmi les prestataires, car il reçoit le numéro, le nom et l'e-mail du payeur ; leur date passe au 12 novembre 2026.
+
+1. **La migration, sur la base de production** : Supabase › SQL Editor › New query, colle tout le fichier `web/supabase/migrations/0081_saspay_secours.sql`, **après la 0080**, puis Run (« Success »). Elle se relance sans risque. Dis-moi « c'est appliqué » : je mets le code en ligne ensuite. Une base neuve l'a déjà : la 0081 est à la fin de `web/supabase/production/partie-6.sql`.
+2. **La clé SasPay** : dans SasPay › Développeur, crée une clé secrète autorisée à encaisser (droit PAYIN ou BOTH), en `sk_live_…` comme la clé Payiz (une clé de test derrière Payiz en mode réel est ignorée). Dans Vercel › Settings › Environment Variables (Production), ajoute `SASPAY_CLE_SECRETE` avec cette clé. Ne me la donne pas.
+3. **Les notifications (recommandé)** : SasPay › Développeur › Webhooks › un webhook vers `https://etudium.online/api/paiements/saspay`, abonné à `transaction.success` et `transaction.failed`. Son secret ne s'affiche qu'une fois : ajoute-le dans Vercel en `SASPAY_SECRET_WEBHOOK`. Sans lui, l'état d'un paiement est relu pendant l'attente et quand l'étudiant revient sur « Mon abonnement ».
+4. **Redéploie** (Vercel › Deployments › le dernier › Redeploy) si tu ajoutes les clés après ma mise en ligne.
+5. **Le nom du compte SasPay : « Étudium »** : Wave et Orange Money affichent le nom du compte marchand sur leur page de validation ; avec un autre nom, l'étudiant le verrait.
+6. **À vérifier** : Back-office › Abonnements et paiements : la ligne « SasPay (secours) : mode réel · N pays ». Sur la souscription, un pays que Payiz ne propose pas montre ses opérateurs. Dans le détail d'un paiement, « Encaissé par » dit Payiz ou SasPay.

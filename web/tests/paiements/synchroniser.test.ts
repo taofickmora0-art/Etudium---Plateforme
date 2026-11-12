@@ -50,7 +50,7 @@ describe("appliquerPayiz", () => {
     const faux = fauxSupabase();
     faux.repondre("rpc.noter_echec", { data: { ...CARTE_SQL, statut: "echoue", motif_echec: "insufficient_funds", numero_recu: null, abonnement: null } });
     const carte = await appliquerPayiz(client(faux), "p1", payiz("requires_payment", { status: "failed", failure_code: "insufficient_funds" }), "J");
-    expect(faux.appels[0]).toMatchObject({ op: "noter_echec", valeurs: { p_paiement: "p1", p_statut: "echoue", p_motif: "insufficient_funds", p_jeton: "J" } });
+    expect(faux.appels[0]).toMatchObject({ op: "noter_echec", valeurs: { p_paiement: "p1", p_statut: "echoue", p_motif: "insufficient_funds", p_jeton: "J", p_payiz: "pay_1" } });
     expect(carte).toMatchObject({ statut: "echoue", motifEchec: "insufficient_funds" });
   });
 

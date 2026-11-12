@@ -82,5 +82,11 @@ export const indicatifDuPays = (code: string): string | null => PAYS[code]?.[1] 
 /** Le « 0 » mis devant les numéros dans le pays mais absent du numéro international (Ghana : 024… → +233 24…). */
 export const zeroNational = (code: string): boolean => PAYS[code]?.[2] === true;
 
+/** « BJ » → « BEN » (SasPay désigne les pays par leur code alpha-2) ; null hors de la table. */
+export const alpha3De = (alpha2: string): string | null => Object.entries(PAYS).find(([, p]) => p[0] === alpha2.toUpperCase())?.[0] ?? null;
+
+/** « BEN » → « BJ » ; null hors de la table. */
+export const alpha2De = (alpha3: string): string | null => PAYS[alpha3]?.[0] ?? null;
+
 /** Un code ISO 3166 alpha-3, en majuscules. */
 export const codePaysValide = (v: unknown): v is string => typeof v === "string" && /^[A-Z]{3}$/.test(v);

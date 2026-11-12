@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { annulerAbonnement, chargerPaiement } from "@/lib/admin/paiements/actions";
 import type { DetailPaiement as Detail } from "@/lib/admin/paiements/types";
 import { dateLongue, dureeAbonnement, libelleMoyen, libelleStatut, montantFcfa } from "@/lib/abonnement/regles";
-import { messageEchec } from "@/lib/paiements/regles";
+import { estSasPay, messageEchec, PREFIXE_SASPAY } from "@/lib/paiements/regles";
 
 const MOTIF = "Indiquez le motif (3 à 300 caractères).";
 
@@ -104,7 +104,8 @@ export function DetailPaiement({ id, ecriture, onFermer }: { id: string; ecritur
             {detail.statut === "echoue" && <Ligne libelle="Motif">{messageEchec(detail.motifEchec)}</Ligne>}
             <Ligne libelle="Créé le">{dateLongue(detail.creeLe)}</Ligne>
             {detail.confirmeLe && <Ligne libelle="Confirmé le">{dateLongue(detail.confirmeLe)}</Ligne>}
-            {detail.payizId && <Ligne libelle="Référence Payiz">{detail.payizId}</Ligne>}
+            {detail.payizId && <Ligne libelle="Encaissé par">{estSasPay(detail.payizId) ? "SasPay" : "Payiz"}</Ligne>}
+            {detail.payizId && <Ligne libelle="Référence">{detail.payizId.replace(PREFIXE_SASPAY, "")}</Ligne>}
             {abonnement?.annuleLe && <Ligne libelle="Abonnement annulé">{`${dateLongue(abonnement.annuleLe)} · ${abonnement.motifAnnulation ?? ""}`}</Ligne>}
           </dl>
         )}
