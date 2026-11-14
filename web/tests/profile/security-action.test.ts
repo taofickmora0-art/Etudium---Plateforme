@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const appels: string[] = [];
-const auth = { getUser: vi.fn(), signInWithPassword: vi.fn(), updateUser: vi.fn(), signOut: vi.fn() };
+const auth = { getUser: vi.fn(), signInWithPassword: vi.fn(), updateUser: vi.fn(), signOut: vi.fn(), resetPasswordForEmail: vi.fn() };
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth }) }));
 vi.mock("next/cache", () => ({ refresh: vi.fn() }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers({ origin: "https://etudium.online" }) }));
 
-const { changePassword } = await import("@/lib/profile/actions");
+const { changePassword, envoyerLienMotDePasse } = await import("@/lib/profile/actions");
 const { IDLE } = await import("@/lib/auth/schemas");
 
 const form = (values: Record<string, string>) => {
@@ -45,5 +46,28 @@ describe("Changer de mot de passe", () => {
     const state = await changePassword(IDLE, form({ current: "motdepasse", password: "motdepasse" }));
     expect(state.message).toBe("Choisissez un mot de passe différent de l’ancien.");
     expect(auth.signOut).not.toHaveBeenCalled();
+  });
+});
+
+describe("Créer un mot de passe, pour un compte Google (14 novembre 2026)", () => {
+  beforeEach(() => {
+    Object.values(auth).forEach((f) => f.mockReset());
+    auth.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "equipe@etudium.online" } }, error: null });
+    auth.resetPasswordForEmail.mockResolvedValue({ error: null });
+  });
+
+  it("le lien part à l'adresse du compte, et mène au choix du mot de passe", async () => {
+    expect(await envoyerLienMotDePasse()).toEqual({ ok: true });
+    expect(auth.resetPasswordForEmail).toHaveBeenCalledWith("equipe@etudium.online", {
+      redirectTo: "https://etudium.online/auth/confirm?next=/nouveau-mot-de-passe",
+    });
+    expect(auth.updateUser).not.toHaveBeenCalled();
+  });
+
+  it("trop de demandes, ou plus de session : le message", async () => {
+    auth.resetPasswordForEmail.mockResolvedValue({ error: { code: "over_email_send_rate_limit", status: 429 } });
+    expect(await envoyerLienMotDePasse()).toMatchObject({ ok: false });
+    auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
+    expect(await envoyerLienMotDePasse()).toEqual({ ok: false, message: "Votre session a expiré. Reconnectez-vous." });
   });
 });

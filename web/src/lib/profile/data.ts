@@ -52,7 +52,8 @@ export const getProfile = cache(async (): Promise<ProfileData | null> => {
     filiere: texte(data?.filiere),
     objectifs: texte(data?.objectifs),
     preferences: readPreferences(data?.preferences_notifications),
-    hasPassword: fournisseurs.has("email"),
+    // Un compte Google qui a créé son mot de passe (par le lien reçu) le dit dans ses métadonnées.
+    hasPassword: fournisseurs.has("email") || user.user_metadata?.mot_de_passe === true,
     googleLinked: fournisseurs.has("google"),
   };
 });

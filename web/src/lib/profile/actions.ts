@@ -1,6 +1,7 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { headers } from "next/headers";
 import { clearLocalSession } from "@/lib/auth/local-session";
 import { authErrorMessage } from "@/lib/auth/messages";
 import { fieldErrorsFrom, type FormState } from "@/lib/auth/schemas";
@@ -124,6 +125,25 @@ export async function changePassword(_prev: FormState, formData: FormData): Prom
     return { status: "error", message: authErrorMessage(null) };
   }
   return { status: "success" };
+}
+
+/**
+ * Créer un mot de passe, pour un compte Google (14 novembre 2026) : le lien de « Mot de passe oublié » part à l'adresse
+ * du compte, et mène au choix du mot de passe. Le lien prouve qu'on tient l'adresse : sur un ordinateur resté connecté,
+ * personne ne crée de mot de passe à la place du titulaire. Ensuite, Google et l'adresse e-mail ouvrent le même compte.
+ */
+export async function envoyerLienMotDePasse(): Promise<{ ok: true } | { ok: false; message: string }> {
+  try {
+    const { supabase, user } = await sessionUser();
+    if (!user?.email) return { ok: false, message: SESSION_EXPIREE };
+    const h = await headers();
+    const origine = h.get("origin") ?? `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo: `${origine}/auth/confirm?next=/nouveau-mot-de-passe` });
+    if (error) return { ok: false, message: authErrorMessage(error) };
+  } catch {
+    return { ok: false, message: authErrorMessage(null) };
+  }
+  return { ok: true };
 }
 
 /**

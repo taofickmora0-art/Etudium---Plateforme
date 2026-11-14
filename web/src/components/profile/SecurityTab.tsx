@@ -11,14 +11,48 @@ import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Tag } from "@/components/ui/Tag";
 import { authErrorMessage } from "@/lib/auth/messages";
 import { IDLE, type FormState } from "@/lib/auth/schemas";
-import { changePassword } from "@/lib/profile/actions";
+import { changePassword, envoyerLienMotDePasse } from "@/lib/profile/actions";
 import type { ProfileData } from "@/lib/profile/data";
 import { DeleteAccountCard } from "./DeleteAccountCard";
 
 const CARTE = "rounded-carte border border-bordure-carte bg-panneau";
 const GRILLE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(220px,calc((100%-16px)/2))),1fr))] items-start gap-4";
 
-function MotDePasse({ hasPassword }: { hasPassword: boolean }) {
+/** Un compte Google crée son mot de passe par un lien reçu à son adresse (14 novembre 2026). */
+function CreerMotDePasse({ email }: { email: string }) {
+  const [envoi, setEnvoi] = useState(false);
+  const [envoye, setEnvoye] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  async function envoyer() {
+    setEnvoi(true);
+    setErreur(null);
+    try {
+      const r = await envoyerLienMotDePasse();
+      if (r.ok) setEnvoye(true);
+      else setErreur(r.message);
+    } catch {
+      // Coupure réseau : on le dit, au lieu de l'écran d'erreur.
+      setErreur(authErrorMessage(null));
+    } finally {
+      setEnvoi(false);
+    }
+  }
+
+  if (envoye) return <Banner tone="reussite" title={`Lien envoyé à ${email} : ouvrez-le pour choisir votre mot de passe.`} />;
+  return (
+    <div className="flex flex-col gap-4">
+      {erreur && <Banner tone="erreur" title={erreur} />}
+      <div className="flex justify-end">
+        <Button onClick={() => void envoyer()} loading={envoi}>
+          Créer un mot de passe
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function MotDePasse({ hasPassword, email }: { hasPassword: boolean; email: string }) {
   const [confirme, setConfirme] = useState(false);
   const [state, action, pending] = useActionState(async (prev: FormState, formData: FormData): Promise<FormState> => {
     try {
@@ -38,9 +72,10 @@ function MotDePasse({ hasPassword }: { hasPassword: boolean }) {
         <p className="m-0 text-sm leading-[22px] text-pretty text-discret">
           {hasPassword
             ? "Après la mise à jour, les autres appareils seront déconnectés."
-            : "Vous vous connectez avec Google : votre compte n’a pas de mot de passe Étudium."}
+            : "Vous vous connectez avec Google. Créez un mot de passe pour vous connecter aussi avec votre adresse e-mail."}
         </p>
       </div>
+      {!hasPassword && <CreerMotDePasse email={email} />}
       {hasPassword && (
         <form action={action} noValidate className="flex flex-col gap-5">
           {state.status === "error" && state.message && <Banner tone="erreur" title={state.message} />}
@@ -77,7 +112,7 @@ export function SecurityTab({ profile }: { profile: ProfileData }) {
   return (
     <div className="flex flex-wrap items-start gap-6">
       <div className="flex min-w-0 flex-[999_1_420px] flex-col gap-4">
-        <MotDePasse hasPassword={profile.hasPassword} />
+        <MotDePasse hasPassword={profile.hasPassword} email={profile.email} />
         {profile.googleLinked && (
           <div className={`${CARTE} flex flex-wrap items-center gap-x-3.5 gap-y-3 px-6 py-[18px]`}>
             <IconTile icon={GoogleIcon} size={44} />

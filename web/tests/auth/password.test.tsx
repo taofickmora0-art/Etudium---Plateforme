@@ -60,7 +60,8 @@ describe("Nouveau mot de passe", () => {
     auth.updateUser.mockResolvedValue({ error: null });
     auth.signOut.mockResolvedValue({ error: null });
     await expect(updatePassword(IDLE, form({ password: "nouveaumdp", confirmation: "nouveaumdp" }))).rejects.toThrow("NEXT_REDIRECT:/accueil");
-    expect(auth.updateUser).toHaveBeenCalledWith({ password: "nouveaumdp" });
+    // Noté sur le compte : un compte Google qui en crée un voit ensuite le formulaire de changement (14 novembre 2026).
+    expect(auth.updateUser).toHaveBeenCalledWith({ password: "nouveaumdp", data: { mot_de_passe: true } });
     expect(auth.signOut).toHaveBeenCalledWith({ scope: "others" });
   });
 

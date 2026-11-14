@@ -228,7 +228,9 @@ export async function updatePassword(_prev: FormState, formData: FormData): Prom
     if (!data?.claims?.sub || !preuveParEmailRecente(data.claims.amr, Math.floor(Date.now() / 1000))) {
       return { status: "error", message: LIEN_EXPIRE };
     }
-    const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+    // Noté sur le compte : un compte Google qui crée ainsi son mot de passe n'a pas d'identité « email » chez Supabase ;
+    // l'onglet Sécurité sait alors qu'il en a un (14 novembre 2026).
+    const { error } = await supabase.auth.updateUser({ password: parsed.data.password, data: { mot_de_passe: true } });
     if (error) {
       const sansSession = (error as { name?: string }).name === "AuthSessionMissingError" || error.code === "session_not_found";
       return { status: "error", message: sansSession ? LIEN_EXPIRE : authErrorMessage(error) };

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // getProfile : le compte (getShellUser), les champs du profil et les fournisseurs de connexion.
-const user = { id: "u1", identities: [] as { provider: string }[] };
+const user = { id: "u1", identities: [] as { provider: string }[], user_metadata: {} as Record<string, unknown> };
 let demo = false;
 vi.mock("@/lib/auth/current-user", () => ({
   demoModeActive: () => demo,
@@ -39,6 +39,11 @@ describe("Lecture du profil", () => {
     expect(await getProfile()).toMatchObject({ hasPassword: false, googleLinked: true });
     user.identities = [{ provider: "email" }, { provider: "google" }];
     expect(await getProfile()).toMatchObject({ hasPassword: true, googleLinked: true });
+    // Un compte Google qui a créé son mot de passe (par le lien reçu) : Supabase ne lui ajoute pas l'identité « email ».
+    user.identities = [{ provider: "google" }];
+    user.user_metadata = { mot_de_passe: true };
+    expect(await getProfile()).toMatchObject({ hasPassword: true, googleLinked: true });
+    user.user_metadata = {};
   });
 
   it("en mode démonstration, les valeurs des écrans du design", async () => {

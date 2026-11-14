@@ -5,9 +5,9 @@ import { describe, expect, it, vi } from "vitest";
 import { SecurityTab } from "@/components/profile/SecurityTab";
 import { ToastProvider } from "@/components/ui/Toast";
 import { DEMO_PROFILE } from "@/lib/demo-user";
-import { changePassword } from "@/lib/profile/actions";
+import { changePassword, envoyerLienMotDePasse } from "@/lib/profile/actions";
 
-vi.mock("@/lib/profile/actions", () => ({ changePassword: vi.fn(), deleteAccount: vi.fn() }));
+vi.mock("@/lib/profile/actions", () => ({ changePassword: vi.fn(), deleteAccount: vi.fn(), envoyerLienMotDePasse: vi.fn() }));
 vi.mock("@/lib/full-page", () => ({ loadFullPage: vi.fn() }));
 
 const afficher = (profil = DEMO_PROFILE) =>
@@ -41,10 +41,25 @@ describe("Onglet Sécurité", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Une erreur est survenue. Vérifiez votre connexion, puis réessayez.");
   });
 
-  it("un compte Google sans mot de passe n'a pas de formulaire", () => {
+  it("un compte Google crée son mot de passe par un lien reçu à son adresse (14 novembre 2026)", async () => {
+    vi.mocked(envoyerLienMotDePasse).mockResolvedValue({ ok: true });
+    const user = userEvent.setup();
     afficher({ ...DEMO_PROFILE, hasPassword: false });
     expect(screen.queryByLabelText("Mot de passe actuel")).not.toBeInTheDocument();
-    expect(screen.getByText("Vous vous connectez avec Google : votre compte n’a pas de mot de passe Étudium.")).toBeInTheDocument();
+    expect(screen.getByText("Vous vous connectez avec Google. Créez un mot de passe pour vous connecter aussi avec votre adresse e-mail.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Créer un mot de passe" }));
+    expect(envoyerLienMotDePasse).toHaveBeenCalled();
+    expect(await screen.findByText("Lien envoyé à aicha.k@exemple.com : ouvrez-le pour choisir votre mot de passe.")).toBeInTheDocument();
+  });
+
+  it("l'envoi du lien refusé ou impossible : le message, et on peut réessayer", async () => {
+    vi.mocked(envoyerLienMotDePasse).mockResolvedValueOnce({ ok: false, message: "Trop de demandes. Réessayez dans quelques minutes." }).mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    const user = userEvent.setup();
+    afficher({ ...DEMO_PROFILE, hasPassword: false });
+    await user.click(screen.getByRole("button", { name: "Créer un mot de passe" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Trop de demandes. Réessayez dans quelques minutes.");
+    await user.click(screen.getByRole("button", { name: "Créer un mot de passe" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Une erreur est survenue. Vérifiez votre connexion, puis réessayez.");
   });
 
   it("le compte Google associé est indiqué", () => {
