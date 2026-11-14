@@ -8,7 +8,7 @@ import { LOGO_EMAIL, modeleEmail } from "@/lib/envois/email";
 // (les messageries refusent le SVG), servie par le site : public/email/logo-etudium.png, produite par
 // scripts/generer-logo-email.mjs depuis le tracé du logo.
 const fichier = (chemin: string) => join(process.cwd(), chemin);
-const MODELES = ["supabase/templates/confirmation-inscription.html", "supabase/templates/mot-de-passe-oublie.html"];
+const MODELES = ["supabase/templates/confirmation-inscription.html", "supabase/templates/mot-de-passe-oublie.html", "supabase/templates/code-mot-de-passe.html"];
 
 describe("Le logo des e-mails", () => {
   it("l'image existe, en haute définition (trois fois la taille affichée de 32 px de haut)", async () => {

@@ -1,53 +1,150 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
 import { GoogleIcon, LockPasswordIcon } from "@hugeicons/core-free-icons";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
+import { CodeInput } from "@/components/ui/CodeInput";
 import { Dialog } from "@/components/ui/Dialog";
 import { Field } from "@/components/ui/Field";
 import { IconTile } from "@/components/ui/IconTile";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Tag } from "@/components/ui/Tag";
 import { authErrorMessage } from "@/lib/auth/messages";
-import { IDLE, type FormState } from "@/lib/auth/schemas";
-import { changePassword, envoyerLienMotDePasse } from "@/lib/profile/actions";
+import { fieldErrorsFrom, IDLE, newPasswordSchema, type FormState } from "@/lib/auth/schemas";
+import { changePassword, creerMotDePasse, envoyerCodeMotDePasse } from "@/lib/profile/actions";
 import type { ProfileData } from "@/lib/profile/data";
 import { DeleteAccountCard } from "./DeleteAccountCard";
 
 const CARTE = "rounded-carte border border-bordure-carte bg-panneau";
 const GRILLE = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(220px,calc((100%-16px)/2))),1fr))] items-start gap-4";
 
-/** Un compte Google crée son mot de passe par un lien reçu à son adresse (14 novembre 2026). */
+/**
+ * Un compte Google crée son mot de passe (demande du 14 novembre 2026) : le mot de passe et sa confirmation, puis un code
+ * à 6 chiffres envoyé à l'adresse du compte, qui prouve que c'est bien la sienne.
+ */
 function CreerMotDePasse({ email }: { email: string }) {
-  const [envoi, setEnvoi] = useState(false);
-  const [envoye, setEnvoye] = useState(false);
-  const [erreur, setErreur] = useState<string | null>(null);
+  const router = useRouter();
+  const [etape, setEtape] = useState<"ferme" | "formulaire" | "code">("ferme");
+  const [motDePasse, setMotDePasse] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [code, setCode] = useState("");
+  const [erreurs, setErreurs] = useState<FormState["fieldErrors"]>({});
+  const [message, setMessage] = useState<string | null>(null);
+  const [occupe, setOccupe] = useState(false);
+  const [cree, setCree] = useState(false);
 
-  async function envoyer() {
-    setEnvoi(true);
-    setErreur(null);
+  async function envoyerCode() {
+    setMessage(null);
+    const verifie = newPasswordSchema.safeParse({ password: motDePasse, confirmation });
+    if (!verifie.success) {
+      setErreurs(fieldErrorsFrom(verifie.error));
+      return;
+    }
+    setErreurs({});
+    setOccupe(true);
     try {
-      const r = await envoyerLienMotDePasse();
-      if (r.ok) setEnvoye(true);
-      else setErreur(r.message);
+      const r = await envoyerCodeMotDePasse();
+      if (r.ok) {
+        setCode("");
+        setEtape("code");
+      } else setMessage(r.message);
     } catch {
       // Coupure réseau : on le dit, au lieu de l'écran d'erreur.
-      setErreur(authErrorMessage(null));
+      setMessage(authErrorMessage(null));
     } finally {
-      setEnvoi(false);
+      setOccupe(false);
     }
   }
 
-  if (envoye) return <Banner tone="reussite" title={`Lien envoyé à ${email} : ouvrez-le pour choisir votre mot de passe.`} />;
-  return (
-    <div className="flex flex-col gap-4">
-      {erreur && <Banner tone="erreur" title={erreur} />}
+  async function confirmer() {
+    setMessage(null);
+    const donnees = new FormData();
+    donnees.set("password", motDePasse);
+    donnees.set("confirmation", confirmation);
+    donnees.set("code", code);
+    setOccupe(true);
+    try {
+      const r = await creerMotDePasse(IDLE, donnees);
+      if (r.status === "success") {
+        setCree(true);
+        return;
+      }
+      setErreurs(r.fieldErrors ?? {});
+      if (r.fieldErrors?.password || r.fieldErrors?.confirmation) setEtape("formulaire");
+      if (r.message) setMessage(r.message);
+    } catch {
+      setMessage(authErrorMessage(null));
+    } finally {
+      setOccupe(false);
+    }
+  }
+
+  if (etape === "ferme") {
+    return (
       <div className="flex justify-end">
-        <Button onClick={() => void envoyer()} loading={envoi}>
-          Créer un mot de passe
-        </Button>
+        <Button onClick={() => setEtape("formulaire")}>Créer un mot de passe</Button>
       </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-5">
+      {message && <Banner tone="erreur" title={message} />}
+      {etape === "formulaire" ? (
+        <>
+          <div className={GRILLE}>
+            <Field label="Nouveau mot de passe" htmlFor="securite-creer" hint="Au moins 8 caractères." error={erreurs?.password}>
+              <PasswordInput id="securite-creer" autoComplete="new-password" minLength={8} value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} />
+            </Field>
+            <Field label="Confirmer le mot de passe" htmlFor="securite-creer-confirmation" error={erreurs?.confirmation}>
+              <PasswordInput id="securite-creer-confirmation" autoComplete="new-password" value={confirmation} onChange={(e) => setConfirmation(e.target.value)} />
+            </Field>
+          </div>
+          <div className="flex flex-wrap justify-end gap-2 max-sm:flex-col-reverse max-sm:[&>*]:w-full">
+            <Button variant="contour" onClick={() => setEtape("ferme")} disabled={occupe}>
+              Annuler
+            </Button>
+            <Button onClick={() => void envoyerCode()} loading={occupe}>
+              Recevoir le code
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="m-0 text-sm leading-[22px] text-texte">{`Un code à 6 chiffres a été envoyé à ${email}.`}</p>
+          <CodeInput label="Code reçu par e-mail" length={6} value={code} onChange={setCode} error={erreurs?.code} disabled={occupe} />
+          <div className="flex flex-wrap justify-end gap-2 max-sm:flex-col-reverse max-sm:[&>*]:w-full">
+            <Button variant="contour" onClick={() => void envoyerCode()} disabled={occupe}>
+              Renvoyer le code
+            </Button>
+            <Button onClick={() => void confirmer()} loading={occupe} disabled={code.length < 6}>
+              Confirmer
+            </Button>
+          </div>
+        </>
+      )}
+      <Dialog
+        open={cree}
+        onOpenChange={(ouverte) => {
+          if (!ouverte) router.refresh();
+          setCree(ouverte);
+        }}
+        icon={LockPasswordIcon}
+        iconTone="reussite"
+        title="Mot de passe créé"
+        description="Vous pouvez maintenant vous connecter avec votre adresse e-mail et ce mot de passe, ou avec Google."
+        footer={
+          <Button
+            onClick={() => {
+              setCree(false);
+              router.refresh();
+            }}
+          >
+            Compris
+          </Button>
+        }
+      />
     </div>
   );
 }

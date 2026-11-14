@@ -1,10 +1,9 @@
 "use server";
 
 import { refresh } from "next/cache";
-import { headers } from "next/headers";
 import { clearLocalSession } from "@/lib/auth/local-session";
 import { authErrorMessage } from "@/lib/auth/messages";
-import { fieldErrorsFrom, type FormState } from "@/lib/auth/schemas";
+import { codeSchema, fieldErrorsFrom, newPasswordSchema, type FormState } from "@/lib/auth/schemas";
 import { createClient } from "@/lib/supabase/server";
 import { detectImageType, PHOTO_ECHEC, PHOTO_MAX_OCTETS, PHOTO_TROP_LOURDE, PHOTO_TYPE } from "./photo";
 import type { NotificationPreferences } from "./preferences";
@@ -128,22 +127,55 @@ export async function changePassword(_prev: FormState, formData: FormData): Prom
 }
 
 /**
- * Créer un mot de passe, pour un compte Google (14 novembre 2026) : le lien de « Mot de passe oublié » part à l'adresse
- * du compte, et mène au choix du mot de passe. Le lien prouve qu'on tient l'adresse : sur un ordinateur resté connecté,
- * personne ne crée de mot de passe à la place du titulaire. Ensuite, Google et l'adresse e-mail ouvrent le même compte.
+ * Créer un mot de passe, pour un compte Google (demande du 14 novembre 2026) : un code à 6 chiffres part à l'adresse du
+ * compte (le code de connexion par e-mail de Supabase, modèle « Magic Link ») ; jamais de compte créé.
  */
-export async function envoyerLienMotDePasse(): Promise<{ ok: true } | { ok: false; message: string }> {
+export async function envoyerCodeMotDePasse(): Promise<{ ok: true } | { ok: false; message: string }> {
   try {
     const { supabase, user } = await sessionUser();
     if (!user?.email) return { ok: false, message: SESSION_EXPIREE };
-    const h = await headers();
-    const origine = h.get("origin") ?? `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
-    const { error } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo: `${origine}/auth/confirm?next=/nouveau-mot-de-passe` });
+    const { error } = await supabase.auth.signInWithOtp({ email: user.email, options: { shouldCreateUser: false } });
     if (error) return { ok: false, message: authErrorMessage(error) };
   } catch {
     return { ok: false, message: authErrorMessage(null) };
   }
   return { ok: true };
+}
+
+/**
+ * Le mot de passe choisi, avec le code reçu : Supabase vérifie le code (la preuve qu'on tient l'adresse ; sur un
+ * ordinateur resté connecté, personne ne crée de mot de passe à la place du titulaire), puis le mot de passe est posé et
+ * noté sur le compte (Supabase n'ajoute pas d'identité « email » à un compte Google). Ensuite, Google et l'adresse
+ * e-mail ouvrent le même compte.
+ */
+export async function creerMotDePasse(_prev: FormState, formData: FormData): Promise<FormState> {
+  const motDePasse = newPasswordSchema.safeParse({ password: texte(formData, "password"), confirmation: texte(formData, "confirmation") });
+  const code = codeSchema.safeParse(texte(formData, "code"));
+  if (!motDePasse.success || !code.success) {
+    return {
+      status: "error",
+      fieldErrors: {
+        ...(motDePasse.success ? {} : fieldErrorsFrom(motDePasse.error)),
+        ...(code.success ? {} : { code: code.error.issues[0]?.message }),
+      },
+    };
+  }
+  try {
+    const { supabase, user } = await sessionUser();
+    if (!user?.email) return { status: "error", message: SESSION_EXPIREE };
+    // Le code ouvre une session neuve du même compte : les cookies de cet appareil sont remplacés.
+    const verification = await supabase.auth.verifyOtp({ email: user.email, token: code.data, type: "email" });
+    if (verification.error) {
+      const faux = verification.error.code === "otp_expired" || verification.error.code === "invalid_otp" || verification.error.status === 403;
+      return faux ? { status: "error", fieldErrors: { code: authErrorMessage({ code: "otp_expired" }) } } : { status: "error", message: authErrorMessage(verification.error) };
+    }
+    if (verification.data.user?.id !== user.id) return { status: "error", message: SESSION_EXPIREE };
+    const { error } = await supabase.auth.updateUser({ password: motDePasse.data.password, data: { mot_de_passe: true } });
+    if (error) return { status: "error", message: authErrorMessage(error) };
+  } catch {
+    return { status: "error", message: authErrorMessage(null) };
+  }
+  return { status: "success" };
 }
 
 /**

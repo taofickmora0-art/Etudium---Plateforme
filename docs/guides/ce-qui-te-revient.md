@@ -1504,3 +1504,14 @@ Ta demande du 12 novembre 2026, comme sur flashSMS.
 4. **Redéploie** (Vercel › Deployments › le dernier › Redeploy) si tu ajoutes les clés après ma mise en ligne.
 5. **Le nom du compte SasPay : « Étudium »** : Wave et Orange Money affichent le nom du compte marchand sur leur page de validation ; avec un autre nom, l'étudiant le verrait.
 6. **À vérifier** : Back-office › Abonnements et paiements : la ligne « SasPay (secours) : mode réel · N pays ». Sur la souscription, un pays que Payiz ne propose pas montre ses opérateurs. Dans le détail d'un paiement, « Encaissé par » dit Payiz ou SasPay.
+
+## 80. Créer un mot de passe pour un compte Google (sans migration), 5 minutes
+
+Ta demande du 14 novembre 2026 : dans Mon profil › Sécurité, un compte Google clique « Créer un mot de passe », saisit le mot de passe et sa confirmation, clique « Recevoir le code », puis saisit le code à 6 chiffres reçu à son adresse. Le code prouve que c'est bien son adresse. Ensuite, Google et l'adresse e-mail avec ce mot de passe ouvrent le même compte.
+
+Le code part avec le modèle d'e-mail « Magic Link » de Supabase, qui ne montre par défaut qu'un lien en anglais. Il faut le remplacer une fois :
+1. Supabase › **Authentication › Emails**, liste des modèles, clique sur **Magic Link**.
+2. **Subject** : `Votre code Étudium`
+3. **Message body** : ouvre `web/supabase/templates/code-mot-de-passe.html` avec le Bloc-notes, **Ctrl + A**, **Ctrl + C** ; dans Supabase, efface l'ancien contenu et colle. Ne touche pas aux accolades `{{ .Token }}`.
+4. **Save**.
+5. **À vérifier** : avec equipe@etudium.online, Mon profil › Sécurité › « Créer un mot de passe » : l'e-mail « Votre code Étudium » arrive avec un code à 6 chiffres ; une fois le code saisi, « Mot de passe créé » s'affiche ; déconnecte-toi et reconnecte-toi avec l'adresse et ce mot de passe.
